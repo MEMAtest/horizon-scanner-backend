@@ -1,0 +1,8 @@
+# Dependency directories
+node_modules/
+
+# Local database file
+db.json
+
+# Environment variables
+.env
