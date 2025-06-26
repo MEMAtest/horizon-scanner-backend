@@ -24,7 +24,8 @@ const scrapeArticleContent = async (url) => {
 };
 
 const analyzeContentWithAI = async (articleText, articleUrl) => {
-    const existingEntry = db.get('updates').find({ url: articleUrl }).value();
+    // Check if article already exists (now async)
+    const existingEntry = await db.get('updates').find({ url: articleUrl }).value();
     if (existingEntry) {
         console.log(`- Skipping analysis for already processed article: ${articleUrl}`);
         return null;
@@ -79,7 +80,7 @@ const analyzeContentWithAI = async (articleText, articleUrl) => {
                 const rawJsonText = jsonMatch[0];
                 const analyzedData = JSON.parse(rawJsonText);
                 
-                // *** NEW: Strict validation of the AI's response ***
+                // Strict validation of the AI's response
                 const requiredKeys = ['headline', 'impact', 'area', 'authority', 'impactLevel', 'urgency', 'sector', 'keyDates'];
                 const missingKeys = requiredKeys.filter(key => !(key in analyzedData));
 
@@ -91,7 +92,8 @@ const analyzeContentWithAI = async (articleText, articleUrl) => {
                 analyzedData.url = articleUrl;
                 analyzedData.fetchedDate = new Date().toISOString();
                 
-                db.get('updates').push(analyzedData).write();
+                // Save to database (now async)
+                await db.get('updates').push(analyzedData).write();
                 console.log(`  ✅ AI Analysis complete and saved for: ${analyzedData.headline}`);
                 return analyzedData;
             } else {
