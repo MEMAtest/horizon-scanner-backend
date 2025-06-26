@@ -32,6 +32,7 @@ app.get('/test', async (req, res) => {
         env: {
             hasHuggingFaceKey: !!process.env.HUGGING_FACE_API_KEY,
             hasDatabaseUrl: !!process.env.DATABASE_URL,
+            hasGroqKey: !!process.env.GROQ_API_KEY,
             nodeVersion: process.version,
             platform: process.platform
         },
@@ -53,6 +54,7 @@ app.get('/debug/database', async (req, res) => {
         const envCheck = {
             DATABASE_URL: !!process.env.DATABASE_URL,
             DATABASE_URL_PREFIX: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) + '...' : 'NOT_SET',
+            GROQ_API_KEY: !!process.env.GROQ_API_KEY,
             HUGGING_FACE_API_KEY: !!process.env.HUGGING_FACE_API_KEY,
             NODE_ENV: process.env.NODE_ENV
         };
@@ -121,6 +123,293 @@ app.get('/debug/database', async (req, res) => {
                 DATABASE_URL: !!process.env.DATABASE_URL,
                 DATABASE_URL_PREFIX: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) + '...' : 'NOT_SET'
             }
+        });
+    }
+});
+
+// Groq API test endpoint
+app.get('/debug/groq-test', async (req, res) => {
+    try {
+        console.log('🧪 Testing Groq API connection');
+        
+        // Check if Groq API key is present
+        if (!process.env.GROQ_API_KEY) {
+            return res.json({
+                status: 'ERROR',
+                message: 'GROQ_API_KEY environment variable not set',
+                envVars: {
+                    GROQ_API_KEY: false,
+                    HUGGING_FACE_API_KEY: !!process.env.HUGGING_FACE_API_KEY,
+                    DATABASE_URL: !!process.env.DATABASE_URL
+                }
+            });
+        }
+        
+        console.log('✅ Groq API key found');
+        
+        // Test simple API call
+        const axios = require('axios');
+        const testPayload = {
+            model: "llama-3.1-8b-instant",
+            messages: [
+                {
+                    role: "user",
+                    content: "Return only this JSON: {\"test\": \"success\", \"provider\": \"groq\"}"
+                }
+            ],
+            max_tokens: 100,
+            temperature: 0.1
+        };
+        
+        console.log('🔄 Making test API call to Groq...');
+        
+        const response = await axios.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            testPayload,
+            {
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${process.env.GROQ_API_KEY}` 
+                },
+                timeout: 30000
+            }
+        );
+        
+        console.log('✅ Groq API call successful');
+        
+        const result = response.data;
+        const aiResponse = result.choices[0].message.content;
+        
+        res.json({
+            status: 'SUCCESS',
+            message: 'Groq API is working!',
+            envVars: {
+                GROQ_API_KEY: true,
+                HUGGING_FACE_API_KEY: !!process.env.HUGGING_FACE_API_KEY,
+                DATABASE_URL: !!process.env.DATABASE_URL
+            },
+            groqResponse: aiResponse,
+            responseTime: 'Fast',
+            provider: 'Groq'
+        });
+        
+    } catch (error) {
+        console.error('❌ Groq API test failed:', error.message);
+        
+        let errorDetails = error.message;
+        if (error.response) {
+            errorDetails = `Status: ${error.response.status}, Data: ${JSON.stringify(error.response.data)}`;
+        }
+        
+        res.status(500).json({
+            status: 'ERROR',
+            message: 'Groq API test failed',
+            error: errorDetails,
+            envVars: {
+                GROQ_API_KEY: !!process.env.GROQ_API_KEY,
+                HUGGING_FACE_API_KEY: !!process.env.HUGGING_FACE_API_KEY,
+                DATABASE_URL: !!process.env.DATABASE_URL
+            }
+        });
+    }
+});
+
+// Test single FCA article processing
+app.get('/debug/test-fca-article', async (req, res) => {
+    try {
+        console.log('🧪 Testing single FCA article processing with Groq');
+        
+        // Test the most recent FCA article
+        const testArticle = {
+            title: "Upper Tribunal upholds Jes Staley ban",
+            link: "https://www.fca.org.uk/news/press-releases/upper-tribunal-upholds-jes-staley-ban",
+            pubDate: "Thursday, June 26, 2025 - 13:08"
+        };
+        
+        console.log('📰 Testing article:', testArticle.title);
+        console.log('🔗 URL:', testArticle.link);
+        
+        // Load the AI analyzer
+        const aiAnalyzer = require('./modules/ai-analyzer');
+        const db = require('./database');
+        await db.initialize();
+        
+        // Check if article already exists
+        const existing = await db.get('updates').find({ url: testArticle.link }).value();
+        if (existing) {
+            return res.json({
+                status: 'SKIPPED',
+                message: 'Article already processed',
+                existingArticle: existing
+            });
+        }
+        
+        console.log('📄 Scraping article content...');
+        const content = await aiAnalyzer.scrapeArticleContent(testArticle.link);
+        
+        if (!content) {
+            return res.json({
+                status: 'ERROR',
+                message: 'Failed to scrape article content'
+            });
+        }
+        
+        console.log('✅ Content scraped, length:', content.length);
+        console.log('🤖 Starting Groq AI analysis...');
+        
+        const startTime = Date.now();
+        const aiResult = await aiAnalyzer.analyzeContentWithAI(content, testArticle.link);
+        const endTime = Date.now();
+        
+        if (aiResult) {
+            res.json({
+                status: 'SUCCESS',
+                message: 'FCA article processed successfully with Groq!',
+                processingTime: (endTime - startTime) + 'ms',
+                article: aiResult,
+                contentLength: content.length
+            });
+        } else {
+            res.json({
+                status: 'ERROR',
+                message: 'AI analysis failed',
+                processingTime: (endTime - startTime) + 'ms',
+                contentLength: content.length
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ FCA article test failed:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            message: 'FCA article test failed',
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Cleanup and reprocess endpoint
+app.get('/debug/cleanup-and-reprocess', async (req, res) => {
+    try {
+        console.log('🧹 Starting cleanup and reprocessing...');
+        
+        const db = require('./database');
+        await db.initialize();
+        
+        // Get initial count
+        const { Pool } = require('pg');
+        const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+        
+        const initialResult = await pool.query('SELECT COUNT(*) FROM updates');
+        const initialCount = parseInt(initialResult.rows[0].count);
+        console.log('📊 Total updates before cleanup:', initialCount);
+        
+        // Delete problematic entries
+        const deleteResult = await pool.query(`
+            DELETE FROM updates 
+            WHERE headline = 'N/A' 
+            OR impact = 'N/A' 
+            OR authority = 'N/A'
+            OR headline LIKE '%Welcome to%'
+            OR headline LIKE '%test%'
+            OR sector = 'N/A'
+        `);
+        
+        console.log('✅ Cleaned up entries:', deleteResult.rowCount);
+        
+        // Get clean count
+        const cleanResult = await pool.query('SELECT COUNT(*) FROM updates');
+        const cleanCount = parseInt(cleanResult.rows[0].count);
+        console.log('📊 Updates after cleanup:', cleanCount);
+        
+        await pool.end();
+        
+        // Now reprocess the recent FCA articles with fixed AI
+        console.log('🔄 Reprocessing recent FCA articles...');
+        
+        const Parser = require('rss-parser');
+        const parser = new Parser();
+        const aiAnalyzer = require('./modules/ai-analyzer');
+        
+        // Helper function to parse FCA date format
+        const parseFCADate = (dateString) => {
+            try {
+                if (!dateString) return null;
+                const cleanDate = dateString.replace(/^[A-Za-z]+,\s*/, '').replace(/\s*-\s*\d{2}:\d{2}$/, '');
+                const parsedDate = new Date(cleanDate);
+                return isNaN(parsedDate.getTime()) ? null : parsedDate;
+            } catch (error) {
+                return null;
+            }
+        };
+        
+        // Get FCA feed
+        const feed = await parser.parseURL('https://www.fca.org.uk/news/rss.xml');
+        
+        // Filter recent items
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        
+        const recentItems = feed.items.filter(item => {
+            const date = parseFCADate(item.pubDate);
+            return date && date >= threeDaysAgo;
+        }).slice(0, 4); // Process only first 4 recent articles
+        
+        console.log('📰 Recent FCA articles to reprocess:', recentItems.length);
+        
+        let processedCount = 0;
+        for (const item of recentItems) {
+            console.log('🔄 Processing:', item.title);
+            
+            // Check if already exists
+            const existing = await db.get('updates').find({ url: item.link }).value();
+            if (existing) {
+                console.log('⏭️ Already exists, skipping');
+                continue;
+            }
+            
+            // Scrape content
+            const content = await aiAnalyzer.scrapeArticleContent(item.link);
+            if (content) {
+                // Analyze with fixed AI
+                const result = await aiAnalyzer.analyzeContentWithAI(content, item.link);
+                if (result) {
+                    processedCount++;
+                    console.log('✅ Successfully processed:', result.headline);
+                }
+            }
+        }
+        
+        // Get final count
+        const finalPool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+        const finalResult = await finalPool.query('SELECT COUNT(*) FROM updates');
+        const finalCount = parseInt(finalResult.rows[0].count);
+        await finalPool.end();
+        
+        res.json({
+            status: 'SUCCESS',
+            message: 'Cleanup and reprocessing completed',
+            before: initialCount,
+            afterCleanup: cleanCount,
+            deletedEntries: deleteResult.rowCount,
+            reprocessedArticles: processedCount,
+            final: finalCount,
+            note: 'Fixed AI analyzer should now work properly'
+        });
+        
+    } catch (error) {
+        console.error('❌ Cleanup failed:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            error: error.message,
+            stack: error.stack
         });
     }
 });
@@ -210,8 +499,8 @@ app.get('/debug/refresh', async (req, res) => {
         console.log('Debug refresh endpoint called');
         
         // Check environment variables
-        if (!process.env.HUGGING_FACE_API_KEY) {
-            return res.json({ error: 'HUGGING_FACE_API_KEY not set' });
+        if (!process.env.GROQ_API_KEY) {
+            return res.json({ error: 'GROQ_API_KEY not set' });
         }
         
         if (!process.env.DATABASE_URL) {
@@ -301,11 +590,11 @@ app.get('/', (req, res) => {
                 console.log('Found at alternative path 2');
                 res.sendFile(altPath2);
             } else {
-                // Serve inline HTML as fallback
+                // Serve updated inline HTML with MEMA branding
                 const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
-    <title>UK Financial Regulatory Horizon Scanner</title>
+    <title>MEMA UK Regulatory Horizon Scanner</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -320,6 +609,8 @@ app.get('/', (req, res) => {
         .button:hover { background: #1d4ed8; }
         .button.success { background: #059669; }
         .button.success:hover { background: #047857; }
+        .button.warning { background: #f59e0b; }
+        .button.warning:hover { background: #d97706; }
         .note { background: #ecfdf5; border: 1px solid #d1fae5; padding: 1rem; border-radius: 0.5rem; margin-top: 2rem; }
         .note-title { color: #065f46; font-weight: 600; margin-bottom: 0.5rem; }
         .note-text { color: #047857; font-size: 0.875rem; }
@@ -329,13 +620,17 @@ app.get('/', (req, res) => {
         .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #059669; margin-right: 0.5rem; }
         .offline { background: #ef4444; }
         #status { margin-top: 1rem; font-size: 0.875rem; color: #6b7280; }
+        .date-info { background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; color: #6b7280; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">UK Financial Regulatory Horizon Scanner</h1>
+            <h1 class="title">MEMA UK Regulatory Horizon Scanner</h1>
             <p class="status">✅ Application Running with Neon PostgreSQL Database</p>
+            <div class="date-info" id="dataInfo">
+                Last updated: <span id="lastUpdated">Loading...</span>
+            </div>
             <p class="description">
                 Your regulatory horizon scanning tool is operational. The database is persistent and ready to collect regulatory updates from UK financial authorities.
             </p>
@@ -345,7 +640,8 @@ app.get('/', (req, res) => {
                 <a href="/api/updates" class="button">View Data</a>
                 <a href="/debug/database" class="button">Database Status</a>
                 <a href="/debug/rss" class="button">Test RSS</a>
-                <a href="/debug/refresh" class="button">Test Refresh</a>
+                <a href="/debug/groq-test" class="button">Test Groq</a>
+                <a href="/debug/cleanup-and-reprocess" class="button warning">Cleanup & Reprocess</a>
             </div>
             
             <div>
@@ -360,11 +656,11 @@ app.get('/', (req, res) => {
             </div>
             
             <div class="note">
-                <div class="note-title">Database: Neon PostgreSQL - Date Parsing Fixed!</div>
+                <div class="note-title">Database: Neon PostgreSQL - Groq AI Powered!</div>
                 <div class="note-text">
                     Your data is stored persistently and will survive function restarts. 
                     The system fetches updates from FCA, Bank of England, PRA, TPR, SFO, and FATF.
-                    RSS date parsing has been fixed to properly detect recent articles.
+                    Now powered by Groq AI for faster and more reliable analysis.
                 </div>
             </div>
         </div>
@@ -388,6 +684,7 @@ app.get('/', (req, res) => {
                 if (response.ok) {
                     status.textContent = 'Success! ' + (result.totalUpdates || 'Multiple') + ' updates available';
                     indicator.className = 'status-indicator';
+                    updateLastRefreshed();
                     console.log('Refresh result:', result);
                 } else {
                     throw new Error(result.error || 'Refresh failed');
@@ -402,6 +699,15 @@ app.get('/', (req, res) => {
             btn.textContent = '🔄 Refresh Regulatory Data';
         }
         
+        function updateLastRefreshed() {
+            const now = new Date();
+            const formatted = now.toLocaleDateString('en-GB') + ' at ' + now.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            document.getElementById('lastUpdated').textContent = formatted;
+        }
+        
         // Test connectivity on page load
         async function checkStatus() {
             try {
@@ -411,9 +717,26 @@ app.get('/', (req, res) => {
                     document.getElementById('statusText').textContent = 'System Online';
                     document.getElementById('indicator').className = 'status-indicator';
                 }
+                
+                // Check for latest data timestamp
+                const dataResponse = await fetch('/api/updates');
+                const data = await dataResponse.json();
+                const allUpdates = Object.values(data).flat();
+                if (allUpdates.length > 0) {
+                    const latestDate = new Date(Math.max(...allUpdates.map(u => new Date(u.fetchedDate))));
+                    const formatted = latestDate.toLocaleDateString('en-GB') + ' at ' + latestDate.toLocaleTimeString('en-GB', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    document.getElementById('lastUpdated').textContent = formatted;
+                } else {
+                    document.getElementById('lastUpdated').textContent = 'No data yet';
+                }
+                
             } catch (error) {
                 document.getElementById('statusText').textContent = 'System Offline';
                 document.getElementById('indicator').className = 'status-indicator offline';
+                document.getElementById('lastUpdated').textContent = 'Unknown';
             }
         }
         
@@ -478,8 +801,8 @@ app.get('/api/updates', async (req, res) => {
         // If no data, provide some sample data for testing
         if (Object.keys(groupedData).length === 0) {
             groupedData.General = [{
-                headline: "Welcome to the Horizon Scanner with Neon Database - Date Parsing Fixed!",
-                impact: "Your database is now set up and ready. RSS date parsing has been fixed to properly detect recent articles. Click 'Refresh Data' to start fetching real regulatory updates from UK financial regulators.",
+                headline: "Welcome to MEMA UK Regulatory Horizon Scanner",
+                impact: "Your database is now set up and ready. RSS date parsing has been fixed and Groq AI is configured. Click 'Refresh Data' to start fetching real regulatory updates from UK financial regulators.",
                 area: "System Setup",
                 authority: "System",
                 impactLevel: "Informational",
@@ -509,10 +832,10 @@ app.post('/api/refresh', async (req, res) => {
         console.log('Refresh endpoint called at:', new Date().toISOString());
         
         // Check required environment variables
-        if (!process.env.HUGGING_FACE_API_KEY) {
-            console.warn('HUGGING_FACE_API_KEY not set');
+        if (!process.env.GROQ_API_KEY) {
+            console.warn('GROQ_API_KEY not set');
             return res.status(400).json({ 
-                error: 'HUGGING_FACE_API_KEY environment variable not set. Please add it in Vercel settings.' 
+                error: 'GROQ_API_KEY environment variable not set. Please add it in Vercel settings.' 
             });
         }
         
@@ -568,7 +891,7 @@ app.post('/api/refresh', async (req, res) => {
             initialCount: initialUpdates.length,
             totalUpdates: finalUpdates.length,
             newArticles: newCount,
-            note: 'Data stored persistently in Neon PostgreSQL database'
+            note: 'Data stored persistently in Neon PostgreSQL database with Groq AI analysis'
         });
         
     } catch (error) {
@@ -588,7 +911,7 @@ app.use('*', (req, res) => {
         error: 'Route not found',
         url: req.originalUrl,
         method: req.method,
-        availableRoutes: ['/', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/database', '/debug/rss', '/debug/refresh']
+        availableRoutes: ['/', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/database', '/debug/rss', '/debug/refresh', '/debug/groq-test', '/debug/cleanup-and-reprocess']
     });
 });
 
@@ -605,13 +928,14 @@ console.log('Starting server...');
 console.log('Node version:', process.version);
 console.log('Environment variables check:');
 console.log('- PORT:', PORT);
+console.log('- GROQ_API_KEY present:', !!process.env.GROQ_API_KEY);
 console.log('- HUGGING_FACE_API_KEY present:', !!process.env.HUGGING_FACE_API_KEY);
 console.log('- DATABASE_URL present:', !!process.env.DATABASE_URL);
 console.log('- Working directory:', process.cwd());
 
 app.listen(PORT, () => {
     console.log('Server is running on port ' + PORT);
-    console.log('Server started successfully with Neon Database!');
+    console.log('MEMA UK Regulatory Horizon Scanner started successfully with Groq AI!');
 });
 
 module.exports = app;

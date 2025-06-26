@@ -2,11 +2,11 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const db = require('../database');
 
-// Updated to use Groq instead of Hugging Face
+// Updated to use Groq with better JSON parsing
 const AI_PROVIDER_CONFIG = {
     apiKey: process.env.GROQ_API_KEY, 
     apiUrl: "https://api.groq.com/openai/v1/chat/completions",
-    model: "llama-3.1-8b-instant" // Fast Llama model on Groq
+    model: "llama-3.1-8b-instant"
 };
 
 const scrapeArticleContent = async (url) => {
@@ -26,7 +26,7 @@ const scrapeArticleContent = async (url) => {
 };
 
 const analyzeContentWithAI = async (articleText, articleUrl) => {
-    // Check if article already exists (now async)
+    // Check if article already exists
     const existingEntry = await db.get('updates').find({ url: articleUrl }).value();
     if (existingEntry) {
         console.log(`- Skipping analysis for already processed article: ${articleUrl}`);
@@ -40,40 +40,49 @@ const analyzeContentWithAI = async (articleText, articleUrl) => {
 
     console.log(`- Analyzing new article with Groq: ${articleUrl}`);
     
-    const prompt = `Analyze the following financial regulatory text and provide a summary in a structured JSON format.
-Based *only* on the text provided, you MUST determine a value for every key: 'headline', 'impact', 'area', 'authority', 'impactLevel', 'urgency', 'sector', and 'keyDates'. Do not omit any keys.
+    // More explicit prompt for better JSON response
+    const prompt = `You are a financial regulatory analyst. Analyze this regulatory text and respond with ONLY a valid JSON object.
 
-- headline: A concise, clear headline for the update.
-- impact: A 2-3 sentence summary of the direct business impact on financial firms.
-- area: A specific focus area, like "Card Acquiring / Scheme Fees" or "Prudential Regulation".
-- authority: The regulatory body that published this (e.g., FCA, PRA, BoE).
-- impactLevel: Classify the impact as 'Significant', 'Moderate', or 'Informational'.
-- urgency: Classify the urgency as 'High', 'Medium', or 'Low'.
-- sector: Classify the primary financial sector this applies to from this list: Payments, Investments, ConsumerCredit, CorporateFinance, Banking, PensionsRetirementIncome, Cryptoassets, AMLFinancialCrime.
-- keyDates: Extract any explicit dates mentioned, such as consultation deadlines or implementation dates. If no dates are found, you must return "N/A".
+Required JSON format (fill ALL fields, no "N/A" allowed):
+{
+  "headline": "Clear article headline",
+  "impact": "2-3 sentence business impact summary", 
+  "area": "Specific regulatory area",
+  "authority": "FCA or PRA or BoE",
+  "impactLevel": "Significant or Moderate or Informational",
+  "urgency": "High or Medium or Low", 
+  "sector": "Banking or Investments or Payments or ConsumerCredit or CorporateFinance or PensionsRetirementIncome or Cryptoassets or AMLFinancialCrime",
+  "keyDates": "Any dates mentioned or None if no dates"
+}
 
-Article Text: "${articleText}"
+Article text: "${articleText.substring(0, 3000)}"
 
-Return ONLY the raw JSON object, without any surrounding text or markdown.`;
+Respond with ONLY the JSON object, no other text:`;
 
     try {
         const payload = {
             model: AI_PROVIDER_CONFIG.model,
             messages: [
                 {
-                    role: "user",
+                    role: "system",
+                    content: "You are a financial regulatory analyst. Always respond with valid JSON only."
+                },
+                {
+                    role: "user", 
                     content: prompt
                 }
             ],
-            max_tokens: 1024,
+            max_tokens: 500,
             temperature: 0.1
         };
 
+        console.log('🤖 Sending request to Groq...');
         const response = await axios.post(AI_PROVIDER_CONFIG.apiUrl, payload, {
             headers: { 
                 'Content-Type': 'application/json', 
                 'Authorization': `Bearer ${AI_PROVIDER_CONFIG.apiKey}` 
-            }
+            },
+            timeout: 30000
         });
 
         if (response.status !== 200) {
@@ -82,45 +91,65 @@ Return ONLY the raw JSON object, without any surrounding text or markdown.`;
 
         const result = response.data;
         if (result && result.choices && result.choices[0] && result.choices[0].message) {
-            const textResponse = result.choices[0].message.content;
-            console.log('🤖 Groq response received, parsing JSON...');
+            const textResponse = result.choices[0].message.content.trim();
+            console.log('🤖 Groq raw response:', textResponse);
             
-            const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+            // Multiple JSON extraction methods
+            let analyzedData = null;
             
-            if (jsonMatch) {
-                const rawJsonText = jsonMatch[0];
-                const analyzedData = JSON.parse(rawJsonText);
+            // Method 1: Try direct JSON parse
+            try {
+                analyzedData = JSON.parse(textResponse);
+                console.log('✅ Direct JSON parse successful');
+            } catch (e) {
+                console.log('❌ Direct JSON parse failed, trying extraction...');
                 
-                // Strict validation of the AI's response
-                const requiredKeys = ['headline', 'impact', 'area', 'authority', 'impactLevel', 'urgency', 'sector', 'keyDates'];
-                const missingKeys = requiredKeys.filter(key => !(key in analyzedData));
-
-                if (missingKeys.length > 0) {
-                    console.error(`❌ AI response was missing required keys: ${missingKeys.join(', ')}`);
-                    return null;
+                // Method 2: Extract JSON from response
+                const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    try {
+                        analyzedData = JSON.parse(jsonMatch[0]);
+                        console.log('✅ JSON extraction successful');
+                    } catch (e2) {
+                        console.log('❌ JSON extraction failed');
+                    }
                 }
-
-                analyzedData.url = articleUrl;
-                analyzedData.fetchedDate = new Date().toISOString();
-                
-                // Save to database (now async)
-                await db.get('updates').push(analyzedData).write();
-                console.log(`  ✅ Groq AI Analysis complete and saved for: ${analyzedData.headline}`);
-                return analyzedData;
-            } else {
-                console.error('❌ Groq response did not contain a valid JSON block.', textResponse);
+            }
+            
+            if (!analyzedData) {
+                console.error('❌ Could not parse AI response as JSON:', textResponse);
                 return null;
             }
+            
+            // Validate required fields
+            const requiredKeys = ['headline', 'impact', 'area', 'authority', 'impactLevel', 'urgency', 'sector', 'keyDates'];
+            const missingKeys = requiredKeys.filter(key => !analyzedData[key] || analyzedData[key] === 'N/A');
+
+            if (missingKeys.length > 0) {
+                console.error(`❌ AI response had invalid fields: ${missingKeys.join(', ')}`);
+                console.log('Full response:', analyzedData);
+                return null;
+            }
+
+            // Add metadata
+            analyzedData.url = articleUrl;
+            analyzedData.fetchedDate = new Date().toISOString();
+            
+            // Save to database
+            await db.get('updates').push(analyzedData).write();
+            console.log(`✅ Groq analysis complete: ${analyzedData.headline}`);
+            return analyzedData;
+            
         } else {
-            console.error('❌ Groq analysis returned unexpected response format.', result);
+            console.error('❌ Groq returned unexpected response format');
             return null;
         }
     } catch (error) {
         console.error(`❌ Error during Groq AI analysis for ${articleUrl}:`, error.message);
         
-        // Check for specific rate limit errors
-        if (error.response && error.response.status === 429) {
-            console.error('🔴 Groq rate limit hit. Consider upgrading or waiting.');
+        if (error.response) {
+            console.error('Response status:', error.response.status);
+            console.error('Response data:', error.response.data);
         }
         
         return null;
