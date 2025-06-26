@@ -130,12 +130,7 @@ const processItemDebug = async (item) => {
     console.log('📅 Article date:', articleDate.toISOString());
     console.log('📅 Three days ago:', threeDaysAgo.toISOString());
     console.log('📅 Is recent?', articleDate >= threeDaysAgo);
-    
-    // TEMPORARILY REMOVE DATE FILTERING FOR DEBUGGING
-    // if (articleDate < threeDaysAgo) {
-    //     console.log('⏭️ Skipping: Article is older than 3 days');
-    //     return 'skipped';
-    // }
+]
     
     // Check if already exists
     const existing = await db.get('updates').find({ url: articleUrl }).value();
