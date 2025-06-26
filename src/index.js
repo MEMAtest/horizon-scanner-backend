@@ -499,7 +499,58 @@ app.post('/api/refresh', async (req, res) => {
         });
     }
 });
-
+app.get('/debug/rss', async (req, res) => {
+    try {
+        console.log('🔍 RSS Debug endpoint called');
+        
+        const Parser = require('rss-parser');
+        const parser = new Parser();
+        
+        // Test just the FCA feed first
+        const feedUrl = 'https://www.fca.org.uk/news/rss.xml';
+        console.log('📡 Testing FCA RSS feed:', feedUrl);
+        
+        const feed = await parser.parseURL(feedUrl);
+        console.log('✅ RSS feed fetched successfully');
+        console.log('📊 Total items:', feed.items.length);
+        
+        // Get recent items
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        
+        const allItems = feed.items.slice(0, 10).map(item => ({
+            title: item.title,
+            pubDate: item.pubDate,
+            link: item.link,
+            dateObj: new Date(item.pubDate),
+            isRecent: new Date(item.pubDate) >= threeDaysAgo,
+            daysAgo: Math.floor((new Date() - new Date(item.pubDate)) / (1000 * 60 * 60 * 24))
+        }));
+        
+        const recentItems = allItems.filter(item => item.isRecent);
+        
+        console.log('📊 Recent items (last 3 days):', recentItems.length);
+        
+        res.json({
+            status: 'SUCCESS',
+            feedUrl: feedUrl,
+            totalItems: feed.items.length,
+            itemsChecked: allItems.length,
+            recentItems: recentItems.length,
+            threeDaysAgo: threeDaysAgo.toISOString(),
+            sampleItems: allItems,
+            recentItemsOnly: recentItems
+        });
+        
+    } catch (error) {
+        console.error('❌ RSS debug error:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
 // Catch all other routes
 app.use('*', (req, res) => {
     console.log('404 - Route not found:', req.originalUrl);
