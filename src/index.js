@@ -45,7 +45,288 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy' });
 });
 
-// NEW: Comprehensive debug endpoint to fix FCA processing issues
+// Dashboard endpoint - serves formatted data view
+app.get('/dashboard', async (req, res) => {
+    try {
+        console.log('Dashboard endpoint called');
+        
+        const db = require('./database');
+        await db.initialize();
+        const updates = await db.get('updates').value();
+        
+        // Group data by sector
+        const groupedData = {};
+        updates.forEach(item => {
+            const sector = item.sector || "General";
+            if (!groupedData[sector]) {
+                groupedData[sector] = [];
+            }
+            groupedData[sector].push(item);
+        });
+        
+        // Sort sectors and items
+        const sortedSectors = Object.keys(groupedData).sort();
+        
+        // Generate dashboard HTML
+        const dashboardHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <title>MEMA UK Reg Tracker - Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+        .header { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; text-align: center; }
+        .title { color: #1e40af; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .subtitle { color: #64748b; font-size: 1.1rem; margin-bottom: 1rem; }
+        .stats { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; }
+        .stat-item { text-align: center; }
+        .stat-number { color: #059669; font-size: 2rem; font-weight: 700; }
+        .stat-label { color: #64748b; font-size: 0.875rem; }
+        .back-link { display: inline-block; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; }
+        .back-link:hover { text-decoration: underline; }
+        .filters { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .filter-group { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+        .filter-select { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; }
+        .filter-button { background: #3b82f6; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; }
+        .filter-button:hover { background: #2563eb; }
+        .sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; }
+        .sector-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .sector-header { background: #f1f5f9; padding: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .sector-title { color: #1e293b; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .sector-count { color: #64748b; font-size: 0.875rem; }
+        .sector-content { padding: 0; }
+        .update-item { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
+        .update-item:last-child { border-bottom: none; }
+        .update-title { color: #1e293b; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; line-height: 1.4; }
+        .update-meta { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .meta-item { display: flex; align-items: center; gap: 0.5rem; }
+        .meta-label { color: #64748b; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; }
+        .meta-value { font-size: 0.875rem; }
+        .impact-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+        .impact-significant { background: #fef2f2; color: #dc2626; }
+        .impact-moderate { background: #fffbeb; color: #d97706; }
+        .impact-informational { background: #f0f9ff; color: #2563eb; }
+        .urgency-high { background: #fef2f2; color: #dc2626; }
+        .urgency-medium { background: #fffbeb; color: #d97706; }
+        .urgency-low { background: #f0fdf4; color: #16a34a; }
+        .authority-badge { background: #f8fafc; color: #475569; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+        .update-impact { color: #374151; margin-bottom: 1rem; }
+        .update-footer { display: flex; justify-content: space-between; align-items: center; }
+        .view-source { color: #3b82f6; text-decoration: none; font-size: 0.875rem; }
+        .view-source:hover { text-decoration: underline; }
+        .update-date { color: #9ca3af; font-size: 0.75rem; }
+        .empty-state { text-align: center; padding: 3rem; color: #64748b; }
+        .search-box { width: 100%; max-width: 300px; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 6px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-link">← Back to Main</a>
+            <h1 class="title">MEMA UK Reg Tracker</h1>
+            <p class="subtitle">Regulatory Updates Dashboard</p>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">${updates.length}</div>
+                    <div class="stat-label">Total Updates</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${sortedSectors.length}</div>
+                    <div class="stat-label">Sectors</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${updates.filter(u => {
+                        const date = new Date(u.fetchedDate);
+                        const today = new Date();
+                        const diffDays = Math.floor((today - date) / (1000 * 60 * 60 * 24));
+                        return diffDays <= 1;
+                    }).length}</div>
+                    <div class="stat-label">Recent (24h)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <input type="text" id="searchBox" placeholder="Search updates..." class="search-box">
+                <select id="sectorFilter" class="filter-select">
+                    <option value="">All Sectors</option>
+                    ${sortedSectors.map(sector => `<option value="${sector}">${sector}</option>`).join('')}
+                </select>
+                <select id="authorityFilter" class="filter-select">
+                    <option value="">All Authorities</option>
+                    ${[...new Set(updates.map(u => u.authority))].sort().map(auth => `<option value="${auth}">${auth}</option>`).join('')}
+                </select>
+                <select id="impactFilter" class="filter-select">
+                    <option value="">All Impact Levels</option>
+                    <option value="Significant">Significant</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Informational">Informational</option>
+                </select>
+                <button onclick="clearFilters()" class="filter-button">Clear Filters</button>
+            </div>
+        </div>
+
+        <div class="sectors" id="sectorsContainer">
+            ${sortedSectors.length === 0 ? `
+                <div class="empty-state">
+                    <h3>No regulatory updates found</h3>
+                    <p>Click "Refresh Regulatory Data" on the main page to fetch updates.</p>
+                </div>
+            ` : sortedSectors.map(sector => `
+                <div class="sector-card" data-sector="${sector}">
+                    <div class="sector-header">
+                        <h2 class="sector-title">${sector}</h2>
+                        <p class="sector-count">${groupedData[sector].length} update${groupedData[sector].length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div class="sector-content">
+                        ${groupedData[sector].sort((a, b) => new Date(b.fetchedDate) - new Date(a.fetchedDate)).map(update => `
+                            <div class="update-item" 
+                                 data-authority="${update.authority}" 
+                                 data-impact="${update.impactLevel}"
+                                 data-title="${update.headline.toLowerCase()}"
+                                 data-content="${update.impact.toLowerCase()}">
+                                <h3 class="update-title">${update.headline}</h3>
+                                <div class="update-meta">
+                                    <div class="meta-item">
+                                        <span class="meta-label">Authority</span>
+                                        <span class="authority-badge">${update.authority}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Impact</span>
+                                        <span class="impact-badge impact-${update.impactLevel.toLowerCase()}">${update.impactLevel}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Urgency</span>
+                                        <span class="urgency-${update.urgency.toLowerCase()} impact-badge">${update.urgency}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Area</span>
+                                        <span class="meta-value">${update.area}</span>
+                                    </div>
+                                </div>
+                                <p class="update-impact">${update.impact}</p>
+                                <div class="update-footer">
+                                    <a href="${update.url}" target="_blank" class="view-source">View Source →</a>
+                                    <span class="update-date">${new Date(update.fetchedDate).toLocaleDateString('en-GB')} at ${new Date(update.fetchedDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                ${update.keyDates && update.keyDates !== 'None specified' ? `
+                                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 6px; font-size: 0.875rem;">
+                                        <strong>Key Dates:</strong> ${update.keyDates}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+
+    <script>
+        // Filter functionality
+        const searchBox = document.getElementById('searchBox');
+        const sectorFilter = document.getElementById('sectorFilter');
+        const authorityFilter = document.getElementById('authorityFilter');
+        const impactFilter = document.getElementById('impactFilter');
+
+        function applyFilters() {
+            const searchTerm = searchBox.value.toLowerCase();
+            const selectedSector = sectorFilter.value;
+            const selectedAuthority = authorityFilter.value;
+            const selectedImpact = impactFilter.value;
+
+            const sectorCards = document.querySelectorAll('.sector-card');
+            
+            sectorCards.forEach(card => {
+                const sector = card.dataset.sector;
+                let hasVisibleUpdates = false;
+
+                // Filter by sector
+                if (selectedSector && sector !== selectedSector) {
+                    card.classList.add('hidden');
+                    return;
+                }
+
+                const updateItems = card.querySelectorAll('.update-item');
+                updateItems.forEach(item => {
+                    let visible = true;
+
+                    // Search filter
+                    if (searchTerm) {
+                        const title = item.dataset.title;
+                        const content = item.dataset.content;
+                        if (!title.includes(searchTerm) && !content.includes(searchTerm)) {
+                            visible = false;
+                        }
+                    }
+
+                    // Authority filter
+                    if (selectedAuthority && item.dataset.authority !== selectedAuthority) {
+                        visible = false;
+                    }
+
+                    // Impact filter
+                    if (selectedImpact && item.dataset.impact !== selectedImpact) {
+                        visible = false;
+                    }
+
+                    if (visible) {
+                        item.classList.remove('hidden');
+                        hasVisibleUpdates = true;
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+
+                // Hide sector card if no visible updates
+                if (hasVisibleUpdates) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        function clearFilters() {
+            searchBox.value = '';
+            sectorFilter.value = '';
+            authorityFilter.value = '';
+            impactFilter.value = '';
+            applyFilters();
+        }
+
+        // Add event listeners
+        searchBox.addEventListener('input', applyFilters);
+        sectorFilter.addEventListener('change', applyFilters);
+        authorityFilter.addEventListener('change', applyFilters);
+        impactFilter.addEventListener('change', applyFilters);
+
+        // Auto-refresh data every 5 minutes
+        setInterval(() => {
+            console.log('Auto-refreshing dashboard data...');
+            window.location.reload();
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>`;
+
+        res.send(dashboardHTML);
+        
+    } catch (error) {
+        console.error('Dashboard error:', error);
+        res.status(500).json({
+            error: 'Failed to load dashboard',
+            details: error.message
+        });
+    }
+});
+
+// Comprehensive debug endpoint to fix FCA processing issues
 app.get('/debug/comprehensive-fix', async (req, res) => {
     try {
         console.log('🔧 Running comprehensive FCA diagnostic...');
@@ -667,7 +948,7 @@ app.get('/debug/refresh', async (req, res) => {
     }
 });
 
-// Serve HTML file with updated branding
+// Serve main page with clean interface
 app.get('/', (req, res) => {
     try {
         console.log('Root route accessed');
@@ -680,70 +961,82 @@ app.get('/', (req, res) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #1f2937; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; }
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        .header { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem; }
-        .title { color: #2563eb; font-size: 2.5rem; font-weight: bold; margin-bottom: 1rem; }
+        .header { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .title { color: #1e40af; font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; }
         .status { color: #059669; font-weight: 600; margin-bottom: 1rem; }
-        .description { color: #6b7280; margin-bottom: 2rem; }
-        .button { display: inline-block; background: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; margin-right: 1rem; margin-bottom: 1rem; transition: background 0.2s; }
-        .button:hover { background: #1d4ed8; }
-        .button.success { background: #059669; }
-        .button.success:hover { background: #047857; }
-        .button.warning { background: #f59e0b; }
-        .button.warning:hover { background: #d97706; }
-        .button.diagnostic { background: #8b5cf6; }
-        .button.diagnostic:hover { background: #7c3aed; }
-        .note { background: #ecfdf5; border: 1px solid #d1fae5; padding: 1rem; border-radius: 0.5rem; margin-top: 2rem; }
-        .note-title { color: #065f46; font-weight: 600; margin-bottom: 0.5rem; }
-        .note-text { color: #047857; font-size: 0.875rem; }
-        .refresh-btn { background: #059669; border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; }
+        .description { color: #64748b; margin-bottom: 2rem; line-height: 1.6; }
+        .button-group { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+        .button { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.2s; border: none; cursor: pointer; font-size: 0.875rem; }
+        .button-primary { background: #3b82f6; color: white; }
+        .button-primary:hover { background: #2563eb; }
+        .button-success { background: #059669; color: white; }
+        .button-success:hover { background: #047857; }
+        .button-secondary { background: #6b7280; color: white; }
+        .button-secondary:hover { background: #4b5563; }
+        .button-warning { background: #f59e0b; color: white; }
+        .button-warning:hover { background: #d97706; }
+        .button-diagnostic { background: #8b5cf6; color: white; }
+        .button-diagnostic:hover { background: #7c3aed; }
+        .refresh-section { background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .refresh-btn { background: #059669; border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.875rem; }
         .refresh-btn:hover { background: #047857; }
         .refresh-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        .status-section { margin-top: 1rem; }
         .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #059669; margin-right: 0.5rem; }
         .offline { background: #ef4444; }
-        #status { margin-top: 1rem; font-size: 0.875rem; color: #6b7280; }
-        .date-info { background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem; color: #6b7280; }
+        .status-text { font-size: 0.875rem; color: #6b7280; }
+        .date-info { background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem; color: #6b7280; }
+        .info-note { background: #eff6ff; border: 1px solid #bfdbfe; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
+        .info-title { color: #1e40af; font-weight: 600; margin-bottom: 0.5rem; }
+        .info-text { color: #1e40af; font-size: 0.875rem; line-height: 1.5; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1 class="title">MEMA UK Reg Tracker</h1>
-            <p class="status">✅ System Operational with Neon PostgreSQL Database</p>
+            <p class="status">✅ System Operational</p>
+            
             <div class="date-info" id="dataInfo">
                 Last updated: <span id="lastUpdated">Loading...</span>
             </div>
+            
             <p class="description">
-                Your regulatory tracking tool is operational. The database is persistent and ready to collect regulatory updates from UK financial authorities.
+                Track regulatory updates from UK financial authorities including FCA, Bank of England, PRA, TPR, SFO, and FATF. 
+                The system automatically monitors and categorizes regulatory changes to keep you informed of developments affecting financial services.
             </p>
             
-            <div>
-                <a href="/test" class="button">System Test</a>
-                <a href="/api/updates" class="button">View Data</a>
-                <a href="/debug/database" class="button">Database Status</a>
-                <a href="/debug/comprehensive-fix" class="button diagnostic">🔧 FCA Diagnostic</a>
-                <a href="/debug/groq-test" class="button">Test Groq AI</a>
-                <a href="/debug/cleanup-and-reprocess" class="button warning">Cleanup & Reprocess</a>
+            <div class="button-group grid-3">
+                <a href="/dashboard" class="button button-primary">📊 View Dashboard</a>
+                <a href="/test" class="button button-secondary">🔧 System Test</a>
+                <a href="/debug/database" class="button button-secondary">💾 Database Status</a>
             </div>
             
-            <div>
+            <div class="button-group grid-3">
+                <a href="/debug/comprehensive-fix" class="button button-diagnostic">🔧 FCA Diagnostic</a>
+                <a href="/debug/groq-test" class="button button-secondary">🤖 Test AI</a>
+                <a href="/debug/cleanup-and-reprocess" class="button button-warning">🧹 Cleanup Data</a>
+            </div>
+            
+            <div class="refresh-section">
                 <button onclick="refreshData()" class="refresh-btn" id="refreshBtn">
                     🔄 Refresh Regulatory Data
                 </button>
+                
+                <div class="status-section" id="status">
+                    <span class="status-indicator" id="indicator"></span>
+                    <span class="status-text" id="statusText">Ready</span>
+                </div>
             </div>
             
-            <div id="status">
-                <span class="status-indicator" id="indicator"></span>
-                <span id="statusText">Ready</span>
-            </div>
-            
-            <div class="note">
-                <div class="note-title">Database: Neon PostgreSQL - Groq AI Powered!</div>
-                <div class="note-text">
-                    Your data is stored persistently and will survive function restarts. 
-                    The system fetches updates from FCA, Bank of England, PRA, TPR, SFO, and FATF.
-                    Now powered by Groq AI for faster and more reliable analysis.
+            <div class="info-note">
+                <div class="info-title">Regulatory Sources Monitored</div>
+                <div class="info-text">
+                    Financial Conduct Authority (FCA) • Bank of England • Prudential Regulation Authority (PRA) • 
+                    The Pensions Regulator (TPR) • Serious Fraud Office (SFO) • Financial Action Task Force (FATF)
                 </div>
             </div>
         </div>
@@ -800,9 +1093,11 @@ app.get('/', (req, res) => {
                     document.getElementById('indicator').className = 'status-indicator';
                 }
                 
+                // Get data count and last update time
                 const dataResponse = await fetch('/api/updates');
                 const data = await dataResponse.json();
                 const allUpdates = Object.values(data).flat();
+                
                 if (allUpdates.length > 0) {
                     const latestDate = new Date(Math.max(...allUpdates.map(u => new Date(u.fetchedDate))));
                     const formatted = latestDate.toLocaleDateString('en-GB') + ' at ' + latestDate.toLocaleTimeString('en-GB', { 
@@ -811,7 +1106,7 @@ app.get('/', (req, res) => {
                     });
                     document.getElementById('lastUpdated').textContent = formatted;
                 } else {
-                    document.getElementById('lastUpdated').textContent = 'No data yet';
+                    document.getElementById('lastUpdated').textContent = 'No data yet - click refresh to start';
                 }
                 
             } catch (error) {
@@ -821,7 +1116,11 @@ app.get('/', (req, res) => {
             }
         }
         
+        // Check status on page load
         checkStatus();
+        
+        // Auto-refresh status every 30 seconds
+        setInterval(checkStatus, 30000);
     </script>
 </body>
 </html>`;
@@ -878,7 +1177,7 @@ app.get('/api/updates', async (req, res) => {
         if (Object.keys(groupedData).length === 0) {
             groupedData.General = [{
                 headline: "Welcome to MEMA UK Reg Tracker",
-                impact: "Your database is now set up and ready. RSS date parsing has been fixed and Groq AI is configured. Click 'Refresh Data' to start fetching real regulatory updates from UK financial regulators.",
+                impact: "Your database is now set up and ready. Click 'Refresh Regulatory Data' to start fetching real regulatory updates from UK financial regulators.",
                 area: "System Setup",
                 authority: "System",
                 impactLevel: "Informational",
@@ -917,7 +1216,7 @@ app.post('/api/refresh', async (req, res) => {
         if (!process.env.DATABASE_URL) {
             console.warn('DATABASE_URL not set');
             return res.status(400).json({ 
-                error: 'DATABASE_URL environment variable not set. Please add your Neon database URL in Vercel settings.' 
+                error: 'DATABASE_URL environment variable not set. Please add your database URL in Vercel settings.' 
             });
         }
         
@@ -961,7 +1260,7 @@ app.post('/api/refresh', async (req, res) => {
             initialCount: initialUpdates.length,
             totalUpdates: finalUpdates.length,
             newArticles: newCount,
-            note: 'Data stored persistently in Neon PostgreSQL database with Groq AI analysis'
+            note: 'Data stored persistently with AI analysis'
         });
         
     } catch (error) {
@@ -981,7 +1280,7 @@ app.use('*', (req, res) => {
         error: 'Route not found',
         url: req.originalUrl,
         method: req.method,
-        availableRoutes: ['/', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/comprehensive-fix', '/debug/database', '/debug/groq-test', '/debug/cleanup-and-reprocess']
+        availableRoutes: ['/', '/dashboard', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/comprehensive-fix', '/debug/database', '/debug/groq-test', '/debug/cleanup-and-reprocess']
     });
 });
 
@@ -1004,7 +1303,7 @@ console.log('- Working directory:', process.cwd());
 
 app.listen(PORT, () => {
     console.log('Server is running on port ' + PORT);
-    console.log('MEMA UK Reg Tracker started successfully with Groq AI!');
+    console.log('MEMA UK Reg Tracker started successfully!');
 });
 
 module.exports = app;
