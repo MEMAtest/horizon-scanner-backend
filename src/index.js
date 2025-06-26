@@ -125,6 +125,85 @@ app.get('/debug/database', async (req, res) => {
     }
 });
 
+// Debug RSS endpoint with fixed date parsing
+app.get('/debug/rss', async (req, res) => {
+    try {
+        console.log('🔍 RSS Debug endpoint called');
+        
+        const Parser = require('rss-parser');
+        const parser = new Parser();
+        
+        // Helper function to parse FCA date format
+        const parseFCADate = (dateString) => {
+            try {
+                // Format: "Thursday, June 26, 2025 - 13:08"
+                if (!dateString) return null;
+                
+                // Remove day of week and time, keep just "June 26, 2025"
+                const cleanDate = dateString.replace(/^[A-Za-z]+,\s*/, '').replace(/\s*-\s*\d{2}:\d{2}$/, '');
+                const parsedDate = new Date(cleanDate);
+                
+                if (isNaN(parsedDate.getTime())) {
+                    return null;
+                }
+                
+                return parsedDate;
+            } catch (error) {
+                return null;
+            }
+        };
+        
+        // Test just the FCA feed first
+        const feedUrl = 'https://www.fca.org.uk/news/rss.xml';
+        console.log('📡 Testing FCA RSS feed:', feedUrl);
+        
+        const feed = await parser.parseURL(feedUrl);
+        console.log('✅ RSS feed fetched successfully');
+        console.log('📊 Total items:', feed.items.length);
+        
+        // Get recent items with FIXED date parsing
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        
+        const allItems = feed.items.slice(0, 10).map(item => {
+            const parsedDate = parseFCADate(item.pubDate);
+            return {
+                title: item.title,
+                pubDate: item.pubDate,
+                link: item.link,
+                dateObj: parsedDate ? parsedDate.toISOString() : null,
+                isRecent: parsedDate ? parsedDate >= threeDaysAgo : false,
+                daysAgo: parsedDate ? Math.floor((new Date() - parsedDate) / (1000 * 60 * 60 * 24)) : null,
+                parseSuccess: parsedDate !== null
+            };
+        });
+        
+        const recentItems = allItems.filter(item => item.isRecent);
+        
+        console.log('📊 Recent items (last 3 days):', recentItems.length);
+        
+        res.json({
+            status: 'SUCCESS',
+            feedUrl: feedUrl,
+            totalItems: feed.items.length,
+            itemsChecked: allItems.length,
+            recentItems: recentItems.length,
+            threeDaysAgo: threeDaysAgo.toISOString(),
+            dateParsingFixed: true,
+            sampleItems: allItems,
+            recentItemsOnly: recentItems
+        });
+        
+    } catch (error) {
+        console.error('❌ RSS debug error:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
 // Debug refresh endpoint (GET version for easy testing)
 app.get('/debug/refresh', async (req, res) => {
     try {
@@ -265,6 +344,7 @@ app.get('/', (req, res) => {
                 <a href="/test" class="button">Test System</a>
                 <a href="/api/updates" class="button">View Data</a>
                 <a href="/debug/database" class="button">Database Status</a>
+                <a href="/debug/rss" class="button">Test RSS</a>
                 <a href="/debug/refresh" class="button">Test Refresh</a>
             </div>
             
@@ -280,10 +360,11 @@ app.get('/', (req, res) => {
             </div>
             
             <div class="note">
-                <div class="note-title">Database: Neon PostgreSQL</div>
+                <div class="note-title">Database: Neon PostgreSQL - Date Parsing Fixed!</div>
                 <div class="note-text">
                     Your data is stored persistently and will survive function restarts. 
                     The system fetches updates from FCA, Bank of England, PRA, TPR, SFO, and FATF.
+                    RSS date parsing has been fixed to properly detect recent articles.
                 </div>
             </div>
         </div>
@@ -397,8 +478,8 @@ app.get('/api/updates', async (req, res) => {
         // If no data, provide some sample data for testing
         if (Object.keys(groupedData).length === 0) {
             groupedData.General = [{
-                headline: "Welcome to the Horizon Scanner with Neon Database",
-                impact: "Your database is now set up and ready. Click 'Refresh Data' to start fetching real regulatory updates from UK financial regulators.",
+                headline: "Welcome to the Horizon Scanner with Neon Database - Date Parsing Fixed!",
+                impact: "Your database is now set up and ready. RSS date parsing has been fixed to properly detect recent articles. Click 'Refresh Data' to start fetching real regulatory updates from UK financial regulators.",
                 area: "System Setup",
                 authority: "System",
                 impactLevel: "Informational",
@@ -499,58 +580,7 @@ app.post('/api/refresh', async (req, res) => {
         });
     }
 });
-app.get('/debug/rss', async (req, res) => {
-    try {
-        console.log('🔍 RSS Debug endpoint called');
-        
-        const Parser = require('rss-parser');
-        const parser = new Parser();
-        
-        // Test just the FCA feed first
-        const feedUrl = 'https://www.fca.org.uk/news/rss.xml';
-        console.log('📡 Testing FCA RSS feed:', feedUrl);
-        
-        const feed = await parser.parseURL(feedUrl);
-        console.log('✅ RSS feed fetched successfully');
-        console.log('📊 Total items:', feed.items.length);
-        
-        // Get recent items
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        
-        const allItems = feed.items.slice(0, 10).map(item => ({
-            title: item.title,
-            pubDate: item.pubDate,
-            link: item.link,
-            dateObj: new Date(item.pubDate),
-            isRecent: new Date(item.pubDate) >= threeDaysAgo,
-            daysAgo: Math.floor((new Date() - new Date(item.pubDate)) / (1000 * 60 * 60 * 24))
-        }));
-        
-        const recentItems = allItems.filter(item => item.isRecent);
-        
-        console.log('📊 Recent items (last 3 days):', recentItems.length);
-        
-        res.json({
-            status: 'SUCCESS',
-            feedUrl: feedUrl,
-            totalItems: feed.items.length,
-            itemsChecked: allItems.length,
-            recentItems: recentItems.length,
-            threeDaysAgo: threeDaysAgo.toISOString(),
-            sampleItems: allItems,
-            recentItemsOnly: recentItems
-        });
-        
-    } catch (error) {
-        console.error('❌ RSS debug error:', error);
-        res.status(500).json({
-            status: 'ERROR',
-            error: error.message,
-            stack: error.stack
-        });
-    }
-});
+
 // Catch all other routes
 app.use('*', (req, res) => {
     console.log('404 - Route not found:', req.originalUrl);
@@ -558,7 +588,7 @@ app.use('*', (req, res) => {
         error: 'Route not found',
         url: req.originalUrl,
         method: req.method,
-        availableRoutes: ['/', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/database', '/debug/refresh']
+        availableRoutes: ['/', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/database', '/debug/rss', '/debug/refresh']
     });
 });
 

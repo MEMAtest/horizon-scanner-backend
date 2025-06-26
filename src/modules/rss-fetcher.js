@@ -10,6 +10,28 @@ const RSS_FEEDS = [
     { name: 'BoE/PRA News', url: 'https://www.bankofengland.co.uk/rss/news' }
 ];
 
+// Helper function to parse FCA date format
+const parseFCADate = (dateString) => {
+    try {
+        // Format: "Thursday, June 26, 2025 - 13:08"
+        if (!dateString) return null;
+        
+        // Remove day of week and time, keep just "June 26, 2025"
+        const cleanDate = dateString.replace(/^[A-Za-z]+,\s*/, '').replace(/\s*-\s*\d{2}:\d{2}$/, '');
+        const parsedDate = new Date(cleanDate);
+        
+        if (isNaN(parsedDate.getTime())) {
+            console.log('❌ Failed to parse date:', dateString);
+            return null;
+        }
+        
+        return parsedDate;
+    } catch (error) {
+        console.log('❌ Date parsing error for:', dateString, error.message);
+        return null;
+    }
+};
+
 // This function processes the RSS feeds
 const fetchAndAnalyzeFeeds = async () => {
     console.log('\n--- 🔍 DEBUG: Fetching RSS Feeds ---');
@@ -31,14 +53,16 @@ const fetchAndAnalyzeFeeds = async () => {
             // Show first few items for debugging
             console.log('\n🔍 First few items from feed:');
             feed.items.slice(0, 3).forEach((item, index) => {
+                const parsedDate = parseFCADate(item.pubDate);
                 console.log('Item ' + (index + 1) + ':');
                 console.log('  Title:', item.title);
-                console.log('  Date:', item.pubDate);
+                console.log('  Raw Date:', item.pubDate);
+                console.log('  Parsed Date:', parsedDate ? parsedDate.toISOString() : 'FAILED');
                 console.log('  Link:', item.link);
             });
             
-            // Process all items without date filtering for debugging
-            console.log('\n🔄 Processing all items (no date filter for debugging)...');
+            // Process all items
+            console.log('\n🔄 Processing items...');
             let processedCount = 0;
             let skippedCount = 0;
             
@@ -51,7 +75,7 @@ const fetchAndAnalyzeFeeds = async () => {
                 }
             }
             
-            console.log('📊 Feed processing summary:');
+            console.log('📊 Feed processing summary for', feedInfo.name + ':');
             console.log('  - Processed:', processedCount);
             console.log('  - Skipped:', skippedCount);
             console.log('  - Total:', feed.items.length);
@@ -122,15 +146,25 @@ const processItemDebug = async (item) => {
     console.log('\n🔍 Processing item:', item.title || 'No title');
     console.log('🔗 URL:', articleUrl);
     
+    // Parse the date properly
+    const articleDate = parseFCADate(item.pubDate);
+    if (!articleDate) {
+        console.log('❌ Skipping: Could not parse article date');
+        return 'failed';
+    }
+    
     // Check date filtering
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const articleDate = new Date(item.pubDate);
     
     console.log('📅 Article date:', articleDate.toISOString());
     console.log('📅 Three days ago:', threeDaysAgo.toISOString());
     console.log('📅 Is recent?', articleDate >= threeDaysAgo);
-]
+    
+    if (articleDate < threeDaysAgo) {
+        console.log('⏭️ Skipping: Article is older than 3 days');
+        return 'skipped';
+    }
     
     // Check if already exists
     const existing = await db.get('updates').find({ url: articleUrl }).value();
