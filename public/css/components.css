@@ -1,0 +1,123 @@
+/* public/css/components.css */
+
+/* Analytics Charts */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.chart-card {
+    background-color: var(--c-header-bg);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--c-border);
+}
+.chart-card h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 1rem;
+}
+
+/* Controls and Filters */
+.controls, .filters {
+    background-color: var(--c-header-bg);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--c-border);
+    margin-bottom: 1.5rem;
+}
+.controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+.filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+.control-group label, .filter-group h4 {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--c-muted);
+    margin-bottom: 0.25rem;
+}
+.control-group input, .control-group select {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--c-border);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+.filter-group .checkbox-group {
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+.btn-link {
+    background: none; border: none; color: var(--c-brand);
+    cursor: pointer; font-size: 0.75rem; padding: 0;
+}
+
+
+/* Update Card */
+#updatesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+.update-card {
+    background: var(--c-header-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+.update-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.update-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+.update-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--c-muted);
+    margin-bottom: 1rem;
+}
+.update-card-impact {
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+.update-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.tag {
+    padding: 0.25rem 0.5rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+.tag-authority { background-color: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.tag-sector { background-color: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.tag-significant, .tag-high { background-color: #fff1f2; color: #9f1239; border-color: #fecdd3; }
+.tag-moderate, .tag-medium { background-color: #fefce8; color: #854d0e; border-color: #fef08a; }
+.tag-informational, .tag-low { background-color: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
