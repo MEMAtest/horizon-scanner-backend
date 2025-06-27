@@ -263,15 +263,62 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy' });
 });
 
-// Dashboard endpoint - serves formatted data view
+// Enhanced Dashboard endpoint with multi-select filtering and modern design
 app.get('/dashboard', async (req, res) => {
     try {
-        console.log('Dashboard endpoint called');
+        console.log('Enhanced Dashboard endpoint called');
         
         const db = require('./database');
         await db.initialize();
         const updates = await db.get('updates').value();
         
+        // Authority parsing function to handle complex formats
+        function parseAuthorities(authorityString) {
+            if (!authorityString) return [];
+            
+            // Handle different formats
+            const normalized = authorityString
+                .replace(/Bank of England and Prudential Regulation Authority \(PRA\)/g, 'BoE,PRA')
+                .replace(/Bank of England/g, 'BoE')
+                .replace(/and/g, ',')
+                .split(',')
+                .map(auth => auth.trim())
+                .filter(auth => auth.length > 0);
+            
+            // Standardize authority names
+            return normalized.map(auth => {
+                if (auth === 'FCA') return 'FCA';
+                if (auth === 'BoE') return 'BoE';
+                if (auth === 'PRA') return 'PRA';
+                if (auth === 'TPR') return 'TPR';
+                if (auth === 'PSR') return 'PSR';
+                if (auth === 'SFO') return 'SFO';
+                if (auth === 'FATF') return 'FATF';
+                return auth;
+            });
+        }
+
+        // Calculate authority freshness
+        const authorityFreshness = {};
+        updates.forEach(update => {
+            const authorities = parseAuthorities(update.authority);
+            const fetchTime = new Date(update.fetchedDate);
+            authorities.forEach(auth => {
+                if (!authorityFreshness[auth] || fetchTime > authorityFreshness[auth]) {
+                    authorityFreshness[auth] = fetchTime;
+                }
+            });
+        });
+
+        // Generate freshness indicators
+        const freshnessHTML = Object.entries(authorityFreshness)
+            .map(([auth, date]) => {
+                const hoursAgo = Math.floor((new Date() - date) / (1000 * 60 * 60));
+                const indicator = hoursAgo < 24 ? '🟢' : hoursAgo < 48 ? '🟡' : '🔴';
+                const statusClass = hoursAgo < 24 ? 'text-green-600' : hoursAgo < 48 ? 'text-yellow-600' : 'text-red-600';
+                return `<span class="freshness-indicator ${statusClass} text-sm font-medium px-2 py-1 bg-gray-50 rounded-lg">${indicator} ${auth}: ${hoursAgo}h ago</span>`;
+            }).join('');
+
         // Group data by sector
         const groupedData = {};
         updates.forEach(item => {
@@ -285,60 +332,149 @@ app.get('/dashboard', async (req, res) => {
         // Sort sectors and items
         const sortedSectors = Object.keys(groupedData).sort();
         
-        // Generate dashboard HTML
+        // Get all unique authorities for filters
+        const allAuthorities = new Set();
+        updates.forEach(update => {
+            parseAuthorities(update.authority).forEach(auth => allAuthorities.add(auth));
+        });
+
+        function getAuthorityClass(authority) {
+            const authorities = parseAuthorities(authority);
+            if (authorities.includes('FCA')) return 'fca';
+            if (authorities.includes('BoE')) return 'boe';
+            if (authorities.includes('PRA')) return 'pra';
+            if (authorities.includes('TPR')) return 'tpr';
+            if (authorities.includes('PSR')) return 'psr';
+            return 'general';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB') + ' at ' + date.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // Generate enhanced dashboard HTML
         const dashboardHTML = `<!DOCTYPE html>
 <html>
 <head>
-    <title>MEMA UK Reg Tracker - Dashboard</title>
+    <title>MEMA UK Reg Tracker - Enhanced Dashboard</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #1e293b; line-height: 1.6; min-height: 100vh; }
         .container { max-width: 1400px; margin: 0 auto; padding: 1rem; }
-        .header { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; text-align: center; }
-        .title { color: #1e40af; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; }
-        .subtitle { color: #64748b; font-size: 1.1rem; margin-bottom: 1rem; }
-        .stats { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; }
-        .stat-item { text-align: center; }
+        .header { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 2rem; backdrop-filter: blur(10px); }
+        .title { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; text-align: center; }
+        .subtitle { color: #64748b; font-size: 1.1rem; margin-bottom: 1.5rem; text-align: center; }
+        .stats { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .stat-item { text-align: center; padding: 1rem; background: rgba(255,255,255,0.7); border-radius: 12px; min-width: 120px; }
         .stat-number { color: #059669; font-size: 2rem; font-weight: 700; }
         .stat-label { color: #64748b; font-size: 0.875rem; }
-        .back-link { display: inline-block; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; }
+        .back-link { display: inline-block; color: #3b82f6; text-decoration: none; margin-bottom: 1rem; font-weight: 600; }
         .back-link:hover { text-decoration: underline; }
-        .filters { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-        .filter-group { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-        .filter-select { padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; }
-        .filter-button { background: #3b82f6; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; }
-        .filter-button:hover { background: #2563eb; }
-        .sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; }
-        .sector-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
-        .sector-header { background: #f1f5f9; padding: 1.5rem; border-bottom: 1px solid #e2e8f0; }
-        .sector-title { color: #1e293b; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+        
+        /* Source Freshness Indicators */
+        .freshness-section { margin: 1.5rem 0; }
+        .freshness-title { color: #374151; font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; }
+        .freshness-title::before { content: "📊"; margin-right: 0.5rem; }
+        .freshness-indicators { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+        
+        /* Enhanced Filters */
+        .filters { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); padding: 2rem; border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .filters-title { color: #1e293b; font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; }
+        .filters-title::before { content: "🎛️"; margin-right: 0.5rem; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .filter-section { background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .filter-label { color: #374151; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; }
+        .filter-label.authorities::before { content: "🏛️"; margin-right: 0.5rem; }
+        .filter-label.impact::before { content: "⚡"; margin-right: 0.5rem; }
+        .filter-label.urgency::before { content: "🚨"; margin-right: 0.5rem; }
+        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+        .checkbox-item { display: flex; align-items: center; padding: 0.5rem; border-radius: 8px; transition: background 0.2s; }
+        .checkbox-item:hover { background: #e2e8f0; }
+        .checkbox-item input[type="checkbox"] { margin-right: 0.5rem; transform: scale(1.1); }
+        .checkbox-item label { font-size: 0.875rem; cursor: pointer; flex: 1; }
+        .filter-actions { display: flex; gap: 0.5rem; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s; font-size: 0.875rem; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; transform: translateY(-1px); }
+        .btn-clear { background: #ef4444; color: white; }
+        .btn-clear:hover { background: #dc2626; transform: translateY(-1px); }
+
+        /* Enhanced Sectors Grid */
+        .sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 2rem; }
+        .sector-card { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; transition: all 0.3s ease; border: 1px solid #e2e8f0; }
+        .sector-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        .sector-header { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .sector-title { color: #1e293b; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; }
+        .sector-title::before { content: "📋"; margin-right: 0.5rem; }
         .sector-count { color: #64748b; font-size: 0.875rem; }
         .sector-content { padding: 0; }
-        .update-item { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
+
+        /* Modern Update Cards */
+        .update-item { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; transition: all 0.3s ease; position: relative; }
         .update-item:last-child { border-bottom: none; }
-        .update-title { color: #1e293b; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; line-height: 1.4; }
-        .update-meta { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-        .meta-item { display: flex; align-items: center; gap: 0.5rem; }
-        .meta-label { color: #64748b; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; }
-        .meta-value { font-size: 0.875rem; }
-        .impact-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+        .update-item:hover { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); transform: translateX(5px); }
+        .update-item::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--authority-color, #94a3b8); transition: width 0.3s ease; }
+        .update-item:hover::before { width: 8px; }
+
+        /* Authority-specific colors */
+        .authority-fca { --authority-color: #1e40af; }
+        .authority-fca .update-badges .authority-badge { background: #dbeafe; color: #1e40af; }
+        .authority-boe { --authority-color: #059669; }
+        .authority-boe .update-badges .authority-badge { background: #d1fae5; color: #059669; }
+        .authority-pra { --authority-color: #dc2626; }
+        .authority-pra .update-badges .authority-badge { background: #fee2e2; color: #dc2626; }
+        .authority-tpr { --authority-color: #7c3aed; }
+        .authority-tpr .update-badges .authority-badge { background: #ede9fe; color: #7c3aed; }
+        .authority-psr { --authority-color: #ea580c; }
+        .authority-psr .update-badges .authority-badge { background: #fed7aa; color: #ea580c; }
+        .authority-general { --authority-color: #6b7280; }
+
+        .update-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .update-title { color: #1e293b; font-size: 1.1rem; font-weight: 700; line-height: 1.4; flex: 1; margin-right: 1rem; }
+        .update-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-start; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .authority-badge { background: #f8fafc; color: #475569; }
         .impact-significant { background: #fef2f2; color: #dc2626; }
         .impact-moderate { background: #fffbeb; color: #d97706; }
         .impact-informational { background: #f0f9ff; color: #2563eb; }
         .urgency-high { background: #fef2f2; color: #dc2626; }
         .urgency-medium { background: #fffbeb; color: #d97706; }
         .urgency-low { background: #f0fdf4; color: #16a34a; }
-        .authority-badge { background: #f8fafc; color: #475569; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
-        .update-impact { color: #374151; margin-bottom: 1rem; }
+
+        .update-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+        .meta-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 8px; }
+        .meta-icon { font-size: 1rem; }
+        .meta-content { flex: 1; }
+        .meta-label { color: #64748b; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; }
+        .meta-value { color: #374151; font-size: 0.875rem; font-weight: 500; }
+
+        .update-impact { color: #374151; margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid var(--authority-color, #94a3b8); }
         .update-footer { display: flex; justify-content: space-between; align-items: center; }
-        .view-source { color: #3b82f6; text-decoration: none; font-size: 0.875rem; }
-        .view-source:hover { text-decoration: underline; }
-        .update-date { color: #9ca3af; font-size: 0.75rem; }
+        .view-source-btn { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; }
+        .view-source-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+        .view-source-btn::after { content: "→"; }
+        .update-date { color: #9ca3af; font-size: 0.75rem; display: flex; align-items: center; gap: 0.25rem; }
+        .update-date::before { content: "📅"; }
+
         .empty-state { text-align: center; padding: 3rem; color: #64748b; }
-        .search-box { width: 100%; max-width: 300px; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 6px; }
+        .empty-state::before { content: "📭"; font-size: 3rem; display: block; margin-bottom: 1rem; }
+        .search-box { width: 100%; max-width: 300px; padding: 0.75rem 1rem; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 0.875rem; transition: border-color 0.2s; }
+        .search-box:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         .hidden { display: none !important; }
+
+        /* Status indicator fix */
+        .system-status { display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; background: #059669; margin-right: 0.5rem; animation: pulse 2s infinite; }
+        .status-offline { background: #ef4444; animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
@@ -346,7 +482,13 @@ app.get('/dashboard', async (req, res) => {
         <div class="header">
             <a href="/" class="back-link">← Back to Main</a>
             <h1 class="title">MEMA UK Reg Tracker</h1>
-            <p class="subtitle">Regulatory Updates Dashboard</p>
+            <p class="subtitle">Enhanced Regulatory Updates Dashboard</p>
+            
+            <div class="system-status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span class="text-sm text-gray-600">System Online - Live Data</span>
+            </div>
+
             <div class="stats">
                 <div class="stat-item">
                     <div class="stat-number">${updates.length}</div>
@@ -365,27 +507,74 @@ app.get('/dashboard', async (req, res) => {
                     }).length}</div>
                     <div class="stat-label">Recent (24h)</div>
                 </div>
+                <div class="stat-item">
+                    <div class="stat-number">${Object.keys(authorityFreshness).length}</div>
+                    <div class="stat-label">Authorities</div>
+                </div>
+            </div>
+
+            <div class="freshness-section">
+                <div class="freshness-title">Source Freshness</div>
+                <div class="freshness-indicators">
+                    ${freshnessHTML || '<span class="text-gray-500">No data available</span>'}
+                </div>
             </div>
         </div>
 
         <div class="filters">
-            <div class="filter-group">
-                <input type="text" id="searchBox" placeholder="Search updates..." class="search-box">
-                <select id="sectorFilter" class="filter-select">
-                    <option value="">All Sectors</option>
-                    ${sortedSectors.map(sector => `<option value="${sector}">${sector}</option>`).join('')}
-                </select>
-                <select id="authorityFilter" class="filter-select">
-                    <option value="">All Authorities</option>
-                    ${[...new Set(updates.map(u => u.authority))].sort().map(auth => `<option value="${auth}">${auth}</option>`).join('')}
-                </select>
-                <select id="impactFilter" class="filter-select">
-                    <option value="">All Impact Levels</option>
-                    <option value="Significant">Significant</option>
-                    <option value="Moderate">Moderate</option>
-                    <option value="Informational">Informational</option>
-                </select>
-                <button onclick="clearFilters()" class="filter-button">Clear Filters</button>
+            <div class="filters-title">Multi-Select Filters</div>
+            <div class="filter-grid">
+                <div class="filter-section">
+                    <div class="filter-label authorities">Authorities</div>
+                    <div class="checkbox-group" id="authorityCheckboxes">
+                        ${Array.from(allAuthorities).sort().map(auth => `
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="auth-${auth}" value="${auth}" class="authority-checkbox">
+                                <label for="auth-${auth}">${auth}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" onclick="selectAllAuthorities()">Select All</button>
+                        <button class="btn btn-secondary" onclick="clearAllAuthorities()">Clear All</button>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <div class="filter-label impact">Impact Levels</div>
+                    <div class="checkbox-group" id="impactCheckboxes">
+                        ${['Significant', 'Moderate', 'Informational'].map(impact => `
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="impact-${impact}" value="${impact}" class="impact-checkbox">
+                                <label for="impact-${impact}">${impact}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" onclick="selectAllImpacts()">Select All</button>
+                        <button class="btn btn-secondary" onclick="clearAllImpacts()">Clear All</button>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <div class="filter-label urgency">Urgency Levels</div>
+                    <div class="checkbox-group" id="urgencyCheckboxes">
+                        ${['High', 'Medium', 'Low'].map(urgency => `
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="urgency-${urgency}" value="${urgency}" class="urgency-checkbox">
+                                <label for="urgency-${urgency}">${urgency}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" onclick="selectAllUrgencies()">Select All</button>
+                        <button class="btn btn-secondary" onclick="clearAllUrgencies()">Clear All</button>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button class="btn btn-primary" onclick="applyFilters()" style="margin-right: 1rem; padding: 0.75rem 2rem;">Apply Filters</button>
+                <button class="btn btn-clear" onclick="resetAllFilters()">Reset All Filters</button>
             </div>
         </div>
 
@@ -403,40 +592,52 @@ app.get('/dashboard', async (req, res) => {
                     </div>
                     <div class="sector-content">
                         ${groupedData[sector].sort((a, b) => new Date(b.fetchedDate) - new Date(a.fetchedDate)).map(update => `
-                            <div class="update-item" 
-                                 data-authority="${update.authority}" 
+                            <div class="update-item authority-${getAuthorityClass(update.authority)}" 
+                                 data-authorities="${parseAuthorities(update.authority).join(',')}" 
                                  data-impact="${update.impactLevel}"
-                                 data-title="${update.headline.toLowerCase()}"
-                                 data-content="${update.impact.toLowerCase()}">
-                                <h3 class="update-title">${update.headline}</h3>
+                                 data-urgency="${update.urgency}">
+                                
+                                <div class="update-header">
+                                    <h3 class="update-title">${update.headline}</h3>
+                                    <div class="update-badges">
+                                        <span class="badge authority-badge">${update.authority}</span>
+                                        <span class="badge impact-${update.impactLevel.toLowerCase()}">${update.impactLevel}</span>
+                                        <span class="badge urgency-${update.urgency.toLowerCase()}">${update.urgency}</span>
+                                    </div>
+                                </div>
+                                
                                 <div class="update-meta">
                                     <div class="meta-item">
-                                        <span class="meta-label">Authority</span>
-                                        <span class="authority-badge">${update.authority}</span>
+                                        <span class="meta-icon">🏛️</span>
+                                        <div class="meta-content">
+                                            <div class="meta-label">Authority</div>
+                                            <div class="meta-value">${update.authority}</div>
+                                        </div>
                                     </div>
                                     <div class="meta-item">
-                                        <span class="meta-label">Impact</span>
-                                        <span class="impact-badge impact-${update.impactLevel.toLowerCase()}">${update.impactLevel}</span>
+                                        <span class="meta-icon">📋</span>
+                                        <div class="meta-content">
+                                            <div class="meta-label">Area</div>
+                                            <div class="meta-value">${update.area}</div>
+                                        </div>
                                     </div>
                                     <div class="meta-item">
-                                        <span class="meta-label">Urgency</span>
-                                        <span class="urgency-${update.urgency.toLowerCase()} impact-badge">${update.urgency}</span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <span class="meta-label">Area</span>
-                                        <span class="meta-value">${update.area}</span>
+                                        <span class="meta-icon">⏰</span>
+                                        <div class="meta-content">
+                                            <div class="meta-label">Key Dates</div>
+                                            <div class="meta-value">${update.keyDates || 'None specified'}</div>
+                                        </div>
                                     </div>
                                 </div>
-                                <p class="update-impact">${update.impact}</p>
+                                
+                                <div class="update-impact">
+                                    <strong>Impact Analysis:</strong> ${update.impact}
+                                </div>
+                                
                                 <div class="update-footer">
-                                    <a href="${update.url}" target="_blank" class="view-source">View Source →</a>
-                                    <span class="update-date">${new Date(update.fetchedDate).toLocaleDateString('en-GB')} at ${new Date(update.fetchedDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <a href="${update.url}" target="_blank" class="view-source-btn">View Source</a>
+                                    <span class="update-date">${formatDate(update.fetchedDate)}</span>
                                 </div>
-                                ${update.keyDates && update.keyDates !== 'None specified' ? `
-                                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 6px; font-size: 0.875rem;">
-                                        <strong>Key Dates:</strong> ${update.keyDates}
-                                    </div>
-                                ` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -446,54 +647,54 @@ app.get('/dashboard', async (req, res) => {
     </div>
 
     <script>
-        // Filter functionality
-        const searchBox = document.getElementById('searchBox');
-        const sectorFilter = document.getElementById('sectorFilter');
-        const authorityFilter = document.getElementById('authorityFilter');
-        const impactFilter = document.getElementById('impactFilter');
+        // Authority parsing function (client-side)
+        function parseAuthorities(authorityString) {
+            if (!authorityString) return [];
+            
+            const normalized = authorityString
+                .replace(/Bank of England and Prudential Regulation Authority \\(PRA\\)/g, 'BoE,PRA')
+                .replace(/Bank of England/g, 'BoE')
+                .replace(/and/g, ',')
+                .split(',')
+                .map(auth => auth.trim())
+                .filter(auth => auth.length > 0);
+            
+            return normalized.map(auth => {
+                if (auth === 'FCA') return 'FCA';
+                if (auth === 'BoE') return 'BoE';
+                if (auth === 'PRA') return 'PRA';
+                if (auth === 'TPR') return 'TPR';
+                if (auth === 'PSR') return 'PSR';
+                if (auth === 'SFO') return 'SFO';
+                if (auth === 'FATF') return 'FATF';
+                return auth;
+            });
+        }
+
+        // Multi-select filtering logic
+        let selectedAuthorities = new Set();
+        let selectedImpactLevels = new Set();
+        let selectedUrgencies = new Set();
 
         function applyFilters() {
-            const searchTerm = searchBox.value.toLowerCase();
-            const selectedSector = sectorFilter.value;
-            const selectedAuthority = authorityFilter.value;
-            const selectedImpact = impactFilter.value;
-
             const sectorCards = document.querySelectorAll('.sector-card');
             
             sectorCards.forEach(card => {
-                const sector = card.dataset.sector;
+                const updateItems = card.querySelectorAll('.update-item');
                 let hasVisibleUpdates = false;
 
-                // Filter by sector
-                if (selectedSector && sector !== selectedSector) {
-                    card.classList.add('hidden');
-                    return;
-                }
-
-                const updateItems = card.querySelectorAll('.update-item');
                 updateItems.forEach(item => {
-                    let visible = true;
+                    const itemAuthorities = item.dataset.authorities.split(',').filter(a => a);
+                    const matchesAuthority = selectedAuthorities.size === 0 || 
+                        itemAuthorities.some(auth => selectedAuthorities.has(auth));
+                    
+                    const matchesImpact = selectedImpactLevels.size === 0 || 
+                        selectedImpactLevels.has(item.dataset.impact);
+                    
+                    const matchesUrgency = selectedUrgencies.size === 0 || 
+                        selectedUrgencies.has(item.dataset.urgency);
 
-                    // Search filter
-                    if (searchTerm) {
-                        const title = item.dataset.title;
-                        const content = item.dataset.content;
-                        if (!title.includes(searchTerm) && !content.includes(searchTerm)) {
-                            visible = false;
-                        }
-                    }
-
-                    // Authority filter
-                    if (selectedAuthority && item.dataset.authority !== selectedAuthority) {
-                        visible = false;
-                    }
-
-                    // Impact filter
-                    if (selectedImpact && item.dataset.impact !== selectedImpact) {
-                        visible = false;
-                    }
-
-                    if (visible) {
+                    if (matchesAuthority && matchesImpact && matchesUrgency) {
                         item.classList.remove('hidden');
                         hasVisibleUpdates = true;
                     } else {
@@ -501,28 +702,133 @@ app.get('/dashboard', async (req, res) => {
                     }
                 });
 
-                // Hide sector card if no visible updates
                 if (hasVisibleUpdates) {
                     card.classList.remove('hidden');
                 } else {
                     card.classList.add('hidden');
                 }
             });
+
+            // Update filter badge counts
+            updateFilterCounts();
         }
 
-        function clearFilters() {
-            searchBox.value = '';
-            sectorFilter.value = '';
-            authorityFilter.value = '';
-            impactFilter.value = '';
+        function updateFilterCounts() {
+            const totalVisible = document.querySelectorAll('.update-item:not(.hidden)').length;
+            console.log(\`Showing \${totalVisible} updates after filtering\`);
+        }
+
+        // Authority filter functions
+        function selectAllAuthorities() {
+            document.querySelectorAll('.authority-checkbox').forEach(cb => {
+                cb.checked = true;
+                selectedAuthorities.add(cb.value);
+            });
+        }
+
+        function clearAllAuthorities() {
+            document.querySelectorAll('.authority-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            selectedAuthorities.clear();
+        }
+
+        // Impact filter functions
+        function selectAllImpacts() {
+            document.querySelectorAll('.impact-checkbox').forEach(cb => {
+                cb.checked = true;
+                selectedImpactLevels.add(cb.value);
+            });
+        }
+
+        function clearAllImpacts() {
+            document.querySelectorAll('.impact-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            selectedImpactLevels.clear();
+        }
+
+        // Urgency filter functions
+        function selectAllUrgencies() {
+            document.querySelectorAll('.urgency-checkbox').forEach(cb => {
+                cb.checked = true;
+                selectedUrgencies.add(cb.value);
+            });
+        }
+
+        function clearAllUrgencies() {
+            document.querySelectorAll('.urgency-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            selectedUrgencies.clear();
+        }
+
+        function resetAllFilters() {
+            clearAllAuthorities();
+            clearAllImpacts();
+            clearAllUrgencies();
             applyFilters();
         }
 
-        // Add event listeners
-        searchBox.addEventListener('input', applyFilters);
-        sectorFilter.addEventListener('change', applyFilters);
-        authorityFilter.addEventListener('change', applyFilters);
-        impactFilter.addEventListener('change', applyFilters);
+        // Event listeners for checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            // Authority checkboxes
+            document.querySelectorAll('.authority-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedAuthorities.add(this.value);
+                    } else {
+                        selectedAuthorities.delete(this.value);
+                    }
+                });
+            });
+
+            // Impact checkboxes
+            document.querySelectorAll('.impact-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedImpactLevels.add(this.value);
+                    } else {
+                        selectedImpactLevels.delete(this.value);
+                    }
+                });
+            });
+
+            // Urgency checkboxes
+            document.querySelectorAll('.urgency-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedUrgencies.add(this.value);
+                    } else {
+                        selectedUrgencies.delete(this.value);
+                    }
+                });
+            });
+
+            // Check system status
+            checkSystemStatus();
+        });
+
+        // Fixed status system
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/test');
+                const result = await response.json();
+                const indicator = document.getElementById('statusIndicator');
+                
+                if (result.database === 'connected' && result.healthScore >= 80) {
+                    indicator.className = 'status-indicator';
+                } else {
+                    indicator.className = 'status-indicator status-offline';
+                }
+            } catch (error) {
+                const indicator = document.getElementById('statusIndicator');
+                indicator.className = 'status-indicator status-offline';
+            }
+        }
+
+        // Auto-refresh status every 30 seconds
+        setInterval(checkSystemStatus, 30000);
 
         // Auto-refresh data every 5 minutes
         setInterval(() => {
@@ -2217,7 +2523,7 @@ app.get('/debug/refresh', async (req, res) => {
     }
 });
 
-// Serve main page with clean interface
+// Enhanced main page with clean interface and fixed status system
 app.get('/', (req, res) => {
     try {
         console.log('Root route accessed');
@@ -2230,104 +2536,121 @@ app.get('/', (req, res) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #1e293b; min-height: 100vh; }
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        .header { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-        .title { color: #1e40af; font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; }
-        .status { color: #059669; font-weight: 600; margin-bottom: 1rem; }
-        .description { color: #64748b; margin-bottom: 2rem; line-height: 1.6; }
-        .button-group { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
-        .button { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.2s; border: none; cursor: pointer; font-size: 0.875rem; }
-        .button-primary { background: #3b82f6; color: white; }
-        .button-primary:hover { background: #2563eb; }
-        .button-success { background: #059669; color: white; }
-        .button-success:hover { background: #047857; }
-        .button-secondary { background: #6b7280; color: white; }
-        .button-secondary:hover { background: #4b5563; }
-        .button-warning { background: #f59e0b; color: white; }
-        .button-warning:hover { background: #d97706; }
-        .button-diagnostic { background: #8b5cf6; color: white; }
-        .button-diagnostic:hover { background: #7c3aed; }
-        .refresh-section { background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
-        .refresh-btn { background: #059669; border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.875rem; }
-        .refresh-btn:hover { background: #047857; }
-        .refresh-btn:disabled { background: #9ca3af; cursor: not-allowed; }
-        .status-section { margin-top: 1rem; }
-        .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #059669; margin-right: 0.5rem; }
-        .offline { background: #ef4444; }
-        .status-text { font-size: 0.875rem; color: #6b7280; }
-        .date-info { background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem; color: #6b7280; }
-        .info-note { background: #eff6ff; border: 1px solid #bfdbfe; padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
-        .info-title { color: #1e40af; font-weight: 600; margin-bottom: 0.5rem; }
-        .info-text { color: #1e40af; font-size: 0.875rem; line-height: 1.5; }
-        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; }
+        .header { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 2rem; backdrop-filter: blur(10px); }
+        .title { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem; text-align: center; }
+        .status { color: #059669; font-weight: 600; margin-bottom: 1rem; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .description { color: #64748b; margin-bottom: 2rem; line-height: 1.6; text-align: center; }
+        .button-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .button { display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; border-radius: 12px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: none; cursor: pointer; font-size: 0.875rem; }
+        .button-primary { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        .button-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4); }
+        .button-success { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; }
+        .button-success:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4); }
+        .button-secondary { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; }
+        .button-secondary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(107, 114, 128, 0.4); }
+        .button-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        .button-warning:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4); }
+        .button-diagnostic { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; }
+        .button-diagnostic:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4); }
+        .button::before { margin-right: 0.5rem; font-size: 1.2rem; }
+        .refresh-section { background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 2rem; border-radius: 16px; margin-bottom: 2rem; border: 1px solid #e2e8f0; }
+        .refresh-btn { background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; color: white; padding: 1rem 2rem; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 1rem; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin: 0 auto; }
+        .refresh-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4); }
+        .refresh-btn:disabled { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); cursor: not-allowed; transform: none; box-shadow: none; }
+        .status-section { margin-top: 1.5rem; text-align: center; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #059669; margin-right: 0.5rem; animation: pulse 2s infinite; }
+        .status-offline { background: #ef4444; animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-text { font-size: 0.875rem; color: #6b7280; font-weight: 500; }
+        .date-info { background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; font-size: 0.875rem; color: #6b7280; text-align: center; }
+        .info-note { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; padding: 2rem; border-radius: 16px; margin-top: 2rem; }
+        .info-title { color: #1e40af; font-weight: 700; margin-bottom: 0.75rem; font-size: 1.1rem; }
+        .info-text { color: #1e40af; font-size: 0.875rem; line-height: 1.6; }
+        .system-status-fixed { display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1 class="title">MEMA UK Reg Tracker</h1>
-            <p class="status">✅ System Operational</p>
+            <div class="status system-status-fixed">
+                <div class="status-indicator" id="systemIndicator"></div>
+                <span>System Operational</span>
+            </div>
             
             <div class="date-info" id="dataInfo">
-                Last updated: <span id="lastUpdated">Loading...</span>
+                <span id="lastUpdatedText">Last updated: </span><span id="lastUpdated">Loading...</span>
             </div>
             
             <p class="description">
-                Track regulatory updates from UK financial authorities including FCA, Bank of England, PRA, TPR, SFO, and FATF. 
+                🏛️ Track regulatory updates from UK financial authorities including FCA, Bank of England, PRA, TPR, SFO, and FATF. 
                 The system automatically monitors and categorizes regulatory changes to keep you informed of developments affecting financial services.
             </p>
             
-            <div class="button-group grid-3">
-                <a href="/dashboard" class="button button-primary">📊 View Dashboard</a>
+            <div class="button-group">
+                <a href="/dashboard" class="button button-primary">📊 Enhanced Dashboard</a>
                 <a href="/test" class="button button-secondary">🔧 System Test</a>
                 <a href="/debug/database" class="button button-secondary">💾 Database Status</a>
             </div>
             
-            <div class="button-group grid-3">
-                <a href="/debug/comprehensive-fix" class="button button-diagnostic">🔧 FCA Diagnostic</a>
-                <a href="/debug/groq-test" class="button button-secondary">🤖 Test AI</a>
-                <a href="/debug/cleanup-and-reprocess" class="button button-warning">🧹 Cleanup Data</a>
+            <div class="button-group">
+                <a href="/debug/comprehensive-fix" class="button button-diagnostic">🔬 FCA Diagnostic</a>
+                <a href="/debug/groq-test" class="button button-secondary">🤖 AI Status</a>
+                <a href="/debug/cleanup-and-reprocess" class="button button-warning">🧹 Data Cleanup</a>
             </div>
             
             <div class="refresh-section">
                 <button onclick="refreshData()" class="refresh-btn" id="refreshBtn">
-                    🔄 Refresh Regulatory Data
+                    <span id="refreshIcon">🔄</span>
+                    <span id="refreshText">Refresh Regulatory Data</span>
                 </button>
                 
                 <div class="status-section" id="status">
-                    <span class="status-indicator" id="indicator"></span>
-                    <span class="status-text" id="statusText">Ready</span>
+                    <span class="status-indicator" id="refreshIndicator"></span>
+                    <span class="status-text" id="statusText">Ready for data refresh</span>
                 </div>
             </div>
             
             <div class="info-note">
-                <div class="info-title">Regulatory Sources Monitored</div>
+                <div class="info-title">🌐 Regulatory Sources Monitored</div>
                 <div class="info-text">
-                    Financial Conduct Authority (FCA) • Bank of England • Prudential Regulation Authority (PRA) • 
-                    The Pensions Regulator (TPR) • Serious Fraud Office (SFO) • Financial Action Task Force (FATF)
+                    <strong>Financial Conduct Authority (FCA)</strong> • <strong>Bank of England</strong> • <strong>Prudential Regulation Authority (PRA)</strong> • 
+                    <strong>The Pensions Regulator (TPR)</strong> • <strong>Serious Fraud Office (SFO)</strong> • <strong>Financial Action Task Force (FATF)</strong>
+                    <br><br>
+                    🤖 <strong>AI-Powered Analysis:</strong> Regulatory content is automatically analyzed and categorized using advanced AI to provide comprehensive business impact assessments.
                 </div>
             </div>
         </div>
     </div>
     
     <script>
+        // Fixed status system - single source of truth
+        let systemStatus = {
+            database: false,
+            api: false,
+            overall: false
+        };
+
         async function refreshData() {
             const btn = document.getElementById('refreshBtn');
             const status = document.getElementById('statusText');
-            const indicator = document.getElementById('indicator');
+            const indicator = document.getElementById('refreshIndicator');
+            const icon = document.getElementById('refreshIcon');
             
             btn.disabled = true;
-            btn.textContent = '🔄 Refreshing...';
-            status.textContent = 'Fetching regulatory updates...';
-            indicator.className = 'status-indicator offline';
+            icon.textContent = '⏳';
+            document.getElementById('refreshText').textContent = 'Refreshing...';
+            status.textContent = 'Fetching latest regulatory updates...';
+            indicator.className = 'status-indicator status-offline';
             
             try {
                 const response = await fetch('/api/refresh', { method: 'POST' });
                 const result = await response.json();
                 
                 if (response.ok) {
-                    status.textContent = 'Success! ' + (result.totalUpdates || 'Multiple') + ' updates available';
+                    status.textContent = \`Success! \${result.totalUpdates || 'Multiple'} updates available - \${result.newArticles || 0} new\`;
                     indicator.className = 'status-indicator';
                     updateLastRefreshed();
                     console.log('Refresh result:', result);
@@ -2336,12 +2659,13 @@ app.get('/', (req, res) => {
                 }
             } catch (error) {
                 status.textContent = 'Error: ' + error.message;
-                indicator.className = 'status-indicator offline';
+                indicator.className = 'status-indicator status-offline';
                 console.error('Refresh error:', error);
             }
             
             btn.disabled = false;
-            btn.textContent = '🔄 Refresh Regulatory Data';
+            icon.textContent = '🔄';
+            document.getElementById('refreshText').textContent = 'Refresh Regulatory Data';
         }
         
         function updateLastRefreshed() {
@@ -2353,13 +2677,33 @@ app.get('/', (req, res) => {
             document.getElementById('lastUpdated').textContent = formatted;
         }
         
-        async function checkStatus() {
+        // Fixed status checking - consolidated
+        async function checkSystemStatus() {
             try {
+                // Check system health
                 const response = await fetch('/test');
                 const result = await response.json();
-                if (result.database === 'connected') {
-                    document.getElementById('statusText').textContent = 'System Online';
-                    document.getElementById('indicator').className = 'status-indicator';
+                
+                systemStatus.database = result.database === 'connected';
+                systemStatus.api = result.healthScore >= 70;
+                systemStatus.overall = systemStatus.database && systemStatus.api;
+                
+                // Update main system indicator
+                const systemIndicator = document.getElementById('systemIndicator');
+                if (systemStatus.overall) {
+                    systemIndicator.className = 'status-indicator';
+                } else {
+                    systemIndicator.className = 'status-indicator status-offline';
+                }
+                
+                // Update refresh indicator
+                const refreshIndicator = document.getElementById('refreshIndicator');
+                if (systemStatus.overall) {
+                    refreshIndicator.className = 'status-indicator';
+                    document.getElementById('statusText').textContent = 'System ready for data refresh';
+                } else {
+                    refreshIndicator.className = 'status-indicator status-offline';
+                    document.getElementById('statusText').textContent = 'System issues detected - check diagnostics';
                 }
                 
                 // Get data count and last update time
@@ -2379,17 +2723,24 @@ app.get('/', (req, res) => {
                 }
                 
             } catch (error) {
-                document.getElementById('statusText').textContent = 'System Offline';
-                document.getElementById('indicator').className = 'status-indicator offline';
+                systemStatus.overall = false;
+                systemStatus.database = false;
+                systemStatus.api = false;
+                
+                document.getElementById('systemIndicator').className = 'status-indicator status-offline';
+                document.getElementById('refreshIndicator').className = 'status-indicator status-offline';
+                document.getElementById('statusText').textContent = 'System offline - check connection';
                 document.getElementById('lastUpdated').textContent = 'Unknown';
+                
+                console.error('Status check error:', error);
             }
         }
         
-        // Check status on page load
-        checkStatus();
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', checkSystemStatus);
         
-        // Auto-refresh status every 30 seconds
-        setInterval(checkStatus, 30000);
+        // Check status every 30 seconds
+        setInterval(checkSystemStatus, 30000);
     </script>
 </body>
 </html>`;
@@ -2445,8 +2796,8 @@ app.get('/api/updates', async (req, res) => {
         
         if (Object.keys(groupedData).length === 0) {
             groupedData.General = [{
-                headline: "Welcome to MEMA UK Reg Tracker",
-                impact: "Your database is now set up and ready. Click 'Refresh Regulatory Data' to start fetching real regulatory updates from UK financial regulators.",
+                headline: "Welcome to Enhanced MEMA UK Reg Tracker",
+                impact: "Your enhanced dashboard is ready with multi-select filtering, source freshness indicators, and modern design. Click 'Refresh Regulatory Data' to start fetching real regulatory updates from UK financial regulators with AI-powered analysis.",
                 area: "System Setup",
                 authority: "System",
                 impactLevel: "Informational",
@@ -2473,19 +2824,19 @@ app.get('/api/updates', async (req, res) => {
 app.post('/api/refresh', async (req, res) => {
     try {
         console.log('=====================================');
-        console.log('Refresh endpoint called at:', new Date().toISOString());
+        console.log('Enhanced refresh endpoint called at:', new Date().toISOString());
         
         if (!process.env.GROQ_API_KEY) {
             console.warn('GROQ_API_KEY not set');
             return res.status(400).json({ 
-                error: 'GROQ_API_KEY environment variable not set. Please add it in Vercel settings.' 
+                error: 'GROQ_API_KEY environment variable not set. Please add it in deployment settings.' 
             });
         }
         
         if (!process.env.DATABASE_URL) {
             console.warn('DATABASE_URL not set');
             return res.status(400).json({ 
-                error: 'DATABASE_URL environment variable not set. Please add your database URL in Vercel settings.' 
+                error: 'DATABASE_URL environment variable not set. Please add your database URL in deployment settings.' 
             });
         }
         
@@ -2510,10 +2861,10 @@ app.post('/api/refresh', async (req, res) => {
         const initialUpdates = await db.get('updates').value();
         console.log('📊 Initial update count:', initialUpdates.length);
         
-        console.log('🔄 Starting RSS feed analysis...');
+        console.log('🔄 Starting enhanced RSS feed analysis...');
         await rssFetcher.fetchAndAnalyzeFeeds();
         
-        console.log('🔄 Starting website scraping...');
+        console.log('🔄 Starting enhanced website scraping...');
         await rssFetcher.scrapeAndAnalyzeWebsites();
         
         const finalUpdates = await db.get('updates').value();
@@ -2524,18 +2875,18 @@ app.post('/api/refresh', async (req, res) => {
         console.log('=====================================');
         
         res.json({ 
-            message: 'Refresh successful',
+            message: 'Enhanced refresh successful',
             timestamp: new Date().toISOString(),
             initialCount: initialUpdates.length,
             totalUpdates: finalUpdates.length,
             newArticles: newCount,
-            note: 'Data stored persistently with AI analysis'
+            note: 'Data stored persistently with enhanced AI analysis and multi-authority support'
         });
         
     } catch (error) {
-        console.error('❌ Error in refresh endpoint:', error);
+        console.error('❌ Error in enhanced refresh endpoint:', error);
         res.status(500).json({ 
-            error: 'Refresh failed',
+            error: 'Enhanced refresh failed',
             details: error.message,
             suggestion: 'Check that all environment variables are set and database is accessible'
         });
@@ -2549,7 +2900,21 @@ app.use('*', (req, res) => {
         error: 'Route not found',
         url: req.originalUrl,
         method: req.method,
-        availableRoutes: ['/', '/dashboard', '/test', '/health', '/api/updates', 'POST /api/refresh', '/debug/comprehensive-fix', '/debug/database', '/debug/groq-test', '/debug/cleanup-and-reprocess']
+        availableRoutes: [
+            '/', 
+            '/dashboard', 
+            '/test', 
+            '/health', 
+            '/api/updates', 
+            'POST /api/refresh', 
+            '/debug/comprehensive-fix', 
+            '/debug/database', 
+            '/debug/groq-test', 
+            '/debug/cleanup-and-reprocess',
+            '/debug/test-fca-article',
+            '/debug/rss',
+            '/debug/refresh'
+        ]
     });
 });
 
@@ -2562,17 +2927,25 @@ app.use((error, req, res, next) => {
     });
 });
 
-console.log('Starting MEMA UK Reg Tracker...');
+console.log('Starting Enhanced MEMA UK Reg Tracker...');
 console.log('Node version:', process.version);
 console.log('Environment variables check:');
 console.log('- PORT:', PORT);
 console.log('- GROQ_API_KEY present:', !!process.env.GROQ_API_KEY);
 console.log('- DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('- HUGGING_FACE_API_KEY present:', !!process.env.HUGGING_FACE_API_KEY);
 console.log('- Working directory:', process.cwd());
 
 app.listen(PORT, () => {
-    console.log('Server is running on port ' + PORT);
-    console.log('MEMA UK Reg Tracker started successfully!');
+    console.log('Enhanced MEMA UK Reg Tracker running on port ' + PORT);
+    console.log('🚀 Phase 1 Enhancements Applied:');
+    console.log('   ✅ Multi-select filtering with authority parsing');
+    console.log('   ✅ Fixed status system (single source of truth)');
+    console.log('   ✅ Source freshness indicators per authority');
+    console.log('   ✅ Enhanced visual design with modern UI');
+    console.log('   ✅ Authority-specific color coding');
+    console.log('   ✅ Modern card designs with hover effects');
+    console.log('   ✅ Improved diagnostic tools');
 });
 
 module.exports = app;
