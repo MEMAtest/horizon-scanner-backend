@@ -1,15 +1,16 @@
 // src/services/rssFetcher.js
-// Loads all dependencies at the top for stability and clarity.
+// This version corrects the case-sensitive path to aiAnalyzer.js
 
 const Parser = require('rss-parser');
 const parser = new Parser();
 
-// --- FIXED ---
-// The require path now correctly uses camelCase 'aiAnalyzer.js' to match the filename.
-// This resolves the "Cannot find module" error on case-sensitive systems like Vercel's.
+// --- CRITICAL FIX ---
+// The require path now correctly uses camelCase 'aiAnalyzer.js' to match the actual filename.
+// This resolves the "Cannot find module" error on Vercel's case-sensitive system.
 const aiAnalyzer = require('./aiAnalyzer.js'); 
+
 const webScraper = require('./webScraper.js');
-const dbService = require('./dbService.js'); // REFACTORED: Moved to top level.
+const dbService = require('./dbService.js');
 
 const RSS_FEEDS = [
     { name: 'FCA News', url: 'https://www.fca.org.uk/news/rss.xml' },
@@ -18,19 +19,54 @@ const RSS_FEEDS = [
 ];
 
 const parseFCADate = (dateString) => {
-    // ... (rest of your parseFCADate function is fine)
     try {
         if (!dateString) return null;
         const cleanDate = dateString.replace(/^[A-Za-z]+,\s*/, '').replace(/\s*-\s*\d{2}:\d{2}$/, '');
         const parsedDate = new Date(cleanDate);
-        if (isNaN(parsedDate.getTime())) return null;
+        if (isNaN(parsedDate.getTime())) {
+            console.log('❌ Failed to parse date:', dateString);
+            return null;
+        }
         return parsedDate;
     } catch (error) {
+        console.log('❌ Date parsing error for:', dateString, error.message);
         return null;
     }
 };
 
-// This function processes the RSS feeds
+const processItem = async (item) => {
+    const articleUrl = item.link;
+    if (!articleUrl) {
+        console.log('⏭️ Skipping item with no link:', item.title);
+        return;
+    }
+    
+    console.log(`\n🔍 Processing item: ${item.title || 'No title'}`);
+    console.log(`🔗 URL: ${articleUrl}`);
+
+    try {
+        const existing = await dbService.findUpdate(articleUrl);
+        if (existing) {
+            console.log('⏭️ Skipping: Already in database.');
+            return;
+        }
+    } catch (error) {
+        console.log('⚠️ Could not check for existing update:', error.message);
+    }
+    
+    console.log('📰 Scraping article content...');
+    const content = await aiAnalyzer.scrapeArticleContent(articleUrl);
+    
+    if (!content || content.length < 100) {
+        console.log('❌ Failed to scrape sufficient content.');
+        return;
+    }
+    
+    console.log('🤖 Starting AI analysis...');
+    await aiAnalyzer.analyzeContentWithAI(content, articleUrl);
+};
+
+
 const fetchAndAnalyzeFeeds = async () => {
     console.log('\n--- Fetching RSS Feeds ---');
     for (const feedInfo of RSS_FEEDS) {
@@ -48,7 +84,6 @@ const fetchAndAnalyzeFeeds = async () => {
     }
 };
 
-// This function processes the scraped websites
 const scrapeAndAnalyzeWebsites = async () => {
     console.log('\n--- Scraping Websites ---');
     try {
@@ -72,39 +107,6 @@ const scrapeAndAnalyzeWebsites = async () => {
     }
 };
 
-// Generic function to process any article item.
-const processItem = async (item) => {
-    const articleUrl = item.link;
-    if (!articleUrl) {
-        console.log('⏭️ Skipping item with no link:', item.title);
-        return;
-    }
-    
-    console.log(`\n🔍 Processing item: ${item.title || 'No title'}`);
-    console.log(`🔗 URL: ${articleUrl}`);
-    
-    // Check if already processed
-    try {
-        const existing = await dbService.findUpdate(articleUrl);
-        if (existing) {
-            console.log('⏭️ Skipping: Already in database.');
-            return;
-        }
-    } catch (error) {
-        console.log('⚠️ Could not check for existing update:', error.message);
-    }
-    
-    console.log('📰 Scraping article content...');
-    const content = await aiAnalyzer.scrapeArticleContent(articleUrl);
-    
-    if (!content || content.length < 100) {
-        console.log('❌ Failed to scrape sufficient content.');
-        return;
-    }
-    
-    console.log('🤖 Starting AI analysis...');
-    await aiAnalyzer.analyzeContentWithAI(content, articleUrl);
-};
 
 module.exports = {
     fetchAndAnalyzeFeeds,
