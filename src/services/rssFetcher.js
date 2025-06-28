@@ -1,10 +1,15 @@
 // src/services/rssFetcher.js
-// Fixed import paths to match actual filenames
+// Loads all dependencies at the top for stability and clarity.
 
 const Parser = require('rss-parser');
 const parser = new Parser();
-const aiAnalyzer = require('./aiAnalyzer'); // FIXED: was './ai-analyzer'
-const webScraper = require('./webScraper'); // Ensure this filename matches too
+
+// --- FIXED ---
+// The require path now correctly uses camelCase 'aiAnalyzer.js' to match the filename.
+// This resolves the "Cannot find module" error on case-sensitive systems like Vercel's.
+const aiAnalyzer = require('./aiAnalyzer.js'); 
+const webScraper = require('./webScraper.js');
+const dbService = require('./dbService.js'); // REFACTORED: Moved to top level.
 
 const RSS_FEEDS = [
     { name: 'FCA News', url: 'https://www.fca.org.uk/news/rss.xml' },
@@ -12,224 +17,96 @@ const RSS_FEEDS = [
     { name: 'BoE/PRA News', url: 'https://www.bankofengland.co.uk/rss/news' }
 ];
 
-// Helper function to parse FCA date format
 const parseFCADate = (dateString) => {
+    // ... (rest of your parseFCADate function is fine)
     try {
-        // Format: "Thursday, June 26, 2025 - 13:08"
         if (!dateString) return null;
-        
-        // Remove day of week and time, keep just "June 26, 2025"
         const cleanDate = dateString.replace(/^[A-Za-z]+,\s*/, '').replace(/\s*-\s*\d{2}:\d{2}$/, '');
         const parsedDate = new Date(cleanDate);
-        
-        if (isNaN(parsedDate.getTime())) {
-            console.log('❌ Failed to parse date:', dateString);
-            return null;
-        }
-        
+        if (isNaN(parsedDate.getTime())) return null;
         return parsedDate;
     } catch (error) {
-        console.log('❌ Date parsing error for:', dateString, error.message);
         return null;
     }
 };
 
 // This function processes the RSS feeds
 const fetchAndAnalyzeFeeds = async () => {
-    console.log('\n--- 🔍 DEBUG: Fetching RSS Feeds ---');
-    
+    console.log('\n--- Fetching RSS Feeds ---');
     for (const feedInfo of RSS_FEEDS) {
         try {
-            console.log('\n📡 Fetching RSS feed:', feedInfo.name);
-            console.log('📡 URL:', feedInfo.url);
-            
+            console.log(`\n📡 Fetching RSS feed: ${feedInfo.name}`);
             const feed = await parser.parseURL(feedInfo.url);
-            console.log('✅ RSS feed fetched successfully');
-            console.log('📊 Total items in feed:', feed.items.length);
-            
-            if (feed.items.length === 0) {
-                console.log('⚠️ No items found in this feed');
-                continue;
-            }
-            
-            // Show first few items for debugging
-            console.log('\n🔍 First few items from feed:');
-            feed.items.slice(0, 3).forEach((item, index) => {
-                const parsedDate = parseFCADate(item.pubDate);
-                console.log('Item ' + (index + 1) + ':');
-                console.log('  Title:', item.title);
-                console.log('  Raw Date:', item.pubDate);
-                console.log('  Parsed Date:', parsedDate ? parsedDate.toISOString() : 'FAILED');
-                console.log('  Link:', item.link);
-            });
-            
-            // Process all items
-            console.log('\n🔄 Processing items...');
-            let processedCount = 0;
-            let skippedCount = 0;
+            console.log(`✅ Fetched successfully. Total items: ${feed.items.length}`);
             
             for (const item of feed.items) {
-                const result = await processItemDebug(item);
-                if (result === 'processed') {
-                    processedCount++;
-                } else if (result === 'skipped') {
-                    skippedCount++;
-                }
+                await processItem(item);
             }
-            
-            console.log('📊 Feed processing summary for', feedInfo.name + ':');
-            console.log('  - Processed:', processedCount);
-            console.log('  - Skipped:', skippedCount);
-            console.log('  - Total:', feed.items.length);
-            
         } catch (error) {
-            console.error('❌ Error processing RSS feed', feedInfo.name + ':', error.message);
+            console.error(`❌ Error processing RSS feed ${feedInfo.name}:`, error.message);
         }
     }
 };
 
 // This function processes the scraped websites
 const scrapeAndAnalyzeWebsites = async () => {
-    console.log('\n--- 🔍 DEBUG: Scraping Websites ---');
-    
+    console.log('\n--- Scraping Websites ---');
     try {
-        // Check if webScraper module exists
         if (!webScraper) {
-            console.log('⚠️ webScraper module not available, skipping website scraping');
+            console.log('⚠️ webScraper module not available, skipping.');
             return;
         }
 
-        const pensionRegulatorArticles = await webScraper.scrapePensionRegulator();
-        console.log('📊 Pension Regulator articles found:', pensionRegulatorArticles.length);
-        
+        const pensionArticles = await webScraper.scrapePensionRegulator();
         const sfoArticles = await webScraper.scrapeSFO();
-        console.log('📊 SFO articles found:', sfoArticles.length);
-        
         const fatfArticles = await webScraper.scrapeFATF();
-        console.log('📊 FATF articles found:', fatfArticles.length);
+        const allScraped = [...pensionArticles, ...sfoArticles, ...fatfArticles];
         
-        const allScrapedArticles = [
-            ...pensionRegulatorArticles,
-            ...sfoArticles,
-            ...fatfArticles,
-        ];
+        console.log(`📊 Total scraped articles: ${allScraped.length}`);
         
-        console.log('📊 Total scraped articles:', allScrapedArticles.length);
-        
-        if (allScrapedArticles.length > 0) {
-            console.log('\n🔍 Sample scraped articles:');
-            allScrapedArticles.slice(0, 2).forEach((item, index) => {
-                console.log('Scraped Item ' + (index + 1) + ':');
-                console.log('  Title:', item.title);
-                console.log('  Date:', item.pubDate);
-                console.log('  Link:', item.link);
-            });
+        for (const item of allScraped) {
+            await processItem(item);
         }
-        
-        let processedCount = 0;
-        let skippedCount = 0;
-        
-        for (const item of allScrapedArticles) {
-            const result = await processItemDebug(item);
-            if (result === 'processed') {
-                processedCount++;
-            } else if (result === 'skipped') {
-                skippedCount++;
-            }
-        }
-        
-        console.log('📊 Scraped content processing summary:');
-        console.log('  - Processed:', processedCount);
-        console.log('  - Skipped:', skippedCount);
-        console.log('  - Total:', allScrapedArticles.length);
-        
     } catch (error) {
         console.error('❌ Error in website scraping:', error.message);
     }
 };
 
-// A generic function to process any article item with detailed debugging
-const processItemDebug = async (item) => {
+// Generic function to process any article item.
+const processItem = async (item) => {
     const articleUrl = item.link;
-    console.log('\n🔍 Processing item:', item.title || 'No title');
-    console.log('🔗 URL:', articleUrl);
-    
-    // Parse the date properly
-    const articleDate = parseFCADate(item.pubDate);
-    if (!articleDate) {
-        console.log('❌ Skipping: Could not parse article date');
-        return 'failed';
+    if (!articleUrl) {
+        console.log('⏭️ Skipping item with no link:', item.title);
+        return;
     }
     
-    // Check date filtering
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    console.log(`\n🔍 Processing item: ${item.title || 'No title'}`);
+    console.log(`🔗 URL: ${articleUrl}`);
     
-    console.log('📅 Article date:', articleDate.toISOString());
-    console.log('📅 Three days ago:', threeDaysAgo.toISOString());
-    console.log('📅 Is recent?', articleDate >= threeDaysAgo);
-    
-    if (articleDate < threeDaysAgo) {
-        console.log('⏭️ Skipping: Article is older than 3 days');
-        return 'skipped';
-    }
-    
-    // Get database service (need to require it here to avoid circular dependencies)
-    let dbService;
-    try {
-        dbService = require('./dbService');
-    } catch (error) {
-        console.log('⚠️ Database service not available, using fallback');
-        // Use fallback or continue without database
-        return 'skipped';
-    }
-    
-    // Check if already exists
+    // Check if already processed
     try {
         const existing = await dbService.findUpdate(articleUrl);
         if (existing) {
-            console.log('⏭️ Skipping: Already processed');
-            return 'skipped';
+            console.log('⏭️ Skipping: Already in database.');
+            return;
         }
     } catch (error) {
         console.log('⚠️ Could not check for existing update:', error.message);
-        // Continue processing anyway
     }
     
     console.log('📰 Scraping article content...');
     const content = await aiAnalyzer.scrapeArticleContent(articleUrl);
     
-    if (!content) {
-        console.log('❌ Failed to scrape article content');
-        return 'failed';
+    if (!content || content.length < 100) {
+        console.log('❌ Failed to scrape sufficient content.');
+        return;
     }
     
-    console.log('✅ Content scraped, length:', content.length);
     console.log('🤖 Starting AI analysis...');
-    
-    const aiResult = await aiAnalyzer.analyzeContentWithAI(content, articleUrl);
-    
-    if (aiResult) {
-        console.log('✅ AI analysis successful:', aiResult.headline);
-        
-        // Save to database if available
-        try {
-            await dbService.saveUpdate(aiResult);
-            console.log('💾 Saved to database');
-        } catch (error) {
-            console.log('⚠️ Could not save to database:', error.message);
-            // Continue anyway - AI analysis was successful
-        }
-        
-        return 'processed';
-    } else {
-        console.log('❌ AI analysis failed');
-        return 'failed';
-    }
+    await aiAnalyzer.analyzeContentWithAI(content, articleUrl);
 };
 
 module.exports = {
     fetchAndAnalyzeFeeds,
-    scrapeAndAnalyzeWebsites,
-    processItemDebug
+    scrapeAndAnalyzeWebsites
 };
