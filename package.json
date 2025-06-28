@@ -1,25 +1,49 @@
 {
-  "name": "horizon-scanner-backend",
-  "version": "1.0.0",
-  "description": "Backend service for the UK Financial Regulatory Horizon Scanner.",
+  "name": "regulatory-horizon-scanner",
+  "version": "2.0.0",
+  "description": "UK Financial Regulatory Updates Tracker with AI Analysis",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
-    "dev": "node src/index.js"
+    "dev": "node src/index.js",
+    "test": "node src/debug/test.js",
+    "build": "echo 'No build step required'",
+    "lint": "echo 'Linting skipped'",
+    "deploy": "vercel --prod"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
+    "express": "^4.18.2",
     "axios": "^1.6.0",
     "cheerio": "^1.0.0-rc.12",
-    "express": "^4.18.2",
-    "lowdb": "^7.0.1",
+    "rss-parser": "^3.13.0",
     "pg": "^8.16.2",
-    "rss-parser": "^3.13.0"
+    "lowdb": "^5.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "regulatory",
+    "compliance", 
+    "uk",
+    "financial",
+    "fca",
+    "bank-of-england",
+    "ai-analysis",
+    "monitoring",
+    "dashboard"
+  ],
+  "author": "MEMA UK",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MEMAtest/horizon-scanner-backend"
+  },
+  "homepage": "https://github.com/MEMAtest/horizon-scanner-backend#readme",
+  "bugs": {
+    "url": "https://github.com/MEMAtest/horizon-scanner-backend/issues"
   }
 }
