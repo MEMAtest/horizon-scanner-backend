@@ -1,4 +1,4 @@
-// FINAL DEPLOYMENT FIX: This comment is added to force a new file hash.
+// FINAL DEPLOYMENT FIX: This file was renamed to dataFetcher.js to force a new file hash.
 
 const Parser = require('rss-parser');
 const parser = new Parser();
