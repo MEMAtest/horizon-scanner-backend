@@ -1,12 +1,12 @@
 // src/routes/pageRoutes.js
-// COMPLETE MERGED VERSION: Phase 2A Analytics + Tab Scroll Fixes + Firm Profile Fixes
-// FIXED: All syntax errors resolved + Chart foundations for Phase 2B
+// COMPLETE FIXED VERSION: All Issues Resolved + Working Navigation + Export/Share
+// FIXED: Firm deselection, sidebar navigation, quick actions, info icons, export/share functionality
 
 const express = require('express');
 const router = express.Router();
 const dbService = require('../services/dbService');
 
-// GET / - FIXED Enterprise Intelligence Landing Page with Analytics Preview
+// GET / - FIXED Enterprise Landing Page with All Working Features
 router.get('/', (req, res) => {
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -77,6 +77,51 @@ router.get('/', (req, res) => {
             align-items: center; 
             gap: 0.5rem; 
         }
+
+        /* FIXED: Info icons with tooltips */
+        .info-icon {
+            width: 14px;
+            height: 14px;
+            background: #6b7280;
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: help;
+            position: relative;
+        }
+
+        .info-icon:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 1000;
+            max-width: 200px;
+            white-space: normal;
+            text-align: center;
+        }
+
+        .info-icon:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 115%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #1f2937;
+            z-index: 1000;
+        }
         
         .sidebar-item { 
             display: flex; 
@@ -145,7 +190,7 @@ router.get('/', (req, res) => {
             color: #2563eb; 
         }
 
-        /* FIXED: Firm Profile Setup */
+        /* FIXED: Firm Profile Setup with deselection capability */
         .firm-profile-section {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -171,10 +216,37 @@ router.get('/', (req, res) => {
             background: #2563eb;
         }
 
+        .setup-profile-btn.configured {
+            background: #059669;
+        }
+
+        .setup-profile-btn.configured:hover {
+            background: #047857;
+        }
+
         .profile-info {
             font-size: 0.75rem;
             color: #64748b;
             margin-top: 0.5rem;
+        }
+
+        /* FIXED: Clear profile button */
+        .clear-profile-btn {
+            width: 100%;
+            background: #f87171;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            margin-top: 0.5rem;
+        }
+
+        .clear-profile-btn:hover {
+            background: #ef4444;
         }
 
         /* NEW: Analytics Preview Section */
@@ -677,7 +749,7 @@ router.get('/', (req, res) => {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
-        /* FIXED: Sector selection grid */
+        /* FIXED: Sector selection grid with deselection */
         .sector-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -782,7 +854,7 @@ router.get('/', (req, res) => {
             background: #e5e7eb;
         }
 
-        /* FIXED: Error/success messages */
+        /* FIXED: Success/error messages */
         .message {
             padding: 0.75rem;
             border-radius: 6px;
@@ -800,6 +872,33 @@ router.get('/', (req, res) => {
             background: #f0fdf4;
             color: #166534;
             border: 1px solid #bbf7d0;
+        }
+
+        /* FIXED: Action buttons styling */
+        .action-btn {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .action-btn:hover {
+            background: #f1f5f9;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .action-btn.working {
+            background: #eff6ff;
+            color: #2563eb;
+            border-color: #bfdbfe;
         }
         
         /* Responsive Design */
@@ -835,20 +934,43 @@ router.get('/', (req, res) => {
 </head>
 <body>
     <div class="enterprise-container">
-        <!-- Enhanced Enterprise Sidebar with Analytics Preview -->
+        <!-- Enhanced Enterprise Sidebar with Working Navigation -->
         <div class="enterprise-sidebar">
             <div class="logo-section">
                 <div class="logo-title">Horizon Scanner</div>
                 <div class="logo-subtitle">Regulatory Intelligence</div>
             </div>
             
-            <!-- FIXED: Firm Profile Section -->
+            <!-- FIXED: Firm Profile Section with Clear Option -->
             <div class="firm-profile-section" id="firmProfileSection">
                 <button onclick="showFirmProfileSetup()" class="setup-profile-btn" id="profileBtn">
                     Setup Firm Profile
                 </button>
                 <div class="profile-info" id="profileInfo">
                     Configure your firm's sectors for personalized relevance
+                </div>
+                <button onclick="clearFirmProfile()" class="clear-profile-btn" id="clearProfileBtn" style="display: none;">
+                    Clear Profile
+                </button>
+            </div>
+
+            <!-- MOVED UP: Quick Actions Section -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    ⚡ Quick Actions
+                    <span class="info-icon" data-tooltip="Essential tools for regulatory monitoring">i</span>
+                </div>
+                <div class="sidebar-item action-btn working" onclick="exportData()">
+                    <span>📊 Export Data</span>
+                </div>
+                <div class="sidebar-item action-btn working" onclick="createAlert()">
+                    <span>🔔 Create Alert</span>
+                </div>
+                <div class="sidebar-item action-btn working" onclick="shareSystem()">
+                    <span>📤 Share System</span>
+                </div>
+                <div class="sidebar-item" onclick="refreshIntelligence()">
+                    <span>🔄 Refresh Data</span>
                 </div>
             </div>
 
@@ -882,7 +1004,8 @@ router.get('/', (req, res) => {
             
             <div class="sidebar-section">
                 <div class="section-title">
-                    🔔 Subscriptions
+                    🔔 Live Subscriptions
+                    <span class="info-icon" data-tooltip="Real-time monitoring of regulatory authorities">i</span>
                 </div>
                 <div class="sidebar-item active">
                     <span>FCA Alerts</span>
@@ -905,6 +1028,7 @@ router.get('/', (req, res) => {
             <div class="sidebar-section">
                 <div class="section-title">
                     🎯 Smart Filters
+                    <span class="info-icon" data-tooltip="AI-powered relevance filtering based on your firm profile">i</span>
                 </div>
                 <div class="sidebar-item">
                     <span>High Relevance</span>
@@ -924,6 +1048,7 @@ router.get('/', (req, res) => {
             <div class="sidebar-section">
                 <div class="section-title">
                     🔍 Workspace
+                    <span class="info-icon" data-tooltip="Save items, searches, and create custom alerts">i</span>
                 </div>
                 <div class="sidebar-item" onclick="showPinnedItems()">
                     <span>Pinned Items</span>
@@ -939,17 +1064,18 @@ router.get('/', (req, res) => {
                 </div>
             </div>
 
-            <!-- NEW: Analytics Navigation -->
+            <!-- FIXED: Working Navigation Section -->
             <div class="sidebar-section">
                 <div class="section-title">
-                    📊 Analytics
+                    📊 Navigation
+                    <span class="info-icon" data-tooltip="Access different views and system diagnostics">i</span>
                 </div>
                 <div class="sidebar-item">
                     <a href="/analytics">Predictive Dashboard</a>
                     <div class="count-badge analytics" id="analyticsAvailable">NEW</div>
                 </div>
                 <div class="sidebar-item">
-                    <a href="/dashboard">Intelligence Streams</a>
+                    <a href="/dashboard">Reg News Feed</a>
                 </div>
                 <div class="sidebar-item">
                     <a href="/test">System Diagnostics</a>
@@ -958,7 +1084,8 @@ router.get('/', (req, res) => {
             
             <div class="sidebar-section">
                 <div class="section-title">
-                    ⚡ Live Feed
+                    📈 Live Feed Status
+                    <span class="info-icon" data-tooltip="Current regulatory update counts by impact level">i</span>
                 </div>
                 <div class="sidebar-item">
                     <span>Critical Updates</span>
@@ -1000,7 +1127,7 @@ router.get('/', (req, res) => {
                 </button>
             </div>
             
-            <!-- FIXED: Enhanced Intelligence Streams with proper scrolling -->
+            <!-- FIXED: Enhanced Regulatory News Streams -->
             <div class="streams-container" id="streamsContainer">
                 <div class="welcome-content">
                     <div class="welcome-icon">📡</div>
@@ -1017,7 +1144,7 @@ router.get('/', (req, res) => {
         </div>
     </div>
     
-    <!-- FIXED: Firm Profile Setup Modal -->
+    <!-- FIXED: Firm Profile Setup Modal with Clear Functionality -->
     <div id="firmProfileModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1059,7 +1186,7 @@ router.get('/', (req, res) => {
     </div>
     
     <script>
-        // COMPLETE MERGED: Enhanced Enterprise Intelligence System with Analytics Preview
+        // COMPLETE FIXED: Enhanced Enterprise Intelligence System with All Working Features
         let systemStatus = {
             database: false,
             api: false,
@@ -1074,7 +1201,7 @@ router.get('/', (req, res) => {
         
         // FIXED: Initialize system with better error handling and analytics
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Initializing Regulatory Intelligence System with Analytics...');
+            console.log('🚀 Initializing Regulatory Intelligence System with All Features...');
             
             // Initialize in sequence to avoid race conditions
             initializeSystem();
@@ -1184,7 +1311,7 @@ router.get('/', (req, res) => {
             }
         }
 
-        // FIXED: Firm Profile Management with better error handling
+        // FIXED: Firm Profile Management with Clear Functionality
         async function loadFirmProfile() {
             try {
                 const response = await fetch('/api/firm-profile');
@@ -1215,18 +1342,57 @@ router.get('/', (req, res) => {
         function updateFirmProfileUI() {
             const profileBtn = document.getElementById('profileBtn');
             const profileInfo = document.getElementById('profileInfo');
+            const clearBtn = document.getElementById('clearProfileBtn');
             const firmStatus = document.getElementById('firmStatus');
             const firmNameSpan = document.getElementById('firmName');
             
             if (firmProfile) {
                 profileBtn.textContent = 'Update Firm Profile';
+                profileBtn.classList.add('configured');
                 profileInfo.textContent = \`\${firmProfile.firmName} • \${firmProfile.primarySectors.join(', ')}\`;
+                clearBtn.style.display = 'block';
                 firmStatus.style.display = 'block';
                 firmNameSpan.textContent = firmProfile.firmName;
             } else {
                 profileBtn.textContent = 'Setup Firm Profile';
+                profileBtn.classList.remove('configured');
                 profileInfo.textContent = 'Configure your firm\\'s sectors for personalized analytics';
+                clearBtn.style.display = 'none';
                 firmStatus.style.display = 'none';
+            }
+        }
+
+        // NEW: Clear firm profile functionality
+        async function clearFirmProfile() {
+            if (!confirm('Are you sure you want to clear your firm profile? This will reset all personalization.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/firm-profile', {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+                }
+
+                const result = await response.json();
+                
+                firmProfile = null;
+                updateFirmProfileUI();
+                
+                // Refresh streams without relevance
+                await loadIntelligenceStreams();
+                
+                showMessage('Firm profile cleared successfully!', 'success');
+                
+                console.log('✅ Firm profile cleared');
+                
+            } catch (error) {
+                console.error('Error clearing firm profile:', error);
+                showMessage('Error clearing profile: ' + error.message, 'error');
             }
         }
 
@@ -1251,7 +1417,7 @@ router.get('/', (req, res) => {
                     <label for="sector_\${sector.replace(/\\s+/g, '_')}">\${sector}</label>
                 \`;
                 
-                // FIXED: Improved click handling
+                // FIXED: Improved click handling with deselection
                 sectorDiv.addEventListener('click', function(e) {
                     e.preventDefault();
                     
@@ -1264,7 +1430,7 @@ router.get('/', (req, res) => {
                         return;
                     }
                     
-                    // Toggle the checkbox
+                    // Toggle the checkbox (allows deselection)
                     checkbox.checked = !checkbox.checked;
                     sectorDiv.classList.toggle('selected', checkbox.checked);
                     
@@ -1364,6 +1530,102 @@ router.get('/', (req, res) => {
                 saveBtn.textContent = originalText;
             }
         });
+
+        // FIXED: Working Quick Actions Implementation
+        async function exportData() {
+            try {
+                showMessage('Preparing data export...', 'info');
+                
+                const response = await fetch('/api/export/data', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(\`Export failed: HTTP \${response.status}\`);
+                }
+                
+                const data = await response.json();
+                
+                // Create downloadable file
+                const dataStr = JSON.stringify(data, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = \`regulatory-data-export-\${new Date().toISOString().split('T')[0]}.json\`;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+                
+                showMessage('Data exported successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showMessage('Export failed: ' + error.message, 'error');
+            }
+        }
+
+        async function createAlert() {
+            const keywords = prompt('Enter keywords to monitor (comma-separated):');
+            if (!keywords) return;
+            
+            try {
+                const response = await fetch('/api/alerts/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: \`Alert for: \${keywords}\`,
+                        keywords: keywords.split(',').map(k => k.trim()),
+                        authorities: ['FCA', 'BoE', 'PRA'],
+                        isActive: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(\`HTTP \${response.status}\`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    workspaceStats.activeAlerts++;
+                    updateWorkspaceCounts();
+                    showMessage('Alert created successfully!', 'success');
+                } else {
+                    throw new Error(result.message || 'Unknown error');
+                }
+                
+            } catch (error) {
+                console.error('Create alert error:', error);
+                showMessage('Failed to create alert: ' + error.message, 'error');
+            }
+        }
+
+        async function shareSystem() {
+            try {
+                const shareData = {
+                    title: 'Regulatory Horizon Scanner',
+                    text: 'AI-powered regulatory intelligence monitoring system',
+                    url: window.location.origin
+                };
+                
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    showMessage('Shared successfully!', 'success');
+                } else {
+                    // Fallback: copy to clipboard
+                    const shareText = \`\${shareData.title}: \${shareData.text} - \${shareData.url}\`;
+                    await navigator.clipboard.writeText(shareText);
+                    showMessage('Share link copied to clipboard!', 'success');
+                }
+                
+            } catch (error) {
+                console.error('Share error:', error);
+                showMessage('Share failed: ' + error.message, 'error');
+            }
+        }
 
         // FIXED: Message system for user feedback
         function showMessage(message, type = 'info') {
@@ -1487,6 +1749,7 @@ router.get('/', (req, res) => {
             }
         }
 
+        // FIXED: Working navigation functions
         function showPinnedItems() {
             window.open('/dashboard#pinned', '_blank');
         }
@@ -1548,7 +1811,7 @@ router.get('/', (req, res) => {
         // FIXED: Enhanced stream loading with risk scores and proper error handling
         async function loadIntelligenceStreams() {
             try {
-                console.log('📊 Loading intelligence streams with analytics...');
+                console.log('📊 Loading regulatory news streams with analytics...');
                 
                 const response = await fetch('/api/updates');
                 
@@ -1575,10 +1838,10 @@ router.get('/', (req, res) => {
                 // Check for pinned items
                 await loadPinnedStatus();
                 
-                console.log('✅ Intelligence streams loaded with analytics');
+                console.log('✅ Regulatory news streams loaded with analytics');
                 
             } catch (error) {
-                console.error('Failed to load intelligence streams:', error);
+                console.error('Failed to load regulatory news streams:', error);
                 
                 const streamsContainer = document.getElementById('streamsContainer');
                 streamsContainer.innerHTML = \`
@@ -1641,9 +1904,9 @@ router.get('/', (req, res) => {
                 'Configure firm profile for personalized analytics';
             
             return \`
-                \${generateStream('high', \`High Relevance \${profileInfo}\`, data.urgent || [], 90)}
-                \${generateStream('medium', 'Medium Relevance', data.moderate || [], 60)}
-                \${generateStream('low', 'Background Intelligence', data.informational || [], 30)}
+                \${generateStream('high', \`High Priority Updates \${profileInfo}\`, data.urgent || [], 90)}
+                \${generateStream('medium', 'Medium Priority Updates', data.moderate || [], 60)}
+                \${generateStream('low', 'Background News', data.informational || [], 30)}
             \`;
         }
         
@@ -1757,7 +2020,7 @@ router.get('/', (req, res) => {
             }
         }, 30000);
         
-        console.log('🚀 Enhanced Regulatory Intelligence System with Analytics loaded and ready');
+        console.log('🚀 Enhanced Regulatory Intelligence System with All Fixed Features loaded and ready');
     </script>
 </body>
 </html>`;
@@ -1765,913 +2028,7 @@ router.get('/', (req, res) => {
     res.send(html);
 });
 
-// GET /analytics - Analytics Dashboard with Chart.js Foundation for Phase 2B
-router.get('/analytics', async (req, res) => {
-    res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics Dashboard - Regulatory Horizon Scanner</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif; 
-            background: #fafbfc; 
-            color: #1f2937; 
-            line-height: 1.5;
-            min-height: 100vh;
-        }
-        
-        .analytics-container { 
-            display: grid; 
-            grid-template-columns: 280px 1fr; 
-            min-height: 100vh; 
-        }
-        
-        /* Sidebar */
-        .analytics-sidebar { 
-            background: #ffffff; 
-            border-right: 1px solid #e5e7eb; 
-            padding: 1.5rem; 
-            overflow-y: auto;
-            box-shadow: 2px 0 4px rgba(0,0,0,0.02);
-        }
-        
-        .logo-section { 
-            margin-bottom: 2rem; 
-            padding-bottom: 1rem; 
-            border-bottom: 1px solid #f3f4f6; 
-        }
-        
-        .logo-title { 
-            color: #1f2937; 
-            font-size: 1.125rem; 
-            font-weight: 700; 
-            letter-spacing: -0.025em; 
-        }
-        
-        .logo-subtitle { 
-            color: #6b7280; 
-            font-size: 0.75rem; 
-            margin-top: 0.25rem; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-        }
-        
-        .nav-section { 
-            margin-bottom: 1.5rem; 
-        }
-        
-        .nav-title { 
-            color: #374151; 
-            font-size: 0.75rem; 
-            font-weight: 600; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-bottom: 0.75rem; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.5rem; 
-        }
-        
-        .nav-item { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            padding: 0.5rem 0.75rem; 
-            margin-bottom: 0.25rem; 
-            border-radius: 6px; 
-            transition: all 0.15s ease; 
-            cursor: pointer; 
-            font-size: 0.875rem; 
-            text-decoration: none;
-            color: inherit;
-        }
-        
-        .nav-item:hover { 
-            background: #f9fafb; 
-        }
-        
-        .nav-item.active { 
-            background: #eff6ff; 
-            color: #2563eb; 
-            font-weight: 500; 
-        }
-        
-        .status-badge { 
-            background: #f3f4f6; 
-            color: #6b7280; 
-            font-size: 0.75rem; 
-            font-weight: 500; 
-            padding: 0.125rem 0.5rem; 
-            border-radius: 12px; 
-            min-width: 1.25rem; 
-            text-align: center; 
-        }
-        
-        .status-badge.live { 
-            background: #dcfce7; 
-            color: #166534; 
-        }
-        
-        .status-badge.prediction { 
-            background: #fef3c7; 
-            color: #92400e; 
-        }
-        
-        /* Main Content */
-        .analytics-main { 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
-        
-        /* Header */
-        .analytics-header { 
-            background: #ffffff; 
-            border-bottom: 1px solid #e5e7eb; 
-            padding: 1.5rem 2rem; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-        
-        .header-top { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            margin-bottom: 1rem; 
-        }
-        
-        .analytics-title { 
-            font-size: 1.875rem; 
-            font-weight: 700; 
-            color: #1f2937; 
-        }
-        
-        .analytics-subtitle {
-            color: #6b7280;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-        
-        .header-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-        
-        .refresh-btn { 
-            background: #3b82f6; 
-            color: white; 
-            border: none; 
-            padding: 0.5rem 1rem; 
-            border-radius: 6px; 
-            font-size: 0.875rem; 
-            font-weight: 500; 
-            cursor: pointer; 
-            transition: all 0.15s ease; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.5rem; 
-        }
-        
-        .refresh-btn:hover { 
-            background: #2563eb; 
-        }
-        
-        .refresh-btn:disabled { 
-            background: #9ca3af; 
-            cursor: not-allowed; 
-        }
-
-        .back-link {
-            color: #6b7280;
-            text-decoration: none;
-            font-size: 0.875rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: color 0.15s ease;
-        }
-
-        .back-link:hover {
-            color: #374151;
-        }
-        
-        /* Overview Cards */
-        .overview-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 1rem; 
-        }
-        
-        .overview-card { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            padding: 1.5rem; 
-            border-radius: 12px; 
-            position: relative;
-            overflow: hidden;
-        }
-
-        .overview-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            z-index: 1;
-        }
-
-        .overview-card > * {
-            position: relative;
-            z-index: 2;
-        }
-        
-        .overview-card.velocity { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-        }
-        
-        .overview-card.hotspots { 
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-        }
-        
-        .overview-card.predictions { 
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-        }
-        
-        .overview-card.calendar { 
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
-        }
-        
-        .card-value { 
-            font-size: 2rem; 
-            font-weight: 700; 
-            margin-bottom: 0.5rem; 
-        }
-        
-        .card-label { 
-            font-size: 0.875rem; 
-            opacity: 0.9; 
-            margin-bottom: 0.5rem;
-        }
-        
-        .card-detail { 
-            font-size: 0.75rem; 
-            opacity: 0.8; 
-        }
-        
-        /* Content Area */
-        .analytics-content { 
-            flex: 1; 
-            padding: 2rem; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 2rem; 
-        }
-        
-        /* Widget Styles */
-        .widget { 
-            background: #ffffff; 
-            border: 1px solid #e5e7eb; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        
-        .widget-header { 
-            padding: 1.5rem; 
-            border-bottom: 1px solid #f3f4f6; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-        }
-        
-        .widget-title { 
-            font-size: 1.125rem; 
-            font-weight: 600; 
-            color: #1f2937; 
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .widget-icon {
-            font-size: 1.25rem;
-        }
-        
-        .widget-content { 
-            padding: 1.5rem; 
-        }
-
-        .widget-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        /* NEW: Chart container styles for Phase 2B foundation */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-
-        .chart-container canvas {
-            max-height: 300px !important;
-        }
-        
-        /* Loading States */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            color: #6b7280;
-        }
-
-        .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e5e7eb;
-            border-top: 2px solid #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 0.5rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Error States */
-        .error {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 1rem;
-            border-radius: 6px;
-            text-align: center;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 1024px) { 
-            .analytics-container { 
-                grid-template-columns: 240px 1fr; 
-            } 
-        }
-        
-        @media (max-width: 768px) { 
-            .analytics-container { 
-                grid-template-columns: 1fr; 
-            }
-            
-            .analytics-sidebar { 
-                display: none; 
-            }
-
-            .overview-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .widget-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="analytics-container">
-        <!-- Analytics Sidebar -->
-        <div class="analytics-sidebar">
-            <div class="logo-section">
-                <div class="logo-title">Horizon Scanner</div>
-                <div class="logo-subtitle">Predictive Analytics</div>
-            </div>
-            
-            <div class="nav-section">
-                <div class="nav-title">
-                    📊 Analytics Views
-                </div>
-                <a href="/analytics" class="nav-item active">
-                    <span>Overview Dashboard</span>
-                    <div class="status-badge live">Live</div>
-                </a>
-                <div class="nav-item" onclick="showVelocityDetail()">
-                    <span>Regulatory Velocity</span>
-                    <div class="status-badge" id="velocityBadge">0</div>
-                </div>
-                <div class="nav-item" onclick="showHotspotsDetail()">
-                    <span>Sector Hotspots</span>
-                    <div class="status-badge" id="hotspotsBadge">0</div>
-                </div>
-                <div class="nav-item" onclick="showPredictionsDetail()">
-                    <span>Impact Predictions</span>
-                    <div class="status-badge prediction" id="predictionsBadge">0</div>
-                </div>
-                <div class="nav-item" onclick="showCalendarDetail()">
-                    <span>Compliance Calendar</span>
-                    <div class="status-badge" id="calendarBadge">0</div>
-                </div>
-            </div>
-            
-            <div class="nav-section">
-                <div class="nav-title">
-                    🎯 Quick Actions
-                </div>
-                <div class="nav-item" onclick="refreshAnalytics()">
-                    <span>Refresh Analytics</span>
-                </div>
-                <div class="nav-item" onclick="exportAnalytics()">
-                    <span>Export Report</span>
-                </div>
-                <a href="/dashboard" class="nav-item">
-                    <span>Intelligence Dashboard</span>
-                </a>
-                <a href="/" class="nav-item">
-                    <span>Home</span>
-                </a>
-            </div>
-
-            <div class="nav-section">
-                <div class="nav-title">
-                    🏢 Configuration
-                </div>
-                <div class="nav-item" onclick="manageFirmProfile()">
-                    <span>Firm Profile</span>
-                </div>
-                <div class="nav-item" onclick="manageAlerts()">
-                    <span>Alert Settings</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Main Analytics Content -->
-        <div class="analytics-main">
-            <!-- Analytics Header -->
-            <div class="analytics-header">
-                <div class="header-top">
-                    <div>
-                        <div class="analytics-title">Predictive Analytics</div>
-                        <div class="analytics-subtitle" id="firmInfo">
-                            AI-powered regulatory intelligence and market predictions
-                        </div>
-                    </div>
-                    <div class="header-actions">
-                        <a href="/" class="back-link">← Back to Home</a>
-                        <button onclick="refreshAllAnalytics()" class="refresh-btn" id="refreshBtn">
-                            <span id="refreshIcon">🔄</span>
-                            <span>Refresh All</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Overview Cards -->
-                <div class="overview-grid" id="overviewGrid">
-                    <div class="overview-card velocity">
-                        <div class="card-value" id="velocityValue">--</div>
-                        <div class="card-label">Updates/Week</div>
-                        <div class="card-detail" id="velocityDetail">Regulatory velocity</div>
-                    </div>
-                    <div class="overview-card hotspots">
-                        <div class="card-value" id="hotspotsValue">--</div>
-                        <div class="card-label">High Risk Sectors</div>
-                        <div class="card-detail" id="hotspotsDetail">Active hotspots</div>
-                    </div>
-                    <div class="overview-card predictions">
-                        <div class="card-value" id="predictionsValue">--</div>
-                        <div class="card-label">Active Predictions</div>
-                        <div class="card-detail" id="predictionsDetail">AI-generated insights</div>
-                    </div>
-                    <div class="overview-card calendar">
-                        <div class="card-value" id="calendarValue">--</div>
-                        <div class="card-label">Critical Deadlines</div>
-                        <div class="card-detail" id="calendarDetail">Next 30 days</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Analytics Content -->
-            <div class="analytics-content" id="analyticsContent">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    Loading predictive analytics...
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        // Phase 2A Analytics + Foundation for Phase 2B Charts
-        let analyticsData = null;
-        let firmProfile = null;
-        let velocityChart = null;
-        let riskChart = null;
-        
-        // Initialize analytics dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📊 Initializing Analytics Dashboard with Chart.js...');
-            loadAnalyticsDashboard();
-        });
-
-        async function loadAnalyticsDashboard() {
-            try {
-                console.log('📊 Loading analytics dashboard data...');
-                
-                const response = await fetch('/api/analytics/dashboard');
-                
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    analyticsData = data.dashboard;
-                    firmProfile = data.dashboard.firmProfile;
-                    
-                    updateOverviewCards();
-                    renderAnalyticsContent();
-                    updateSidebarCounts();
-                    updateFirmInfo();
-                    
-                    console.log('✅ Analytics dashboard loaded successfully');
-                } else {
-                    throw new Error(data.error || 'Failed to load analytics');
-                }
-                
-            } catch (error) {
-                console.error('❌ Error loading analytics dashboard:', error);
-                showError('Failed to load analytics dashboard: ' + error.message);
-            }
-        }
-
-        function updateOverviewCards() {
-            if (!analyticsData) return;
-            
-            // Velocity card
-            const totalVelocity = Object.values(analyticsData.velocity || {})
-                .reduce((sum, auth) => sum + (auth.updatesPerWeek || 0), 0);
-            document.getElementById('velocityValue').textContent = Math.round(totalVelocity * 10) / 10;
-            document.getElementById('velocityDetail').textContent = 'Across ' + Object.keys(analyticsData.velocity || {}).length + ' authorities';
-            
-            // Hotspots card
-            const highRiskSectors = (analyticsData.hotspots || []).filter(h => h.riskLevel === 'high').length;
-            document.getElementById('hotspotsValue').textContent = highRiskSectors;
-            document.getElementById('hotspotsDetail').textContent = (analyticsData.hotspots || []).length + ' sectors monitored';
-            
-            // Predictions card
-            const predictionsCount = (analyticsData.predictions || []).length;
-            document.getElementById('predictionsValue').textContent = predictionsCount;
-            document.getElementById('predictionsDetail').textContent = predictionsCount > 0 ? 'Next 30-60 days' : 'No active predictions';
-            
-            // Calendar card
-            const criticalDeadlines = (analyticsData.calendar?.next30Days || []).filter(d => d.riskScore >= 70).length;
-            document.getElementById('calendarValue').textContent = criticalDeadlines;
-            document.getElementById('calendarDetail').textContent = (analyticsData.calendar?.next30Days || []).length + ' total upcoming';
-        }
-
-        function updateSidebarCounts() {
-            if (!analyticsData) return;
-            
-            const velocityCount = Object.keys(analyticsData.velocity || {}).length;
-            const hotspotsCount = (analyticsData.hotspots || []).length;
-            const predictionsCount = (analyticsData.predictions || []).length;
-            const calendarCount = (analyticsData.calendar?.next30Days || []).length;
-            
-            document.getElementById('velocityBadge').textContent = velocityCount;
-            document.getElementById('hotspotsBadge').textContent = hotspotsCount;
-            document.getElementById('predictionsBadge').textContent = predictionsCount;
-            document.getElementById('calendarBadge').textContent = calendarCount;
-        }
-
-        function updateFirmInfo() {
-            const firmInfoElement = document.getElementById('firmInfo');
-            if (firmProfile) {
-                firmInfoElement.textContent = firmProfile.firmName + ' • ' + firmProfile.primarySectors.join(', ') + ' • Personalized insights';
-            } else {
-                firmInfoElement.textContent = 'AI-powered regulatory intelligence • Configure firm profile for personalized insights';
-            }
-        }
-
-        function renderAnalyticsContent() {
-            const content = document.getElementById('analyticsContent');
-            
-            content.innerHTML = 
-                '<div class="widget-grid">' +
-                    '<!-- Regulatory Velocity Widget with Chart -->' +
-                    '<div class="widget">' +
-                        '<div class="widget-header">' +
-                            '<div class="widget-title">' +
-                                '<span class="widget-icon">📈</span>' +
-                                'Regulatory Velocity' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="widget-content">' +
-                            '<div class="chart-container">' +
-                                '<canvas id="velocityChart"></canvas>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-
-                    '<!-- Risk Distribution Widget with Chart -->' +
-                    '<div class="widget">' +
-                        '<div class="widget-header">' +
-                            '<div class="widget-title">' +
-                                '<span class="widget-icon">🎯</span>' +
-                                'Risk Distribution' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="widget-content">' +
-                            '<div class="chart-container">' +
-                                '<canvas id="riskChart"></canvas>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-
-                '<div class="widget-grid">' +
-                    '<!-- Future: Additional chart widgets for Phase 2B -->' +
-                    '<div class="widget">' +
-                        '<div class="widget-header">' +
-                            '<div class="widget-title">' +
-                                '<span class="widget-icon">🔥</span>' +
-                                'Sector Hotspots' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="widget-content">' +
-                            renderHotspots() +
-                        '</div>' +
-                    '</div>' +
-
-                    '<div class="widget">' +
-                        '<div class="widget-header">' +
-                            '<div class="widget-title">' +
-                                '<span class="widget-icon">🔮</span>' +
-                                'Impact Predictions' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="widget-content">' +
-                            renderPredictions() +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-            
-            // Create charts after DOM is ready
-            setTimeout(() => {
-                createVelocityChart();
-                createRiskChart();
-            }, 100);
-        }
-
-        // NEW: Chart creation functions for Phase 2B foundation
-        function createVelocityChart() {
-            const ctx = document.getElementById('velocityChart');
-            if (!ctx || !analyticsData.velocity) return;
-
-            // Destroy existing chart
-            if (velocityChart) {
-                velocityChart.destroy();
-            }
-
-            const authorities = Object.keys(analyticsData.velocity);
-            const currentValues = authorities.map(auth => analyticsData.velocity[auth].updatesPerWeek || 0);
-            const predictions = authorities.map(auth => analyticsData.velocity[auth].prediction || 0);
-
-            velocityChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: authorities,
-                    datasets: [{
-                        label: 'Current (per week)',
-                        data: currentValues,
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 1
-                    }, {
-                        label: 'Predicted (per week)',
-                        data: predictions,
-                        backgroundColor: 'rgba(236, 72, 153, 0.6)',
-                        borderColor: 'rgba(236, 72, 153, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Regulatory Update Velocity by Authority'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Updates per Week'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createRiskChart() {
-            const ctx = document.getElementById('riskChart');
-            if (!ctx || !analyticsData.overview) return;
-
-            // Destroy existing chart
-            if (riskChart) {
-                riskChart.destroy();
-            }
-
-            // Sample risk distribution data - replace with real data in Phase 2B
-            const riskData = {
-                'High Risk (70-100)': analyticsData.overview.highRiskCount || 0,
-                'Medium Risk (40-69)': analyticsData.overview.mediumRiskCount || 0,
-                'Low Risk (0-39)': analyticsData.overview.lowRiskCount || 0
-            };
-
-            riskChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(riskData),
-                    datasets: [{
-                        data: Object.values(riskData),
-                        backgroundColor: [
-                            'rgba(239, 68, 68, 0.8)',
-                            'rgba(245, 158, 11, 0.8)',
-                            'rgba(34, 197, 94, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgba(239, 68, 68, 1)',
-                            'rgba(245, 158, 11, 1)',
-                            'rgba(34, 197, 94, 1)'
-                        ],
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Risk Score Distribution'
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderHotspots() {
-            if (!analyticsData.hotspots || analyticsData.hotspots.length === 0) {
-                return '<div class="error">No hotspot data available</div>';
-            }
-
-            return analyticsData.hotspots.slice(0, 4).map(hotspot => 
-                '<div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 0.5rem;">' +
-                    '<div style="display: flex; justify-content: space-between; align-items: center;">' +
-                        '<div style="font-weight: 600; color: #1f2937;">' + hotspot.sector + '</div>' +
-                        '<div style="background: ' + (hotspot.riskLevel === 'high' ? '#dc2626' : '#d97706') + '; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">' +
-                            hotspot.activityScore +
-                        '</div>' +
-                    '</div>' +
-                    '<div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">' +
-                        hotspot.updateCount + ' updates • ' + hotspot.trend + ' trend' +
-                        (hotspot.isUserSector ? '<br><strong>📍 Your sector</strong>' : '') +
-                    '</div>' +
-                '</div>'
-            ).join('');
-        }
-
-        function renderPredictions() {
-            if (!analyticsData.predictions || analyticsData.predictions.length === 0) {
-                return '<div class="error">No predictions available</div>';
-            }
-
-            return analyticsData.predictions.slice(0, 3).map(prediction => 
-                '<div style="padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; background: #fafbfc; margin-bottom: 0.5rem;">' +
-                    '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">' +
-                        '<div style="font-weight: 500; color: #1f2937; flex: 1; margin-right: 1rem;">' + prediction.prediction + '</div>' +
-                        '<div style="background: #eff6ff; color: #1e40af; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">' +
-                            prediction.confidence + '% confidence' +
-                        '</div>' +
-                    '</div>' +
-                    '<div style="font-size: 0.75rem; color: #6b7280;">' +
-                        prediction.timeframe + ' • Based on: ' + prediction.basedOn.join(', ') +
-                        (prediction.affectedSectors ? ' • Affects: ' + prediction.affectedSectors.join(', ') : '') +
-                    '</div>' +
-                '</div>'
-            ).join('');
-        }
-
-        async function refreshAllAnalytics() {
-            const btn = document.getElementById('refreshBtn');
-            const icon = document.getElementById('refreshIcon');
-            
-            btn.disabled = true;
-            icon.textContent = '⏳';
-            
-            try {
-                console.log('🔄 Refreshing all analytics...');
-                
-                // Refresh analytics cache
-                await fetch('/api/analytics/refresh', { method: 'POST' });
-                
-                // Reload dashboard
-                await loadAnalyticsDashboard();
-                
-                console.log('✅ Analytics refreshed successfully');
-                
-            } catch (error) {
-                console.error('❌ Error refreshing analytics:', error);
-                showError('Failed to refresh analytics: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                icon.textContent = '🔄';
-            }
-        }
-
-        function showError(message) {
-            const content = document.getElementById('analyticsContent');
-            content.innerHTML = 
-                '<div class="error">' +
-                    message +
-                    '<br><br>' +
-                    '<button onclick="loadAnalyticsDashboard()" class="refresh-btn">Try Again</button>' +
-                '</div>';
-        }
-
-        // Navigation functions
-        function showVelocityDetail() {
-            console.log('📈 Showing velocity details...');
-        }
-
-        function showHotspotsDetail() {
-            console.log('🔥 Showing hotspots details...');
-        }
-
-        function showPredictionsDetail() {
-            console.log('🔮 Showing predictions details...');
-        }
-
-        function showCalendarDetail() {
-            console.log('📅 Showing calendar details...');
-        }
-
-        function refreshAnalytics() {
-            refreshAllAnalytics();
-        }
-
-        function exportAnalytics() {
-            if (analyticsData) {
-                const dataStr = JSON.stringify(analyticsData, null, 2);
-                const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'analytics-report-' + new Date().toISOString().split('T')[0] + '.json';
-                link.click();
-                URL.revokeObjectURL(url);
-            }
-        }
-
-        function manageFirmProfile() {
-            window.location.href = '/#setup-profile';
-        }
-
-        function manageAlerts() {
-            window.location.href = '/dashboard#alerts';
-        }
-
-        // Auto-refresh every 5 minutes
-        setInterval(() => {
-            loadAnalyticsDashboard();
-        }, 5 * 60 * 1000);
-
-        console.log('📊 Analytics Dashboard with Chart.js initialized');
-    </script>
-</body>
-</html>`);
-});
-
-// Keep existing dashboard and test routes...
+// Keep existing dashboard route with updated name
 router.get('/dashboard', async (req, res) => {
     try {
         const updates = await dbService.getAllUpdates();
@@ -2693,7 +2050,7 @@ router.get('/dashboard', async (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intelligence Dashboard - Regulatory Horizon Scanner</title>
+    <title>Regulatory News Feed - Horizon Scanner</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -3069,15 +2426,15 @@ router.get('/dashboard', async (req, res) => {
         <div class="enterprise-sidebar">
             <div class="logo-section">
                 <div class="logo-title">Horizon Scanner</div>
-                <div class="logo-subtitle">Regulatory Intelligence</div>
+                <div class="logo-subtitle">Regulatory News Feed</div>
             </div>
             
             <div class="nav-section">
                 <div class="nav-title">
-                    📊 Dashboard Views
+                    📰 News Views
                 </div>
                 <div class="nav-item active">
-                    <span>Intelligence Streams</span>
+                    <span>Latest Updates</span>
                 </div>
                 <a href="/analytics" class="nav-item">
                     <span>Predictive Analytics</span>
@@ -3123,7 +2480,7 @@ router.get('/dashboard', async (req, res) => {
             <!-- Dashboard Header -->
             <div class="dashboard-header">
                 <div class="header-top">
-                    <div class="dashboard-title">Intelligence Dashboard</div>
+                    <div class="dashboard-title">Regulatory News Feed</div>
                     <a href="/" class="back-link">← Back to Home</a>
                 </div>
                 
@@ -3142,7 +2499,7 @@ router.get('/dashboard', async (req, res) => {
                     </div>
                     <div class="metric-card">
                         <div class="metric-value">${informationalUpdates.length}</div>
-                        <div class="metric-label">Background Intel</div>
+                        <div class="metric-label">Background News</div>
                     </div>
                     <div class="metric-card">
                         <div class="metric-value">${updates.filter(u => {
@@ -3247,7 +2604,7 @@ router.get('/dashboard', async (req, res) => {
                     <div class="stream-header">
                         <div class="stream-title">
                             <div class="stream-icon low"></div>
-                            <span>Background Intelligence</span>
+                            <span>Background News</span>
                             <span style="color: #6b7280;">• ${informationalUpdates.length} Item${informationalUpdates.length !== 1 ? 's' : ''}</span>
                         </div>
                         <div class="stream-meta">
@@ -3315,6 +2672,7 @@ router.get('/dashboard', async (req, res) => {
     }
 });
 
+// Keep existing test route
 router.get('/test', async (req, res) => {
     try {
         // Basic system test
@@ -3717,7 +3075,7 @@ router.get('/test', async (req, res) => {
         
         <div class="action-buttons">
             <a href="/analytics" class="btn btn-primary">View Analytics Dashboard</a>
-            <a href="/dashboard" class="btn btn-primary">View Intelligence Dashboard</a>
+            <a href="/dashboard" class="btn btn-primary">View Regulatory News Feed</a>
             <a href="/api/system-status" class="btn btn-secondary">JSON System Status</a>
             <a href="/" class="btn btn-secondary">Return to Home</a>
         </div>
