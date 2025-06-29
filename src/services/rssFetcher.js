@@ -1,14 +1,8 @@
-// src/services/rssFetcher.js
-// This version corrects the case-sensitive path to aiAnalyzer.js
+// FINAL DEPLOYMENT FIX: This comment is added to force a new file hash.
 
 const Parser = require('rss-parser');
 const parser = new Parser();
-
-// --- CRITICAL FIX ---
-// The require path now correctly uses camelCase 'aiAnalyzer.js' to match the actual filename.
-// This resolves the "Cannot find module" error on Vercel's case-sensitive system.
 const aiAnalyzer = require('./aiAnalyzer.js'); 
-
 const webScraper = require('./webScraper.js');
 const dbService = require('./dbService.js');
 
@@ -24,12 +18,10 @@ const parseFCADate = (dateString) => {
         const cleanDate = dateString.replace(/^[A-Za-z]+,\s*/, '').replace(/\s*-\s*\d{2}:\d{2}$/, '');
         const parsedDate = new Date(cleanDate);
         if (isNaN(parsedDate.getTime())) {
-            console.log('❌ Failed to parse date:', dateString);
             return null;
         }
         return parsedDate;
     } catch (error) {
-        console.log('❌ Date parsing error for:', dateString, error.message);
         return null;
     }
 };
@@ -42,7 +34,6 @@ const processItem = async (item) => {
     }
     
     console.log(`\n🔍 Processing item: ${item.title || 'No title'}`);
-    console.log(`🔗 URL: ${articleUrl}`);
 
     try {
         const existing = await dbService.findUpdate(articleUrl);
@@ -54,15 +45,13 @@ const processItem = async (item) => {
         console.log('⚠️ Could not check for existing update:', error.message);
     }
     
-    console.log('📰 Scraping article content...');
     const content = await aiAnalyzer.scrapeArticleContent(articleUrl);
     
     if (!content || content.length < 100) {
-        console.log('❌ Failed to scrape sufficient content.');
+        console.log('❌ Failed to scrape sufficient content for URL:', articleUrl);
         return;
     }
     
-    console.log('🤖 Starting AI analysis...');
     await aiAnalyzer.analyzeContentWithAI(content, articleUrl);
 };
 
@@ -71,10 +60,7 @@ const fetchAndAnalyzeFeeds = async () => {
     console.log('\n--- Fetching RSS Feeds ---');
     for (const feedInfo of RSS_FEEDS) {
         try {
-            console.log(`\n📡 Fetching RSS feed: ${feedInfo.name}`);
             const feed = await parser.parseURL(feedInfo.url);
-            console.log(`✅ Fetched successfully. Total items: ${feed.items.length}`);
-            
             for (const item of feed.items) {
                 await processItem(item);
             }
@@ -87,17 +73,10 @@ const fetchAndAnalyzeFeeds = async () => {
 const scrapeAndAnalyzeWebsites = async () => {
     console.log('\n--- Scraping Websites ---');
     try {
-        if (!webScraper) {
-            console.log('⚠️ webScraper module not available, skipping.');
-            return;
-        }
-
         const pensionArticles = await webScraper.scrapePensionRegulator();
         const sfoArticles = await webScraper.scrapeSFO();
         const fatfArticles = await webScraper.scrapeFATF();
         const allScraped = [...pensionArticles, ...sfoArticles, ...fatfArticles];
-        
-        console.log(`📊 Total scraped articles: ${allScraped.length}`);
         
         for (const item of allScraped) {
             await processItem(item);
