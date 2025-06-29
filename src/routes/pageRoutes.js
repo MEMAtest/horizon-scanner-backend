@@ -1030,15 +1030,15 @@ router.get('/', (req, res) => {
                     🎯 Smart Filters
                     <span class="info-icon" data-tooltip="AI-powered relevance filtering based on your firm profile">i</span>
                 </div>
-                <div class="sidebar-item">
+                <div class="sidebar-item" onclick="filterByRelevance('high')">
                     <span>High Relevance</span>
                     <div class="count-badge urgent" id="highRelevanceCount">0</div>
                 </div>
-                <div class="sidebar-item">
+                <div class="sidebar-item" onclick="filterByRelevance('medium')">
                     <span>Medium Relevance</span>
                     <div class="count-badge moderate" id="mediumRelevanceCount">0</div>
                 </div>
-                <div class="sidebar-item">
+                <div class="sidebar-item" onclick="filterByRelevance('low')">
                     <span>Background Intel</span>
                     <div class="count-badge" id="lowRelevanceCount">0</div>
                 </div>
@@ -1061,6 +1061,41 @@ router.get('/', (req, res) => {
                 <div class="sidebar-item" onclick="showCustomAlerts()">
                     <span>Custom Alerts</span>
                     <div class="count-badge" id="alertCount">0</div>
+                </div>
+            </div>
+
+            <!-- FIXED: Authority Filters Section -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    🏛️ Filter by Authority
+                    <span class="info-icon" data-tooltip="Filter updates by regulatory authority">i</span>
+                </div>
+                <div class="sidebar-item" onclick="filterByAuthority('FCA')">
+                    <span>FCA</span>
+                    <div class="count-badge" id="fcaCount">0</div>
+                </div>
+                <div class="sidebar-item" onclick="filterByAuthority('BoE')">
+                    <span>Bank of England</span>
+                    <div class="count-badge" id="boeCount">0</div>
+                </div>
+                <div class="sidebar-item" onclick="filterByAuthority('PRA')">
+                    <span>PRA</span>
+                    <div class="count-badge" id="praCount">0</div>
+                </div>
+                <div class="sidebar-item" onclick="filterByAuthority('TPR')">
+                    <span>TPR</span>
+                    <div class="count-badge" id="tprCount">0</div>
+                </div>
+                <div class="sidebar-item" onclick="filterByAuthority('SFO')">
+                    <span>SFO</span>
+                    <div class="count-badge" id="sfoCount">0</div>
+                </div>
+                <div class="sidebar-item" onclick="filterByAuthority('FATF')">
+                    <span>FATF</span>
+                    <div class="count-badge" id="fatfCount">0</div>
+                </div>
+                <div class="sidebar-item" onclick="clearFilters()">
+                    <span>🔄 Clear Filters</span>
                 </div>
             </div>
 
@@ -1555,7 +1590,9 @@ router.get('/', (req, res) => {
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = \`regulatory-data-export-\${new Date().toISOString().split('T')[0]}.json\`;
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
                 
                 URL.revokeObjectURL(url);
                 
@@ -1603,27 +1640,73 @@ router.get('/', (req, res) => {
             }
         }
 
+        // FIXED: Share functionality with proper error handling
+        let shareInProgress = false;
+        
         async function shareSystem() {
+            if (shareInProgress) {
+                showMessage('Share already in progress...', 'info');
+                return;
+            }
+            
             try {
+                shareInProgress = true;
+                
                 const shareData = {
                     title: 'Regulatory Horizon Scanner',
                     text: 'AI-powered regulatory intelligence monitoring system',
                     url: window.location.origin
                 };
                 
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                    showMessage('Shared successfully!', 'success');
+                // Check if Web Share API is supported and user gesture is valid
+                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                    try {
+                        await navigator.share(shareData);
+                        showMessage('Shared successfully!', 'success');
+                    } catch (shareError) {
+                        if (shareError.name === 'AbortError') {
+                            showMessage('Share was cancelled', 'info');
+                        } else {
+                            throw shareError;
+                        }
+                    }
                 } else {
                     // Fallback: copy to clipboard
                     const shareText = \`\${shareData.title}: \${shareData.text} - \${shareData.url}\`;
-                    await navigator.clipboard.writeText(shareText);
-                    showMessage('Share link copied to clipboard!', 'success');
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(shareText);
+                        showMessage('Share link copied to clipboard!', 'success');
+                    } else {
+                        // Older browser fallback
+                        const textArea = document.createElement('textarea');
+                        textArea.value = shareText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        showMessage('Share link copied to clipboard!', 'success');
+                    }
                 }
                 
             } catch (error) {
                 console.error('Share error:', error);
-                showMessage('Share failed: ' + error.message, 'error');
+                showMessage('Share failed. Link copied to clipboard instead.', 'warning');
+                
+                // Fallback of the fallback
+                try {
+                    const fallbackText = window.location.origin;
+                    const textArea = document.createElement('textarea');
+                    textArea.value = fallbackText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                } catch (fallbackError) {
+                    console.error('Fallback copy failed:', fallbackError);
+                }
+            } finally {
+                shareInProgress = false;
             }
         }
 
@@ -1808,7 +1891,11 @@ router.get('/', (req, res) => {
             }
         }
         
-        // FIXED: Enhanced stream loading with risk scores and proper error handling
+        // Global variables for filtering
+        let allUpdatesData = null;
+        let currentFilter = null;
+
+        // FIXED: Enhanced stream loading with authority counts
         async function loadIntelligenceStreams() {
             try {
                 console.log('📊 Loading regulatory news streams with analytics...');
@@ -1820,6 +1907,7 @@ router.get('/', (req, res) => {
                 }
                 
                 const data = await response.json();
+                allUpdatesData = data; // Store for filtering
                 
                 const streamsContainer = document.getElementById('streamsContainer');
                 streamsContainer.innerHTML = generateRelevanceBasedStreams(data);
@@ -1828,6 +1916,9 @@ router.get('/', (req, res) => {
                 document.getElementById('highRelevanceCount').textContent = data.urgent ? data.urgent.length : 0;
                 document.getElementById('mediumRelevanceCount').textContent = data.moderate ? data.moderate.length : 0;
                 document.getElementById('lowRelevanceCount').textContent = data.informational ? data.informational.length : 0;
+                
+                // Update authority counts
+                updateAuthorityCounts(data);
                 
                 // Update legacy counts for compatibility
                 const urgentCount = data.urgent ? data.urgent.filter(u => u.urgency === 'High').length : 0;
@@ -1854,6 +1945,113 @@ router.get('/', (req, res) => {
                     </div>
                 \`;
             }
+        }
+
+        // NEW: Update authority counts
+        function updateAuthorityCounts(data) {
+            const allUpdates = [
+                ...(data.urgent || []),
+                ...(data.moderate || []),
+                ...(data.informational || [])
+            ];
+            
+            const authorityCounts = {
+                FCA: 0,
+                BoE: 0,
+                PRA: 0,
+                TPR: 0,
+                SFO: 0,
+                FATF: 0
+            };
+            
+            allUpdates.forEach(update => {
+                const authority = update.authority;
+                if (authorityCounts.hasOwnProperty(authority)) {
+                    authorityCounts[authority]++;
+                }
+            });
+            
+            // Update UI
+            document.getElementById('fcaCount').textContent = authorityCounts.FCA;
+            document.getElementById('boeCount').textContent = authorityCounts.BoE;
+            document.getElementById('praCount').textContent = authorityCounts.PRA;
+            document.getElementById('tprCount').textContent = authorityCounts.TPR;
+            document.getElementById('sfoCount').textContent = authorityCounts.SFO;
+            document.getElementById('fatfCount').textContent = authorityCounts.FATF;
+        }
+
+        // NEW: Filter by authority
+        function filterByAuthority(authority) {
+            if (!allUpdatesData) {
+                showMessage('No data loaded. Please refresh first.', 'warning');
+                return;
+            }
+            
+            console.log('🔍 Filtering by authority:', authority);
+            currentFilter = { type: 'authority', value: authority };
+            
+            // Filter all update streams by authority
+            const filteredData = {
+                urgent: (allUpdatesData.urgent || []).filter(u => u.authority === authority),
+                moderate: (allUpdatesData.moderate || []).filter(u => u.authority === authority),
+                informational: (allUpdatesData.informational || []).filter(u => u.authority === authority),
+                firmProfile: allUpdatesData.firmProfile
+            };
+            
+            const streamsContainer = document.getElementById('streamsContainer');
+            streamsContainer.innerHTML = generateRelevanceBasedStreams(filteredData, authority + ' Updates');
+            
+            showMessage(\`Filtered to show only \${authority} updates\`, 'info');
+        }
+
+        // NEW: Filter by relevance
+        function filterByRelevance(level) {
+            if (!allUpdatesData) {
+                showMessage('No data loaded. Please refresh first.', 'warning');
+                return;
+            }
+            
+            console.log('🔍 Filtering by relevance:', level);
+            currentFilter = { type: 'relevance', value: level };
+            
+            let filteredData = { urgent: [], moderate: [], informational: [], firmProfile: allUpdatesData.firmProfile };
+            let filterTitle = '';
+            
+            switch (level) {
+                case 'high':
+                    filteredData.urgent = allUpdatesData.urgent || [];
+                    filterTitle = 'High Relevance Updates';
+                    break;
+                case 'medium':
+                    filteredData.moderate = allUpdatesData.moderate || [];
+                    filterTitle = 'Medium Relevance Updates';
+                    break;
+                case 'low':
+                    filteredData.informational = allUpdatesData.informational || [];
+                    filterTitle = 'Background Intelligence';
+                    break;
+            }
+            
+            const streamsContainer = document.getElementById('streamsContainer');
+            streamsContainer.innerHTML = generateRelevanceBasedStreams(filteredData, filterTitle);
+            
+            showMessage(\`Filtered to show \${level} relevance updates\`, 'info');
+        }
+
+        // NEW: Clear all filters
+        function clearFilters() {
+            if (!allUpdatesData) {
+                showMessage('No data loaded. Please refresh first.', 'warning');
+                return;
+            }
+            
+            console.log('🔄 Clearing all filters');
+            currentFilter = null;
+            
+            const streamsContainer = document.getElementById('streamsContainer');
+            streamsContainer.innerHTML = generateRelevanceBasedStreams(allUpdatesData);
+            
+            showMessage('All filters cleared', 'success');
         }
         
         async function loadPinnedStatus() {
@@ -1886,15 +2084,16 @@ router.get('/', (req, res) => {
             }
         }
         
-        function generateRelevanceBasedStreams(data) {
-            if (!data || data.total === 0) {
+        function generateRelevanceBasedStreams(data, customTitle = null) {
+            if (!data || (data.urgent?.length === 0 && data.moderate?.length === 0 && data.informational?.length === 0)) {
                 return \`
                     <div class="welcome-content">
                         <div class="welcome-icon">📭</div>
-                        <div class="welcome-title">No Updates Available</div>
+                        <div class="welcome-title">\${customTitle || 'No Updates Available'}</div>
                         <div class="welcome-subtitle">
-                            Click "Refresh Data" to fetch the latest regulatory updates from monitored sources.
+                            \${customTitle ? 'No updates match the current filter. Try clearing filters or refreshing data.' : 'Click "Refresh Data" to fetch the latest regulatory updates from monitored sources.'}
                         </div>
+                        \${customTitle ? '<button onclick="clearFilters()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Clear Filters</button>' : ''}
                     </div>
                 \`;
             }
@@ -1903,10 +2102,12 @@ router.get('/', (req, res) => {
                 \`for \${data.firmProfile.firmName} (\${data.firmProfile.primarySectors.join(', ')})\` : 
                 'Configure firm profile for personalized analytics';
             
+            const titlePrefix = customTitle ? customTitle : 'High Priority Updates';
+            
             return \`
-                \${generateStream('high', \`High Priority Updates \${profileInfo}\`, data.urgent || [], 90)}
-                \${generateStream('medium', 'Medium Priority Updates', data.moderate || [], 60)}
-                \${generateStream('low', 'Background News', data.informational || [], 30)}
+                \${generateStream('high', \`\${titlePrefix} \${!customTitle ? profileInfo : ''}\`, data.urgent || [], 90)}
+                \${generateStream('medium', customTitle ? '' : 'Medium Priority Updates', data.moderate || [], 60)}
+                \${generateStream('low', customTitle ? '' : 'Background News', data.informational || [], 30)}
             \`;
         }
         
