@@ -1,37 +1,211 @@
 {
-  "name": "mema-uk-reg-tracker",
+  "name": "regulatory-horizon-scanner",
   "version": "2.0.0",
-  "description": "UK Regulatory Updates Tracker with AI Analysis",
+  "description": "Enterprise Regulatory Intelligence Platform - Comprehensive monitoring of UK and international financial regulatory authorities",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node src/index.js",
-    "test": "node -e \"console.log('Test script - checking basic functionality'); process.exit(0);\""
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "axios": "^1.6.0",
-    "cheerio": "^1.0.0-rc.12",
-    "rss-parser": "^3.13.0",
-    "pg": "^8.16.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-username/horizon-scanner-backend.git"
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "validate": "node scripts/validate-system.js",
+    "cleanup": "node scripts/cleanup-database.js",
+    "refresh": "node scripts/manual-refresh.js",
+    "stats": "node scripts/show-stats.js",
+    "setup": "node scripts/setup-environment.js",
+    "build": "echo 'No build step required for Node.js application'",
+    "health": "curl -f http://localhost:3000/health || exit 1"
   },
   "keywords": [
     "regulatory",
     "compliance",
-    "uk",
     "financial-services",
-    "ai-analysis",
+    "intelligence",
+    "monitoring",
     "fca",
+    "pra",
     "bank-of-england",
-    "regulatory-tracker"
+    "regulatory-technology",
+    "fintech",
+    "regtech"
   ],
-  "author": "MEMA",
-  "license": "MIT"
+  "author": {
+    "name": "Regulatory Intelligence Team",
+    "email": "contact@regulatory-intelligence.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/regulatory-horizon-scanner.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/regulatory-horizon-scanner/issues"
+  },
+  "homepage": "https://github.com/your-org/regulatory-horizon-scanner#readme",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.5.1",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.2.0",
+    "joi": "^17.11.0",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "morgan": "^1.10.0",
+    "node-cron": "^3.0.3",
+    "pg": "^8.11.3",
+    "rss-parser": "^3.13.0",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.55.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.2.0",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.0",
+    "supertest": "^6.3.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js",
+      "!src/**/*.test.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js",
+      "**/src/**/*.test.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
+  },
+  "eslintConfig": {
+    "extends": [
+      "standard"
+    ],
+    "env": {
+      "node": true,
+      "jest": true
+    },
+    "rules": {
+      "no-console": "off",
+      "space-before-function-paren": "off"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm test"
+    }
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src/"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "data/",
+      "logs/",
+      "tests/"
+    ],
+    "env": {
+      "NODE_ENV": "development"
+    }
+  },
+  "config": {
+    "deployment": {
+      "platforms": [
+        "vercel",
+        "heroku",
+        "railway",
+        "render",
+        "aws",
+        "gcp",
+        "azure"
+      ],
+      "database": {
+        "preferred": "postgresql",
+        "fallback": "json-file"
+      },
+      "ai": {
+        "provider": "groq",
+        "model": "llama-3.1-8b-instant"
+      }
+    },
+    "monitoring": {
+      "sources": {
+        "rss_feeds": 7,
+        "websites": 12,
+        "total": 19
+      },
+      "authorities": [
+        "FCA",
+        "PRA",
+        "BoE",
+        "PSR",
+        "TPR",
+        "HMT",
+        "ESMA",
+        "EBA",
+        "FATF",
+        "FSB",
+        "Treasury Committee",
+        "OFSI",
+        "JMLSG",
+        "Pay.UK"
+      ]
+    }
+  },
+  "optionalDependencies": {
+    "fsevents": "^2.3.3"
+  },
+  "peerDependencies": {
+    "node": ">=16.0.0"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/your-org"
+  },
+  "directories": {
+    "lib": "src/",
+    "test": "tests/",
+    "doc": "docs/"
+  },
+  "files": [
+    "src/",
+    "scripts/",
+    "docs/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
 }

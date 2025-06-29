@@ -1,7 +1,9 @@
 // src/index.js
 // A clean, robust, and standard Express entry point.
-// All modules are loaded at the start, making path errors easy to find.
+// Load environment variables first
+require('dotenv').config();
 
+// All modules are loaded at the start, making path errors easy to find.
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,34 +19,22 @@ process.on('uncaughtException', (error) => {
     console.error('🚨 UNCAUGHT EXCEPTION:', error);
     process.exit(1); // A server in an unknown state should be terminated.
 });
+
 process.on('unhandledRejection', (reason, promise) => {
     console.error('🚨 UNHANDLED REJECTION:', reason);
 });
 
-
 // --- Route Mounting ---
 // Load your different route modules.
 const apiRoutes = require('./routes/apiRoutes');
-// const pageRoutes = require('./routes/pageRoutes'); // Uncomment if you create page-specific routes
-// const debugRoutes = require('./routes/debugRoutes'); // Uncomment if you create debug-specific routes
+const pageRoutes = require('./routes/pageRoutes');
 
 // Mount the routers to specific URL prefixes.
 // All routes defined in apiRoutes will now start with /api
 app.use('/api', apiRoutes);
-// app.use('/', pageRoutes); // Example for HTML pages
-// app.use('/debug', debugRoutes); // Example for debug endpoints
 
-// A simple root endpoint to show the server is alive.
-app.get('/', (req, res) => {
-    res.status(200).send(`
-        <div style="font-family: sans-serif; text-align: center; padding: 4rem;">
-            <h1>✅ Regulatory Horizon Scanner API</h1>
-            <p>Server is online and healthy.</p>
-            <p>Access API endpoints at <code>/api/...</code></p>
-        </div>
-    `);
-});
-
+// Mount page routes at the root level
+app.use('/', pageRoutes);
 
 // --- Final Error Handling Middleware ---
 // This catch-all middleware runs if no other route has matched the request.
@@ -61,10 +51,14 @@ app.use((error, req, res, next) => {
     });
 });
 
-
 // --- Server Startup ---
 app.listen(PORT, () => {
-    console.log(`✅ Server is listening on port ${PORT}`);
+    console.log(`✅ Regulatory Horizon Scanner listening on port ${PORT}`);
+    console.log('📊 Phase 1 Features Available:');
+    console.log('   🏠 Main Landing Page: /');
+    console.log('   📊 Enhanced Dashboard: /dashboard');
+    console.log('   🔧 System Diagnostics: /test');
+    console.log('   🔗 API Endpoints: /api/*');
     console.log('Routes have been mounted successfully.');
 });
 
