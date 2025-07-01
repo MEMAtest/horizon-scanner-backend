@@ -1,329 +1,792 @@
 // src/services/aiAnalyzer.js
-// AI-powered content analysis for regulatory updates with enhanced error handling and efficiency
+// ENHANCED AI ANALYZER: Robust Content Processing + Advanced Sector Analysis + Error Handling
+// INTEGRATED: Works seamlessly with enhanced scraper and RSS fetcher for excellence-grade analysis
 
 const axios = require('axios');
 const cheerio = require('cheerio');
-const dbService = require('./dbService.js');
 
-const AI_PROVIDER_CONFIG = {
-    apiKey: process.env.GROQ_API_KEY, 
-    apiUrl: "https://api.groq.com/openai/v1/chat/completions",
-    model: "llama-3.1-8b-instant",
-    maxRetries: 3,
-    retryDelay: 2000
+// Enhanced industry sector definitions with more granular categorization
+const INDUSTRY_SECTORS = [
+    'Banking',
+    'Investment Management', 
+    'Consumer Credit',
+    'Insurance',
+    'Payments',
+    'Pensions',
+    'Mortgages',
+    'Capital Markets',
+    'Cryptocurrency',
+    'Fintech',
+    'AML & Financial Crime',
+    'Audit & Accounting',
+    'Professional Services',
+    'General'
+];
+
+// Enhanced authority-specific sector mappings
+const AUTHORITY_SECTOR_MAPPINGS = {
+    'FCA': ['Banking', 'Investment Management', 'Consumer Credit', 'Insurance', 'Payments', 'Capital Markets', 'Cryptocurrency', 'Fintech'],
+    'PRA': ['Banking', 'Insurance', 'Capital Markets'],
+    'BoE': ['Banking', 'Capital Markets', 'Payments', 'Fintech'],
+    'TPR': ['Pensions'],
+    'SFO': ['AML & Financial Crime', 'Banking', 'Investment Management'],
+    'FATF': ['AML & Financial Crime', 'Banking', 'Payments', 'Cryptocurrency'],
+    'FRC': ['Audit & Accounting', 'Professional Services'],
+    'JMLSG': ['AML & Financial Crime', 'Banking'],
+    'ESMA': ['Capital Markets', 'Investment Management', 'Cryptocurrency']
 };
 
-const scrapeArticleContent = async (url) => {
-    console.log(`🔍 Scraping content from: ${url}`);
-    
-    try {
-        const { data } = await axios.get(url, { 
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }, 
-            timeout: 15000,
-            maxRedirects: 5
-        });
+class EnhancedAIAnalyzer {
+    constructor() {
+        this.groqApiKey = process.env.GROQ_API_KEY;
+        this.groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        this.model = 'llama-3.1-8b-instant';
         
-        const $ = cheerio.load(data);
+        this.requestTimeout = 30000; // 30 seconds
+        this.maxRetries = 3;
+        this.rateLimitDelay = 1000; // 1 second between requests
         
-        // Remove unwanted elements
-        $('script, style, nav, header, footer, .advertisement, .social-media, .cookie-banner').remove();
-        
-        // Try multiple content selectors in order of preference
-        const contentSelectors = [
-            'main article .content',
-            'main article',
-            '.article-content',
-            '.post-content',
-            '.content-body',
-            'main',
+        // Enhanced content extraction selectors
+        this.contentSelectors = [
             'article',
-            '.main-content'
+            '.article-content',
+            '.content',
+            '.post-content',
+            '.entry-content',
+            '.news-content',
+            '.press-release-content',
+            'main',
+            '.main-content',
+            '#content',
+            '#main',
+            '.publication-content',
+            '.document-content'
         ];
         
-        let articleText = '';
+        // Enhanced cleaning patterns
+        this.cleaningPatterns = [
+            /<!--[\s\S]*?-->/g, // HTML comments
+            /<script[\s\S]*?<\/script>/gi, // Script tags
+            /<style[\s\S]*?<\/style>/gi, // Style tags
+            /<noscript[\s\S]*?<\/noscript>/gi, // Noscript tags
+            /\[if[\s\S]*?\[endif\]/gi, // IE conditional comments
+            /window\.__[\s\S]*?};/g, // JavaScript objects
+            /\s{3,}/g, // Multiple whitespace
+            /\n{3,}/g // Multiple newlines
+        ];
+    }
+
+    // ENHANCED ARTICLE CONTENT SCRAPING with multiple strategies
+    async scrapeArticleContent(url) {
+        console.log(`🔍 Enhanced content scraping for: ${url}`);
         
-        for (const selector of contentSelectors) {
-            const content = $(selector);
-            if (content.length > 0) {
-                articleText = content.text();
-                if (articleText.length > 200) {
-                    console.log(`✅ Content extracted using selector: ${selector}`);
-                    break;
+        try {
+            // Enhanced request with multiple user agents and retry logic
+            const response = await this.makeRobustRequest(url);
+            const $ = cheerio.load(response.data);
+            
+            // Strategy 1: Try specific content selectors
+            let content = this.extractContentWithSelectors($);
+            
+            // Strategy 2: Try semantic content extraction
+            if (!content || content.length < 100) {
+                content = this.extractSemanticContent($);
+            }
+            
+            // Strategy 3: Try paragraph-based extraction
+            if (!content || content.length < 100) {
+                content = this.extractParagraphContent($);
+            }
+            
+            // Strategy 4: Fallback to body content with smart filtering
+            if (!content || content.length < 100) {
+                content = this.extractBodyContent($);
+            }
+            
+            if (!content || content.length < 50) {
+                throw new Error('Insufficient content extracted');
+            }
+            
+            // Enhanced content cleaning and validation
+            const cleanedContent = this.enhancedContentCleaning(content);
+            const validatedContent = this.validateExtractedContent(cleanedContent);
+            
+            if (!validatedContent.isValid) {
+                throw new Error(`Content validation failed: ${validatedContent.reason}`);
+            }
+            
+            console.log(`✅ Successfully extracted ${cleanedContent.length} characters of content`);
+            return cleanedContent;
+            
+        } catch (error) {
+            console.error(`❌ Content scraping failed for ${url}:`, error.message);
+            throw error;
+        }
+    }
+
+    // ENHANCED ROBUST HTTP REQUEST
+    async makeRobustRequest(url, attempt = 1) {
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        ];
+        
+        const userAgent = userAgents[attempt % userAgents.length];
+        
+        try {
+            const response = await axios.get(url, {
+                headers: {
+                    'User-Agent': userAgent,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Cache-Control': 'no-cache',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
+                },
+                timeout: this.requestTimeout,
+                maxRedirects: 5,
+                validateStatus: (status) => status < 500
+            });
+            
+            if (response.status >= 400) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response;
+            
+        } catch (error) {
+            if (attempt < this.maxRetries) {
+                console.log(`⚠️ Request attempt ${attempt} failed, retrying...`);
+                await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay * attempt));
+                return this.makeRobustRequest(url, attempt + 1);
+            }
+            throw error;
+        }
+    }
+
+    // CONTENT EXTRACTION STRATEGIES
+    extractContentWithSelectors($) {
+        for (const selector of this.contentSelectors) {
+            const element = $(selector).first();
+            if (element.length > 0) {
+                const content = element.text().trim();
+                if (content.length > 200) {
+                    console.log(`✅ Content found with selector: ${selector}`);
+                    return content;
                 }
             }
         }
+        return null;
+    }
+
+    extractSemanticContent($) {
+        // Look for semantic HTML5 elements
+        const semanticSelectors = [
+            'main article',
+            'main section',
+            '[role="main"] article',
+            '[role="main"]',
+            '.content-wrapper',
+            '.page-content',
+            '.article-wrapper'
+        ];
         
-        // Fallback to body if no good content found
-        if (!articleText || articleText.length < 200) {
-            articleText = $('body').text();
-            console.log('⚠️ Using fallback body text extraction');
+        for (const selector of semanticSelectors) {
+            const element = $(selector).first();
+            if (element.length > 0) {
+                const content = element.text().trim();
+                if (content.length > 200) {
+                    console.log(`✅ Semantic content found with: ${selector}`);
+                    return content;
+                }
+            }
+        }
+        return null;
+    }
+
+    extractParagraphContent($) {
+        // Extract content from paragraphs, filtering out navigation and footer content
+        const paragraphs = $('p').filter((i, el) => {
+            const $el = $(el);
+            const text = $el.text().trim();
+            
+            // Filter out short paragraphs and navigation elements
+            if (text.length < 30) return false;
+            
+            // Filter out common navigation/footer content
+            const parent = $el.closest('nav, footer, aside, .nav, .footer, .sidebar, .menu');
+            if (parent.length > 0) return false;
+            
+            return true;
+        });
+        
+        if (paragraphs.length > 0) {
+            const content = paragraphs.map((i, el) => $(el).text().trim()).get().join('\n\n');
+            if (content.length > 200) {
+                console.log(`✅ Paragraph-based content extracted: ${paragraphs.length} paragraphs`);
+                return content;
+            }
         }
         
-        // Clean and process text
-        const cleanedText = articleText
-            .replace(/\s\s+/g, ' ')
-            .replace(/\n\s*\n/g, '\n')
-            .replace(/[^\w\s\.,;:!?\-()]/g, '')
+        return null;
+    }
+
+    extractBodyContent($) {
+        // Fallback: extract from body but filter out navigation, footer, etc.
+        const $body = $('body').clone();
+        
+        // Remove unwanted elements
+        $body.find('nav, footer, aside, script, style, noscript, .nav, .footer, .sidebar, .menu, .advertisement, .ads').remove();
+        
+        const content = $body.text().trim();
+        if (content.length > 200) {
+            console.log(`✅ Body content extracted as fallback`);
+            return content;
+        }
+        
+        return null;
+    }
+
+    // ENHANCED CONTENT CLEANING
+    enhancedContentCleaning(content) {
+        if (!content) return '';
+        
+        let cleaned = content;
+        
+        // Apply cleaning patterns
+        for (const pattern of this.cleaningPatterns) {
+            cleaned = cleaned.replace(pattern, ' ');
+        }
+        
+        // Enhanced text cleaning
+        cleaned = cleaned
+            .replace(/\s*\n\s*/g, '\n') // Normalize line breaks
+            .replace(/\t+/g, ' ') // Replace tabs with spaces
+            .replace(/\s{2,}/g, ' ') // Collapse multiple spaces
+            .replace(/\n{3,}/g, '\n\n') // Limit consecutive line breaks
+            .replace(/[^\x20-\x7E\n]/g, ' ') // Remove non-ASCII characters except newlines
             .trim();
         
-        if (cleanedText.length < 100) {
-            throw new Error('Insufficient content extracted');
+        // Remove common website boilerplate
+        const boilerplatePatterns = [
+            /cookies?\s+policy/gi,
+            /privacy\s+policy/gi,
+            /terms\s+(of\s+)?(use|service)/gi,
+            /all\s+rights\s+reserved/gi,
+            /copyright\s+\d{4}/gi,
+            /subscribe\s+to\s+newsletter/gi,
+            /follow\s+us\s+on/gi,
+            /share\s+this\s+article/gi
+        ];
+        
+        for (const pattern of boilerplatePatterns) {
+            cleaned = cleaned.replace(pattern, '');
         }
         
-        // Limit content size for AI processing
-        const maxLength = 4000;
-        const finalText = cleanedText.length > maxLength ? 
-            cleanedText.substring(0, maxLength) + '...' : cleanedText;
-        
-        console.log(`✅ Extracted ${finalText.length} characters of content`);
-        return finalText;
-        
-    } catch (error) {
-        console.error(`❌ Error scraping ${url}:`, error.message);
-        return null;
+        return cleaned.trim();
     }
-};
 
-const extractJSONFromResponse = (textResponse) => {
-    if (!textResponse) return null;
-    
-    // Try direct JSON parse first
-    try { 
-        return JSON.parse(textResponse); 
-    } catch (e) { 
-        // Continue to other methods
-    }
-    
-    // Try extracting from markdown code blocks
-    const markdownMatch = textResponse.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-    if (markdownMatch) {
-        try { 
-            return JSON.parse(markdownMatch[1]); 
-        } catch(e) { 
-            console.log('Failed to parse markdown JSON');
+    // CONTENT VALIDATION
+    validateExtractedContent(content) {
+        if (!content || typeof content !== 'string') {
+            return { isValid: false, reason: 'No content provided' };
         }
-    }
-    
-    // Try finding JSON object in text
-    const jsonMatch = textResponse.match(/\{[\s\S]*?\}/);
-    if (jsonMatch) {
-        try { 
-            return JSON.parse(jsonMatch[0]); 
-        } catch(e) { 
-            console.log('Failed to parse extracted JSON');
+        
+        if (content.length < 50) {
+            return { isValid: false, reason: 'Content too short' };
         }
+        
+        if (content.length > 50000) {
+            return { isValid: false, reason: 'Content suspiciously long' };
+        }
+        
+        // Check for minimum word count
+        const wordCount = content.split(/\s+/).length;
+        if (wordCount < 20) {
+            return { isValid: false, reason: 'Insufficient word count' };
+        }
+        
+        // Check for repetitive content
+        const uniqueWords = new Set(content.toLowerCase().split(/\s+/));
+        const uniquenessRatio = uniqueWords.size / wordCount;
+        if (uniquenessRatio < 0.3) {
+            return { isValid: false, reason: 'Content appears repetitive' };
+        }
+        
+        // Check for regulatory relevance indicators
+        const regulatoryKeywords = [
+            'regulation', 'regulatory', 'compliance', 'guidance', 'policy',
+            'directive', 'framework', 'standard', 'requirement', 'rule',
+            'conduct', 'supervision', 'oversight', 'enforcement', 'consultation',
+            'financial', 'banking', 'investment', 'insurance', 'pension'
+        ];
+        
+        const hasRegulatoryContent = regulatoryKeywords.some(keyword => 
+            content.toLowerCase().includes(keyword)
+        );
+        
+        if (!hasRegulatoryContent) {
+            return { isValid: false, reason: 'Content does not appear regulatory in nature' };
+        }
+        
+        return { isValid: true, reason: 'Content validation passed' };
     }
-    
-    console.error('❌ Failed to extract valid JSON from AI response');
-    return null;
-};
 
-const buildAnalysisPrompt = (articleText, articleUrl) => {
-    return `Analyze this UK regulatory article and respond with ONLY a valid JSON object.
+    // ENHANCED AI ANALYSIS with robust error handling and fallbacks
+    async analyzeContentWithAI(content, url) {
+        if (!this.groqApiKey) {
+            console.log('⚠️ No Groq API key available, using enhanced fallback analysis');
+            return this.createEnhancedFallbackAnalysis(content, url);
+        }
 
-ARTICLE CONTENT:
-${articleText}
-
-SOURCE URL: ${articleUrl}
-
-Analyze the regulatory impact and respond with this exact JSON structure:
-
-{
-  "headline": "Clear, professional headline summarizing the key regulatory change",
-  "impact": "2-3 sentence summary of what this means for financial services firms",
-  "area": "Specific regulatory area (e.g., Consumer Duty, Capital Requirements, AML, etc.)",
-  "authority": "Exact authority name: FCA, BoE, PRA, TPR, SFO, or FATF",
-  "impactLevel": "Significant, Moderate, or Informational",
-  "urgency": "High, Medium, or Low",
-  "sector": "Most affected sector: Banking, Investment Management, Insurance, Pensions, Payments, Consumer Credit, or General",
-  "keyDates": "Important dates mentioned (deadlines, implementation dates) or 'None specified'",
-  "primary_sectors": ["Array of affected sectors from: Banking, Investment Management, Insurance, Pensions, Payments, Consumer Credit"],
-  "sector_relevance_scores": {
-    "Banking": 0-100,
-    "Investment Management": 0-100,
-    "Insurance": 0-100,
-    "Pensions": 0-100,
-    "Payments": 0-100,
-    "Consumer Credit": 0-100
-  }
-}
-
-IMPORTANT GUIDELINES:
-- Keep headline under 100 characters
-- Impact must be business-focused and actionable
-- Authority must be exact match from the list
-- Sector relevance scores should total impact across sectors (0-100 each)
-- Primary sectors should include top 2-3 most affected sectors
-- Be precise with impactLevel and urgency based on regulatory significance
-
-Respond with ONLY the JSON object, no additional text.`;
-};
-
-const analyzeContentWithAI = async (articleText, articleUrl) => {
-    console.log(`\n🤖 === AI ANALYSIS START for ${articleUrl} ===`);
-    
-    if (!AI_PROVIDER_CONFIG.apiKey) {
-        console.error('❌ GROQ_API_KEY not set. Cannot perform AI analysis.');
-        return null;
-    }
-    
-    const prompt = buildAnalysisPrompt(articleText, articleUrl);
-    
-    let retryCount = 0;
-    
-    while (retryCount < AI_PROVIDER_CONFIG.maxRetries) {
         try {
-            const payload = {
-                model: AI_PROVIDER_CONFIG.model,
-                messages: [
-                    { 
-                        role: "system", 
-                        content: "You are a UK financial regulatory expert. Analyze regulatory content and provide structured insights in JSON format. Be precise, professional, and focus on business impact." 
-                    },
-                    { 
-                        role: "user", 
-                        content: prompt 
-                    }
-                ],
-                max_tokens: 1000,
-                temperature: 0.1,
-                top_p: 0.9
-            };
-
-            console.log(`🤖 Sending request to AI (attempt ${retryCount + 1}/${AI_PROVIDER_CONFIG.maxRetries})`);
+            console.log(`🤖 Starting enhanced AI analysis for content (${content.length} chars)`);
             
-            const response = await axios.post(AI_PROVIDER_CONFIG.apiUrl, payload, {
-                headers: { 
-                    'Authorization': `Bearer ${AI_PROVIDER_CONFIG.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 30000
-            });
-
-            const textResponse = response.data?.choices?.[0]?.message?.content?.trim();
+            const enhancedPrompt = this.createEnhancedAnalysisPrompt(content, url);
             
-            if (!textResponse) {
-                throw new Error('Invalid response structure from AI API');
-            }
-
-            console.log(`🤖 Received AI response (${textResponse.length} characters)`);
+            const response = await this.makeGroqRequest(enhancedPrompt);
             
-            const analyzedData = extractJSONFromResponse(textResponse);
-            
-            if (!analyzedData) {
-                throw new Error('Failed to extract JSON from AI response');
+            if (!response || !response.choices || !response.choices[0]) {
+                throw new Error('Invalid response format from Groq API');
             }
             
-            // Validate required fields
-            const requiredFields = ['headline', 'impact', 'area', 'authority', 'impactLevel', 'urgency', 'sector'];
-            const missingFields = requiredFields.filter(field => !analyzedData[field]);
+            const aiResponse = response.choices[0].message.content;
+            const parsedAnalysis = this.parseAndValidateAIResponse(aiResponse, content, url);
             
-            if (missingFields.length > 0) {
-                throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+            if (!parsedAnalysis) {
+                throw new Error('Failed to parse AI response');
             }
             
-            // Add metadata
-            analyzedData.url = articleUrl;
-            analyzedData.fetchedDate = new Date().toISOString();
-            analyzedData.analysisVersion = '2.0';
-            analyzedData.processingTime = Date.now();
-            
-            // Ensure sector relevance scores exist
-            if (!analyzedData.sector_relevance_scores) {
-                analyzedData.sector_relevance_scores = {
-                    "Banking": 0,
-                    "Investment Management": 0,
-                    "Insurance": 0,
-                    "Pensions": 0,
-                    "Payments": 0,
-                    "Consumer Credit": 0
-                };
-            }
-            
-            // Ensure primary sectors exist
-            if (!analyzedData.primary_sectors) {
-                analyzedData.primary_sectors = [analyzedData.sector];
-            }
-            
-            // Save to database
-            try {
-                await dbService.saveUpdate(analyzedData);
-                console.log(`✅ Successfully analyzed and saved: ${analyzedData.headline.substring(0, 60)}...`);
-            } catch (dbError) {
-                console.error(`❌ Database save failed: ${dbError.message}`);
-                // Still return the analysis even if DB save fails
-            }
-            
-            return analyzedData;
+            console.log(`✅ Enhanced AI analysis completed successfully`);
+            return parsedAnalysis;
             
         } catch (error) {
-            retryCount++;
-            console.error(`❌ AI analysis attempt ${retryCount} failed:`, error.message);
+            console.error(`❌ Enhanced AI analysis failed:`, error.message);
             
-            if (retryCount < AI_PROVIDER_CONFIG.maxRetries) {
-                console.log(`⏳ Retrying in ${AI_PROVIDER_CONFIG.retryDelay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, AI_PROVIDER_CONFIG.retryDelay));
-            } else {
-                console.error(`❌ AI analysis failed after ${AI_PROVIDER_CONFIG.maxRetries} attempts`);
-                return null;
-            }
+            // Enhanced fallback analysis
+            console.log('🔄 Using enhanced fallback analysis with sector intelligence');
+            return this.createEnhancedFallbackAnalysis(content, url);
         }
     }
-    
-    console.log(`🤖 === AI ANALYSIS END ===\n`);
-    return null;
-};
 
-// Batch processing with rate limiting
-const analyzeMultipleContents = async (contentItems, maxConcurrent = 3) => {
-    console.log(`🤖 Starting batch analysis of ${contentItems.length} items`);
-    
-    const results = [];
-    const errors = [];
-    
-    // Process in batches to avoid rate limiting
-    for (let i = 0; i < contentItems.length; i += maxConcurrent) {
-        const batch = contentItems.slice(i, i + maxConcurrent);
-        console.log(`🤖 Processing batch ${Math.floor(i/maxConcurrent) + 1}/${Math.ceil(contentItems.length/maxConcurrent)}`);
+    // ENHANCED ANALYSIS PROMPT
+    createEnhancedAnalysisPrompt(content, url) {
+        return `You are an expert regulatory intelligence analyst specializing in UK and international financial services regulation. 
+
+Analyze this regulatory content and provide a comprehensive structured response:
+
+CONTENT TO ANALYZE:
+${content.substring(0, 4000)}
+
+URL SOURCE: ${url}
+
+ANALYSIS REQUIREMENTS:
+1. Create a clear, professional headline (max 120 characters)
+2. Provide a concise business impact summary (max 300 words)
+3. Identify the regulatory area/topic
+4. Determine impact level: Significant, Moderate, or Informational
+5. Assess urgency: High, Medium, or Low
+6. Identify ALL relevant industry sectors from this list: ${INDUSTRY_SECTORS.join(', ')}
+7. Provide sector-specific relevance scores (0-100) for each identified sector
+8. Extract any key dates, deadlines, or implementation timeframes
+9. Identify any compliance requirements or actions needed
+
+CRITICAL: Respond ONLY with valid JSON in this exact format:
+{
+  "headline": "Clear, professional headline",
+  "impact": "Concise business impact summary",
+  "area": "Specific regulatory area or topic",
+  "impactLevel": "Significant|Moderate|Informational",
+  "urgency": "High|Medium|Low", 
+  "sector": "Primary sector most affected",
+  "primarySectors": ["Array", "of", "affected", "sectors"],
+  "sectorRelevanceScores": {
+    "Banking": 85,
+    "Investment Management": 70
+  },
+  "keyDates": "Any important dates or deadlines mentioned",
+  "complianceActions": "Required actions or next steps",
+  "riskLevel": "High|Medium|Low"
+}
+
+Ensure accuracy and professionalism. Focus on business impact and actionable insights.`;
+    }
+
+    // ENHANCED GROQ API REQUEST
+    async makeGroqRequest(prompt, attempt = 1) {
+        try {
+            const response = await axios.post(this.groqApiUrl, {
+                model: this.model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a regulatory intelligence expert. Always respond with valid JSON only.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                temperature: 0.1,
+                max_tokens: 1500,
+                top_p: 0.9
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${this.groqApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: this.requestTimeout
+            });
+
+            return response.data;
+            
+        } catch (error) {
+            if (attempt < this.maxRetries && (error.response?.status === 429 || error.code === 'ECONNRESET')) {
+                console.log(`⚠️ Groq API attempt ${attempt} failed, retrying...`);
+                await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay * attempt));
+                return this.makeGroqRequest(prompt, attempt + 1);
+            }
+            throw error;
+        }
+    }
+
+    // ENHANCED AI RESPONSE PARSING
+    parseAndValidateAIResponse(aiResponse, content, url) {
+        try {
+            // Clean the response to extract JSON
+            let cleanedResponse = aiResponse.trim();
+            
+            // Remove any markdown formatting
+            cleanedResponse = cleanedResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            
+            // Find JSON object boundaries
+            const jsonStart = cleanedResponse.indexOf('{');
+            const jsonEnd = cleanedResponse.lastIndexOf('}') + 1;
+            
+            if (jsonStart === -1 || jsonEnd === 0) {
+                throw new Error('No valid JSON found in AI response');
+            }
+            
+            const jsonString = cleanedResponse.substring(jsonStart, jsonEnd);
+            const parsed = JSON.parse(jsonString);
+            
+            // Enhanced validation and enrichment
+            const validated = this.validateAndEnrichAnalysis(parsed, content, url);
+            
+            return validated;
+            
+        } catch (error) {
+            console.error('❌ Failed to parse AI response:', error.message);
+            console.log('Raw AI response:', aiResponse.substring(0, 500));
+            return null;
+        }
+    }
+
+    // VALIDATE AND ENRICH ANALYSIS
+    validateAndEnrichAnalysis(analysis, content, url) {
+        // Ensure required fields exist
+        const enriched = {
+            headline: analysis.headline || 'Regulatory Update',
+            impact: analysis.impact || 'Impact assessment unavailable',
+            area: analysis.area || 'General Regulatory',
+            impactLevel: this.validateImpactLevel(analysis.impactLevel),
+            urgency: this.validateUrgency(analysis.urgency),
+            sector: analysis.sector || 'General',
+            primarySectors: this.validateSectors(analysis.primarySectors),
+            sectorRelevanceScores: this.validateRelevanceScores(analysis.sectorRelevanceScores),
+            keyDates: analysis.keyDates || 'No specific dates mentioned',
+            complianceActions: analysis.complianceActions || 'No specific actions required',
+            riskLevel: this.validateRiskLevel(analysis.riskLevel),
+            url: url,
+            fetchedDate: new Date().toISOString(),
+            analysisMethod: 'enhanced_ai_analysis'
+        };
         
-        const batchPromises = batch.map(async (item) => {
-            try {
-                const content = await scrapeArticleContent(item.url);
-                if (!content) return null;
-                
-                const analysis = await analyzeContentWithAI(content, item.url);
-                return analysis;
-            } catch (error) {
-                errors.push({ url: item.url, error: error.message });
-                return null;
+        // Add authority detection from URL
+        enriched.authority = this.detectAuthorityFromUrl(url);
+        
+        // Enhance sector relevance if missing
+        if (!enriched.sectorRelevanceScores || Object.keys(enriched.sectorRelevanceScores).length === 0) {
+            enriched.sectorRelevanceScores = this.generateSectorRelevanceScores(enriched.primarySectors, enriched.authority);
+        }
+        
+        return enriched;
+    }
+
+    // VALIDATION HELPERS
+    validateImpactLevel(level) {
+        const validLevels = ['Significant', 'Moderate', 'Informational'];
+        return validLevels.includes(level) ? level : 'Informational';
+    }
+
+    validateUrgency(urgency) {
+        const validUrgencies = ['High', 'Medium', 'Low'];
+        return validUrgencies.includes(urgency) ? urgency : 'Low';
+    }
+
+    validateRiskLevel(risk) {
+        const validRisks = ['High', 'Medium', 'Low'];
+        return validRisks.includes(risk) ? risk : 'Low';
+    }
+
+    validateSectors(sectors) {
+        if (!Array.isArray(sectors)) return ['General'];
+        return sectors.filter(sector => INDUSTRY_SECTORS.includes(sector));
+    }
+
+    validateRelevanceScores(scores) {
+        if (!scores || typeof scores !== 'object') return {};
+        
+        const validated = {};
+        for (const [sector, score] of Object.entries(scores)) {
+            if (INDUSTRY_SECTORS.includes(sector) && typeof score === 'number' && score >= 0 && score <= 100) {
+                validated[sector] = Math.round(score);
+            }
+        }
+        return validated;
+    }
+
+    // AUTHORITY DETECTION FROM URL
+    detectAuthorityFromUrl(url) {
+        if (!url) return 'Unknown';
+        
+        const urlLower = url.toLowerCase();
+        
+        if (urlLower.includes('fca.org.uk')) return 'FCA';
+        if (urlLower.includes('bankofengland.co.uk')) return urlLower.includes('prudential') ? 'PRA' : 'BoE';
+        if (urlLower.includes('thepensionsregulator.gov.uk')) return 'TPR';
+        if (urlLower.includes('sfo.gov.uk')) return 'SFO';
+        if (urlLower.includes('fatf-gafi.org')) return 'FATF';
+        if (urlLower.includes('frc.org.uk')) return 'FRC';
+        if (urlLower.includes('jmlsg.org.uk')) return 'JMLSG';
+        if (urlLower.includes('esma.europa.eu')) return 'ESMA';
+        
+        return 'Unknown';
+    }
+
+    // GENERATE SECTOR RELEVANCE SCORES
+    generateSectorRelevanceScores(primarySectors, authority) {
+        const scores = {};
+        
+        // Get authority-specific sectors
+        const authoritySectors = AUTHORITY_SECTOR_MAPPINGS[authority] || [];
+        
+        // Assign high scores to primary sectors
+        primarySectors.forEach(sector => {
+            scores[sector] = 90;
+        });
+        
+        // Assign medium scores to authority-relevant sectors
+        authoritySectors.forEach(sector => {
+            if (!scores[sector]) {
+                scores[sector] = 60;
             }
         });
         
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults.filter(result => result !== null));
+        // Assign low scores to other major sectors
+        ['Banking', 'Investment Management', 'Insurance'].forEach(sector => {
+            if (!scores[sector]) {
+                scores[sector] = 20;
+            }
+        });
         
-        // Rate limiting delay between batches
-        if (i + maxConcurrent < contentItems.length) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        return scores;
     }
-    
-    console.log(`🤖 Batch analysis complete: ${results.length} successful, ${errors.length} errors`);
-    
-    return { results, errors };
-};
+
+    // ENHANCED FALLBACK ANALYSIS
+    createEnhancedFallbackAnalysis(content, url) {
+        console.log('🔄 Creating enhanced fallback analysis with sector intelligence');
+        
+        const authority = this.detectAuthorityFromUrl(url);
+        const analysis = this.performTextAnalysis(content);
+        const sectors = this.detectSectorsFromContent(content, authority);
+        
+        return {
+            headline: this.extractHeadlineFromContent(content),
+            impact: this.extractImpactFromContent(content),
+            area: analysis.area,
+            authority: authority,
+            impactLevel: analysis.impactLevel,
+            urgency: analysis.urgency,
+            sector: sectors.primary,
+            primarySectors: sectors.all,
+            sectorRelevanceScores: this.generateSectorRelevanceScores(sectors.all, authority),
+            keyDates: this.extractDatesFromContent(content),
+            complianceActions: 'Review content for specific compliance requirements',
+            riskLevel: analysis.riskLevel,
+            url: url,
+            fetchedDate: new Date().toISOString(),
+            analysisMethod: 'enhanced_fallback_analysis',
+            isFallbackAnalysis: true
+        };
+    }
+
+    // ENHANCED TEXT ANALYSIS
+    performTextAnalysis(content) {
+        const textLower = content.toLowerCase();
+        
+        // Impact level detection
+        let impactLevel = 'Informational';
+        if (textLower.includes('significant') || textLower.includes('major') || textLower.includes('critical')) {
+            impactLevel = 'Significant';
+        } else if (textLower.includes('important') || textLower.includes('moderate') || textLower.includes('guidance')) {
+            impactLevel = 'Moderate';
+        }
+        
+        // Urgency detection
+        let urgency = 'Low';
+        if (textLower.includes('urgent') || textLower.includes('immediate') || textLower.includes('deadline')) {
+            urgency = 'High';
+        } else if (textLower.includes('soon') || textLower.includes('required') || textLower.includes('must')) {
+            urgency = 'Medium';
+        }
+        
+        // Risk level detection
+        let riskLevel = 'Low';
+        if (textLower.includes('risk') || textLower.includes('concern') || textLower.includes('warning')) {
+            riskLevel = 'Medium';
+            if (textLower.includes('high risk') || textLower.includes('serious') || textLower.includes('enforcement')) {
+                riskLevel = 'High';
+            }
+        }
+        
+        // Area detection
+        let area = 'General Regulatory';
+        const areaKeywords = {
+            'Prudential Regulation': ['capital', 'prudential', 'solvency', 'liquidity'],
+            'Conduct Regulation': ['conduct', 'consumer', 'protection', 'treating customers fairly'],
+            'Market Regulation': ['market', 'trading', 'securities', 'exchange'],
+            'Anti-Money Laundering': ['money laundering', 'aml', 'suspicious activity', 'financial crime'],
+            'Data Protection': ['data protection', 'gdpr', 'privacy', 'personal data'],
+            'Governance': ['governance', 'board', 'directors', 'management']
+        };
+        
+        for (const [areaName, keywords] of Object.entries(areaKeywords)) {
+            if (keywords.some(keyword => textLower.includes(keyword))) {
+                area = areaName;
+                break;
+            }
+        }
+        
+        return { impactLevel, urgency, riskLevel, area };
+    }
+
+    // SECTOR DETECTION FROM CONTENT
+    detectSectorsFromContent(content, authority) {
+        const textLower = content.toLowerCase();
+        const detectedSectors = [];
+        
+        const sectorKeywords = {
+            'Banking': ['bank', 'banking', 'deposit', 'lending', 'credit institution'],
+            'Investment Management': ['investment', 'fund management', 'asset management', 'portfolio', 'fund'],
+            'Insurance': ['insurance', 'insurer', 'policy', 'claim', 'underwriting'],
+            'Consumer Credit': ['consumer credit', 'retail banking', 'mortgage', 'personal loan'],
+            'Capital Markets': ['capital market', 'securities', 'trading', 'exchange', 'listing'],
+            'Payments': ['payment', 'payment services', 'electronic money', 'psp'],
+            'Pensions': ['pension', 'retirement', 'pension scheme', 'trustee'],
+            'Cryptocurrency': ['crypto', 'cryptocurrency', 'digital asset', 'virtual currency'],
+            'AML & Financial Crime': ['money laundering', 'financial crime', 'suspicious activity'],
+            'Fintech': ['fintech', 'financial technology', 'innovation']
+        };
+        
+        for (const [sector, keywords] of Object.entries(sectorKeywords)) {
+            if (keywords.some(keyword => textLower.includes(keyword))) {
+                detectedSectors.push(sector);
+            }
+        }
+        
+        // Add authority-specific sectors if none detected
+        if (detectedSectors.length === 0) {
+            const authoritySectors = AUTHORITY_SECTOR_MAPPINGS[authority];
+            if (authoritySectors && authoritySectors.length > 0) {
+                detectedSectors.push(authoritySectors[0]);
+            }
+        }
+        
+        // Fallback to General if still no sectors
+        if (detectedSectors.length === 0) {
+            detectedSectors.push('General');
+        }
+        
+        return {
+            all: detectedSectors,
+            primary: detectedSectors[0]
+        };
+    }
+
+    // CONTENT EXTRACTION HELPERS
+    extractHeadlineFromContent(content) {
+        // Try to extract a meaningful headline from the first few sentences
+        const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        
+        if (sentences.length > 0) {
+            let headline = sentences[0].trim();
+            
+            // Clean up the headline
+            headline = headline.replace(/^(The\s+)?/i, '');
+            headline = headline.substring(0, 120);
+            
+            if (headline.length > 10) {
+                return headline;
+            }
+        }
+        
+        return 'Regulatory Update';
+    }
+
+    extractImpactFromContent(content) {
+        // Extract the first meaningful paragraph as impact summary
+        const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+        
+        if (paragraphs.length > 0) {
+            let impact = paragraphs[0].trim();
+            if (impact.length > 300) {
+                impact = impact.substring(0, 297) + '...';
+            }
+            return impact;
+        }
+        
+        return content.substring(0, 300) + (content.length > 300 ? '...' : '');
+    }
+
+    extractDatesFromContent(content) {
+        const datePatterns = [
+            /\b(\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})\b/gi,
+            /\b(\d{1,2}\/\d{1,2}\/\d{4})\b/g,
+            /\b(\d{4}-\d{1,2}-\d{1,2})\b/g
+        ];
+        
+        const dates = [];
+        for (const pattern of datePatterns) {
+            const matches = content.match(pattern);
+            if (matches) {
+                dates.push(...matches.slice(0, 3));
+            }
+        }
+        
+        return dates.length > 0 ? dates.join(', ') : 'No specific dates mentioned';
+    }
+}
+
+// Create and export singleton instance
+const enhancedAIAnalyzer = new EnhancedAIAnalyzer();
 
 module.exports = {
-    scrapeArticleContent,
-    analyzeContentWithAI,
-    analyzeMultipleContents,
-    extractJSONFromResponse,
-    buildAnalysisPrompt,
-    INDUSTRY_SECTORS: [
-        'Banking', 'Investment Management', 'Consumer Credit',
-        'Insurance', 'Payments', 'Pensions', 'Mortgages',
-        'Capital Markets', 'Cryptocurrency', 'Fintech', 'General'
-    ]
+    // Primary methods
+    scrapeArticleContent: (url) => enhancedAIAnalyzer.scrapeArticleContent(url),
+    analyzeContentWithAI: (content, url) => enhancedAIAnalyzer.analyzeContentWithAI(content, url),
+    
+    // Utility methods
+    validateExtractedContent: (content) => enhancedAIAnalyzer.validateExtractedContent(content),
+    detectAuthorityFromUrl: (url) => enhancedAIAnalyzer.detectAuthorityFromUrl(url),
+    
+    // Constants
+    INDUSTRY_SECTORS,
+    AUTHORITY_SECTOR_MAPPINGS,
+    
+    // Export analyzer instance
+    enhancedAIAnalyzer
 };
