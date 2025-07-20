@@ -1,926 +1,1127 @@
-// src/routes/pages/dashboardPage.js
-// CLEANED: Removed duplicate functions, kept only dashboard-specific logic
+// Fixed Dashboard Page - Phase 1
+// File: src/routes/pages/dashboardPage.js
 
-const { getCommonStyles } = require('../templates/commonStyles');
 const { getSidebar } = require('../templates/sidebar');
-const { getCommonClientScripts } = require('../templates/clientScripts');
+const { getClientScripts } = require('../templates/clientScripts');
+const { getCommonStyles } = require('../templates/commonStyles');
 const dbService = require('../../services/dbService');
 
-// Helper functions remain the same for fallback compatibility
-const getAnalyticsService = () => {
+async function renderDashboardPage(req, res) {
     try {
-        return require('../../services/analyticsService');
-    } catch (error) {
-        console.warn('Analytics service not available, using fallback');
-        return {
-            calculateRiskScore: () => 0
-        };
-    }
-};
-
-const getRelevanceService = () => {
-    try {
-        return require('../../services/relevanceService');
-    } catch (error) {
-        console.warn('Relevance service not available, using fallback');
-        return {
-            calculateRelevanceScore: () => 0,
-            categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
-        };
-    }
-};
-
-const getWorkspaceService = () => {
-    try {
-        return require('../../services/workspaceService');
-    } catch (error) {
-        console.warn('Workspace service not available, using fallback');
-        return {
-            getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } })
-        };
-    }
-};
-
-const dashboardPage = async (req, res) => {
-    try {
-        // Get updates and categorize them
-        const updates = await dbService.getAllUpdates();
+        console.log('📊 Rendering enhanced dashboard page...');
         
-        const urgentUpdates = updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant');
-        const moderateUpdates = updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate');
-        const informationalUpdates = updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational');
+        // Get query parameters for filtering
+        const {
+            category = 'all',
+            authority = null,
+            sector = null,
+            impact = null,
+            range = null,
+            search = null
+        } = req.query;
         
-        // Calculate enhanced counts for the new filtering sections
-        let consultationCount = 0, guidanceCount = 0, enforcementCount = 0;
-        let speechCount = 0, newsCount = 0, policyCount = 0;
-        let finalRuleCount = 0, proposalCount = 0, noticeCount = 0, reportCount = 0;
-        let rssCount = 0, scrapedCount = 0, directCount = 0;
-        
-        updates.forEach(update => {
-            const headline = (update.headline || '').toLowerCase();
-            const impact = (update.impact || '').toLowerCase();
-            const content = headline + ' ' + impact;
-            const url = update.url || '';
-            
-            // Category classification
-            if (content.includes('consultation')) consultationCount++;
-            else if (content.includes('guidance')) guidanceCount++;
-            else if (content.includes('enforcement') || content.includes('fine')) enforcementCount++;
-            else if (content.includes('speech')) speechCount++;
-            else if (content.includes('policy')) policyCount++;
-            else newsCount++;
-            
-            // Content type classification
-            if (content.includes('final rule')) finalRuleCount++;
-            else if (content.includes('proposal')) proposalCount++;
-            else if (content.includes('notice')) noticeCount++;
-            else if (content.includes('report')) reportCount++;
-            
-            // Source type classification
-            if (url.includes('rss') || url.includes('feed') || update.sourceType === 'rss') rssCount++;
-            else if (url.includes('gov.uk') || update.sourceType === 'direct') directCount++;
-            else scrapedCount++;
+        // Get enhanced updates with AI analysis
+        const updates = await dbService.getEnhancedUpdates({
+            category,
+            authority,
+            sector,
+            impact,
+            range,
+            search,
+            limit: 50
         });
         
-        const authorityCount = {};
-        updates.forEach(update => {
-            const auth = update.authority || 'Unknown';
-            authorityCount[auth] = (authorityCount[auth] || 0) + 1;
-        });
+        // Get dashboard statistics
+        const dashboardStats = await getDashboardStatistics();
         
-        const counts = {
-            totalUpdates: updates.length,
-            urgentCount: urgentUpdates.length,
-            moderateCount: moderateUpdates.length,
-            informationalCount: informationalUpdates.length,
-            fcaCount: authorityCount.FCA || 0,
-            boeCount: authorityCount.BoE || 0,
-            praCount: authorityCount.PRA || 0,
-            tprCount: authorityCount.TPR || 0,
-            sfoCount: authorityCount.SFO || 0,
-            fatfCount: authorityCount.FATF || 0,
-            // Enhanced counts for filtering
-            consultationCount,
-            guidanceCount,
-            enforcementCount,
-            speechCount,
-            newsCount,
-            policyCount,
-            finalRuleCount,
-            proposalCount,
-            noticeCount,
-            reportCount,
-            rssCount,
-            scrapedCount,
-            directCount
-        };
-
-        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Regulatory News Feed - Horizon Scanner</title>
-    ${getCommonStyles()}
-    <style>
-        /* Dashboard-specific styles */
-        .dashboard-container { 
-            display: grid; 
-            grid-template-columns: 280px 1fr; 
-            min-height: 100vh; 
-        }
+        // Get filter options
+        const filterOptions = await getFilterOptions();
         
-        .dashboard-main { 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
+        // Generate sidebar
+        const sidebar = await getSidebar('dashboard');
         
-        .dashboard-header { 
-            background: #ffffff; 
-            border-bottom: 1px solid #e5e7eb; 
-            padding: 1.5rem; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-        
-        .header-top { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            margin-bottom: 1rem; 
-        }
-        
-        .dashboard-title { 
-            font-size: 1.5rem; 
-            font-weight: 700; 
-            color: #1f2937; 
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .back-link { 
-            color: #6b7280; 
-            text-decoration: none; 
-            font-size: 0.875rem; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.5rem; 
-            transition: color 0.15s ease; 
-        }
-        
-        .back-link:hover { 
-            color: #374151; 
-        }
-        
-        .metrics-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
-            gap: 1rem; 
-        }
-        
-        .metric-card { 
-            background: #f9fafb; 
-            padding: 1rem; 
-            border-radius: 8px; 
-            border: 1px solid #f3f4f6; 
-            transition: all 0.15s ease;
-        }
-        
-        .metric-card:hover {
-            background: #f3f4f6;
-            transform: translateY(-1px);
-        }
-        
-        .metric-value { 
-            font-size: 1.5rem; 
-            font-weight: 700; 
-            color: #1f2937; 
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .metric-icon {
-            font-size: 1.25rem;
-        }
-        
-        .metric-label { 
-            font-size: 0.75rem; 
-            color: #6b7280; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-top: 0.25rem; 
-            font-weight: 500;
-        }
-        
-        .streams-content { 
-            flex: 1; 
-            padding: 1.5rem; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 1rem; 
-            background: #fafbfc;
-        }
-        
-        .intelligence-stream { 
-            background: #ffffff; 
-            border: 1px solid #e5e7eb; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        
-        .stream-header { 
-            padding: 1rem 1.5rem; 
-            border-bottom: 1px solid #f3f4f6; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-        }
-        
-        .stream-title { 
-            display: flex; 
-            align-items: center; 
-            gap: 0.75rem; 
-            font-size: 0.875rem; 
-            font-weight: 600; 
-        }
-        
-        .stream-icon { 
-            width: 12px; 
-            height: 12px; 
-            border-radius: 50%; 
-        }
-        
-        .stream-icon.urgent { background: #dc2626; }
-        .stream-icon.moderate { background: #f59e0b; }
-        .stream-icon.low { background: #10b981; }
-        
-        .stream-meta { 
-            display: flex; 
-            align-items: center; 
-            gap: 1rem; 
-            font-size: 0.75rem; 
-            color: #6b7280; 
-        }
-        
-        .timeline-bar { 
-            width: 100px; 
-            height: 4px; 
-            background: #f3f4f6; 
-            border-radius: 2px; 
-            overflow: hidden; 
-            cursor: help;
-            position: relative;
-        }
-        
-        .timeline-fill { 
-            height: 100%; 
-            background: #3b82f6; 
-            transition: width 0.3s ease; 
-        }
-
-        .timeline-bar:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 120%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1f2937;
-            color: white;
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            z-index: 1000;
-        }
-        
-        .stream-content { 
-            padding: 0; 
-            max-height: 500px; 
-            overflow-y: auto; 
-        }
-        
-        .update-card { 
-            padding: 1rem 1.5rem; 
-            border-bottom: 1px solid #f9fafb; 
-            transition: all 0.15s ease; 
-            position: relative;
-        }
-        
-        .update-card:hover { 
-            background: #f9fafb; 
-        }
-        
-        .update-card:last-child { 
-            border-bottom: none; 
-        }
-        
-        .update-header { 
-            display: flex; 
-            align-items: flex-start; 
-            justify-content: space-between; 
-            margin-bottom: 0.75rem; 
-        }
-        
-        .update-title { 
-            font-size: 0.875rem; 
-            font-weight: 600; 
-            color: #1f2937; 
-            line-height: 1.4; 
-            flex: 1; 
-            margin-right: 1rem; 
-            cursor: pointer;
-        }
-
-        .update-actions {
-            display: flex;
-            gap: 0.5rem;
-            align-items: flex-start;
-        }
-
-        .pin-btn {
-            background: none;
-            border: none;
-            color: #6b7280;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 4px;
-            font-size: 0.875rem;
-            transition: all 0.15s ease;
-        }
-
-        .pin-btn:hover {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .pin-btn.pinned {
-            color: #dc2626;
-        }
-        
-        .update-badges { 
-            display: flex; 
-            gap: 0.375rem; 
-            flex-shrink: 0; 
-            margin-bottom: 0.75rem;
-        }
-        
-        .badge { 
-            padding: 0.125rem 0.5rem; 
-            border-radius: 4px; 
-            font-size: 0.625rem; 
-            font-weight: 500; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        /* Enhanced authority badges with recognition icons */
-        .badge-fca { 
-            background: #dbeafe; 
-            color: #1e40af; 
-        }
-        .badge-fca::before {
-            content: '🏛️';
-            font-size: 0.75rem;
-        }
-        
-        .badge-boe { 
-            background: #d1fae5; 
-            color: #065f46; 
-        }
-        .badge-boe::before {
-            content: '🏦';
-            font-size: 0.75rem;
-        }
-        
-        .badge-pra { 
-            background: #fef2f2; 
-            color: #991b1b; 
-        }
-        .badge-pra::before {
-            content: '⚖️';
-            font-size: 0.75rem;
-        }
-        
-        .badge-tpr { 
-            background: #ede9fe; 
-            color: #6b21a8; 
-        }
-        .badge-tpr::before {
-            content: '🏢';
-            font-size: 0.75rem;
-        }
-        
-        .badge-sfo { 
-            background: #fed7aa; 
-            color: #9a3412; 
-        }
-        .badge-sfo::before {
-            content: '🔍';
-            font-size: 0.75rem;
-        }
-        
-        .badge-fatf { 
-            background: #f3f4f6; 
-            color: #374151; 
-        }
-        .badge-fatf::before {
-            content: '🌍';
-            font-size: 0.75rem;
-        }
-        
-        .update-summary { 
-            color: #4b5563; 
-            font-size: 0.8125rem; 
-            line-height: 1.4; 
-            margin-bottom: 0.75rem; 
-        }
-        
-        .update-footer { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            font-size: 0.75rem; 
-            color: #6b7280; 
-        }
-        
-        .update-time { 
-            display: flex; 
-            align-items: center; 
-            gap: 0.375rem; 
-        }
-        
-        /* Enhanced date display with clear single format */
-        .date-display {
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-            font-size: 0.75rem;
-            color: #6b7280;
-        }
-
-        .date-icon {
-            font-size: 0.875rem;
-        }
-
-        .publication-date {
-            font-weight: 500;
-            color: #374151;
-        }
-        
-        .view-details { 
-            color: #3b82f6; 
-            text-decoration: none; 
-            font-weight: 500; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.25rem; 
-            transition: color 0.15s ease; 
-        }
-        
-        .view-details:hover { 
-            color: #2563eb; 
-        }
-        
-        .empty-stream { 
-            padding: 2rem; 
-            text-align: center; 
-            color: #6b7280; 
-        }
-        
-        .empty-stream-icon { 
-            font-size: 2rem; 
-            margin-bottom: 0.5rem; 
-        }
-
-        .filter-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            background: #f3f4f6;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .filter-btn:hover {
-            background: #e5e7eb;
-        }
-
-        .filter-btn.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #2563eb;
-        }
-
-        .source-indicator {
-            font-size: 0.7rem;
-            color: #9ca3af;
-            margin-left: 0.5rem;
-        }
-        
-        @media (max-width: 1024px) { 
-            .dashboard-container { 
-                grid-template-columns: 240px 1fr; 
-            } 
-        }
-        
-        @media (max-width: 768px) { 
-            .dashboard-container { 
-                grid-template-columns: 1fr; 
-            }
-            
-            .sidebar { 
-                display: none; 
-            }
-
-            .metrics-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        ${getSidebar('dashboard', counts)}
-        
-        <div class="dashboard-main">
-            <div class="dashboard-header">
-                <div class="header-top">
-                    <div class="dashboard-title">
-                        📰 Regulatory News Feed
-                    </div>
-                    <a href="/" class="back-link">← Back to Home</a>
-                </div>
-                
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-value">
-                            <span class="metric-icon">📊</span>
-                            ${updates.length}
-                        </div>
-                        <div class="metric-label">Total Updates</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">
-                            <span class="metric-icon">🚨</span>
-                            ${urgentUpdates.length}
-                        </div>
-                        <div class="metric-label">Critical Impact</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">
-                            <span class="metric-icon">⚠️</span>
-                            ${moderateUpdates.length}
-                        </div>
-                        <div class="metric-label">Monitoring Required</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">
-                            <span class="metric-icon">📋</span>
-                            ${informationalUpdates.length}
-                        </div>
-                        <div class="metric-label">Background News</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">
-                            <span class="metric-icon">🕐</span>
-                            ${updates.filter(u => {
-                                const date = new Date(u.fetchedDate);
-                                const yesterday = new Date();
-                                yesterday.setDate(yesterday.getDate() - 1);
-                                return date >= yesterday;
-                            }).length}
-                        </div>
-                        <div class="metric-label">Recent (24h)</div>
-                    </div>
-                </div>
-
-                <div class="filter-actions">
-                    <button class="filter-btn active" onclick="showAllUpdates()">All Updates</button>
-                    <button class="filter-btn" onclick="filterByAuthority('FCA')">FCA Only</button>
-                    <button class="filter-btn" onclick="filterByAuthority('BoE')">BoE Only</button>
-                    <button class="filter-btn" onclick="filterByAuthority('PRA')">PRA Only</button>
-                    <button class="filter-btn" onclick="filterByUrgency('High')">High Urgency</button>
-                    <button class="filter-btn" onclick="filterByImpact('Significant')">High Impact</button>
-                    <button class="filter-btn" onclick="clearDashboardFilters()">Clear Filters</button>
-                </div>
-            </div>
-            
-            <div class="streams-content" id="dashboardStreams">
-                ${urgentUpdates.length > 0 ? `
-                <div class="intelligence-stream" id="urgentStream">
-                    <div class="stream-header">
-                        <div class="stream-title">
-                            <div class="stream-icon urgent"></div>
-                            <span>Critical Impact</span>
-                            <span style="color: #6b7280;">• ${urgentUpdates.length} Item${urgentUpdates.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div class="stream-meta">
-                            <div class="timeline-bar" data-tooltip="High priority regulatory updates requiring immediate attention">
-                                <div class="timeline-fill" style="width: 85%"></div>
-                            </div>
-                            <span>24h</span>
-                        </div>
-                    </div>
-                    <div class="stream-content">
-                        ${urgentUpdates.slice(0, 8).map(update => `
-                        <div class="update-card" data-url="${update.url}" data-authority="${update.authority}" data-urgency="${update.urgency}" data-impact="${update.impactLevel}">
-                            <div class="update-header">
-                                <div class="update-title" onclick="window.open('${update.url}', '_blank')">${update.headline}</div>
-                                <div class="update-actions">
-                                    <button class="pin-btn" onclick="event.stopPropagation(); toggleDashboardPin('${update.url}', '${update.headline.replace(/'/g, "\\\\'")}', '${update.authority}')" title="Pin item">📍</button>
-                                </div>
-                            </div>
-                            <div class="update-badges">
-                                <div class="badge badge-${update.authority.toLowerCase()}">${update.authority}</div>
-                                ${update.impactLevel ? `<div class="badge" style="background: #fef2f2; color: #dc2626;">${update.impactLevel}</div>` : ''}
-                                ${update.urgency ? `<div class="badge" style="background: #fff7ed; color: #ea580c;">${update.urgency}</div>` : ''}
-                            </div>
-                            <div class="update-summary">
-                                ${update.impact.length > 150 ? update.impact.substring(0, 150) + '...' : update.impact}
-                                <span class="source-indicator" title="Data source type">
-                                    ${update.url.includes('rss') || update.sourceType === 'rss' ? '📡 RSS' : 
-                                      update.url.includes('gov.uk') ? '🏛️ Direct' : '🕷️ Scraped'}
-                                </span>
-                            </div>
-                            <div class="update-footer">
-                                <div class="date-display">
-                                    <span class="date-icon">📅</span>
-                                    <span class="publication-date">${new Date(update.fetchedDate).toLocaleDateString('en-GB', { 
-                                        day: 'numeric', 
-                                        month: 'short', 
-                                        year: 'numeric' 
-                                    })}</span>
-                                </div>
-                                <a href="${update.url}" target="_blank" class="view-details" onclick="event.stopPropagation()">
-                                    View Source →
-                                </a>
-                            </div>
-                        </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-                
-                ${moderateUpdates.length > 0 ? `
-                <div class="intelligence-stream" id="moderateStream">
-                    <div class="stream-header">
-                        <div class="stream-title">
-                            <div class="stream-icon moderate"></div>
-                            <span>Monitoring Required</span>
-                            <span style="color: #6b7280;">• ${moderateUpdates.length} Item${moderateUpdates.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div class="stream-meta">
-                            <div class="timeline-bar" data-tooltip="Medium priority updates for ongoing monitoring">
-                                <div class="timeline-fill" style="width: 70%"></div>
-                            </div>
-                            <span>7d</span>
-                        </div>
-                    </div>
-                    <div class="stream-content">
-                        ${moderateUpdates.slice(0, 10).map(update => `
-                        <div class="update-card" data-url="${update.url}" data-authority="${update.authority}" data-urgency="${update.urgency}" data-impact="${update.impactLevel}">
-                            <div class="update-header">
-                                <div class="update-title" onclick="window.open('${update.url}', '_blank')">${update.headline}</div>
-                                <div class="update-actions">
-                                    <button class="pin-btn" onclick="event.stopPropagation(); toggleDashboardPin('${update.url}', '${update.headline.replace(/'/g, "\\\\'")}', '${update.authority}')" title="Pin item">📍</button>
-                                </div>
-                            </div>
-                            <div class="update-badges">
-                                <div class="badge badge-${update.authority.toLowerCase()}">${update.authority}</div>
-                                ${update.impactLevel ? `<div class="badge" style="background: #fffbeb; color: #d97706;">${update.impactLevel}</div>` : ''}
-                                ${update.urgency ? `<div class="badge" style="background: #f0f9ff; color: #0369a1;">${update.urgency}</div>` : ''}
-                            </div>
-                            <div class="update-summary">
-                                ${update.impact.length > 150 ? update.impact.substring(0, 150) + '...' : update.impact}
-                                <span class="source-indicator" title="Data source type">
-                                    ${update.url.includes('rss') || update.sourceType === 'rss' ? '📡 RSS' : 
-                                      update.url.includes('gov.uk') ? '🏛️ Direct' : '🕷️ Scraped'}
-                                </span>
-                            </div>
-                            <div class="update-footer">
-                                <div class="date-display">
-                                    <span class="date-icon">📅</span>
-                                    <span class="publication-date">${new Date(update.fetchedDate).toLocaleDateString('en-GB', { 
-                                        day: 'numeric', 
-                                        month: 'short', 
-                                        year: 'numeric' 
-                                    })}</span>
-                                </div>
-                                <a href="${update.url}" target="_blank" class="view-details" onclick="event.stopPropagation()">
-                                    View Source →
-                                </a>
-                            </div>
-                        </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-                
-                ${informationalUpdates.length > 0 ? `
-                <div class="intelligence-stream" id="informationalStream">
-                    <div class="stream-header">
-                        <div class="stream-title">
-                            <div class="stream-icon low"></div>
-                            <span>Background News</span>
-                            <span style="color: #6b7280;">• ${informationalUpdates.length} Item${informationalUpdates.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div class="stream-meta">
-                            <div class="timeline-bar" data-tooltip="Informational updates and background regulatory news">
-                                <div class="timeline-fill" style="width: 45%"></div>
-                            </div>
-                            <span>30d</span>
-                        </div>
-                    </div>
-                    <div class="stream-content">
-                        ${informationalUpdates.slice(0, 8).map(update => `
-                        <div class="update-card" data-url="${update.url}" data-authority="${update.authority}" data-urgency="${update.urgency}" data-impact="${update.impactLevel}">
-                            <div class="update-header">
-                                <div class="update-title" onclick="window.open('${update.url}', '_blank')">${update.headline}</div>
-                                <div class="update-actions">
-                                    <button class="pin-btn" onclick="event.stopPropagation(); toggleDashboardPin('${update.url}', '${update.headline.replace(/'/g, "\\\\'")}', '${update.authority}')" title="Pin item">📍</button>
-                                </div>
-                            </div>
-                            <div class="update-badges">
-                                <div class="badge badge-${update.authority.toLowerCase()}">${update.authority}</div>
-                                ${update.impactLevel ? `<div class="badge" style="background: #f0fdf4; color: #166534;">${update.impactLevel}</div>` : ''}
-                                ${update.urgency ? `<div class="badge" style="background: #f8fafc; color: #475569;">${update.urgency}</div>` : ''}
-                            </div>
-                            <div class="update-summary">
-                                ${update.impact.length > 150 ? update.impact.substring(0, 150) + '...' : update.impact}
-                                <span class="source-indicator" title="Data source type">
-                                    ${update.url.includes('rss') || update.sourceType === 'rss' ? '📡 RSS' : 
-                                      update.url.includes('gov.uk') ? '🏛️ Direct' : '🕷️ Scraped'}
-                                </span>
-                            </div>
-                            <div class="update-footer">
-                                <div class="date-display">
-                                    <span class="date-icon">📅</span>
-                                    <span class="publication-date">${new Date(update.fetchedDate).toLocaleDateString('en-GB', { 
-                                        day: 'numeric', 
-                                        month: 'short', 
-                                        year: 'numeric' 
-                                    })}</span>
-                                </div>
-                                <a href="${update.url}" target="_blank" class="view-details" onclick="event.stopPropagation()">
-                                    View Source →
-                                </a>
-                            </div>
-                        </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-                
-                ${updates.length === 0 ? `
-                <div class="intelligence-stream">
-                    <div class="empty-stream">
-                        <div class="empty-stream-icon">📭</div>
-                        <div style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem;">No Updates Available</div>
-                        <div style="font-size: 0.875rem; margin-bottom: 1rem;">
-                            <a href="/" style="color: #3b82f6;">Go to Home</a> and click "Refresh Data" to fetch updates
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    </div>
-
-    ${getCommonClientScripts()}
-
-    <script>
-        // =================
-        // DASHBOARD PAGE SPECIFIC LOGIC ONLY
-        // =================
-
-        // Additional dashboard-specific functionality
-        async function exportCurrentView() {
-            try {
-                const response = await fetch('/api/export/data');
-                const data = await response.json();
-                
-                const dataStr = JSON.stringify(data, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = \`dashboard-export-\${new Date().toISOString().split('T')[0]}.json\`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                URL.revokeObjectURL(url);
-                showMessage('Dashboard exported successfully', 'success');
-                console.log('✅ Dashboard view exported');
-            } catch (error) {
-                console.error('Export error:', error);
-                showMessage('Export failed', 'error');
-            }
-        }
-
-        async function createDashboardAlert() {
-            const keywords = prompt('Enter keywords to monitor (comma-separated):');
-            if (!keywords) return;
-            
-            try {
-                const response = await fetch('/api/alerts/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: \`Dashboard Alert: \${keywords}\`,
-                        keywords: keywords.split(',').map(k => k.trim()),
-                        authorities: ['FCA', 'BoE', 'PRA'],
-                        isActive: true
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('Alert created successfully!', 'success');
-                } else {
-                    showMessage('Failed to create alert: ' + result.message, 'error');
+        const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Dashboard - AI Regulatory Intelligence</title>
+            ${getCommonStyles()}
+            <style>
+                /* Dashboard Specific Styles */
+                .dashboard-header {
+                    background: white;
+                    padding: 25px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    margin-bottom: 30px;
+                    border: 1px solid #e5e7eb;
                 }
-            } catch (error) {
-                console.error('Create alert error:', error);
-                showMessage('Failed to create alert', 'error');
-            }
-        }
-
-        async function shareDashboard() {
-            try {
-                const shareData = {
-                    title: 'Regulatory News Dashboard',
-                    text: 'Latest regulatory updates from UK financial authorities',
-                    url: window.location.href
+                
+                .dashboard-title {
+                    font-size: 1.8rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin-bottom: 10px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                .dashboard-subtitle {
+                    color: #6b7280;
+                    font-size: 1rem;
+                    margin-bottom: 20px;
+                }
+                
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 30px;
+                }
+                
+                .stat-card {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    border: 1px solid #e5e7eb;
+                    text-align: center;
+                    transition: transform 0.2s;
+                }
+                
+                .stat-card:hover {
+                    transform: translateY(-2px);
+                }
+                
+                .stat-number {
+                    font-size: 2.2rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                    display: block;
+                    margin-bottom: 5px;
+                }
+                
+                .stat-label {
+                    color: #6b7280;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                }
+                
+                .stat-change {
+                    font-size: 0.8rem;
+                    margin-top: 5px;
+                    font-weight: 500;
+                }
+                
+                .stat-change.positive {
+                    color: #16a34a;
+                }
+                
+                .stat-change.negative {
+                    color: #dc2626;
+                }
+                
+                .controls-panel {
+                    background: white;
+                    padding: 25px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    margin-bottom: 30px;
+                    border: 1px solid #e5e7eb;
+                }
+                
+                .controls-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    flex-wrap: wrap;
+                    gap: 15px;
+                }
+                
+                .controls-title {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+                
+                .search-container {
+                    position: relative;
+                    flex: 1;
+                    max-width: 400px;
+                    min-width: 250px;
+                }
+                
+                .search-input {
+                    width: 100%;
+                    padding: 12px 40px 12px 16px;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    transition: border-color 0.2s;
+                }
+                
+                .search-input:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                }
+                
+                .search-button {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    color: #6b7280;
+                    cursor: pointer;
+                    padding: 6px;
+                    border-radius: 4px;
+                    transition: color 0.2s;
+                }
+                
+                .search-button:hover {
+                    color: #4f46e5;
+                }
+                
+                .filters-row {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 20px;
+                }
+                
+                .filter-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                
+                .filter-label {
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    color: #374151;
+                }
+                
+                .filter-select {
+                    padding: 10px 12px;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 6px;
+                    font-size: 0.9rem;
+                    background: white;
+                    cursor: pointer;
+                    transition: border-color 0.2s;
+                }
+                
+                .filter-select:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                }
+                
+                .quick-filters {
+                    display: flex;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                    margin-bottom: 15px;
+                }
+                
+                .quick-filter-btn {
+                    padding: 8px 16px;
+                    border: 2px solid #e5e7eb;
+                    background: white;
+                    border-radius: 20px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    color: #374151;
+                }
+                
+                .quick-filter-btn:hover {
+                    border-color: #4f46e5;
+                    color: #4f46e5;
+                }
+                
+                .quick-filter-btn.active {
+                    background: #4f46e5;
+                    border-color: #4f46e5;
+                    color: white;
+                }
+                
+                .sort-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    margin-top: 15px;
+                    padding-top: 15px;
+                    border-top: 1px solid #f3f4f6;
+                }
+                
+                .sort-label {
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                    color: #374151;
+                }
+                
+                .sort-buttons {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+                
+                .sort-btn {
+                    padding: 6px 12px;
+                    border: 1px solid #d1d5db;
+                    background: white;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    color: #4b5563;
+                }
+                
+                .sort-btn:hover {
+                    border-color: #4f46e5;
+                    color: #4f46e5;
+                }
+                
+                .sort-btn.active {
+                    background: #4f46e5;
+                    border-color: #4f46e5;
+                    color: white;
+                }
+                
+                .results-info {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                
+                .results-count {
+                    color: #6b7280;
+                    font-size: 0.9rem;
+                }
+                
+                .view-options {
+                    display: flex;
+                    gap: 8px;
+                }
+                
+                .view-btn {
+                    padding: 6px 10px;
+                    border: 1px solid #d1d5db;
+                    background: white;
+                    border-radius: 4px;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .view-btn.active {
+                    background: #4f46e5;
+                    border-color: #4f46e5;
+                    color: white;
+                }
+                
+                .updates-container {
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    border: 1px solid #e5e7eb;
+                    overflow: hidden;
+                }
+                
+                .update-card {
+                    padding: 25px;
+                    border-bottom: 1px solid #f3f4f6;
+                    transition: background-color 0.2s;
+                    cursor: pointer;
+                }
+                
+                .update-card:hover {
+                    background-color: #f9fafb;
+                }
+                
+                .update-card:last-child {
+                    border-bottom: none;
+                }
+                
+                .update-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 15px;
+                    gap: 15px;
+                }
+                
+                .update-meta-primary {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+                
+                .authority-badge {
+                    background: #4f46e5;
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                }
+                
+                .date-badge {
+                    background: #f3f4f6;
+                    color: #6b7280;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                }
+                
+                .impact-badge {
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                
+                .impact-badge.significant {
+                    background: #fef2f2;
+                    color: #dc2626;
+                    border: 1px solid #fecaca;
+                }
+                
+                .impact-badge.moderate {
+                    background: #fffbeb;
+                    color: #d97706;
+                    border: 1px solid #fed7aa;
+                }
+                
+                .impact-badge.informational {
+                    background: #f0f9ff;
+                    color: #0284c7;
+                    border: 1px solid #bae6fd;
+                }
+                
+                .update-actions {
+                    display: flex;
+                    gap: 8px;
+                    opacity: 0;
+                    transition: opacity 0.2s;
+                }
+                
+                .update-card:hover .update-actions {
+                    opacity: 1;
+                }
+                
+                .action-btn {
+                    padding: 6px;
+                    border: 1px solid #d1d5db;
+                    background: white;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    transition: all 0.2s;
+                    color: #6b7280;
+                }
+                
+                .action-btn:hover {
+                    background: #f3f4f6;
+                    border-color: #9ca3af;
+                }
+                
+                .update-headline {
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin-bottom: 12px;
+                    line-height: 1.4;
+                }
+                
+                .update-headline a {
+                    color: inherit;
+                    text-decoration: none;
+                    transition: color 0.2s;
+                }
+                
+                .update-headline a:hover {
+                    color: #4f46e5;
+                }
+                
+                .update-summary {
+                    color: #4b5563;
+                    line-height: 1.6;
+                    margin-bottom: 15px;
+                    font-size: 0.95rem;
+                }
+                
+                .update-details {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 15px;
+                    padding: 15px;
+                    background: #f9fafb;
+                    border-radius: 8px;
+                }
+                
+                .detail-item {
+                    font-size: 0.85rem;
+                }
+                
+                .detail-label {
+                    font-weight: 600;
+                    color: #374151;
+                    margin-bottom: 3px;
+                }
+                
+                .detail-value {
+                    color: #6b7280;
+                }
+                
+                .update-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 15px;
+                    flex-wrap: wrap;
+                }
+                
+                .sector-tags {
+                    display: flex;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                }
+                
+                .sector-tag {
+                    background: #e0e7ff;
+                    color: #4338ca;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .sector-tag:hover {
+                    background: #c7d2fe;
+                    color: #3730a3;
+                }
+                
+                .ai-features {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+                
+                .ai-feature {
+                    background: #f0f9ff;
+                    color: #0c4a6e;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    border: 1px solid #0ea5e9;
+                }
+                
+                .ai-feature.high-impact {
+                    background: #fef2f2;
+                    color: #991b1b;
+                    border-color: #ef4444;
+                }
+                
+                .ai-feature.deadline {
+                    background: #fffbeb;
+                    color: #92400e;
+                    border-color: #f59e0b;
+                }
+                
+                .ai-feature.enforcement {
+                    background: #fdf2f8;
+                    color: #be185d;
+                    border-color: #ec4899;
+                }
+                
+                .no-updates {
+                    text-align: center;
+                    padding: 60px 20px;
+                    color: #6b7280;
+                }
+                
+                .no-updates-icon {
+                    font-size: 4rem;
+                    margin-bottom: 20px;
+                    opacity: 0.5;
+                }
+                
+                .loading-state {
+                    text-align: center;
+                    padding: 60px 20px;
+                    color: #6b7280;
+                }
+                
+                .spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 4px solid #f3f4f6;
+                    border-top: 4px solid #4f46e5;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 20px;
+                }
+                
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                
+                .error-state {
+                    text-align: center;
+                    padding: 60px 20px;
+                    color: #dc2626;
+                }
+                
+                .error-icon {
+                    font-size: 3rem;
+                    margin-bottom: 20px;
+                }
+                
+                .btn {
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    text-decoration: none;
+                    display: inline-block;
+                    text-align: center;
+                }
+                
+                .btn-primary {
+                    background: #4f46e5;
+                    color: white;
+                }
+                
+                .btn-primary:hover {
+                    background: #4338ca;
+                }
+                
+                .btn-secondary {
+                    background: #f3f4f6;
+                    color: #374151;
+                    border: 1px solid #d1d5db;
+                }
+                
+                .btn-secondary:hover {
+                    background: #e5e7eb;
+                }
+                
+                /* Responsive Design */
+                @media (max-width: 768px) {
+                    .stats-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                    
+                    .controls-header {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    
+                    .search-container {
+                        max-width: none;
+                    }
+                    
+                    .filters-row {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .quick-filters {
+                        justify-content: center;
+                    }
+                    
+                    .sort-controls {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 10px;
+                    }
+                    
+                    .update-header {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    
+                    .update-meta-primary {
+                        justify-content: center;
+                    }
+                    
+                    .update-actions {
+                        opacity: 1;
+                        justify-content: center;
+                    }
+                    
+                    .update-details {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .update-footer {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="app-container">
+                ${sidebar}
+                
+                <main class="main-content">
+                    <!-- Dashboard Header -->
+                    <header class="dashboard-header">
+                        <h1 class="dashboard-title">
+                            📊 AI Regulatory Intelligence Dashboard
+                        </h1>
+                        <p class="dashboard-subtitle">
+                            Real-time regulatory monitoring with AI-powered analysis and business impact intelligence
+                        </p>
+                        
+                        <!-- Dashboard Statistics -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="stat-number">${dashboardStats.totalUpdates}</span>
+                                <span class="stat-label">Total Updates</span>
+                                <div class="stat-change positive">+${dashboardStats.newToday} today</div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${dashboardStats.highImpact}</span>
+                                <span class="stat-label">High Impact</span>
+                                <div class="stat-change ${dashboardStats.impactTrend === 'up' ? 'positive' : 'negative'}">
+                                    ${dashboardStats.impactTrend === 'up' ? '↗' : '↘'} ${dashboardStats.impactChange}%
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${dashboardStats.aiAnalyzed}</span>
+                                <span class="stat-label">AI Analyzed</span>
+                                <div class="stat-change positive">${Math.round(dashboardStats.aiAnalyzed / dashboardStats.totalUpdates * 100)}% coverage</div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">${dashboardStats.activeAuthorities}</span>
+                                <span class="stat-label">Active Authorities</span>
+                                <div class="stat-change positive">+${dashboardStats.newAuthorities} this week</div>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <!-- Controls Panel -->
+                    <section class="controls-panel">
+                        <div class="controls-header">
+                            <h2 class="controls-title">Filter & Search</h2>
+                            <div class="search-container">
+                                <input 
+                                    type="text" 
+                                    id="search-input" 
+                                    class="search-input" 
+                                    placeholder="Search updates, authorities, sectors..."
+                                    value="${search || ''}"
+                                >
+                                <button id="search-button" class="search-button">🔍</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Filters -->
+                        <div class="quick-filters">
+                            <button class="quick-filter-btn ${category === 'all' ? 'active' : ''}" data-filter="all" onclick="filterByCategory('all')">
+                                All Updates
+                            </button>
+                            <button class="quick-filter-btn ${category === 'high-impact' ? 'active' : ''}" data-filter="high-impact" onclick="filterByCategory('high-impact')">
+                                High Impact
+                            </button>
+                            <button class="quick-filter-btn ${category === 'today' ? 'active' : ''}" data-filter="today" onclick="filterByCategory('today')">
+                                Today
+                            </button>
+                            <button class="quick-filter-btn ${category === 'this-week' ? 'active' : ''}" data-filter="this-week" onclick="filterByCategory('this-week')">
+                                This Week
+                            </button>
+                            <button class="quick-filter-btn ${category === 'consultations' ? 'active' : ''}" data-filter="consultations" onclick="filterByCategory('consultations')">
+                                Consultations
+                            </button>
+                            <button class="quick-filter-btn ${category === 'enforcement' ? 'active' : ''}" data-filter="enforcement" onclick="filterByCategory('enforcement')">
+                                Enforcement
+                            </button>
+                            <button class="quick-filter-btn ${category === 'deadlines' ? 'active' : ''}" data-filter="deadlines" onclick="filterByCategory('deadlines')">
+                                Deadlines
+                            </button>
+                        </div>
+                        
+                        <!-- Advanced Filters -->
+                        <div class="filters-row">
+                            <div class="filter-group">
+                                <label class="filter-label">Authority</label>
+                                <select class="filter-select" onchange="filterByAuthority(this.value)">
+                                    <option value="">All Authorities</option>
+                                    ${generateAuthorityOptions(filterOptions.authorities, authority)}
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">Sector</label>
+                                <select class="filter-select" onchange="filterBySector(this.value)">
+                                    <option value="">All Sectors</option>
+                                    ${generateSectorOptions(filterOptions.sectors, sector)}
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">Impact Level</label>
+                                <select class="filter-select" onchange="filterByImpactLevel(this.value)">
+                                    <option value="">All Impact Levels</option>
+                                    <option value="Significant" ${impact === 'Significant' ? 'selected' : ''}>Significant</option>
+                                    <option value="Moderate" ${impact === 'Moderate' ? 'selected' : ''}>Moderate</option>
+                                    <option value="Informational" ${impact === 'Informational' ? 'selected' : ''}>Informational</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">Date Range</label>
+                                <select class="filter-select" onchange="filterByDateRange(this.value)">
+                                    <option value="">All Time</option>
+                                    <option value="today" ${range === 'today' ? 'selected' : ''}>Today</option>
+                                    <option value="week" ${range === 'week' ? 'selected' : ''}>This Week</option>
+                                    <option value="month" ${range === 'month' ? 'selected' : ''}>This Month</option>
+                                    <option value="quarter" ${range === 'quarter' ? 'selected' : ''}>This Quarter</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Sort Controls -->
+                        <div class="sort-controls">
+                            <span class="sort-label">Sort by:</span>
+                            <div class="sort-buttons">
+                                <button class="sort-btn active" data-sort="newest" onclick="sortUpdates('newest')">
+                                    Newest First
+                                </button>
+                                <button class="sort-btn" data-sort="impact" onclick="sortUpdates('impact')">
+                                    Impact Score
+                                </button>
+                                <button class="sort-btn" data-sort="authority" onclick="sortUpdates('authority')">
+                                    Authority
+                                </button>
+                                <button class="sort-btn" data-sort="sector" onclick="sortUpdates('sector')">
+                                    Sector
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Search Results Info -->
+                    <div id="search-results" style="display: none;"></div>
+                    
+                    <!-- Results Info -->
+                    <div class="results-info">
+                        <span class="results-count">
+                            Showing <span id="results-count">${updates.length}</span> updates
+                        </span>
+                        <div class="view-options">
+                            <button class="view-btn active" data-view="cards">📋 Cards</button>
+                            <button class="view-btn" data-view="table">📊 Table</button>
+                            <button class="view-btn" data-view="timeline">⏰ Timeline</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Updates Container -->
+                    <div class="updates-container" id="updates-container">
+                        ${generateUpdatesHTML(updates)}
+                    </div>
+                    
+                    <!-- Load More Button -->
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button class="btn btn-secondary" onclick="loadMoreUpdates()">
+                            Load More Updates
+                        </button>
+                    </div>
+                </main>
+            </div>
+            
+            <!-- Initialize with data -->
+            <script>
+                // Pass server-side data to client
+                window.initialUpdates = ${JSON.stringify(updates)};
+                window.dashboardStats = ${JSON.stringify(dashboardStats)};
+                window.filterOptions = ${JSON.stringify(filterOptions)};
+                window.currentFilters = {
+                    category: '${category}',
+                    authority: '${authority || ''}',
+                    sector: '${sector || ''}',
+                    impact: '${impact || ''}',
+                    range: '${range || ''}',
+                    search: '${search || ''}'
                 };
-                
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                } else {
-                    await navigator.clipboard.writeText(\`\${shareData.title}: \${shareData.url}\`);
-                    showMessage('Dashboard link copied to clipboard!', 'success');
-                }
-            } catch (error) {
-                console.error('Share error:', error);
-                showMessage('Share failed', 'error');
-            }
-        }
-
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📰 Dashboard Page: Initializing...');
+            </script>
             
-            // Load workspace stats and pinned status using common functions
-            if (typeof updateWorkspaceCounts === 'function') {
-                updateWorkspaceCounts();
-            }
-            
-            if (typeof loadPinnedStatus === 'function') {
-                loadPinnedStatus();
-            }
-            
-            console.log('✅ Dashboard initialized with enhanced filtering and pin functionality');
-        });
-        
-        // Make dashboard-specific functions globally available
-        window.exportCurrentView = exportCurrentView;
-        window.createDashboardAlert = createDashboardAlert;
-        window.shareDashboard = shareDashboard;
-    </script>
-</body>
-</html>`;
+            ${getClientScripts()}
+        </body>
+        </html>`;
         
         res.send(html);
         
     } catch (error) {
-        console.error('Dashboard page error:', error);
+        console.error('❌ Error rendering dashboard page:', error);
         res.status(500).send(`
-            <div style="padding: 2rem; text-align: center;">
-                <h1>Dashboard Error</h1>
-                <p>${error.message}</p>
-                <a href="/" style="color: #3b82f6;">← Back to Home</a>
-            </div>
+            <html>
+                <head><title>Error - Dashboard</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>⚠️ Dashboard Error</h1>
+                    <p>Unable to load the dashboard. Please try refreshing.</p>
+                    <p><a href="/dashboard">← Try Again</a></p>
+                    <small>Error: ${error.message}</small>
+                </body>
+            </html>
         `);
     }
-};
+}
 
-module.exports = dashboardPage;
+async function getDashboardStatistics() {
+    try {
+        const stats = await dbService.getDashboardStatistics();
+        return {
+            totalUpdates: stats.totalUpdates || 0,
+            highImpact: stats.highImpact || 0,
+            aiAnalyzed: stats.aiAnalyzed || 0,
+            activeAuthorities: stats.activeAuthorities || 0,
+            newToday: stats.newToday || 0,
+            newAuthorities: stats.newAuthorities || 0,
+            impactTrend: stats.impactTrend || 'stable',
+            impactChange: stats.impactChange || 0
+        };
+    } catch (error) {
+        console.error('Error getting dashboard statistics:', error);
+        return {
+            totalUpdates: 0,
+            highImpact: 0,
+            aiAnalyzed: 0,
+            activeAuthorities: 0,
+            newToday: 0,
+            newAuthorities: 0,
+            impactTrend: 'stable',
+            impactChange: 0
+        };
+    }
+}
+
+async function getFilterOptions() {
+    try {
+        const options = await dbService.getFilterOptions();
+        return {
+            authorities: options.authorities || [],
+            sectors: options.sectors || []
+        };
+    } catch (error) {
+        console.error('Error getting filter options:', error);
+        return {
+            authorities: [],
+            sectors: []
+        };
+    }
+}
+
+function generateAuthorityOptions(authorities, selectedAuthority) {
+    return authorities.map(auth => 
+        `<option value="${auth.name}" ${auth.name === selectedAuthority ? 'selected' : ''}>
+            ${auth.name} (${auth.count})
+        </option>`
+    ).join('');
+}
+
+function generateSectorOptions(sectors, selectedSector) {
+    return sectors.map(sector => 
+        `<option value="${sector.name}" ${sector.name === selectedSector ? 'selected' : ''}>
+            ${sector.name} (${sector.count})
+        </option>`
+    ).join('');
+}
+
+function generateUpdatesHTML(updates) {
+    if (!updates || updates.length === 0) {
+        return `
+            <div class="no-updates">
+                <div class="no-updates-icon">📭</div>
+                <h3>No updates found</h3>
+                <p>Try adjusting your filters or search criteria.</p>
+                <button onclick="clearAllFilters()" class="btn btn-secondary">Clear All Filters</button>
+            </div>
+        `;
+    }
+    
+    return updates.map(update => generateUpdateCard(update)).join('');
+}
+
+function generateUpdateCard(update) {
+    const publishedDate = formatDate(update.publishedDate || update.createdAt);
+    const impactBadge = getImpactBadge(update);
+    const sectorTags = getSectorTags(update);
+    const aiFeatures = getAIFeatures(update);
+    
+    return `
+        <div class="update-card" data-id="${update.id}">
+            <div class="update-header">
+                <div class="update-meta-primary">
+                    <span class="authority-badge">${update.authority}</span>
+                    <span class="date-badge">${publishedDate}</span>
+                    ${impactBadge}
+                </div>
+                <div class="update-actions">
+                    <button onclick="bookmarkUpdate('${update.id}')" class="action-btn" title="Bookmark">⭐</button>
+                    <button onclick="shareUpdate('${update.id}')" class="action-btn" title="Share">🔗</button>
+                    <button onclick="viewDetails('${update.id}')" class="action-btn" title="Details">👁️</button>
+                </div>
+            </div>
+            
+            <h3 class="update-headline">
+                <a href="${update.url}" target="_blank" rel="noopener">${update.headline}</a>
+            </h3>
+            
+            <div class="update-summary">
+                ${update.impact || update.summary || update.ai_summary || 'No summary available'}
+            </div>
+            
+            <div class="update-details">
+                <div class="detail-item">
+                    <div class="detail-label">Regulatory Area</div>
+                    <div class="detail-value">${update.area || 'General'}</div>
+                </div>
+                
+                ${update.business_impact_score ? `
+                <div class="detail-item">
+                    <div class="detail-label">Impact Score</div>
+                    <div class="detail-value">${update.business_impact_score}/10</div>
+                </div>
+                ` : ''}
+                
+                ${update.urgency ? `
+                <div class="detail-item">
+                    <div class="detail-label">Urgency</div>
+                    <div class="detail-value">${update.urgency}</div>
+                </div>
+                ` : ''}
+                
+                ${update.keyDates ? `
+                <div class="detail-item">
+                    <div class="detail-label">Key Dates</div>
+                    <div class="detail-value">${update.keyDates}</div>
+                </div>
+                ` : ''}
+                
+                ${update.compliance_deadline ? `
+                <div class="detail-item">
+                    <div class="detail-label">Compliance Deadline</div>
+                    <div class="detail-value">${formatDate(update.compliance_deadline)}</div>
+                </div>
+                ` : ''}
+                
+                ${update.complianceActions ? `
+                <div class="detail-item">
+                    <div class="detail-label">Required Actions</div>
+                    <div class="detail-value">${update.complianceActions}</div>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div class="update-footer">
+                <div class="sector-tags">
+                    ${sectorTags}
+                </div>
+                <div class="ai-features">
+                    ${aiFeatures}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getImpactBadge(update) {
+    const level = update.impactLevel || 'Informational';
+    const score = update.business_impact_score;
+    
+    let badgeClass = level.toLowerCase();
+    let badgeText = level;
+    
+    if (score && score >= 8) {
+        badgeClass = 'significant critical';
+        badgeText = `${level} (${score}/10)`;
+    } else if (score) {
+        badgeText = `${level} (${score}/10)`;
+    }
+    
+    return `<span class="impact-badge ${badgeClass}">${badgeText}</span>`;
+}
+
+function getSectorTags(update) {
+    const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : []);
+    
+    return sectors.slice(0, 3).map(sector => 
+        `<span class="sector-tag" onclick="filterBySector('${sector}')">${sector}</span>`
+    ).join('');
+}
+
+function getAIFeatures(update) {
+    const features = [];
+    
+    if (update.business_impact_score && update.business_impact_score >= 7) {
+        features.push(`<span class="ai-feature high-impact">🔥 High Impact (${update.business_impact_score}/10)</span>`);
+    }
+    
+    if (update.compliance_deadline) {
+        const deadline = new Date(update.compliance_deadline);
+        const daysUntil = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
+        if (daysUntil <= 30 && daysUntil > 0) {
+            features.push(`<span class="ai-feature deadline">⏰ Deadline in ${daysUntil} days</span>`);
+        }
+    }
+    
+    if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
+        features.push(`<span class="ai-feature enforcement">🚨 Enforcement Action</span>`);
+    }
+    
+    if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
+        features.push(`<span class="ai-feature high-confidence">🤖 High Confidence (${Math.round(update.ai_confidence_score * 100)}%)</span>`);
+    }
+    
+    if (update.urgency === 'High') {
+        features.push(`<span class="ai-feature urgent">🚨 Urgent</span>`);
+    }
+    
+    return features.join('');
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Today';
+    if (diffDays === 2) return 'Yesterday';
+    if (diffDays <= 7) return `${diffDays - 1} days ago`;
+    
+    return date.toLocaleDateString('en-UK', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+    });
+}
+
+module.exports = {
+    renderDashboardPage
+};

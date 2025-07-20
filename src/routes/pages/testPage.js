@@ -6,7 +6,7 @@ const { getSidebar } = require('../templates/sidebar');
 const { getCommonClientScripts } = require('../templates/clientScripts');
 const dbService = require('../../services/dbService');
 
-// Helper functions for fallback compatibility (simplified for test page)
+// Helper functions remain the same for fallback compatibility
 const getAnalyticsService = () => {
     try {
         return require('../../services/analyticsService');
@@ -183,6 +183,16 @@ const testPage = async (req, res) => {
             align-items: center;
             justify-content: center;
             gap: 0.75rem;
+        }
+
+        .diagnostics-title a {
+            color: #1f2937;
+            text-decoration: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .diagnostics-title a:hover {
+            opacity: 0.7;
         }
         
         .back-link { 
@@ -499,7 +509,7 @@ const testPage = async (req, res) => {
                 <a href="/" class="back-link">← Back to Home</a>
                 <h1 class="diagnostics-title">
                     <span class="score-icon">${healthScore >= 80 ? '✅' : healthScore >= 60 ? '⚠️' : '❌'}</span>
-                    System Diagnostics
+                    <a href="/">System Diagnostics</a>
                 </h1>
                 
                 <div class="health-score">
@@ -924,7 +934,7 @@ const testPage = async (req, res) => {
         // TEST PAGE SPECIFIC LOGIC ONLY
         // =================
         
-        // Test page specific variables
+        // Test results data for this page
         let testResults = {
             database: ${dbConnected},
             analytics: ${analyticsStatus === 'operational'},
@@ -933,10 +943,29 @@ const testPage = async (req, res) => {
             environment: ${envVars.hasGroqKey && envVars.hasDatabaseUrl}
         };
         
-        // Test-specific functions
+        // Initialize test dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Test Page: Initializing...');
+            updateTestCounts();
+            
+            // Auto-refresh diagnostics every 30 seconds
+            setInterval(refreshDiagnostics, 30000);
+            
+            console.log('✅ System Diagnostics initialized');
+        });
+
+        function updateTestCounts() {
+            const passed = Object.values(testResults).filter(Boolean).length;
+            const total = Object.keys(testResults).length;
+            
+            console.log(\`Tests: \${passed}/\${total} passing\`);
+        }
+
         async function runFullDiagnostics() {
             try {
-                showMessage('Running comprehensive system diagnostics...', 'info');
+                if (typeof showMessage === 'function') {
+                    showMessage('Running comprehensive system diagnostics...', 'info');
+                }
                 
                 const tests = [
                     { name: 'Database Connection', test: () => testDatabaseConnection() },
@@ -963,12 +992,16 @@ const testPage = async (req, res) => {
                 }
                 
                 const score = Math.round((passedTests / tests.length) * 100);
-                showMessage(\`Diagnostics complete: \${passedTests}/\${tests.length} tests passed (\${score}%)\`, 
-                    score >= 80 ? 'success' : 'warning');
+                if (typeof showMessage === 'function') {
+                    showMessage(\`Diagnostics complete: \${passedTests}/\${tests.length} tests passed (\${score}%)\`, 
+                        score >= 80 ? 'success' : 'warning');
+                }
                 
             } catch (error) {
                 console.error('Full diagnostics error:', error);
-                showMessage('Diagnostics failed: ' + error.message, 'error');
+                if (typeof showMessage === 'function') {
+                    showMessage('Diagnostics failed: ' + error.message, 'error');
+                }
             }
         }
 
@@ -1023,21 +1056,23 @@ const testPage = async (req, res) => {
 
         async function clearSystemCache() {
             try {
-                showMessage('Clearing system cache...', 'info');
+                if (typeof showMessage === 'function') {
+                    showMessage('Clearing system cache...', 'info');
+                }
                 
                 // Clear analytics cache using common function if available
                 if (typeof refreshAnalytics === 'function') {
                     await refreshAnalytics();
-                    showMessage('System cache cleared successfully!', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    // Fallback to direct API call
+                    // Direct cache clear
                     const response = await fetch('/api/analytics/refresh', {
                         method: 'POST'
                     });
                     
                     if (response.ok) {
-                        showMessage('System cache cleared successfully!', 'success');
+                        if (typeof showMessage === 'function') {
+                            showMessage('System cache cleared successfully!', 'success');
+                        }
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
                         throw new Error('Cache clear failed');
@@ -1045,15 +1080,10 @@ const testPage = async (req, res) => {
                 }
             } catch (error) {
                 console.error('Clear cache error:', error);
-                showMessage('Failed to clear cache: ' + error.message, 'error');
+                if (typeof showMessage === 'function') {
+                    showMessage('Failed to clear cache: ' + error.message, 'error');
+                }
             }
-        }
-
-        function updateTestCounts() {
-            const passed = Object.values(testResults).filter(Boolean).length;
-            const total = Object.keys(testResults).length;
-            
-            console.log(\`Tests: \${passed}/\${total} passing\`);
         }
 
         async function refreshDiagnostics() {
@@ -1070,25 +1100,14 @@ const testPage = async (req, res) => {
                 console.error('Error refreshing diagnostics:', error);
             }
         }
-        
-        // Initialize test dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔧 Test Page: Initializing diagnostics...');
-            updateTestCounts();
-            
-            // Auto-refresh diagnostics every 30 seconds
-            setInterval(refreshDiagnostics, 30000);
-            
-            console.log('✅ System Diagnostics initialized');
-        });
-        
+
         // Make test-specific functions globally available
         window.runFullDiagnostics = runFullDiagnostics;
         window.clearSystemCache = clearSystemCache;
-        window.updateTestCounts = updateTestCounts;
         window.refreshDiagnostics = refreshDiagnostics;
+        window.updateTestCounts = updateTestCounts;
         
-        console.log('🔧 System Diagnostics ready');
+        console.log('🔧 Test Page: Script loaded and ready');
     </script>
 </body>
 </html>`;

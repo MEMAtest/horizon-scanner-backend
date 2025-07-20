@@ -1,0 +1,369 @@
+/* ==========================================
+   Professional Theme Override - Navy/Charcoal Design System
+   public/css/professional-theme.css
+   
+   This file overrides the purple startup theme with a professional,
+   authoritative navy/charcoal color scheme
+   
+   To activate: Include this CSS file AFTER all other CSS files
+   To deactivate: Simply remove the CSS link
+   ========================================== */
+
+:root {
+    /* Primary Colors - Replacing Purple */
+    --primary-navy: #0A2342;
+    --primary-charcoal: #252A31;
+    
+    /* Accent Colors - Replacing Light Purple */
+    --accent-teal: #4091A8;
+    --accent-teal-hover: #357a8c;
+    
+    /* Neutral Colors */
+    --neutral-white: #FFFFFF;
+    --neutral-light-grey: #DDE1E6;
+    --neutral-dark-grey: #1D242B;
+    --neutral-mid-grey: #6B7280;
+    
+    /* Status Colors (desaturated) */
+    --status-high: #B91C1C;
+    --status-medium: #D97706;
+    --status-low: #047857;
+}
+
+/* ========================================
+   BODY & BACKGROUND OVERRIDES
+   ======================================== */
+
+body {
+    background: linear-gradient(135deg, var(--neutral-light-grey) 0%, #F3F4F6 100%) !important;
+    color: var(--neutral-dark-grey) !important;
+}
+
+/* ========================================
+   SIDEBAR OVERRIDES
+   ======================================== */
+
+/* Sidebar Header - Replace purple gradient */
+.sidebar-header {
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-charcoal) 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Active Navigation Items */
+.nav-item.active .nav-link,
+.nav-link:hover {
+    background: var(--accent-teal) !important;
+    color: white !important;
+}
+
+.nav-badge {
+    background: var(--primary-charcoal) !important;
+}
+
+/* Counter Items */
+.counter-item:hover {
+    border-color: var(--primary-navy) !important;
+}
+
+.counter-item.active {
+    background: var(--primary-navy) !important;
+    border-color: var(--primary-navy) !important;
+}
+
+/* Insight Items */
+.insight-item {
+    border-left-color: var(--primary-navy) !important;
+}
+
+.insight-item:hover {
+    border-left-color: var(--accent-teal) !important;
+}
+
+.insight-link {
+    color: var(--primary-navy) !important;
+    border: 1px solid var(--neutral-light-grey) !important;
+}
+
+.insight-link:hover {
+    background: var(--primary-navy) !important;
+    border-color: var(--primary-navy) !important;
+}
+
+/* ========================================
+   BUTTON OVERRIDES
+   ======================================== */
+
+/* Primary Buttons */
+.btn-primary,
+.button-primary,
+.filter-btn--primary {
+    background: var(--primary-navy) !important;
+    border: 1px solid var(--primary-navy) !important;
+    box-shadow: none !important;
+}
+
+.btn-primary:hover,
+.button-primary:hover,
+.filter-btn--primary:hover {
+    background: var(--primary-charcoal) !important;
+    border-color: var(--primary-charcoal) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: none !important;
+}
+
+/* Ghost Buttons */
+.filter-btn,
+.button-small,
+.filter-control-btn {
+    background: transparent !important;
+    border: 1px solid var(--neutral-light-grey) !important;
+    color: var(--primary-navy) !important;
+    box-shadow: none !important;
+}
+
+.filter-btn:hover,
+.button-small:hover,
+.filter-control-btn:hover {
+    background: var(--neutral-white) !important;
+    border-color: var(--primary-navy) !important;
+    box-shadow: none !important;
+}
+
+.filter-btn.active {
+    background: var(--primary-navy) !important;
+    color: white !important;
+    border-color: var(--primary-navy) !important;
+}
+
+/* ========================================
+   CARD & CONTAINER OVERRIDES
+   ======================================== */
+
+/* Remove shadows, add borders to all cards */
+.card,
+.update-card,
+.sector-card,
+.insight-item,
+.counter-item,
+.modal-content,
+.header,
+.filters,
+.main-content {
+    box-shadow: none !important;
+    border: 1px solid var(--neutral-light-grey) !important;
+}
+
+/* Update hover states */
+.sector-card:hover,
+.update-item:hover {
+    box-shadow: none !important;
+    border-color: var(--primary-navy) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ========================================
+   TYPOGRAPHY & LINK OVERRIDES
+   ======================================== */
+
+/* Headers */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--neutral-dark-grey) !important;
+}
+
+/* Links */
+a {
+    color: var(--primary-navy) !important;
+}
+
+a:hover {
+    color: var(--primary-charcoal) !important;
+}
+
+/* Title gradients */
+.title,
+.brand-title {
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-charcoal) 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+/* ========================================
+   FOCUS STATES OVERRIDE
+   ======================================== */
+
+button:focus,
+.btn:focus,
+.filter-btn:focus,
+.authority-btn:focus,
+.sector-btn:focus,
+.nav-link:focus,
+input:focus,
+.search-box:focus {
+    outline: 2px solid var(--primary-navy) !important;
+    outline-offset: 2px !important;
+}
+
+/* ========================================
+   STATUS & BADGE OVERRIDES
+   ======================================== */
+
+/* Impact badges */
+.impact-significant {
+    background: #FEF2F2 !important;
+    color: var(--status-high) !important;
+}
+
+.impact-moderate {
+    background: #FFFBEB !important;
+    color: var(--status-medium) !important;
+}
+
+.impact-informational {
+    background: #F0F9FF !important;
+    color: var(--primary-navy) !important;
+}
+
+/* Urgency badges */
+.urgency-high,
+.urgency-badge.high,
+.urgency-badge.critical {
+    background: #FEF2F2 !important;
+    color: var(--status-high) !important;
+}
+
+.urgency-medium,
+.urgency-badge.medium {
+    background: #FFFBEB !important;
+    color: var(--status-medium) !important;
+}
+
+.urgency-low,
+.urgency-badge.low {
+    background: #F0FDF4 !important;
+    color: var(--status-low) !important;
+}
+
+/* ========================================
+   SPECIFIC COMPONENT OVERRIDES
+   ======================================== */
+
+/* Search box */
+.search-box:focus,
+.filter-input:focus {
+    border-color: var(--primary-navy) !important;
+    box-shadow: 0 0 0 3px rgba(10, 35, 66, 0.1) !important;
+}
+
+/* Filter components */
+.filter-option-checkmark {
+    border-color: var(--neutral-light-grey) !important;
+}
+
+input[type="checkbox"]:checked + .filter-option-checkmark,
+input[type="radio"]:checked + .filter-option-checkmark {
+    background-color: var(--primary-navy) !important;
+    border-color: var(--primary-navy) !important;
+}
+
+/* Active filters */
+.active-filter-tag {
+    background: var(--accent-teal) !important;
+    color: white !important;
+}
+
+/* Navigation dropdown */
+.nav-dropdown {
+    border: 1px solid var(--neutral-light-grey) !important;
+    box-shadow: none !important;
+}
+
+/* ========================================
+   ANIMATIONS & TRANSITIONS
+   ======================================== */
+
+/* Ensure smooth transitions */
+* {
+    transition-property: background-color, border-color, color, transform !important;
+    transition-duration: 0.2s !important;
+    transition-timing-function: ease !important;
+}
+
+/* ========================================
+   UTILITY OVERRIDES
+   ======================================== */
+
+/* Remove any remaining shadows */
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl {
+    box-shadow: none !important;
+}
+
+/* Authority specific colors */
+.authority-fca {
+    --authority-color: var(--primary-navy) !important;
+}
+
+.authority-boe {
+    --authority-color: var(--primary-charcoal) !important;
+}
+
+.authority-pra {
+    --authority-color: var(--accent-teal) !important;
+}
+
+/* Counter number colors */
+.counter-number.high-impact {
+    color: var(--status-high) !important;
+}
+
+.counter-number.today {
+    color: var(--status-low) !important;
+}
+
+.counter-number.this-week {
+    color: var(--primary-navy) !important;
+}
+
+/* ========================================
+   MODAL & OVERLAY OVERRIDES
+   ======================================== */
+
+.modal-backdrop {
+    background: rgba(37, 42, 49, 0.5) !important;
+}
+
+.modal-close:hover {
+    background: #F3F4F6 !important;
+    color: var(--primary-navy) !important;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* Ensure mobile menu maintains professional look */
+    .sidebar.mobile-open {
+        border-right: 1px solid var(--neutral-light-grey) !important;
+        box-shadow: none !important;
+    }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+    body {
+        background: white !important;
+    }
+    
+    .card,
+    .update-card {
+        border: 1px solid var(--neutral-dark-grey) !important;
+    }
+}

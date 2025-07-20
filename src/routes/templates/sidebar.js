@@ -1,392 +1,387 @@
-// src/routes/templates/sidebar.js
-// Enhanced sidebar with new filtering capabilities
+// Fixed Sidebar Template - Phase 1
+// File: src/routes/templates/sidebar.js
 
-const getSidebar = (pageType = 'home', counts = {}) => {
-    const {
-        totalUpdates = 0,
-        urgentCount = 0,
-        moderateCount = 0,
-        informationalCount = 0,
-        fcaCount = 0,
-        boeCount = 0,
-        praCount = 0,
-        tprCount = 0,
-        sfoCount = 0,
-        fatfCount = 0,
-        highRelevanceCount = 0,
-        mediumRelevanceCount = 0,
-        lowRelevanceCount = 0,
-        pinnedCount = 0,
-        savedSearchCount = 0,
-        alertCount = 0,
-        // NEW: Category counts
-        consultationCount = 0,
-        guidanceCount = 0,
-        enforcementCount = 0,
-        speechCount = 0,
-        newsCount = 0,
-        policyCount = 0,
-        // NEW: Content type counts
-        finalRuleCount = 0,
-        proposalCount = 0,
-        noticeCount = 0,
-        reportCount = 0,
-        // NEW: Source type counts
-        rssCount = 0,
-        scrapedCount = 0,
-        directCount = 0
-    } = counts;
+const dbService = require('../../services/dbService');
 
-    return `
-        <div class="enterprise-sidebar">
-            <div class="logo-section">
-                <div class="logo-title">Horizon Scanner</div>
-                <div class="logo-subtitle">${pageType === 'analytics' ? 'Predictive Analytics' : pageType === 'dashboard' ? 'Regulatory News Feed' : 'Regulatory Intelligence'}</div>
+async function getSidebar(currentPage = '') {
+    try {
+        console.log('🔧 Generating enhanced sidebar...');
+        
+        // Get recent update counts for live counters
+        const recentCounts = await getRecentUpdateCounts();
+        
+        // Get AI insights for sidebar highlights
+        const aiInsights = await getAIInsightsForSidebar();
+        
+        // Get saved searches and pinned items (Phase 1.3 preparation)
+        const userPreferences = await getUserPreferences();
+        
+        return `
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🤖 AI Regulatory Intelligence</h2>
+                <div class="sidebar-status">
+                    <span class="status-indicator online" title="AI Service Online"></span>
+                    <span class="last-update">Updated ${formatRelativeTime(new Date())}</span>
+                </div>
             </div>
             
-            <!-- Firm Profile Section -->
-            <div class="firm-profile-section" id="firmProfileSection">
-                <button onclick="showFirmProfileSetup()" class="setup-profile-btn" id="profileBtn">
-                    Setup Firm Profile
+            <!-- Live Feed Counters -->
+            <div class="live-counters">
+                <h3>📊 Live Feed</h3>
+                <div class="counter-grid">
+                    <div class="counter-item ${currentPage === 'dashboard' ? 'active' : ''}">
+                        <a href="/dashboard">
+                            <div class="counter-number" id="total-updates">${recentCounts.total}</div>
+                            <div class="counter-label">Total Updates</div>
+                        </a>
+                    </div>
+                    <div class="counter-item">
+                        <div class="counter-number high-impact" id="high-impact-count">${recentCounts.highImpact}</div>
+                        <div class="counter-label">High Impact</div>
+                    </div>
+                    <div class="counter-item">
+                        <div class="counter-number today" id="today-count">${recentCounts.today}</div>
+                        <div class="counter-label">Today</div>
+                    </div>
+                    <div class="counter-item">
+                        <div class="counter-number this-week" id="week-count">${recentCounts.thisWeek}</div>
+                        <div class="counter-label">This Week</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Intelligence Highlights -->
+            <div class="ai-highlights">
+                <h3>🧠 AI Insights</h3>
+                <div class="insights-container">
+                    ${generateAIHighlights(aiInsights)}
+                </div>
+                <div class="insights-actions">
+                    <a href="/ai/weekly-roundup" class="insight-link">📋 Weekly Roundup</a>
+                    <a href="/ai/early-warnings" class="insight-link">⚠️ Early Warnings</a>
+                </div>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="sidebar-nav">
+                <h3>📑 Navigation</h3>
+                <ul class="nav-list">
+                    <li class="nav-item ${currentPage === '' || currentPage === 'home' ? 'active' : ''}">
+                        <a href="/" class="nav-link">
+                            <span class="nav-icon">🏠</span>
+                            <span class="nav-text">Home</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'dashboard' ? 'active' : ''}">
+                        <a href="/dashboard" class="nav-link">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Dashboard</span>
+                            <span class="nav-badge">${recentCounts.unread}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'analytics' ? 'active' : ''}">
+                        <a href="/analytics" class="nav-link">
+                            <span class="nav-icon">📈</span>
+                            <span class="nav-text">Analytics</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'ai-intelligence' ? 'active' : ''}">
+                        <a href="/ai-intelligence" class="nav-link">
+                            <span class="nav-icon">🤖</span>
+                            <span class="nav-text">AI Intelligence</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Quick Filters -->
+            <div class="quick-filters">
+                <h3>⚡ Quick Filters</h3>
+                <div class="filter-buttons">
+                    <button onclick="filterByCategory('all')" class="filter-btn active" data-filter="all">
+                        All Updates
+                    </button>
+                    <button onclick="filterByCategory('high-impact')" class="filter-btn" data-filter="high-impact">
+                        High Impact
+                    </button>
+                    <button onclick="filterByCategory('today')" class="filter-btn" data-filter="today">
+                        Today
+                    </button>
+                    <button onclick="filterByCategory('this-week')" class="filter-btn" data-filter="this-week">
+                        This Week
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Authority Filters -->
+            <div class="authority-filters">
+                <h3>🏛️ Authorities</h3>
+                <div class="authority-list">
+                    ${generateAuthorityFilters(recentCounts.authorities)}
+                </div>
+            </div>
+            
+            <!-- Sector Filters -->
+            <div class="sector-filters">
+                <h3>🏢 Sectors</h3>
+                <div class="sector-list">
+                    ${generateSectorFilters(recentCounts.sectors)}
+                </div>
+            </div>
+            
+            <!-- Saved Items (Phase 1.3 Preview) -->
+            <div class="saved-items">
+                <h3>⭐ Saved Items</h3>
+                <div class="saved-list">
+                    ${generateSavedItems(userPreferences.savedItems)}
+                </div>
+                <button onclick="showSaveDialog()" class="btn-secondary btn-sm">
+                    + Save Current View
                 </button>
-                <div class="profile-info" id="profileInfo">
-                    Configure your firm's sectors for personalized relevance
-                </div>
-                <button onclick="clearFirmProfile()" class="clear-profile-btn" id="clearProfileBtn" style="display: none;">
-                    Clear Profile
-                </button>
-            </div>
-
-            <!-- Quick Actions Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    ⚡ Quick Actions
-                    <span class="info-icon" data-tooltip="Essential tools for regulatory monitoring and workspace management">i</span>
-                </div>
-                <div class="sidebar-item action-btn working" onclick="exportData()">
-                    <span>📊 Export Data</span>
-                </div>
-                <div class="sidebar-item action-btn working" onclick="createAlert()">
-                    <span>🔔 Create Alert</span>
-                </div>
-                <div class="sidebar-item action-btn working" onclick="shareSystem()">
-                    <span>📤 Share System</span>
-                </div>
-                <div class="sidebar-item" onclick="refreshIntelligence()">
-                    <span>🔄 Refresh Data</span>
-                </div>
-            </div>
-
-            <!-- NEW: Filter by Category Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    📋 Filter by Category
-                    <span class="info-icon" data-tooltip="Filter by regulatory document category and type">i</span>
-                </div>
-                <div class="filter-section">
-                    <div class="filter-options">
-                        <div class="filter-option" onclick="filterByCategory('consultation')">
-                            <span>
-                                <span class="content-type-badge content-type-consultation">📋 Consultations</span>
-                            </span>
-                            <div class="count-badge moderate">${consultationCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByCategory('guidance')">
-                            <span>
-                                <span class="content-type-badge content-type-guidance">📖 Guidance</span>
-                            </span>
-                            <div class="count-badge">${guidanceCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByCategory('enforcement')">
-                            <span>
-                                <span class="content-type-badge content-type-enforcement">⚖️ Enforcement</span>
-                            </span>
-                            <div class="count-badge urgent">${enforcementCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByCategory('speech')">
-                            <span>
-                                <span class="content-type-badge content-type-speech">🎤 Speeches</span>
-                            </span>
-                            <div class="count-badge">${speechCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByCategory('news')">
-                            <span>
-                                <span class="content-type-badge content-type-news">📰 News</span>
-                            </span>
-                            <div class="count-badge">${newsCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByCategory('policy')">
-                            <span>
-                                <span class="content-type-badge content-type-policy">📜 Policy</span>
-                            </span>
-                            <div class="count-badge">${policyCount}</div>
-                        </div>
-                    </div>
-                    <div class="filter-actions">
-                        <a href="#" class="filter-action" onclick="selectAllCategories()">All</a>
-                        <span>•</span>
-                        <a href="#" class="filter-action" onclick="clearCategoryFilters()">None</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- NEW: Filter by Content Type Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    🏷️ Filter by Content Type
-                    <span class="info-icon" data-tooltip="Filter by specific document and content types">i</span>
-                </div>
-                <div class="filter-section">
-                    <div class="filter-options">
-                        <div class="filter-option" onclick="filterByContentType('final-rule')">
-                            <span>
-                                <span class="priority-badge priority-high">🎯</span>
-                                Final Rules
-                            </span>
-                            <div class="count-badge urgent">${finalRuleCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByContentType('proposal')">
-                            <span>
-                                <span class="priority-badge priority-medium">💭</span>
-                                Proposals
-                            </span>
-                            <div class="count-badge moderate">${proposalCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByContentType('notice')">
-                            <span>
-                                <span class="priority-badge priority-medium">📢</span>
-                                Notices
-                            </span>
-                            <div class="count-badge moderate">${noticeCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByContentType('report')">
-                            <span>
-                                <span class="priority-badge priority-background">📊</span>
-                                Reports
-                            </span>
-                            <div class="count-badge">${reportCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterByContentType('fine')">
-                            <span>
-                                <span class="priority-badge priority-high">💰</span>
-                                Fines & Penalties
-                            </span>
-                            <div class="count-badge urgent">${enforcementCount}</div>
-                        </div>
-                    </div>
-                    <div class="filter-actions">
-                        <a href="#" class="filter-action" onclick="selectAllContentTypes()">All</a>
-                        <span>•</span>
-                        <a href="#" class="filter-action" onclick="clearContentTypeFilters()">None</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- NEW: Filter by Source Type Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    📡 Filter by Source Type
-                    <span class="info-icon" data-tooltip="Filter by how the content was obtained">i</span>
-                </div>
-                <div class="filter-section">
-                    <div class="filter-options">
-                        <div class="filter-option" onclick="filterBySourceType('rss')">
-                            <span>
-                                <span style="color: #10b981;">📡</span>
-                                RSS Feeds
-                            </span>
-                            <div class="count-badge">${rssCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterBySourceType('scraped')">
-                            <span>
-                                <span style="color: #f59e0b;">🕷️</span>
-                                Web Scraped
-                            </span>
-                            <div class="count-badge">${scrapedCount}</div>
-                        </div>
-                        <div class="filter-option" onclick="filterBySourceType('direct')">
-                            <span>
-                                <span style="color: #3b82f6;">🔗</span>
-                                Direct Links
-                            </span>
-                            <div class="count-badge">${directCount}</div>
-                        </div>
-                    </div>
-                    <div class="filter-actions">
-                        <a href="#" class="filter-action" onclick="selectAllSourceTypes()">All</a>
-                        <span>•</span>
-                        <a href="#" class="filter-action" onclick="clearSourceTypeFilters()">None</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analytics Preview Section -->
-            <div class="analytics-preview" id="analyticsPreview" style="display: none;">
-                <div class="analytics-preview-title">
-                    🔮 Predictive Insights
-                </div>
-                <div class="analytics-metrics">
-                    <div class="analytics-metric">
-                        <div class="analytics-metric-value" id="velocityPreview">--</div>
-                        <div class="analytics-metric-label">Updates/Week</div>
-                    </div>
-                    <div class="analytics-metric">
-                        <div class="analytics-metric-value" id="hotSectorsPreview">--</div>
-                        <div class="analytics-metric-label">Hot Sectors</div>
-                    </div>
-                    <div class="analytics-metric">
-                        <div class="analytics-metric-value" id="predictionsPreview">--</div>
-                        <div class="analytics-metric-label">Predictions</div>
-                    </div>
-                    <div class="analytics-metric">
-                        <div class="analytics-metric-value" id="riskScorePreview">--</div>
-                        <div class="analytics-metric-label">Avg Risk</div>
-                    </div>
-                </div>
-                <a href="/analytics" class="analytics-preview-link">
-                    View Full Analytics Dashboard →
-                </a>
             </div>
             
-            <!-- Live Subscriptions -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    🔔 Live Subscriptions
-                    <span class="info-icon" data-tooltip="Real-time monitoring status of regulatory authorities">i</span>
-                </div>
-                <div class="sidebar-item active">
-                    <span>FCA Alerts</span>
-                    <div class="status-indicator live" id="fcaStatus"></div>
-                </div>
-                <div class="sidebar-item">
-                    <span>BoE Updates</span>
-                    <div class="status-indicator live" id="boeStatus"></div>
-                </div>
-                <div class="sidebar-item">
-                    <span>PRA Notices</span>
-                    <div class="status-indicator warning" id="praStatus"></div>
-                </div>
-                <div class="sidebar-item">
-                    <span>TPR News</span>
-                    <div class="status-indicator offline" id="tprStatus"></div>
+            <!-- System Status -->
+            <div class="system-status">
+                <h4>System Status</h4>
+                <div class="status-list">
+                    <div class="status-item">
+                        <span class="status-dot online"></span>
+                        <span>RSS Feeds</span>
+                        <span class="status-count">${recentCounts.activeSources}/12</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot online"></span>
+                        <span>AI Analysis</span>
+                        <span class="status-count">Active</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot ${recentCounts.dbStatus}"></span>
+                        <span>Database</span>
+                        <span class="status-count">${recentCounts.dbStatus === 'online' ? 'Connected' : 'JSON Mode'}</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="sidebar-section">
-                <div class="section-title">
-                    🎯 Smart Filters
-                    <span class="info-icon" data-tooltip="AI-powered relevance filtering based on your firm profile">i</span>
+            <!-- Footer -->
+            <div class="sidebar-footer">
+                <div class="version-info">
+                    <small>AI Intelligence Platform v2.0</small>
                 </div>
-                <div class="sidebar-item" onclick="filterByRelevance('high')">
-                    <span>High Relevance</span>
-                    <div class="count-badge urgent" id="highRelevanceCount">${highRelevanceCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByRelevance('medium')">
-                    <span>Medium Relevance</span>
-                    <div class="count-badge moderate" id="mediumRelevanceCount">${mediumRelevanceCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByRelevance('low')">
-                    <span>Background Intel</span>
-                    <div class="count-badge" id="lowRelevanceCount">${lowRelevanceCount}</div>
-                </div>
-            </div>
-            
-            <!-- Enhanced Workspace Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    🔍 Workspace
-                    <span class="info-icon" data-tooltip="Save items, searches, and create custom alerts">i</span>
-                </div>
-                <div class="sidebar-item" onclick="showPinnedItems()">
-                    <span>Pinned Items</span>
-                    <div class="count-badge" id="pinnedCount">${pinnedCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="showSavedSearches()">
-                    <span>Saved Searches</span>
-                    <div class="count-badge" id="savedSearchCount">${savedSearchCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="showCustomAlerts()">
-                    <span>Custom Alerts</span>
-                    <div class="count-badge" id="alertCount">${alertCount}</div>
-                </div>
-            </div>
-
-            <!-- Authority Filters Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    🏛️ Filter by Authority
-                    <span class="info-icon" data-tooltip="Filter updates by regulatory authority">i</span>
-                </div>
-                <div class="sidebar-item" onclick="filterByAuthority('FCA')">
-                    <span>FCA</span>
-                    <div class="count-badge" id="fcaCount">${fcaCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByAuthority('BoE')">
-                    <span>Bank of England</span>
-                    <div class="count-badge" id="boeCount">${boeCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByAuthority('PRA')">
-                    <span>PRA</span>
-                    <div class="count-badge" id="praCount">${praCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByAuthority('TPR')">
-                    <span>TPR</span>
-                    <div class="count-badge" id="tprCount">${tprCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByAuthority('SFO')">
-                    <span>SFO</span>
-                    <div class="count-badge" id="sfoCount">${sfoCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="filterByAuthority('FATF')">
-                    <span>FATF</span>
-                    <div class="count-badge" id="fatfCount">${fatfCount}</div>
-                </div>
-                <div class="sidebar-item" onclick="clearFilters()">
-                    <span>🔄 Clear Filters</span>
-                </div>
-            </div>
-
-            <!-- Working Navigation Section -->
-            <div class="sidebar-section">
-                <div class="section-title">
-                    📊 Navigation
-                    <span class="info-icon" data-tooltip="Access different views and system diagnostics">i</span>
-                </div>
-                <div class="sidebar-item ${pageType === 'analytics' ? 'active' : ''}">
-                    <a href="/analytics">Predictive Dashboard</a>
-                    <div class="count-badge analytics" id="analyticsAvailable">NEW</div>
-                </div>
-                <div class="sidebar-item ${pageType === 'dashboard' ? 'active' : ''}">
-                    <a href="/dashboard">Reg News Feed</a>
-                </div>
-                <div class="sidebar-item ${pageType === 'test' ? 'active' : ''}">
-                    <a href="/test">System Diagnostics</a>
-                </div>
-                <div class="sidebar-item ${pageType === 'home' ? 'active' : ''}">
-                    <a href="/">Intelligence Hub</a>
-                </div>
-            </div>
-            
-            <div class="sidebar-section">
-                <div class="section-title">
-                    📈 Live Feed Status
-                    <span class="info-icon" data-tooltip="Current regulatory update counts by impact level">i</span>
-                </div>
-                <div class="sidebar-item">
-                    <span>Critical Updates</span>
-                    <div class="count-badge urgent" id="criticalCount">${urgentCount}</div>
-                </div>
-                <div class="sidebar-item">
-                    <span>Moderate Impact</span>
-                    <div class="count-badge moderate" id="moderateCount">${moderateCount}</div>
-                </div>
-                <div class="sidebar-item">
-                    <span>Informational</span>
-                    <div class="count-badge" id="informationalCount">${informationalCount}</div>
+                <div class="last-refresh">
+                    <small>Last refresh: <span id="last-refresh-time">${formatTime(new Date())}</span></small>
+                    <button onclick="refreshData()" class="refresh-btn" title="Refresh Data">🔄</button>
                 </div>
             </div>
         </div>
-    `;
-};
+        
+        <!-- Auto-refresh script -->
+        <script>
+            // Auto-refresh counters every 30 seconds
+            setInterval(updateLiveCounters, 30000);
+            
+            // Update last refresh time every minute
+            setInterval(updateRefreshTime, 60000);
+        </script>`;
+        
+    } catch (error) {
+        console.error('❌ Error generating sidebar:', error);
+        return generateFallbackSidebar(currentPage);
+    }
+}
 
-module.exports = { getSidebar };
+async function getRecentUpdateCounts() {
+    try {
+        const counts = await dbService.getUpdateCounts();
+        return {
+            total: counts.total || 0,
+            highImpact: counts.highImpact || 0,
+            today: counts.today || 0,
+            thisWeek: counts.thisWeek || 0,
+            unread: counts.unread || 0,
+            authorities: counts.authorities || {},
+            sectors: counts.sectors || {},
+            activeSources: counts.activeSources || 0,
+            dbStatus: counts.dbStatus || 'online'
+        };
+    } catch (error) {
+        console.error('Error getting update counts:', error);
+        return {
+            total: 0, highImpact: 0, today: 0, thisWeek: 0, unread: 0,
+            authorities: {}, sectors: {}, activeSources: 0, dbStatus: 'offline'
+        };
+    }
+}
+
+async function getAIInsightsForSidebar() {
+    try {
+        const insights = await dbService.getRecentAIInsights(3);
+        return insights || [];
+    } catch (error) {
+        console.error('Error getting AI insights:', error);
+        return [];
+    }
+}
+
+async function getUserPreferences() {
+    try {
+        // Phase 1.3 - Will implement user-specific preferences
+        return {
+            savedItems: [],
+            savedSearches: [],
+            pinnedItems: []
+        };
+    } catch (error) {
+        console.error('Error getting user preferences:', error);
+        return { savedItems: [], savedSearches: [], pinnedItems: [] };
+    }
+}
+
+function generateAIHighlights(insights) {
+    if (!insights || insights.length === 0) {
+        return `
+            <div class="insight-item">
+                <div class="insight-icon">🤖</div>
+                <div class="insight-content">
+                    <div class="insight-title">AI Analysis Ready</div>
+                    <div class="insight-summary">Enhanced AI insights will appear here</div>
+                </div>
+            </div>`;
+    }
+    
+    return insights.map(insight => `
+        <div class="insight-item ${insight.urgency_level}">
+            <div class="insight-icon">${getInsightIcon(insight.insight_type)}</div>
+            <div class="insight-content">
+                <div class="insight-title">${insight.title}</div>
+                <div class="insight-summary">${insight.summary.substring(0, 100)}...</div>
+                <div class="insight-meta">
+                    <span class="urgency-badge ${insight.urgency_level}">${insight.urgency_level}</span>
+                    <span class="impact-score">Impact: ${insight.impact_score}/10</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function generateAuthorityFilters(authorities) {
+    const authorityList = Object.entries(authorities)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 8)
+        .map(([authority, count]) => `
+            <div class="filter-item">
+                <button onclick="filterByAuthority('${authority}')" class="authority-btn" data-authority="${authority}">
+                    <span class="authority-name">${authority}</span>
+                    <span class="authority-count">${count}</span>
+                </button>
+            </div>
+        `).join('');
+        
+    return authorityList || '<div class="no-data">No data available</div>';
+}
+
+function generateSectorFilters(sectors) {
+    const sectorList = Object.entries(sectors)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 6)
+        .map(([sector, count]) => `
+            <div class="filter-item">
+                <button onclick="filterBySector('${sector}')" class="sector-btn" data-sector="${sector}">
+                    <span class="sector-name">${sector}</span>
+                    <span class="sector-count">${count}</span>
+                </button>
+            </div>
+        `).join('');
+        
+    return sectorList || '<div class="no-data">No data available</div>';
+}
+
+function generateSavedItems(savedItems) {
+    if (!savedItems || savedItems.length === 0) {
+        return '<div class="no-saved-items">No saved items yet</div>';
+    }
+    
+    return savedItems.map(item => `
+        <div class="saved-item">
+            <span class="saved-icon">⭐</span>
+            <span class="saved-title">${item.title}</span>
+            <button onclick="removeSavedItem('${item.id}')" class="remove-btn">×</button>
+        </div>
+    `).join('');
+}
+
+function getInsightIcon(insightType) {
+    const icons = {
+        'early_warning': '⚠️',
+        'deadline': '📅',
+        'pattern': '📊',
+        'briefing': '📋',
+        'trend': '📈',
+        'enforcement': '🚨'
+    };
+    return icons[insightType] || '💡';
+}
+
+function generateFallbackSidebar(currentPage) {
+    return `
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🤖 AI Regulatory Intelligence</h2>
+                <div class="sidebar-status">
+                    <span class="status-indicator offline" title="Loading..."></span>
+                    <span class="last-update">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="loading-placeholder">
+                <div class="spinner"></div>
+                <p>Loading intelligence data...</p>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul class="nav-list">
+                    <li class="nav-item ${currentPage === '' || currentPage === 'home' ? 'active' : ''}">
+                        <a href="/" class="nav-link">
+                            <span class="nav-icon">🏠</span>
+                            <span class="nav-text">Home</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'dashboard' ? 'active' : ''}">
+                        <a href="/dashboard" class="nav-link">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'analytics' ? 'active' : ''}">
+                        <a href="/analytics" class="nav-link">
+                            <span class="nav-icon">📈</span>
+                            <span class="nav-text">Analytics</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>`;
+}
+
+// Utility functions for time formatting
+function formatRelativeTime(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+}
+
+function formatTime(date) {
+    return date.toLocaleTimeString('en-UK', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+}
+
+module.exports = {
+    getSidebar
+};

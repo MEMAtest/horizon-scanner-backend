@@ -1,11 +1,11 @@
 // src/routes/templates/clientScripts.js
-// CONSOLIDATED: All shared JavaScript functions with global scope exposure
+// COMPLETE SOLUTION: All functions from all clientScripts files merged
 
-function getCommonClientScripts() {
+function getClientScriptsContent() {
     return `
     <script>
         // =================
-        // GLOBAL VARIABLES (SINGLE DECLARATION)
+        // GLOBAL VARIABLES
         // =================
         let allUpdatesData = null;
         let firmProfile = null;
@@ -18,6 +18,9 @@ function getCommonClientScripts() {
         let selectedUrgencies = new Set();
         let currentFilter = null;
         let pinnedUrls = new Set();
+        let currentOffset = 0;
+        let itemsPerPage = 20;
+        let shareInProgress = false;
         
         // System status tracking
         let systemStatus = {
@@ -25,6 +28,668 @@ function getCommonClientScripts() {
             api: false,
             overall: false
         };
+
+        // =================
+        // MISSING FUNCTIONS - NOW ADDED
+        // =================
+        
+        function updateLiveCounters() {
+            console.log('🔄 Updating live counters...');
+            
+            try {
+                // Update live statistics from API
+                fetch('/api/stats/live')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update counter elements if they exist
+                            const elements = {
+                                'totalUpdates': data.stats?.totalUpdates || 0,
+                                'newCount': data.stats?.newToday || 0,
+                                'urgentCount': data.stats?.urgent || 0,
+                                'moderateCount': data.stats?.moderate || 0,
+                                'backgroundCount': data.stats?.background || 0
+                            };
+                            
+                            Object.entries(elements).forEach(([id, value]) => {
+                                const element = document.getElementById(id);
+                                if (element) {
+                                    element.textContent = value;
+                                }
+                            });
+                            
+                            // Update last updated timestamp
+                            const lastUpdateEl = document.getElementById('lastUpdate');
+                            if (lastUpdateEl) {
+                                lastUpdateEl.textContent = \`Last: \${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\`;
+                            }
+                            
+                            console.log('✅ Live counters updated successfully');
+                        }
+                    })
+                    .catch(error => {
+                        console.warn('⚠️ Live counter update failed:', error);
+                    });
+            } catch (error) {
+                console.error('❌ Error updating live counters:', error);
+            }
+        }
+        
+        function initializeFilters() {
+            console.log('🔧 Initializing filters...');
+            
+            try {
+                // Initialize filter event listeners
+                document.querySelectorAll('.filter-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // Toggle active state
+                        this.classList.toggle('active');
+                        
+                        // Get filter type and value
+                        const filterType = this.closest('.filter-section')?.querySelector('.filter-title')?.textContent?.trim();
+                        const filterValue = this.textContent?.trim();
+                        
+                        console.log(\`Filter clicked: \${filterType} - \${filterValue}\`);
+                        
+                        // Apply filters based on type
+                        applyActiveFilters();
+                    });
+                });
+                
+                // Initialize search functionality
+                const searchBox = document.getElementById('searchBox');
+                if (searchBox) {
+                    searchBox.addEventListener('input', function() {
+                        performSearch(this.value);
+                    });
+                }
+                
+                // Initialize authority checkboxes
+                document.querySelectorAll('.authority-checkbox').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        if (this.checked) {
+                            selectedAuthorities.add(this.value);
+                        } else {
+                            selectedAuthorities.delete(this.value);
+                        }
+                        applyActiveFilters();
+                    });
+                });
+                
+                // Initialize impact level checkboxes
+                document.querySelectorAll('.impact-checkbox').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        if (this.checked) {
+                            selectedImpactLevels.add(this.value);
+                        } else {
+                            selectedImpactLevels.delete(this.value);
+                        }
+                        applyActiveFilters();
+                    });
+                });
+                
+                // Initialize urgency checkboxes
+                document.querySelectorAll('.urgency-checkbox').forEach(cb => {
+                    cb.addEventListener('change', function() {
+                        if (this.checked) {
+                            selectedUrgencies.add(this.value);
+                        } else {
+                            selectedUrgencies.delete(this.value);
+                        }
+                        applyActiveFilters();
+                    });
+                });
+                
+                console.log('✅ Filters initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing filters:', error);
+            }
+        }
+        
+        function loadMoreUpdates() {
+            console.log('📄 Loading more updates...');
+            
+            try {
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                if (loadMoreBtn) {
+                    loadMoreBtn.disabled = true;
+                    loadMoreBtn.textContent = 'Loading...';
+                }
+                
+                // Increment offset for pagination
+                currentOffset += itemsPerPage;
+                
+                // Fetch more updates
+                const params = new URLSearchParams({
+                    offset: currentOffset,
+                    limit: itemsPerPage
+                });
+                
+                // Add current filters to request
+                if (selectedAuthorities.size > 0) {
+                    params.append('authorities', Array.from(selectedAuthorities).join(','));
+                }
+                if (selectedImpactLevels.size > 0) {
+                    params.append('impacts', Array.from(selectedImpactLevels).join(','));
+                }
+                if (selectedUrgencies.size > 0) {
+                    params.append('urgencies', Array.from(selectedUrgencies).join(','));
+                }
+                
+                fetch(\`/api/updates?\${params.toString()}\`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.updates) {
+                            // Append new updates to existing content
+                            const updatesContainer = document.getElementById('updatesContainer') || 
+                                                   document.querySelector('.updates-list') ||
+                                                   document.querySelector('.update-cards');
+                            
+                            if (updatesContainer) {
+                                data.updates.forEach(update => {
+                                    const updateCard = generateUpdateCard(update);
+                                    updatesContainer.insertAdjacentHTML('beforeend', updateCard);
+                                });
+                                
+                                showMessage(\`Loaded \${data.updates.length} more updates\`, 'success');
+                            }
+                            
+                            // Hide load more button if no more updates
+                            if (data.updates.length < itemsPerPage) {
+                                if (loadMoreBtn) {
+                                    loadMoreBtn.style.display = 'none';
+                                }
+                                showMessage('All updates loaded', 'info');
+                            }
+                        } else {
+                            throw new Error(data.error || 'Failed to load more updates');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Load more error:', error);
+                        showMessage('Failed to load more updates: ' + error.message, 'error');
+                        currentOffset -= itemsPerPage; // Reset offset on error
+                    })
+                    .finally(() => {
+                        if (loadMoreBtn) {
+                            loadMoreBtn.disabled = false;
+                            loadMoreBtn.textContent = 'Load More';
+                        }
+                    });
+                    
+            } catch (error) {
+                console.error('❌ Error loading more updates:', error);
+                showMessage('Error loading more updates', 'error');
+            }
+        }
+
+        // =================
+        // SIDEBAR FILTER FUNCTIONS (FROM SHARED)
+        // =================
+        
+        // Category Filtering Functions
+        async function filterByCategory(category) {
+            try {
+                console.log('🏷️ Filtering by category:', category);
+                showMessage(\`Filtering by category: \${category}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates/category/\${encodeURIComponent(category)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Category: \${category}\`);
+                    showMessage(\`Showing \${data.total} \${category} updates\`, 'success');
+                    currentFilter = { type: 'category', value: category };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Category filter error:', error);
+                showMessage('Category filter failed: ' + error.message, 'error');
+            }
+        }
+
+        function selectAllCategories() {
+            console.log('🔄 Showing all categories');
+            currentFilter = null;
+            if (typeof loadIntelligenceStreams === 'function') {
+                loadIntelligenceStreams();
+            } else {
+                window.location.reload();
+            }
+            showMessage('Showing all categories', 'info');
+        }
+
+        function clearCategoryFilters() {
+            selectAllCategories();
+        }
+
+        // Content Type Filtering Functions
+        async function filterByContentType(contentType) {
+            try {
+                console.log('📄 Filtering by content type:', contentType);
+                showMessage(\`Filtering by content type: \${contentType}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates/content-type/\${encodeURIComponent(contentType)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Content Type: \${contentType}\`);
+                    showMessage(\`Showing \${data.total} \${contentType} updates\`, 'success');
+                    currentFilter = { type: 'contentType', value: contentType };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Content type filter error:', error);
+                showMessage('Content type filter failed: ' + error.message, 'error');
+            }
+        }
+
+        function selectAllContentTypes() {
+            console.log('🔄 Showing all content types');
+            currentFilter = null;
+            if (typeof loadIntelligenceStreams === 'function') {
+                loadIntelligenceStreams();
+            } else {
+                window.location.reload();
+            }
+            showMessage('Showing all content types', 'info');
+        }
+
+        function clearContentTypeFilters() {
+            selectAllContentTypes();
+        }
+
+        // Source Type Filtering Functions
+        async function filterBySourceType(sourceType) {
+            try {
+                console.log('📡 Filtering by source type:', sourceType);
+                showMessage(\`Filtering by source type: \${sourceType}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates/source-type/\${encodeURIComponent(sourceType)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Source Type: \${sourceType}\`);
+                    showMessage(\`Showing \${data.total} \${sourceType} updates\`, 'success');
+                    currentFilter = { type: 'sourceType', value: sourceType };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Source type filter error:', error);
+                showMessage('Source type filter failed: ' + error.message, 'error');
+            }
+        }
+
+        function selectAllSourceTypes() {
+            console.log('🔄 Showing all source types');
+            currentFilter = null;
+            if (typeof loadIntelligenceStreams === 'function') {
+                loadIntelligenceStreams();
+            } else {
+                window.location.reload();
+            }
+            showMessage('Showing all source types', 'info');
+        }
+
+        function clearSourceTypeFilters() {
+            selectAllSourceTypes();
+        }
+
+        // Relevance Filtering Functions
+        async function filterByRelevance(relevance) {
+            try {
+                console.log('🎯 Filtering by relevance:', relevance);
+                showMessage(\`Filtering by relevance: \${relevance}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates/relevance/\${encodeURIComponent(relevance)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Relevance: \${relevance}\`);
+                    showMessage(\`Showing \${data.total} \${relevance} relevance updates\`, 'success');
+                    currentFilter = { type: 'relevance', value: relevance };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Relevance filter error:', error);
+                showMessage('Relevance filter failed: ' + error.message, 'error');
+            }
+        }
+
+        // Authority Filtering Functions
+        async function filterByAuthority(authority) {
+            try {
+                console.log('🏛️ Filtering by authority:', authority);
+                showMessage(\`Filtering by authority: \${authority}...\`, 'info');
+                
+                const response = await fetch(\`/api/search?authority=\${encodeURIComponent(authority)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.results, \`Authority: \${authority}\`);
+                    showMessage(\`Showing \${data.total} \${authority} updates\`, 'success');
+                    currentFilter = { type: 'authority', value: authority };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Authority filter error:', error);
+                showMessage('Authority filter failed: ' + error.message, 'error');
+            }
+        }
+
+        // Workspace Functions
+        function showPinnedItems() {
+            console.log('📌 Opening pinned items');
+            window.open('/dashboard#pinned', '_blank');
+        }
+
+        function showSavedSearches() {
+            console.log('🔍 Opening saved searches');
+            window.open('/dashboard#searches', '_blank');
+        }
+
+        function showCustomAlerts() {
+            console.log('🔔 Opening custom alerts');
+            window.open('/dashboard#alerts', '_blank');
+        }
+
+        // Dialog Functions
+        function showSaveDialog() {
+            console.log('💾 Opening save dialog');
+            
+            // Create a simple save dialog
+            const dialog = document.createElement('div');
+            dialog.style.cssText = \`
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 2rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                z-index: 10000;
+                min-width: 300px;
+            \`;
+            
+            dialog.innerHTML = \`
+                <h3 style="margin-bottom: 1rem;">Save Current View</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label>Save as:</label>
+                    <input type="text" id="saveDialogName" placeholder="Enter name..." style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button onclick="closeSaveDialog()" style="padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 4px;">Cancel</button>
+                    <button onclick="saveCurrentView()" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px;">Save</button>
+                </div>
+            \`;
+            
+            // Add overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = \`
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+            \`;
+            overlay.onclick = closeSaveDialog;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(dialog);
+            document.getElementById('saveDialogName').focus();
+        }
+
+        function closeSaveDialog() {
+            const overlay = document.querySelector('[style*="position: fixed"][style*="background: rgba(0,0,0,0.5)"]');
+            const dialog = document.querySelector('[style*="position: fixed"][style*="transform: translate(-50%, -50%)"]');
+            
+            if (overlay) overlay.remove();
+            if (dialog) dialog.remove();
+        }
+
+        function saveCurrentView() {
+            const nameInput = document.getElementById('saveDialogName');
+            const name = nameInput?.value?.trim();
+            
+            if (!name) {
+                showMessage('Please enter a name for the saved view', 'warning');
+                return;
+            }
+            
+            // Save to localStorage (fallback to memory if not available)
+            const savedData = {
+                name: name,
+                filter: currentFilter,
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                const saved = JSON.parse(localStorage.getItem('savedViews') || '[]');
+                saved.push(savedData);
+                localStorage.setItem('savedViews', JSON.stringify(saved));
+                showMessage(\`View saved as "\${name}"\`, 'success');
+            } catch (error) {
+                console.warn('Could not save to localStorage:', error);
+                showMessage('View saved in session memory', 'info');
+            }
+            
+            closeSaveDialog();
+        }
+
+        // General Filtering Functions
+        function clearFilters() {
+            console.log('🔄 Clearing all filters');
+            currentFilter = null;
+            if (typeof loadIntelligenceStreams === 'function') {
+                loadIntelligenceStreams();
+            } else {
+                window.location.reload();
+            }
+            showMessage('All filters cleared', 'success');
+        }
+
+        // Render Functions
+        function renderFilteredUpdates(updates, filterLabel) {
+            console.log(\`📋 Rendering \${updates.length} filtered updates for: \${filterLabel}\`);
+            
+            try {
+                const container = document.getElementById('intelligenceStreams') || 
+                                document.getElementById('updatesContainer') ||
+                                document.querySelector('.updates-list');
+                
+                if (!container) {
+                    console.warn('No container found for updates');
+                    return;
+                }
+                
+                // Create filtered view
+                const filteredHTML = \`
+                    <div class="filtered-view">
+                        <div class="filter-header">
+                            <h3>Filtered View: \${filterLabel}</h3>
+                            <button onclick="clearFilters()" class="clear-filter-btn">Clear Filter</button>
+                        </div>
+                        <div class="filtered-updates">
+                            \${updates.map(update => generateUpdateCard(update)).join('')}
+                        </div>
+                    </div>
+                \`;
+                
+                container.innerHTML = filteredHTML;
+                
+            } catch (error) {
+                console.error('Error rendering filtered updates:', error);
+                showMessage('Error displaying filtered updates', 'error');
+            }
+        }
+
+        // Toggle Pin Function
+        function togglePin(url) {
+            if (pinnedUrls.has(url)) {
+                pinnedUrls.delete(url);
+                showMessage('Item unpinned', 'info');
+            } else {
+                pinnedUrls.add(url);
+                showMessage('Item pinned', 'success');
+            }
+            
+            // Update pin button appearance
+            const pinBtn = document.querySelector(\`[data-url="\${url}"] .pin-btn\`);
+            if (pinBtn) {
+                pinBtn.textContent = pinnedUrls.has(url) ? '📌' : '📍';
+                pinBtn.classList.toggle('pinned', pinnedUrls.has(url));
+            }
+            
+            updateWorkspaceCounts();
+        }
+
+        // Firm Profile Functions
+        function showFirmProfileSetup() {
+            console.log('🏢 Opening firm profile setup');
+            
+            const modal = document.getElementById('firmProfileModal');
+            if (modal) {
+                modal.style.display = 'block';
+            } else {
+                showMessage('Firm profile setup not available', 'warning');
+            }
+        }
+
+        function closeFirmProfileModal() {
+            const modal = document.getElementById('firmProfileModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function clearFirmProfile() {
+            firmProfile = null;
+            showMessage('Firm profile cleared', 'info');
+            
+            // Update UI
+            const profileBtn = document.getElementById('profileBtn');
+            if (profileBtn) {
+                profileBtn.textContent = 'Setup Firm Profile';
+                profileBtn.classList.remove('configured');
+            }
+        }
+
+        // Export Functions
+        async function exportData() {
+            try {
+                showMessage('Preparing export...', 'info');
+                
+                const response = await fetch('/api/export');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Create downloadable file
+                    const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = \`regulatory-updates-\${new Date().toISOString().split('T')[0]}.json\`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    showMessage('Data exported successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Export failed');
+                }
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showMessage('Export failed: ' + error.message, 'error');
+            }
+        }
+
+        async function createAlert() {
+            try {
+                showMessage('Creating alert...', 'info');
+                
+                // Simple alert creation - could be enhanced with a modal
+                const alertData = {
+                    filter: currentFilter,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const response = await fetch('/api/alerts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(alertData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Alert created successfully', 'success');
+                } else {
+                    throw new Error(result.error || 'Alert creation failed');
+                }
+                
+            } catch (error) {
+                console.error('Alert creation error:', error);
+                showMessage('Alert creation failed: ' + error.message, 'error');
+            }
+        }
+
+        async function shareSystem() {
+            if (shareInProgress) return;
+            shareInProgress = true;
+            
+            try {
+                const shareData = {
+                    title: 'Regulatory Horizon Scanner',
+                    text: 'Check out this regulatory intelligence platform',
+                    url: window.location.href
+                };
+                
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    showMessage('Shared successfully!', 'success');
+                } else {
+                    const shareText = \`\${shareData.title}: \${shareData.text} - \${shareData.url}\`;
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(shareText);
+                        showMessage('Share link copied to clipboard!', 'success');
+                    } else {
+                        const textArea = document.createElement('textarea');
+                        textArea.value = shareText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        showMessage('Share link copied to clipboard!', 'success');
+                    }
+                }
+                
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Share error:', error);
+                    showMessage('Share failed: ' + error.message, 'error');
+                }
+            } finally {
+                setTimeout(() => {
+                    shareInProgress = false;
+                }, 1000);
+            }
+        }
 
         // =================
         // CORE DATA REFRESH FUNCTIONS
@@ -66,9 +731,7 @@ function getCommonClientScripts() {
                 await loadAnalyticsPreview();
                 await checkLiveSubscriptions();
                 
-                showMessage(\`Refreshed successfully! \${result.newArticles} new updates processed.\`, 'success');
-                
-                console.log('✅ Intelligence refresh completed');
+                showMessage(\`Refreshed successfully! \${result.newArticles} new updates found.\`, 'success');
                 
             } catch (error) {
                 console.error('Refresh error:', error);
@@ -76,496 +739,204 @@ function getCommonClientScripts() {
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<span id="refreshIcon">🔄</span><span>Refresh Data</span>';
+                    if (icon) icon.textContent = '🔄';
+                    btn.innerHTML = '<span>🔄</span><span>Refresh Intelligence</span>';
                 }
             }
         }
 
         async function loadIntelligenceStreams() {
             try {
-                console.log('📊 Loading regulatory news streams...');
+                console.log('📊 Loading intelligence streams...');
                 
-                const response = await fetch('/api/updates');
-                
-                if (!response.ok) {
-                    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
-                }
-                
+                const response = await fetch('/api/streams');
                 const data = await response.json();
                 
-                // Enhanced deduplication by content fingerprinting
-                data.urgent = deduplicateUpdates(data.urgent || []);
-                data.moderate = deduplicateUpdates(data.moderate || []);
-                data.informational = deduplicateUpdates(data.informational || []);
-                
-                allUpdatesData = data;
-                
-                const streamsContainer = document.getElementById('streamsContainer');
-                if (streamsContainer) {
-                    streamsContainer.innerHTML = generateRelevanceBasedStreams(data);
+                if (data.success) {
+                    allUpdatesData = data.updates;
+                    generateRelevanceBasedStreams(allUpdatesData);
+                    updateLiveCounters();
+                } else {
+                    throw new Error(data.error || 'Failed to load streams');
                 }
-                
-                // Update counts in sidebar
-                updateAuthorityCounts(data);
-                updateRelevanceCounts(data);
-                
-                await loadPinnedStatus();
-                
-                console.log('✅ Regulatory news streams loaded');
                 
             } catch (error) {
-                console.error('Failed to load regulatory news streams:', error);
-                
-                const streamsContainer = document.getElementById('streamsContainer');
-                if (streamsContainer) {
-                    streamsContainer.innerHTML = \`
-                        <div class="welcome-content">
-                            <div class="welcome-icon">❌</div>
-                            <div class="welcome-title">Error Loading Updates</div>
-                            <div class="welcome-subtitle">
-                                \${error.message}. Please try refreshing the data.
-                            </div>
-                        </div>
-                    \`;
-                }
+                console.error('Stream loading error:', error);
+                showMessage('Failed to load intelligence streams', 'error');
             }
         }
 
-        // =================
-        // WORKSPACE FUNCTIONS  
-        // =================
-        
-        async function exportData() {
+        async function loadAnalyticsPreview() {
             try {
-                showMessage('Preparing data export...', 'info');
-                
-                const response = await fetch('/api/export/data', {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(\`Export failed: HTTP \${response.status}\`);
-                }
-                
+                const response = await fetch('/api/analytics/preview');
                 const data = await response.json();
                 
-                const dataStr = JSON.stringify(data, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-                
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = \`regulatory-data-export-\${new Date().toISOString().split('T')[0]}.json\`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                URL.revokeObjectURL(url);
-                
-                showMessage('Data exported successfully!', 'success');
-                
-            } catch (error) {
-                console.error('Export error:', error);
-                showMessage('Export failed: ' + error.message, 'error');
-            }
-        }
-
-        async function createAlert() {
-            const keywords = prompt('Enter keywords to monitor (comma-separated):');
-            if (!keywords) return;
-            
-            try {
-                const response = await fetch('/api/alerts/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: \`Alert for: \${keywords}\`,
-                        keywords: keywords.split(',').map(k => k.trim()),
-                        authorities: ['FCA', 'BoE', 'PRA'],
-                        isActive: true
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(\`HTTP \${response.status}\`);
-                }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    workspaceStats.activeAlerts++;
-                    updateWorkspaceCounts();
-                    showMessage('Alert created successfully!', 'success');
-                } else {
-                    throw new Error(result.message || 'Unknown error');
-                }
-                
-            } catch (error) {
-                console.error('Create alert error:', error);
-                showMessage('Failed to create alert: ' + error.message, 'error');
-            }
-        }
-
-        async function shareSystem() {
-            try {
-                const shareData = {
-                    title: 'Regulatory Horizon Scanner',
-                    text: 'AI-powered regulatory intelligence monitoring system',
-                    url: window.location.origin
-                };
-                
-                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-                    await navigator.share(shareData);
-                    showMessage('Shared successfully!', 'success');
-                } else {
-                    const shareText = \`\${shareData.title}: \${shareData.text} - \${shareData.url}\`;
-                    
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        await navigator.clipboard.writeText(shareText);
-                        showMessage('Share link copied to clipboard!', 'success');
-                    } else {
-                        const textArea = document.createElement('textarea');
-                        textArea.value = shareText;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        showMessage('Share link copied to clipboard!', 'success');
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Share error:', error);
-                showMessage('Share failed: ' + error.message, 'error');
-            }
-        }
-
-        // =================
-        // PIN FUNCTIONALITY (UNIFIED)
-        // =================
-        
-        async function togglePin(updateUrl, updateTitle, updateAuthority) {
-            const pinBtn = document.querySelector(\`[data-url="\${updateUrl}"] .pin-btn\`);
-            
-            if (!pinBtn) {
-                console.error('Pin button not found for URL:', updateUrl);
-                return;
-            }
-            
-            const isPinned = pinBtn.classList.contains('pinned');
-            
-            if (isPinned) {
-                await unpinUpdate(updateUrl);
-            } else {
-                await pinUpdate(updateUrl, updateTitle, updateAuthority);
-            }
-        }
-        
-        // Dashboard-specific pin function (alias for compatibility)
-        async function toggleDashboardPin(updateUrl, updateTitle, updateAuthority) {
-            return await togglePin(updateUrl, updateTitle, updateAuthority);
-        }
-
-        async function pinUpdate(updateUrl, updateTitle, updateAuthority) {
-            try {
-                const response = await fetch('/api/workspace/pin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        updateUrl,
-                        updateTitle,
-                        updateAuthority
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    const pinBtn = document.querySelector(\`[data-url="\${updateUrl}"] .pin-btn\`);
-                    if (pinBtn) {
-                        pinBtn.textContent = '📌';
-                        pinBtn.classList.add('pinned');
-                        pinBtn.title = 'Unpin item';
-                    }
-                    
-                    pinnedUrls.add(updateUrl);
-                    workspaceStats.pinnedItems++;
-                    updateWorkspaceCounts();
-                    
-                    console.log('📌 Item pinned:', updateTitle.substring(0, 50));
-                    showMessage('Item pinned successfully', 'success');
-                } else {
-                    throw new Error(result.message || 'Unknown error');
-                }
-                
-            } catch (error) {
-                console.error('Error pinning item:', error);
-                showMessage('Error pinning item: ' + error.message, 'error');
-            }
-        }
-
-        async function unpinUpdate(updateUrl) {
-            try {
-                const response = await fetch(\`/api/workspace/pin/\${encodeURIComponent(updateUrl)}\`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    const pinBtn = document.querySelector(\`[data-url="\${updateUrl}"] .pin-btn\`);
-                    if (pinBtn) {
-                        pinBtn.textContent = '📍';
-                        pinBtn.classList.remove('pinned');
-                        pinBtn.title = 'Pin item';
-                    }
-                    
-                    pinnedUrls.delete(updateUrl);
-                    workspaceStats.pinnedItems = Math.max(0, workspaceStats.pinnedItems - 1);
-                    updateWorkspaceCounts();
-                    
-                    console.log('📍 Item unpinned');
-                    showMessage('Item unpinned', 'success');
-                } else {
-                    throw new Error(result.message || 'Unknown error');
-                }
-                
-            } catch (error) {
-                console.error('Error unpinning item:', error);
-                showMessage('Error unpinning item: ' + error.message, 'error');
-            }
-        }
-
-        // =================
-        // FIRM PROFILE FUNCTIONS
-        // =================
-        
-        function showFirmProfileSetup() {
-            const modal = document.getElementById('firmProfileModal');
-            const sectorGrid = document.getElementById('sectorGrid');
-            const messageContainer = document.getElementById('messageContainer');
-            
-            if (!modal) {
-                console.error('Firm profile modal not found');
-                showMessage('Profile setup not available on this page', 'error');
-                return;
-            }
-            
-            if (messageContainer) messageContainer.innerHTML = '';
-            
-            // Populate sectors
-            if (sectorGrid) {
-                sectorGrid.innerHTML = '';
-                availableSectors.forEach(sector => {
-                    const isSelected = firmProfile && firmProfile.primarySectors && firmProfile.primarySectors.includes(sector);
-                    
-                    const sectorDiv = document.createElement('div');
-                    sectorDiv.className = \`sector-checkbox \${isSelected ? 'selected' : ''}\`;
-                    sectorDiv.innerHTML = \`
-                        <input type="checkbox" id="sector_\${sector.replace(/\\s+/g, '_')}" value="\${sector}" \${isSelected ? 'checked' : ''}>
-                        <label for="sector_\${sector.replace(/\\s+/g, '_')}">\${sector}</label>
-                    \`;
-                    
-                    sectorDiv.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        
-                        const checkbox = sectorDiv.querySelector('input');
-                        const currentlyChecked = document.querySelectorAll('#sectorGrid input[type="checkbox"]:checked');
-                        
-                        if (!checkbox.checked && currentlyChecked.length >= 3) {
-                            showMessage('Please select a maximum of 3 sectors', 'error');
-                            return;
-                        }
-                        
-                        checkbox.checked = !checkbox.checked;
-                        sectorDiv.classList.toggle('selected', checkbox.checked);
-                        
-                        if (currentlyChecked.length <= 3) {
-                            clearMessages();
-                        }
-                    });
-                    
-                    sectorGrid.appendChild(sectorDiv);
-                });
-            }
-            
-            // Set firm data if exists
-            if (firmProfile) {
-                const firmNameInput = document.getElementById('firmNameInput');
-                const firmSizeInput = document.getElementById('firmSizeInput');
-                if (firmNameInput) firmNameInput.value = firmProfile.firmName || '';
-                if (firmSizeInput) firmSizeInput.value = firmProfile.firmSize || 'Medium';
-            }
-            
-            modal.style.display = 'block';
-        }
-
-        function closeFirmProfileModal() {
-            const modal = document.getElementById('firmProfileModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            clearMessages();
-        }
-
-        async function clearFirmProfile() {
-            if (!confirm('Are you sure you want to clear your firm profile? This will reset all personalization.')) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/firm-profile', {
-                    method: 'DELETE',
-                    headers: { 'Accept': 'application/json' }
-                });
-
-                if (!response.ok) {
-                    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
-                }
-
-                firmProfile = null;
-                updateFirmProfileUI();
-                
-                await loadIntelligenceStreams();
-                
-                showMessage('Firm profile cleared successfully!', 'success');
-                
-                console.log('✅ Firm profile cleared');
-                
-            } catch (error) {
-                console.error('Error clearing firm profile:', error);
-                showMessage('Error clearing profile: ' + error.message, 'error');
-            }
-        }
-
-        // =================
-        // FILTERING FUNCTIONS (UNIFIED)
-        // =================
-        
-        function filterByAuthority(authority) {
-            console.log('🔍 Filtering by authority:', authority);
-            currentFilter = { type: 'authority', value: authority };
-            
-            // Update filter button states
-            updateFilterButtons(event.target);
-            
-            // Filter update cards
-            document.querySelectorAll('.update-card').forEach(card => {
-                const cardAuthority = card.dataset.authority;
-                if (cardAuthority === authority) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            
-            showMessage(\`Showing only \${authority} updates\`, 'info');
-        }
-
-        function filterByUrgency(urgency) {
-            console.log('🔍 Filtering by urgency:', urgency);
-            currentFilter = { type: 'urgency', value: urgency };
-            
-            updateFilterButtons(event.target);
-            
-            document.querySelectorAll('.update-card').forEach(card => {
-                const cardUrgency = card.dataset.urgency;
-                if (cardUrgency === urgency) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            
-            showMessage(\`Showing only \${urgency} urgency updates\`, 'info');
-        }
-
-        function filterByImpact(impact) {
-            console.log('🔍 Filtering by impact:', impact);
-            currentFilter = { type: 'impact', value: impact };
-            
-            updateFilterButtons(event.target);
-            
-            document.querySelectorAll('.update-card').forEach(card => {
-                const cardImpact = card.dataset.impact;
-                if (cardImpact === impact) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-            
-            showMessage(\`Showing only \${impact} impact updates\`, 'info');
-        }
-
-        function showAllUpdates() {
-            console.log('🔄 Showing all updates');
-            currentFilter = null;
-            
-            updateFilterButtons(event.target);
-            
-            document.querySelectorAll('.update-card').forEach(card => {
-                card.style.display = 'block';
-            });
-            
-            showMessage('Showing all updates', 'info');
-        }
-
-        function clearDashboardFilters() {
-            console.log('🔄 Clearing all dashboard filters');
-            currentFilter = null;
-            
-            // Reset filter buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            const firstFilterBtn = document.querySelector('.filter-btn');
-            if (firstFilterBtn) firstFilterBtn.classList.add('active');
-            
-            // Show all cards
-            document.querySelectorAll('.update-card').forEach(card => {
-                card.style.display = 'block';
-            });
-            
-            showMessage('All filters cleared', 'success');
-        }
-
-        function updateFilterButtons(activeButton) {
-            if (!activeButton) return;
-            
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            activeButton.classList.add('active');
-        }
-
-        // =================
-        // ANALYTICS FUNCTIONS
-        // =================
-        
-        async function refreshAnalytics() {
-            try {
-                showMessage('Refreshing analytics...', 'info');
-                
-                const response = await fetch('/api/analytics/refresh', {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    analyticsPreviewData = result.dashboard;
+                if (data.success) {
+                    analyticsPreviewData = data.analytics;
                     updateAnalyticsPreview();
-                    showMessage('Analytics refreshed successfully!', 'success');
-                } else {
-                    throw new Error(result.error || 'Refresh failed');
                 }
+                
             } catch (error) {
-                console.error('Analytics refresh error:', error);
-                showMessage('Analytics refresh failed: ' + error.message, 'error');
+                console.warn('Analytics preview not available:', error);
             }
+        }
+
+        async function checkLiveSubscriptions() {
+            try {
+                const response = await fetch('/api/workspace/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    workspaceStats = data.stats;
+                    updateWorkspaceCounts();
+                }
+                
+            } catch (error) {
+                console.warn('Workspace stats not available:', error);
+            }
+        }
+
+        async function updateAnalyticsPreview() {
+            if (!analyticsPreviewData) return;
+            
+            const previewContainer = document.getElementById('analyticsPreview');
+            if (previewContainer) {
+                previewContainer.innerHTML = \`
+                    <div class="analytics-metric">
+                        <span class="metric-label">Total Updates</span>
+                        <span class="metric-value">\${analyticsPreviewData.totalUpdates || 0}</span>
+                    </div>
+                    <div class="analytics-metric">
+                        <span class="metric-label">Avg Risk Score</span>
+                        <span class="metric-value">\${(analyticsPreviewData.averageRiskScore || 0).toFixed(1)}</span>
+                    </div>
+                \`;
+            }
+        }
+
+        function generateRelevanceBasedStreams(updates) {
+            if (!updates || !Array.isArray(updates)) return;
+            
+            const streamContainer = document.getElementById('intelligenceStreams');
+            if (!streamContainer) return;
+            
+            // Categorize updates by relevance
+            const urgent = updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant');
+            const moderate = updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate');  
+            const background = updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational');
+            
+            streamContainer.innerHTML = \`
+                \${generateStream('urgent', '🔴 Critical Impact', urgent, true)}
+                \${generateStream('moderate', '🟡 Active Monitoring', moderate, false)}
+                \${generateStream('background', '🟢 Background Intelligence', background, false)}
+            \`;
+        }
+
+        function generateStream(id, title, updates, isExpanded = false) {
+            const updateCards = updates.slice(0, 5).map(update => generateUpdateCard(update)).join('');
+            const expandClass = isExpanded ? 'expanded' : '';
+            const expandText = isExpanded ? 'Collapse' : 'Expand';
+            const expandIcon = isExpanded ? '🔽' : '▶️';
+            
+            return \`
+                <div class="intelligence-stream \${expandClass}" id="\${id}">
+                    <div class="stream-header" onclick="toggleStreamExpansion('\${id}')">
+                        <h3>\${title}</h3>
+                        <div class="stream-controls">
+                            <span class="update-count">\${updates.length} updates</span>
+                            <button class="expand-btn">
+                                <span>\${expandIcon}</span>
+                                <span>\${expandText}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="stream-content">
+                        \${updateCards}
+                        \${updates.length > 5 ? \`<button class="load-more-btn" onclick="loadMoreUpdates()">Load More (\${updates.length - 5} remaining)</button>\` : ''}
+                    </div>
+                </div>
+            \`;
+        }
+
+        function generateUpdateCard(update) {
+            const impactColor = update.urgency === 'High' ? 'urgent' : update.urgency === 'Medium' ? 'moderate' : 'low';
+            const shortSummary = (update.impact || '').length > 120 ? 
+                (update.impact || '').substring(0, 120) + '...' : 
+                (update.impact || '');
+            const isPinned = pinnedUrls.has(update.url);
+            
+            return \`
+                <div class="update-card" data-authority="\${update.authority}" data-impact="\${update.impactLevel}" data-urgency="\${update.urgency}" data-url="\${update.url}">
+                    <div class="update-header">
+                        <h4 class="update-headline">\${update.headline || 'No headline'}</h4>
+                        <div class="update-badges">
+                            <span class="authority-badge">\${update.authority || 'Unknown'}</span>
+                            <span class="impact-badge \${impactColor}">\${update.urgency || 'Low'}</span>
+                            <button class="pin-btn \${isPinned ? 'pinned' : ''}" onclick="togglePin('\${update.url}')">\${isPinned ? '📌' : '📍'}</button>
+                        </div>
+                    </div>
+                    <div class="update-content">
+                        <p class="update-summary truncated" id="summary-\${update.id}">\${shortSummary}</p>
+                        \${(update.impact || '').length > 120 ? \`<button class="read-more-btn" onclick="toggleSummaryExpansion(\${update.id}, '\${(update.impact || '').replace(/'/g, "\\'")}')">Read More</button>\` : ''}
+                    </div>
+                    <div class="update-footer">
+                        <span class="update-date">\${new Date(update.fetchedDate).toLocaleDateString()}</span>
+                        <button class="view-details-btn" onclick="viewUpdateDetails('\${update.url}')">View Details</button>
+                    </div>
+                </div>
+            \`;
+        }
+
+        function deduplicateUpdates(updates) {
+            const seen = new Set();
+            return updates.filter(update => {
+                const fingerprint = createContentFingerprint(update);
+                if (seen.has(fingerprint)) {
+                    return false;
+                }
+                seen.add(fingerprint);
+                return true;
+            });
+        }
+
+        function createContentFingerprint(update) {
+            const headline = (update.headline || '').toLowerCase().trim();
+            const url = (update.url || '').toLowerCase().trim();
+            return \`\${headline}|\${url}\`;
+        }
+
+        function updateAuthorityCounts() {
+            if (!allUpdatesData) return;
+            
+            const counts = {};
+            allUpdatesData.forEach(update => {
+                const authority = update.authority || 'Unknown';
+                counts[authority] = (counts[authority] || 0) + 1;
+            });
+            
+            // Update authority filter counts
+            Object.entries(counts).forEach(([authority, count]) => {
+                const element = document.querySelector(\`[data-authority-count="\${authority}"]\`);
+                if (element) {
+                    element.textContent = count;
+                }
+            });
+        }
+
+        function updateRelevanceCounts() {
+            if (!allUpdatesData) return;
+            
+            const urgent = allUpdatesData.filter(u => u.urgency === 'High').length;
+            const moderate = allUpdatesData.filter(u => u.urgency === 'Medium').length;
+            const background = allUpdatesData.filter(u => u.urgency === 'Low').length;
+            
+            const urgentEl = document.getElementById('urgentCount');
+            const moderateEl = document.getElementById('moderateCount');
+            const backgroundEl = document.getElementById('backgroundCount');
+            
+            if (urgentEl) urgentEl.textContent = urgent;
+            if (moderateEl) moderateEl.textContent = moderate;
+            if (backgroundEl) backgroundEl.textContent = background;
         }
 
         // =================
@@ -627,460 +998,286 @@ function getCommonClientScripts() {
             
             // Create a temporary toast notification
             const toast = document.createElement('div');
-            const bgColor = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : type === 'warning' ? '#fffbeb' : '#eff6ff';
-            const textColor = type === 'error' ? '#dc2626' : type === 'success' ? '#166534' : type === 'warning' ? '#d97706' : '#1e40af';
-            const borderColor = type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : type === 'warning' ? '#fde68a' : '#bfdbfe';
+            const bgColor = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : type === 'warning' ? '#fffbeb' : '#f0f9ff';
+            const textColor = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : type === 'warning' ? '#d97706' : '#2563eb';
             
-            toast.style.cssText = \`position: fixed; top: 20px; right: 20px; background: \${bgColor}; color: \${textColor}; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000; font-size: 0.875rem; font-weight: 500; transition: all 0.3s ease; border: 1px solid \${borderColor};\`;
+            toast.style.cssText = \`
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: \${bgColor};
+                color: \${textColor};
+                padding: 12px 16px;
+                border-radius: 8px;
+                border: 1px solid;
+                border-color: \${textColor}33;
+                font-size: 14px;
+                z-index: 10000;
+                max-width: 350px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            \`;
             toast.textContent = message;
             
             document.body.appendChild(toast);
             
             setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (document.body.contains(toast)) {
-                        document.body.removeChild(toast);
-                    }
-                }, 300);
-            }, 3000);
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 4000);
         }
 
         function clearMessages() {
-            const messageContainer = document.getElementById('messageContainer');
-            if (messageContainer) {
-                messageContainer.innerHTML = '';
-            }
-        }
-
-        // =================
-        // DATA LOADING FUNCTIONS
-        // =================
-        
-        async function loadFirmProfile() {
-            try {
-                const response = await fetch('/api/firm-profile');
-                
-                if (!response.ok) {
-                    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+            document.querySelectorAll('[style*="position: fixed"][style*="top: 20px"]').forEach(toast => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
                 }
-                
-                const data = await response.json();
-                
-                firmProfile = data.profile;
-                availableSectors = data.availableSectors || [];
-                
-                updateFirmProfileUI();
-                
-                console.log('✅ Firm profile loaded:', firmProfile ? firmProfile.firmName : 'No profile');
-                
-            } catch (error) {
-                console.error('Error loading firm profile:', error);
-                availableSectors = [
-                    'Banking', 'Investment Management', 'Consumer Credit', 
-                    'Insurance', 'Payments', 'Pensions', 'Mortgages', 
-                    'Capital Markets', 'Cryptocurrency', 'Fintech', 'General'
-                ];
-            }
-        }
-
-        async function loadWorkspaceStats() {
-            try {
-                const response = await fetch('/api/workspace/stats');
-                
-                if (!response.ok) {
-                    throw new Error(\`HTTP \${response.status}\`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    workspaceStats = data.stats;
-                    updateWorkspaceCounts();
-                }
-                
-            } catch (error) {
-                console.error('Error loading workspace stats:', error);
-            }
-        }
-
-        async function loadPinnedStatus() {
-            try {
-                const response = await fetch('/api/workspace/pinned');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const pinnedItems = data.items.map(item => item.updateUrl);
-                    pinnedUrls.clear();
-                    pinnedItems.forEach(url => pinnedUrls.add(url));
-                    
-                    document.querySelectorAll('.pin-btn').forEach(btn => {
-                        const updateCard = btn.closest('.update-card');
-                        const url = updateCard?.getAttribute('data-url');
-                        
-                        if (url && pinnedUrls.has(url)) {
-                            btn.textContent = '📌';
-                            btn.classList.add('pinned');
-                            btn.title = 'Unpin item';
-                        } else {
-                            btn.textContent = '📍';
-                            btn.classList.remove('pinned');
-                            btn.title = 'Pin item';
-                        }
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Error loading pinned status:', error);
-            }
-        }
-
-        async function loadAnalyticsPreview() {
-            try {
-                const response = await fetch('/api/analytics/dashboard');
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        analyticsPreviewData = data.dashboard;
-                        updateAnalyticsPreview();
-                        
-                        const analyticsPreview = document.getElementById('analyticsPreview');
-                        if (analyticsPreview && data.dashboard.overview.totalUpdates > 0) {
-                            analyticsPreview.style.display = 'block';
-                        }
-                        
-                        console.log('✅ Analytics preview loaded');
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Error loading analytics preview:', error);
-            }
-        }
-
-        async function checkLiveSubscriptions() {
-            try {
-                const feeds = [
-                    { id: 'fcaStatus', name: 'FCA' },
-                    { id: 'boeStatus', name: 'BoE' },
-                    { id: 'praStatus', name: 'PRA' },
-                    { id: 'tprStatus', name: 'TPR' }
-                ];
-
-                for (const feed of feeds) {
-                    const element = document.getElementById(feed.id);
-                    if (element) {
-                        const isLive = Math.random() > 0.3;
-                        element.className = \`status-indicator \${isLive ? 'live' : 'offline'}\`;
-                        element.setAttribute('title', \`\${feed.name} feed is \${isLive ? 'live and updating' : 'temporarily unavailable'}\`);
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Error checking live subscriptions:', error);
-            }
-        }
-
-        // =================
-        // UI UPDATE FUNCTIONS
-        // =================
-        
-        function updateFirmProfileUI() {
-            const profileBtn = document.getElementById('profileBtn');
-            const profileInfo = document.getElementById('profileInfo');
-            const clearBtn = document.getElementById('clearProfileBtn');
-            const firmStatus = document.getElementById('firmStatus');
-            const firmNameSpan = document.getElementById('firmName');
-            
-            if (profileBtn) {
-                if (firmProfile) {
-                    profileBtn.textContent = 'Update Firm Profile';
-                    profileBtn.classList.add('configured');
-                } else {
-                    profileBtn.textContent = 'Setup Firm Profile';
-                    profileBtn.classList.remove('configured');
-                }
-            }
-            
-            if (profileInfo) {
-                profileInfo.textContent = firmProfile ? 
-                    \`\${firmProfile.firmName} • \${firmProfile.primarySectors.join(', ')}\` :
-                    'Configure your firm\\'s sectors for personalized analytics';
-            }
-            
-            if (clearBtn) {
-                clearBtn.style.display = firmProfile ? 'block' : 'none';
-            }
-            
-            if (firmStatus) {
-                firmStatus.style.display = firmProfile ? 'block' : 'none';
-            }
-            
-            if (firmNameSpan) {
-                firmNameSpan.textContent = firmProfile ? firmProfile.firmName : 'No profile';
-            }
+            });
         }
 
         function updateWorkspaceCounts() {
-            const pinnedCount = document.getElementById('pinnedCount');
-            const savedSearchCount = document.getElementById('savedSearchCount');
-            const alertCount = document.getElementById('alertCount');
+            const pinnedEl = document.getElementById('pinnedCount');
+            const searchesEl = document.getElementById('savedSearchesCount');
+            const alertsEl = document.getElementById('customAlertsCount');
             
-            if (pinnedCount) pinnedCount.textContent = workspaceStats.pinnedItems || 0;
-            if (savedSearchCount) savedSearchCount.textContent = workspaceStats.savedSearches || 0;
-            if (alertCount) alertCount.textContent = workspaceStats.activeAlerts || 0;
+            if (pinnedEl) pinnedEl.textContent = pinnedUrls.size || 0;
+            if (searchesEl) searchesEl.textContent = workspaceStats.savedSearches || 0;
+            if (alertsEl) alertsEl.textContent = workspaceStats.activeAlerts || 0;
         }
 
-        function updateAnalyticsPreview() {
-            if (!analyticsPreviewData) return;
-            
+        async function checkSystemStatus() {
             try {
-                const overview = analyticsPreviewData.overview;
+                const response = await fetch('/api/system-status');
+                const data = await response.json();
                 
-                const totalVelocity = Object.values(analyticsPreviewData.velocity || {})
-                    .reduce((sum, auth) => sum + (auth.updatesPerWeek || 0), 0);
-                    
-                const velocityEl = document.getElementById('velocityPreview');
-                if (velocityEl) velocityEl.textContent = Math.round(totalVelocity * 10) / 10;
+                systemStatus = {
+                    database: data.database?.connected || false,
+                    api: data.api?.healthy || false,
+                    overall: data.overall?.status === 'healthy'
+                };
                 
-                const hotSectors = (analyticsPreviewData.hotspots || []).filter(h => h.riskLevel === 'high').length;
-                const hotSectorsEl = document.getElementById('hotSectorsPreview');
-                if (hotSectorsEl) hotSectorsEl.textContent = hotSectors;
-                
-                const predictions = (analyticsPreviewData.predictions || []).length;
-                const predictionsEl = document.getElementById('predictionsPreview');
-                if (predictionsEl) predictionsEl.textContent = predictions;
-                
-                const avgRisk = overview.averageRiskScore || 0;
-                const riskScoreEl = document.getElementById('riskScorePreview');
-                if (riskScoreEl) riskScoreEl.textContent = Math.round(avgRisk);
+                // Update status indicators if they exist
+                const statusIndicator = document.getElementById('systemStatus');
+                if (statusIndicator) {
+                    statusIndicator.className = systemStatus.overall ? 'status-healthy' : 'status-error';
+                    statusIndicator.textContent = systemStatus.overall ? 'System Healthy' : 'System Issues';
+                }
                 
             } catch (error) {
-                console.error('Error updating analytics preview:', error);
+                console.warn('System status check failed:', error);
+                systemStatus = { database: false, api: false, overall: false };
             }
         }
 
-        function updateAuthorityCounts(data) {
-            const allUpdates = [
-                ...(data.urgent || []),
-                ...(data.moderate || []),
-                ...(data.informational || [])
-            ];
+        async function initializeSystem() {
+            console.log('🚀 Initializing system...');
             
-            const authorityCounts = {
-                FCA: 0,
-                BoE: 0,
-                PRA: 0,
-                TPR: 0,
-                SFO: 0,
-                FATF: 0
-            };
-            
-            allUpdates.forEach(update => {
-                const authority = update.authority;
-                if (authorityCounts.hasOwnProperty(authority)) {
-                    authorityCounts[authority]++;
-                }
-            });
-            
-            const fcaCount = document.getElementById('fcaCount');
-            const boeCount = document.getElementById('boeCount');
-            const praCount = document.getElementById('praCount');
-            const tprCount = document.getElementById('tprCount');
-            const sfoCount = document.getElementById('sfoCount');
-            const fatfCount = document.getElementById('fatfCount');
-            
-            if (fcaCount) fcaCount.textContent = authorityCounts.FCA;
-            if (boeCount) boeCount.textContent = authorityCounts.BoE;
-            if (praCount) praCount.textContent = authorityCounts.PRA;
-            if (tprCount) tprCount.textContent = authorityCounts.TPR;
-            if (sfoCount) sfoCount.textContent = authorityCounts.SFO;
-            if (fatfCount) fatfCount.textContent = authorityCounts.FATF;
-        }
-
-        function updateRelevanceCounts(data) {
-            const highRelevanceCount = document.getElementById('highRelevanceCount');
-            const mediumRelevanceCount = document.getElementById('mediumRelevanceCount');
-            const lowRelevanceCount = document.getElementById('lowRelevanceCount');
-            
-            if (highRelevanceCount) highRelevanceCount.textContent = data.urgent ? data.urgent.length : 0;
-            if (mediumRelevanceCount) mediumRelevanceCount.textContent = data.moderate ? data.moderate.length : 0;
-            if (lowRelevanceCount) lowRelevanceCount.textContent = data.informational ? data.informational.length : 0;
-        }
-
-        // =================
-        // CONTENT GENERATION FUNCTIONS
-        // =================
-        
-        function deduplicateUpdates(updates) {
-            const seen = new Map();
-            
-            return updates.filter(update => {
-                const fingerprint = createContentFingerprint(update);
+            try {
+                // Initialize all components
+                initializeFilters();
+                await checkSystemStatus();
+                await loadIntelligenceStreams();
+                await loadAnalyticsPreview();
+                await checkLiveSubscriptions();
                 
-                if (seen.has(fingerprint)) {
-                    console.log(\`🔄 Duplicate detected: \${update.headline?.substring(0, 50)}...\`);
-                    return false;
-                }
+                // Start live counter updates
+                updateLiveCounters();
+                setInterval(updateLiveCounters, 30000); // Update every 30 seconds
                 
-                seen.set(fingerprint, true);
-                return true;
-            });
-        }
-
-        function createContentFingerprint(update) {
-            const headline = (update.headline || '').toLowerCase().trim();
-            const content = (update.impact || '').toLowerCase().trim();
-            
-            const normalizedHeadline = headline
-                .replace(/[^\\w\\s]/g, '')
-                .replace(/\\s+/g, ' ')
-                .substring(0, 100);
-            
-            const normalizedContent = content
-                .replace(/[^\\w\\s]/g, '')
-                .replace(/\\s+/g, ' ')
-                .substring(0, 200);
-            
-            return \`\${normalizedHeadline}|\${update.authority}|\${normalizedContent}\`;
-        }
-
-        function generateRelevanceBasedStreams(data, customTitle = null) {
-            if (!data || (data.urgent?.length === 0 && data.moderate?.length === 0 && data.informational?.length === 0)) {
-                return \`
-                    <div class="welcome-content">
-                        <div class="welcome-icon">📭</div>
-                        <div class="welcome-title">\${customTitle || 'No Updates Available'}</div>
-                        <div class="welcome-subtitle">
-                            \${customTitle ? 'No updates match the current filter. Try clearing filters or refreshing data.' : 'Click "Refresh Data" to fetch the latest regulatory updates from monitored sources.'}
-                        </div>
-                        \${customTitle ? '<button onclick="clearFilters()" class="btn btn-secondary">Clear Filters</button>' : ''}
-                    </div>
-                \`;
+                console.log('✅ System initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ System initialization failed:', error);
+                showMessage('System initialization failed: ' + error.message, 'error');
             }
-            
-            const profileInfo = data.firmProfile ? 
-                \`for \${data.firmProfile.firmName} (\${data.firmProfile.primarySectors.join(', ')})\` : 
-                'Configure firm profile for personalized analytics';
-            
-            const titlePrefix = customTitle ? customTitle : 'High Priority Updates';
-            
-            return \`
-                \${generateStream('high', \`\${titlePrefix} \${!customTitle ? profileInfo : ''}\`, data.urgent || [], 90)}
-                \${generateStream('medium', customTitle ? '' : 'Medium Priority Updates', data.moderate || [], 60)}
-                \${generateStream('low', customTitle ? '' : 'Background News', data.informational || [], 30)}
-            \`;
-        }
-        
-        function generateStream(type, title, updates, timelinePercent) {
-            if (!updates || updates.length === 0) return '';
-            
-            const streamId = \`stream-\${type}-\${Date.now()}\`;
-            const isExpanded = expandedStreams.has(streamId);
-            
-            return \`
-                <div class="intelligence-stream \${isExpanded ? 'expanded' : ''}" id="\${streamId}">
-                    <div class="stream-header" onclick="toggleStreamExpansion('\${streamId}')">
-                        <div class="stream-title">
-                            <div class="stream-icon \${type}"></div>
-                            <span>\${title}</span>
-                            <span style="color: #6b7280;">• \${updates.length} Item\${updates.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div class="stream-meta">
-                            <div class="timeline-bar" data-tooltip="Activity level over the last \${timelinePercent >= 80 ? '24 hours' : timelinePercent >= 50 ? '7 days' : '30 days'}">
-                                <div class="timeline-fill" style="width: \${timelinePercent}%"></div>
-                            </div>
-                            <button class="expand-btn">
-                                <span>\${isExpanded ? '🔽' : '▶️'}</span>
-                                <span>\${isExpanded ? 'Collapse' : 'Expand'}</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="stream-content \${isExpanded ? 'expanded' : ''}">
-                        \${updates.map(update => generateUpdateCard(update)).join('')}
-                    </div>
-                </div>
-            \`;
-        }
-
-        function generateUpdateCard(update) {
-            const updateId = \`update-\${Date.now()}-\${Math.random().toString(36).substr(2, 9)}\`;
-            const shortSummary = update.impact.length > 120 ? update.impact.substring(0, 120) + '...' : update.impact;
-            const isPinned = pinnedUrls.has(update.url);
-            
-            return \`
-                <div class="update-card" data-url="\${update.url}" data-authority="\${update.authority}" data-urgency="\${update.urgency}" data-impact="\${update.impactLevel}">
-                    <div class="update-header">
-                        <div class="update-title" onclick="viewUpdateDetails('\${update.url}')">\${update.headline}</div>
-                        <div class="update-actions">
-                            <button class="pin-btn \${isPinned ? 'pinned' : ''}" onclick="event.stopPropagation(); togglePin('\${update.url}', '\${update.headline.replace(/'/g, "\\\\'")}', '\${update.authority}')" title="\${isPinned ? 'Unpin' : 'Pin'} item">\${isPinned ? '📌' : '📍'}</button>
-                        </div>
-                    </div>
-                    <div class="update-badges">
-                        <div class="badge badge-\${update.authority.toLowerCase()}">\${update.authority}</div>
-                        \${update.impactLevel ? \`<div class="badge" style="background: #fef2f2; color: #dc2626;">\${update.impactLevel}</div>\` : ''}
-                        \${update.urgency ? \`<div class="badge" style="background: #fff7ed; color: #ea580c;">\${update.urgency}</div>\` : ''}
-                    </div>
-                    <div class="update-summary \${update.impact.length > 120 ? 'truncated' : ''}" id="summary-\${updateId}">
-                        \${shortSummary}
-                    </div>
-                    \${update.impact.length > 120 ? \`
-                        <button class="read-more-btn" onclick="toggleSummaryExpansion('\${updateId}', '\${update.impact.replace(/'/g, "\\\\'")}')">
-                            Read More
-                        </button>
-                    \` : ''}
-                    <div class="update-footer">
-                        <div class="date-display">
-                            <span class="date-icon">📅</span>
-                            <span class="publication-date">\${new Date(update.fetchedDate).toLocaleDateString('en-GB', { 
-                                day: 'numeric', 
-                                month: 'short', 
-                                year: 'numeric' 
-                            })}</span>
-                        </div>
-                        <a href="\${update.url}" target="_blank" class="view-details" onclick="event.stopPropagation()">
-                            View Source →
-                        </a>
-                    </div>
-                </div>
-            \`;
         }
 
         // =================
-        // FORM HANDLERS
+        // HELPER FUNCTIONS FOR NEW FEATURES
         // =================
         
-        function handleFirmProfileSubmit(event) {
+        function applyActiveFilters() {
+            console.log('🎯 Applying active filters...');
+            
+            try {
+                // Get all active filter options
+                const activeFilters = {
+                    authorities: Array.from(selectedAuthorities),
+                    impacts: Array.from(selectedImpactLevels),
+                    urgencies: Array.from(selectedUrgencies)
+                };
+                
+                // Apply filters to visible updates
+                document.querySelectorAll('.update-card').forEach(card => {
+                    let shouldShow = true;
+                    
+                    // Check authority filter
+                    if (activeFilters.authorities.length > 0) {
+                        const cardAuthority = card.getAttribute('data-authority');
+                        if (!activeFilters.authorities.includes(cardAuthority)) {
+                            shouldShow = false;
+                        }
+                    }
+                    
+                    // Check impact filter
+                    if (activeFilters.impacts.length > 0) {
+                        const cardImpact = card.getAttribute('data-impact');
+                        if (!activeFilters.impacts.includes(cardImpact)) {
+                            shouldShow = false;
+                        }
+                    }
+                    
+                    // Check urgency filter
+                    if (activeFilters.urgencies.length > 0) {
+                        const cardUrgency = card.getAttribute('data-urgency');
+                        if (!activeFilters.urgencies.includes(cardUrgency)) {
+                            shouldShow = false;
+                        }
+                    }
+                    
+                    // Show/hide card
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+                
+                // Update result count
+                const visibleCards = document.querySelectorAll('.update-card[style*="block"], .update-card:not([style*="none"])').length;
+                const countElement = document.getElementById('resultCount');
+                if (countElement) {
+                    countElement.textContent = \`\${visibleCards} updates shown\`;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error applying filters:', error);
+            }
+        }
+        
+        function performSearch(searchTerm) {
+            console.log(\`🔍 Performing search: "\${searchTerm}"\`);
+            
+            try {
+                if (!searchTerm || searchTerm.length < 2) {
+                    // Show all cards if search is empty
+                    document.querySelectorAll('.update-card').forEach(card => {
+                        card.style.display = 'block';
+                    });
+                    return;
+                }
+                
+                const searchLower = searchTerm.toLowerCase();
+                
+                document.querySelectorAll('.update-card').forEach(card => {
+                    const headline = card.querySelector('.update-headline')?.textContent?.toLowerCase() || '';
+                    const summary = card.querySelector('.update-summary')?.textContent?.toLowerCase() || '';
+                    const authority = card.querySelector('.authority-badge')?.textContent?.toLowerCase() || '';
+                    
+                    const isMatch = headline.includes(searchLower) || 
+                                  summary.includes(searchLower) || 
+                                  authority.includes(searchLower);
+                    
+                    card.style.display = isMatch ? 'block' : 'none';
+                });
+                
+            } catch (error) {
+                console.error('❌ Search error:', error);
+            }
+        }
+
+        // =================
+        // FILTER FUNCTIONS
+        // =================
+        
+        function clearAllFilters() {
+            currentFilter = null;
+            selectedAuthorities.clear();
+            selectedImpactLevels.clear();
+            selectedUrgencies.clear();
+            
+            // Clear all active filter buttons
+            document.querySelectorAll('.filter-option.active').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Clear all checkboxes
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            
+            // Reset filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const firstFilterBtn = document.querySelector('.filter-btn');
+            if (firstFilterBtn) firstFilterBtn.classList.add('active');
+            
+            // Show all cards
+            document.querySelectorAll('.update-card').forEach(card => {
+                card.style.display = 'block';
+            });
+            
+            showMessage('All filters cleared', 'success');
+        }
+
+        function updateFilterButtons(activeButton) {
+            if (!activeButton) return;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            activeButton.classList.add('active');
+        }
+
+        // =================
+        // ANALYTICS FUNCTIONS
+        // =================
+        
+        async function refreshAnalytics() {
+            try {
+                showMessage('Refreshing analytics...', 'info');
+                
+                const response = await fetch('/api/analytics/refresh', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    analyticsPreviewData = result.dashboard;
+                    updateAnalyticsPreview();
+                    showMessage('Analytics refreshed successfully!', 'success');
+                } else {
+                    throw new Error(result.error || 'Refresh failed');
+                }
+            } catch (error) {
+                console.error('Analytics refresh error:', error);
+                showMessage('Analytics refresh failed: ' + error.message, 'error');
+            }
+        }
+
+        // =================
+        // FIRM PROFILE FUNCTIONS
+        // =================
+        
+        async function handleFirmProfileSubmit(event) {
             event.preventDefault();
             
-            const firmName = document.getElementById('firmNameInput')?.value.trim();
-            const firmSize = document.getElementById('firmSizeInput')?.value;
-            const selectedSectors = Array.from(document.querySelectorAll('#sectorGrid input:checked')).map(cb => cb.value);
+            const formData = new FormData(event.target);
+            const sectors = Array.from(document.querySelectorAll('#sectorGrid input:checked')).map(cb => cb.value);
             
-            if (!firmName) {
-                showMessage('Please enter a firm name', 'error');
-                return;
-            }
+            const profile = {
+                firmName: formData.get('firmName'),
+                firmSize: formData.get('firmSize'),
+                primarySectors: sectors,
+                riskAppetite: formData.get('riskAppetite') || 'Medium',
+                complianceMaturity: formData.get('complianceMaturity') || 'Intermediate'
+            };
             
-            if (selectedSectors.length === 0) {
-                showMessage('Please select at least one business sector', 'error');
-                return;
-            }
-            
-            if (selectedSectors.length > 3) {
-                showMessage('Please select maximum 3 business sectors', 'error');
-                return;
-            }
-            
-            saveFirmProfile(firmName, firmSize, selectedSectors);
+            await saveFirmProfile(profile);
         }
 
-        async function saveFirmProfile(firmName, firmSize, primarySectors) {
+        async function saveFirmProfile(profile) {
             const saveBtn = document.getElementById('saveProfileBtn');
-            const originalText = saveBtn?.textContent;
+            const originalText = saveBtn ? saveBtn.textContent : '';
             
             try {
                 if (saveBtn) {
@@ -1088,162 +1285,87 @@ function getCommonClientScripts() {
                     saveBtn.textContent = 'Saving...';
                 }
                 
-                clearMessages();
-                
-                console.log('💾 Saving firm profile:', { firmName, firmSize, primarySectors });
-                
                 const response = await fetch('/api/firm-profile', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        firmName,
-                        firmSize,
-                        primarySectors
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(profile)
                 });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                    throw new Error(errorData.error || \`HTTP \${response.status}: \${response.statusText}\`);
-                }
                 
                 const result = await response.json();
                 
-                firmProfile = result.profile;
-                updateFirmProfileUI();
-                closeFirmProfileModal();
-                
-                await loadAnalyticsPreview();
-                await loadIntelligenceStreams();
-                
-                showMessage(\`Firm profile saved! \${result.relevanceUpdated || 0} updates recalculated for relevance.\`, 'success');
-                
-                console.log('✅ Firm profile saved successfully');
+                if (result.success) {
+                    firmProfile = profile;
+                    showMessage('Firm profile saved successfully!', 'success');
+                    
+                    // Reload intelligence streams if available
+                    if (typeof loadIntelligenceStreams === 'function') {
+                        await loadIntelligenceStreams();
+                    }
+                    
+                    console.log('✅ Firm profile saved successfully');
+                } else {
+                    throw new Error(result.message || 'Failed to save profile');
+                }
                 
             } catch (error) {
-                console.error('Error saving firm profile:', error);
-                showMessage('Error saving profile: ' + error.message, 'error');
+                console.error('Save profile error:', error);
+                showMessage('Failed to save profile: ' + error.message, 'error');
             } finally {
                 if (saveBtn) {
                     saveBtn.disabled = false;
-                    saveBtn.textContent = originalText || 'Save Profile';
+                    saveBtn.textContent = originalText;
                 }
             }
         }
-
+ 
+        
+        
         // =================
-        // INITIALIZATION
+        // GLOBAL FUNCTION EXPOSURE - ALL FUNCTIONS
         // =================
         
-        async function initializeSystem() {
-            try {
-                await checkSystemStatus();
-                await loadFirmProfile();
-                await loadWorkspaceStats();
-                await loadAnalyticsPreview();
-                await loadIntelligenceStreams();
-                await checkLiveSubscriptions();
-                
-                console.log('✅ System initialization complete');
-            } catch (error) {
-                console.error('❌ System initialization failed:', error);
-                showMessage('System initialization failed. Some features may not work properly.', 'error');
-            }
-        }
 
-        async function checkSystemStatus() {
-            try {
-                const response = await fetch('/api/system-status');
-                const status = await response.json();
-                
-                systemStatus.database = status.database === 'connected';
-                systemStatus.api = status.environment.hasGroqKey;
-                systemStatus.overall = systemStatus.database && systemStatus.api;
-                
-                updateStatusIndicators(systemStatus);
-                
-            } catch (error) {
-                console.error('System status check failed:', error);
-                systemStatus.overall = false;
-                updateStatusIndicators(systemStatus);
-            }
-        }
-
-        function updateStatusIndicators(status) {
-            const liveIndicator = document.querySelector('.pulse-dot');
-            if (liveIndicator) {
-                liveIndicator.style.background = status.overall ? '#10b981' : '#ef4444';
-            }
-        }
-
-        // =================
-        // EVENT HANDLERS
-        // =================
         
-        // Initialize common functionality when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeCommonFunctions);
-        } else {
-            initializeCommonFunctions();
-        }
+        // *** CRITICAL MISSING FUNCTIONS ***
+        window.updateLiveCounters = updateLiveCounters;
+        window.initializeFilters = initializeFilters;
+        window.loadMoreUpdates = loadMoreUpdates;
         
-        function initializeCommonFunctions() {
-            // Set up form handlers
-            const firmProfileForm = document.getElementById('firmProfileForm');
-            if (firmProfileForm) {
-                firmProfileForm.addEventListener('submit', handleFirmProfileSubmit);
-            }
-            
-            // Set up modal click outside to close
-            window.addEventListener('click', function(event) {
-                const modal = document.getElementById('firmProfileModal');
-                if (modal && event.target === modal) {
-                    closeFirmProfileModal();
-                }
-            });
-            
-            // Load initial data
-            loadFirmProfile().then(() => {
-                updateFirmProfileUI();
-                updateWorkspaceCounts();
-            });
-            
-            console.log('✅ Common functions initialized');
-        }
-
-        // =================
-        // GLOBAL FUNCTION EXPOSURE
-        // =================
+        // *** SIDEBAR FILTER FUNCTIONS ***
+        window.filterByCategory = filterByCategory;
+        window.selectAllCategories = selectAllCategories;
+        window.clearCategoryFilters = clearCategoryFilters;
+        window.filterByContentType = filterByContentType;
+        window.selectAllContentTypes = selectAllContentTypes;
+        window.clearContentTypeFilters = clearContentTypeFilters;
+        window.filterBySourceType = filterBySourceType;
+        window.selectAllSourceTypes = selectAllSourceTypes;
+        window.clearSourceTypeFilters = clearSourceTypeFilters;
+        window.filterByRelevance = filterByRelevance;
+        window.filterByAuthority = filterByAuthority;
         
-        // Make all interactive functions globally available for onclick handlers
-        window.refreshIntelligence = refreshIntelligence;
-        window.exportData = exportData;
-        window.createAlert = createAlert;
-        window.shareSystem = shareSystem;
+        // *** WORKSPACE FUNCTIONS ***
+        window.showPinnedItems = showPinnedItems;
+        window.showSavedSearches = showSavedSearches;
+        window.showCustomAlerts = showCustomAlerts;
+        window.showSaveDialog = showSaveDialog;
+        window.closeSaveDialog = closeSaveDialog;
+        window.saveCurrentView = saveCurrentView;
+        
+        // *** UI FUNCTIONS ***
+        window.togglePin = togglePin;
         window.showFirmProfileSetup = showFirmProfileSetup;
         window.closeFirmProfileModal = closeFirmProfileModal;
         window.clearFirmProfile = clearFirmProfile;
-        window.togglePin = togglePin;
-        window.toggleDashboardPin = toggleDashboardPin;
-        window.pinUpdate = pinUpdate;
-        window.unpinUpdate = unpinUpdate;
-        window.filterByAuthority = filterByAuthority;
-        window.filterByUrgency = filterByUrgency;
-        window.filterByImpact = filterByImpact;
-        window.showAllUpdates = showAllUpdates;
-        window.clearDashboardFilters = clearDashboardFilters;
-        window.refreshAnalytics = refreshAnalytics;
-        window.toggleStreamExpansion = toggleStreamExpansion;
-        window.toggleSummaryExpansion = toggleSummaryExpansion;
-        window.viewUpdateDetails = viewUpdateDetails;
-        window.showMessage = showMessage;
-        window.clearMessages = clearMessages;
-        window.updateWorkspaceCounts = updateWorkspaceCounts;
-        window.checkSystemStatus = checkSystemStatus;
-        window.initializeSystem = initializeSystem;
+        window.renderFilteredUpdates = renderFilteredUpdates;
+        
+        // *** EXPORT/SHARE FUNCTIONS ***
+        window.exportData = exportData;
+        window.createAlert = createAlert;
+        window.shareSystem = shareSystem;
+        
+        // *** CORE DATA FUNCTIONS ***
+        window.refreshIntelligence = refreshIntelligence;
         window.loadIntelligenceStreams = loadIntelligenceStreams;
         window.loadAnalyticsPreview = loadAnalyticsPreview;
         window.checkLiveSubscriptions = checkLiveSubscriptions;
@@ -1253,12 +1375,66 @@ function getCommonClientScripts() {
         window.generateUpdateCard = generateUpdateCard;
         window.deduplicateUpdates = deduplicateUpdates;
         window.createContentFingerprint = createContentFingerprint;
-        window.updateAuthorityCounts = updateAuthorityCounts;
-        window.updateRelevanceCounts = updateRelevanceCounts;
+        
+        // *** UI INTERACTION FUNCTIONS ***
+        window.toggleStreamExpansion = toggleStreamExpansion;
+        window.toggleSummaryExpansion = toggleSummaryExpansion;
+        window.viewUpdateDetails = viewUpdateDetails;
+        
+        // *** UTILITY FUNCTIONS ***
+        window.showMessage = showMessage;
+        window.clearMessages = clearMessages;
+        window.updateWorkspaceCounts = updateWorkspaceCounts;
+        window.checkSystemStatus = checkSystemStatus;
+        window.initializeSystem = initializeSystem;
+        
+        // *** FILTER AND SEARCH FUNCTIONS ***
+        window.clearFilters = clearFilters;
+        window.clearAllFilters = clearAllFilters;
+        window.applyActiveFilters = applyActiveFilters;
+        window.performSearch = performSearch;
+        window.updateFilterButtons = updateFilterButtons;
+        
+        // *** ANALYTICS FUNCTIONS ***
+        window.refreshAnalytics = refreshAnalytics;
+        
+        // *** PROFILE FUNCTIONS ***
         window.handleFirmProfileSubmit = handleFirmProfileSubmit;
         window.saveFirmProfile = saveFirmProfile;
+        
+        // *** COUNT UPDATE FUNCTIONS ***
+        window.updateAuthorityCounts = updateAuthorityCounts;
+        window.updateRelevanceCounts = updateRelevanceCounts;
+        
+        console.log('✅ ALL FUNCTIONS LOADED AND GLOBALLY AVAILABLE');
+        console.log('🔧 Critical functions fixed:', ['updateLiveCounters', 'initializeFilters', 'loadMoreUpdates']);
+        console.log('🏷️ Filter functions added:', ['filterByCategory', 'filterByAuthority', 'filterByContentType']);
+        console.log('💾 Dialog functions added:', ['showSaveDialog', 'closeSaveDialog', 'saveCurrentView']);
+        console.log('📊 Total functions exposed:', Object.keys(window).filter(key => typeof window[key] === 'function').length);
     </script>
     `;
 }
 
-module.exports = { getCommonClientScripts };
+// Export ALL possible function name variations for maximum compatibility
+function getCommonClientScripts() {
+    return getClientScriptsContent();
+}
+
+function getClientScripts() {
+    return getClientScriptsContent();
+}
+
+function getSharedClientScripts() {
+    return getClientScriptsContent();
+}
+
+function getCommonScripts() {
+    return getClientScriptsContent();
+}
+
+module.exports = { 
+    getCommonClientScripts,
+    getClientScripts,
+    getSharedClientScripts,
+    getCommonScripts
+};

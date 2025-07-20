@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "insight_type": "system_ready",
+    "title": "AI Intelligence System Operational",
+    "summary": "The enhanced AI regulatory intelligence platform is now active and analyzing regulatory updates. Enhanced impact scoring, sector-specific analysis, and proactive insights are now available.",
+    "impact_score": 6,
+    "urgency_level": "medium",
+    "affected_firm_types": [
+      "Banking",
+      "Investment Management",
+      "Insurance"
+    ],
+    "affected_firm_sizes": [
+      "small",
+      "medium",
+      "large"
+    ],
+    "probability_score": 0.95,
+    "evidence_sources": [
+      "System initialization",
+      "AI analyzer status"
+    ],
+    "recommendations": [
+      "Explore AI-powered weekly roundups",
+      "Review enhanced impact scoring",
+      "Configure firm-specific preferences"
+    ],
+    "created_at": "2025-07-02T09:41:08.102Z",
+    "is_active": true
+  }
+]

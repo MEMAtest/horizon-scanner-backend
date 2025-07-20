@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "firm_name": "Demo Financial Services",
+    "firm_size": "medium",
+    "primary_sectors": [
+      "Banking",
+      "Investment Management"
+    ],
+    "regulatory_appetite": "moderate",
+    "key_business_lines": [
+      "Retail Banking",
+      "Wealth Management",
+      "Corporate Finance"
+    ],
+    "geographic_focus": [
+      "UK",
+      "EU"
+    ],
+    "compliance_maturity": "developing",
+    "created_at": "2025-07-02T09:41:08.103Z",
+    "updated_at": "2025-07-02T09:41:08.103Z"
+  }
+]

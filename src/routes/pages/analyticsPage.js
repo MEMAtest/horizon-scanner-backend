@@ -6,7 +6,7 @@ const { getSidebar } = require('../templates/sidebar');
 const { getCommonClientScripts } = require('../templates/clientScripts');
 const dbService = require('../../services/dbService');
 
-// Helper functions for fallback compatibility
+// Helper functions remain the same for fallback compatibility
 const getAnalyticsService = () => {
     try {
         return require('../../services/analyticsService');
@@ -239,6 +239,16 @@ const analyticsPage = async (req, res) => {
             display: flex;
             align-items: center;
             gap: 0.75rem;
+        }
+
+        .analytics-title a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .analytics-title a:hover {
+            opacity: 0.8;
         }
         
         .analytics-subtitle { 
@@ -543,12 +553,12 @@ const analyticsPage = async (req, res) => {
         .btn-secondary:hover { 
             background: #e5e7eb; 
         }
-
+        
         .refresh-btn {
             background: #059669;
             color: white;
         }
-
+        
         .refresh-btn:hover {
             background: #047857;
         }
@@ -580,7 +590,7 @@ const analyticsPage = async (req, res) => {
             <div class="analytics-header">
                 <a href="/" class="back-link">← Back to Home</a>
                 <h1 class="analytics-title">
-                    🔮 Predictive Analytics Dashboard
+                    <a href="/">🔮 Predictive Analytics Dashboard</a>
                 </h1>
                 <p class="analytics-subtitle">AI-powered regulatory intelligence and forecasting</p>
             </div>
@@ -776,19 +786,46 @@ const analyticsPage = async (req, res) => {
         // ANALYTICS PAGE SPECIFIC LOGIC ONLY
         // =================
         
-        // Store analytics data for page-specific updates
+        // Analytics data for this page
         let analyticsData = ${analyticsData ? JSON.stringify(analyticsData) : 'null'};
         
-        // Analytics page specific functionality
-        function updateAnalyticsMetrics() {
-            if (!analyticsData) return;
+        // Initialize analytics dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📊 Analytics Page: Initializing...');
             
-            // Update main metrics using common functions if available
-            if (typeof updateAnalyticsPreview === 'function') {
-                updateAnalyticsPreview();
+            if (!analyticsData) {
+                loadAnalyticsDashboard();
+            } else {
+                updateMetrics();
             }
             
-            // Update analytics-specific metrics
+            // Auto-refresh every 2 minutes
+            setInterval(loadAnalyticsDashboard, 120000);
+            
+            console.log('✅ Analytics Dashboard initialized');
+        });
+
+        async function loadAnalyticsDashboard() {
+            try {
+                const response = await fetch('/api/analytics/dashboard');
+                const data = await response.json();
+                
+                if (data.success) {
+                    analyticsData = data.dashboard;
+                    updateMetrics();
+                    console.log('✅ Analytics dashboard loaded');
+                } else {
+                    console.error('Failed to load analytics dashboard');
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+        
+        function updateMetrics() {
+            if (!analyticsData) return;
+            
+            // Update main metrics
             const totalElement = document.getElementById('totalUpdates');
             const riskElement = document.getElementById('averageRisk');
             const predictionsElement = document.getElementById('activePredictions');
@@ -812,44 +849,11 @@ const analyticsPage = async (req, res) => {
             if (forecastElement) forecastElement.textContent = analyticsData.predictions.length + ' predictions active';
         }
 
-        async function loadAnalyticsDashboard() {
-            try {
-                const response = await fetch('/api/analytics/dashboard');
-                const data = await response.json();
-                
-                if (data.success) {
-                    analyticsData = data.dashboard;
-                    updateAnalyticsMetrics();
-                    console.log('✅ Analytics dashboard loaded');
-                } else {
-                    console.error('Failed to load analytics dashboard');
-                }
-            } catch (error) {
-                console.error('Error loading analytics:', error);
-            }
-        }
-        
-        // Initialize analytics dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📊 Analytics Dashboard: Initializing...');
-            
-            if (!analyticsData) {
-                loadAnalyticsDashboard();
-            } else {
-                updateAnalyticsMetrics();
-            }
-            
-            // Auto-refresh every 2 minutes
-            setInterval(loadAnalyticsDashboard, 120000);
-            
-            console.log('✅ Analytics Dashboard initialized');
-        });
-        
         // Make analytics-specific functions globally available
-        window.updateAnalyticsMetrics = updateAnalyticsMetrics;
         window.loadAnalyticsDashboard = loadAnalyticsDashboard;
+        window.updateMetrics = updateMetrics;
         
-        console.log('📊 Analytics Dashboard ready');
+        console.log('📊 Analytics Page: Script loaded and ready');
     </script>
 </body>
 </html>`;
