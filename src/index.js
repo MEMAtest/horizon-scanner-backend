@@ -24,6 +24,11 @@ class AIRegulatoryIntelligenceServer {
         this.initializeRoutes();
         this.initializeErrorHandling();
     }
+    
+    // Add this getter method
+    getApp() {
+        return this.app;
+    }
 
     initializeMiddleware() {
         console.log('🔧 Initializing middleware...');
@@ -403,14 +408,19 @@ module.exports = app;
     }
 }
 
-// Create and start the server
+// Create server instance
 const server = new AIRegulatoryIntelligenceServer();
 
-// Start the server
-server.start().catch(error => {
-    console.error('❌ Failed to start AI Regulatory Intelligence Platform:', error);
-    process.exit(1);
-});
+// Start server only in development
+if (process.env.NODE_ENV !== 'production') {
+    server.start().catch(error => {
+        console.error('❌ Failed to start AI Regulatory Intelligence Platform:', error);
+        process.exit(1);
+    });
+}
 
-// Export for testing
-module.exports = { AIRegulatoryIntelligenceServer };
+// CRITICAL: Export the Express app instance for Vercel
+module.exports = server.getApp();
+
+// Also export the class for testing
+module.exports.AIRegulatoryIntelligenceServer = AIRegulatoryIntelligenceServer;
