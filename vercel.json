@@ -1,9 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/server.js", "use": "@vercel/node" }
+  "name": "mema-uk-reg-tracker",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
   ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/api/server.js" }
-  ]
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
