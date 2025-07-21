@@ -1,6 +1,15 @@
 {
   "version": 2,
+  "name": "mema-uk-reg-tracker",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
-  ]
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  }
 }

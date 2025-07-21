@@ -3,7 +3,6 @@
 
 const express = require('express');
 const cors = require('cors');
-const app = require('express')();
 const path = require('path');
 require('dotenv').config();
 
@@ -20,6 +19,7 @@ class AIRegulatoryIntelligenceServer {
     constructor() {
         this.app = express();
         this.port = process.env.PORT || 3000;
+        this.server = null;
         this.initializeMiddleware();
         this.initializeRoutes();
         this.initializeErrorHandling();
@@ -39,21 +39,6 @@ class AIRegulatoryIntelligenceServer {
             credentials: true
         }));
         
-// --- Route Mounting ---
-// Load your different route modules.
-const apiRoutes = require('./routes/apiRoutes');
-const pageRoutes = require('./routes/pageRoutes');
-
-// Mount the routers to specific URL prefixes.
-// All routes defined in apiRoutes will now start with /api
-this.app.use('/api', apiRoutes);
-
-// 🔧 ADD THIS LINE RIGHT HERE (fixes /ai/ route errors):
-this.app.use('/ai', apiRoutes);
-
-// Mount page routes at the root level
-this.app.use('/', pageRoutes);
-
         // Body parsing
         this.app.use(express.json({ limit: '10mb' }));
         this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -119,6 +104,9 @@ this.app.use('/', pageRoutes);
         
         // API routes
         this.app.use('/api', apiRoutes);
+        
+        // AI routes (duplicate mounting for compatibility)
+        this.app.use('/ai', apiRoutes);
         
         // Page routes
         this.app.use('/', pageRoutes);
@@ -334,51 +322,37 @@ this.app.use('/', pageRoutes);
             await this.initializeServices();
             
             // Start the server
-            if (process.env.NODE_ENV !== 'production') {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-    });
-}
-
-const PORT = process.env.PORT || 3000;
-
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log('\n================================================');
-        console.log('🎉 AI REGULATORY INTELLIGENCE PLATFORM READY');
-        console.log('================================================');
-        console.log(`🌐 Server running on: http://localhost:${PORT}`);
-        console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
-        console.log(`📈 Analytics: http://localhost:${PORT}/analytics`);
-        console.log(`🔍 Health Check: http://localhost:${PORT}/health`);
-        console.log(`🤖 AI Roundup: http://localhost:${PORT}/api/ai/weekly-roundup`);
-        console.log(`⚡ API Status: http://localhost:${PORT}/api/status`);
-        console.log(`🧪 Test Endpoint: http://localhost:${PORT}/test`);
-        console.log('================================================');
-        console.log('🎯 Phase 1 Features Available:');
-        console.log(' ✅ Enhanced AI Analysis & Impact Scoring');
-        console.log(' ✅ Real-time Dashboard with Live Counters');
-        console.log(' ✅ Advanced Filtering & Search');
-        console.log(' ✅ AI-powered Weekly Roundups');
-        console.log(' ✅ Authority & Sector Analysis');
-        console.log(' ✅ Proactive Intelligence System');
-        console.log(' ✅ Enhanced Database Schema');
-        console.log(' ✅ Responsive UI & Mobile Support');
-        console.log('================================================');
-        console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`💾 Database: ${dbService.fallbackMode ? 'JSON Mode' : 'PostgreSQL'}`);
-        console.log(`🤖 AI Service: ${process.env.GROQ_API_KEY ? 'Active' : 'Fallback Mode'}`);
-        console.log('================================================\n');
-    });
-}
-
-// CRITICAL: Export for Vercel - must be last line
-module.exports = app;
+            this.server = this.app.listen(this.port, () => {
+                console.log('\n================================================');
+                console.log('🎉 AI REGULATORY INTELLIGENCE PLATFORM READY');
+                console.log('================================================');
+                console.log(`🌐 Server running on: http://localhost:${this.port}`);
+                console.log(`📊 Dashboard: http://localhost:${this.port}/dashboard`);
+                console.log(`📈 Analytics: http://localhost:${this.port}/analytics`);
+                console.log(`🔍 Health Check: http://localhost:${this.port}/health`);
+                console.log(`🤖 AI Roundup: http://localhost:${this.port}/api/ai/weekly-roundup`);
+                console.log(`⚡ API Status: http://localhost:${this.port}/api/status`);
+                console.log(`🧪 Test Endpoint: http://localhost:${this.port}/test`);
+                console.log('================================================');
+                console.log('🎯 Phase 1 Features Available:');
+                console.log(' ✅ Enhanced AI Analysis & Impact Scoring');
+                console.log(' ✅ Real-time Dashboard with Live Counters');
+                console.log(' ✅ Advanced Filtering & Search');
+                console.log(' ✅ AI-powered Weekly Roundups');
+                console.log(' ✅ Authority & Sector Analysis');
+                console.log(' ✅ Proactive Intelligence System');
+                console.log(' ✅ Enhanced Database Schema');
+                console.log(' ✅ Responsive UI & Mobile Support');
+                console.log('================================================');
+                console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+                console.log(`💾 Database: ${dbService.fallbackMode ? 'JSON Mode' : 'PostgreSQL'}`);
+                console.log(`🤖 AI Service: ${process.env.GROQ_API_KEY ? 'Active' : 'Fallback Mode'}`);
+                console.log('================================================\n');
+            });
             
         } catch (error) {
             console.error('❌ Failed to start server:', error);
-            process.exit(1);
+            throw error;
         }
     }
 
