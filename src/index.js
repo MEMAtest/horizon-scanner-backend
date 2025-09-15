@@ -89,6 +89,7 @@ class AIRegulatoryIntelligenceServer {
                     },
                     version: '2.0.0-phase1',
                     environment: process.env.NODE_ENV || 'development',
+                    platform: process.env.VERCEL ? 'vercel' : 'traditional',
                     uptime: Math.floor(process.uptime()),
                     memory: process.memoryUsage()
                 });
@@ -98,6 +99,57 @@ class AIRegulatoryIntelligenceServer {
                     status: 'unhealthy',
                     error: error.message,
                     timestamp: new Date().toISOString()
+                });
+            }
+        });
+        
+        // Cron endpoint for Vercel scheduled functions
+        this.app.post('/api/cron/refresh', async (req, res) => {
+            try {
+                // Basic security check for Vercel cron
+                const authHeader = req.headers.authorization;
+                if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+                    return res.status(401).json({ error: 'Unauthorized' });
+                }
+                
+                console.log('🔄 Cron refresh triggered');
+                const result = await rssFetcher.fetchAllFeeds();
+                
+                res.json({
+                    success: true,
+                    message: 'Refresh completed',
+                    stats: {
+                        newUpdates: result.newUpdates || 0,
+                        total: result.total || 0,
+                        timestamp: new Date().toISOString()
+                    }
+                });
+            } catch (error) {
+                console.error('Cron refresh error:', error);
+                res.status(500).json({ 
+                    success: false, 
+                    error: error.message 
+                });
+            }
+        });
+
+        // Manual refresh endpoint (works on all platforms)
+        this.app.post('/api/refresh', async (req, res) => {
+            try {
+                console.log('🔄 Manual refresh triggered');
+                const result = await rssFetcher.fetchAllFeeds();
+                
+                res.json({
+                    success: true,
+                    newArticles: result.newUpdates || 0,
+                    total: result.total || 0,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('Manual refresh error:', error);
+                res.status(500).json({ 
+                    success: false, 
+                    error: error.message 
                 });
             }
         });
@@ -257,8 +309,12 @@ class AIRegulatoryIntelligenceServer {
             // Initialize AI analyzer (already initialized)
             console.log('🤖 AI analyzer service initialized');
             
-            // Start background tasks
-            await this.startBackgroundTasks();
+            // Start background tasks if not on Vercel
+            if (!process.env.VERCEL) {
+                await this.startBackgroundTasks();
+            } else {
+                console.log('📝 Vercel environment - background tasks handled via cron');
+            }
             
             console.log('✅ All services initialized successfully');
             
@@ -385,16 +441,49 @@ class AIRegulatoryIntelligenceServer {
 // Create server instance
 const server = new AIRegulatoryIntelligenceServer();
 
-// Start server only in development
-if (process.env.NODE_ENV !== 'production') {
+// Detect environment and handle appropriately
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+const isProduction = process.env.NODE_ENV === 'production';
+const shouldStartServer = process.env.START_SERVER === 'true';
+
+if (isVercel) {
+    // Vercel serverless environment
+    console.log('🚀 Running on Vercel - initializing for serverless...');
+    
+    // Initialize services without starting the server
+    (async () => {
+        try {
+            await server.initializeServices();
+            console.log('✅ Services initialized for Vercel');
+        } catch (error) {
+            console.error('⚠️ Service initialization warning:', error);
+            // Don't exit - let Vercel handle the app even if some services fail
+        }
+    })();
+    
+    // Export the Express app for Vercel
+    module.exports = server.getApp();
+    
+} else if (!isProduction || shouldStartServer) {
+    // Local development OR production with explicit start
+    console.log('🚀 Starting server in traditional mode...');
+    
     server.start().catch(error => {
-        console.error('❌ Failed to start AI Regulatory Intelligence Platform:', error);
+        console.error('❌ Failed to start server:', error);
         process.exit(1);
     });
+    
+    // Still export for compatibility
+    module.exports = server.getApp();
+    
+} else {
+    // Production without explicit start (for imports)
+    console.log('📦 Production mode - app exported without starting server');
+    console.log('ℹ️ Set START_SERVER=true to start the server');
+    
+    // Just export the app
+    module.exports = server.getApp();
 }
-
-// CRITICAL: Export the Express app instance for Vercel
-module.exports = server.getApp();
 
 // Also export the class for testing
 module.exports.AIRegulatoryIntelligenceServer = AIRegulatoryIntelligenceServer;

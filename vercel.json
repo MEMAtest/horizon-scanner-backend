@@ -1,15 +1,25 @@
 {
   "version": 2,
   "name": "mema-uk-reg-tracker",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api"
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api"
     }
   ],
   "functions": {
     "api/index.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "src/**"
     }
+  },
+  "env": {
+    "NODE_ENV": "production"
   }
 }

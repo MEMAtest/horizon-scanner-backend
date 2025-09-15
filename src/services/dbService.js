@@ -202,6 +202,29 @@ class EnhancedDBService {
         }
     }
 
+    async checkUpdateExists(url) {
+    try {
+        if (this.fallbackMode) {
+            const updates = await this.loadJSONData(this.updatesFile);
+            return updates.some(u => u.url === url);
+        } else {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(
+                    'SELECT EXISTS(SELECT 1 FROM regulatory_updates WHERE url = $1) as exists',
+                    [url]
+                );
+                return result.rows[0].exists;
+            } finally {
+                client.release();
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ Error checking if update exists:', error.message);
+        return false; // Assume doesn't exist on error to allow saving
+    }
+}
+
     // ENHANCED UPDATES METHODS
     async saveUpdate(updateData) {
         try {

@@ -500,9 +500,7 @@ class EnhancedRSSFetcher {
         for (const update of updates) {
             try {
                 // Check if update already exists
-                const exists = await dbService.checkUpdateExists ? 
-                    await dbService.checkUpdateExists(update.url) :
-                    false;
+                const exists = await dbService.checkUpdateExists(update.url);
                 if (exists) {
                     continue;
                 }
