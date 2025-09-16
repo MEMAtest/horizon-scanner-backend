@@ -109,6 +109,47 @@ router.get('/updates/:id', async (req, res) => {
     }
 });
 
+// Live counts endpoint for sidebar - fixes 404 error
+router.get('/live-counts', async (req, res) => {
+    try {
+        console.log('📊 API: Getting live counts for sidebar');
+        
+        const counts = await dbService.getUpdateCounts();
+        
+        // Ensure all expected fields are present for the sidebar
+        const response = {
+            success: true,
+            total: counts.total || 0,
+            highImpact: counts.highImpact || 0,
+            today: counts.today || 0,
+            todayChange: counts.todayChange || 0,
+            thisWeek: counts.thisWeek || 0,
+            unread: counts.unread || 0,
+            activeSources: counts.activeSources || 12, // Default to 12 if not available
+            timestamp: new Date().toISOString()
+        };
+        
+        res.json(response);
+        
+    } catch (error) {
+        console.error('❌ API Error getting live counts:', error);
+        
+        // Return default values on error to prevent frontend crashes
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            total: 0,
+            highImpact: 0,
+            today: 0,
+            todayChange: 0,
+            thisWeek: 0,
+            unread: 0,
+            activeSources: 0,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // AI INTELLIGENCE ENDPOINTS
 router.get('/ai/insights', async (req, res) => {
     try {
@@ -467,12 +508,112 @@ router.get('/status', async (req, res) => {
 });
 
 // =================================================================
-// INSERT THESE EXACT LINES IN YOUR src/routes/apiRoutes.js
-// RIGHT AFTER YOUR HEALTH CHECK ENDPOINT
-// RIGHT BEFORE: // ====== ERROR HANDLING MIDDLEWARE ======
+// 🆕 CRITICAL MISSING ENDPOINTS - ADD THESE HERE
 // =================================================================
 
-// ====== MISSING ENDPOINTS CAUSING 404 ERRORS ======
+// System status endpoint (different from /status - frontend expects this exact endpoint)
+router.get('/system-status', async (req, res) => {
+    try {
+        console.log('🔍 API: System status check requested');
+        
+        const dbHealth = await dbService.healthCheck();
+        const aiHealth = await aiAnalyzer.healthCheck();
+        
+        res.json({
+            overall: { 
+                status: dbHealth.status === 'healthy' && aiHealth.status === 'healthy' ? 'healthy' : 'degraded' 
+            },
+            database: { 
+                connected: dbHealth.status === 'healthy',
+                ...dbHealth 
+            },
+            api: { 
+                healthy: true, 
+                version: '2.0.0' 
+            },
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('System status error:', error);
+        res.status(503).json({
+            overall: { status: 'error' },
+            database: { connected: false },
+            api: { healthy: false },
+            error: error.message
+        });
+    }
+});
+
+// Main refresh endpoint (POST)
+router.post('/refresh', async (req, res) => {
+    try {
+        console.log('🔄 Refresh endpoint called');
+        
+        // Try to use rssFetcher if available
+        const rssFetcher = require('../services/rssFetcher');
+        const results = await rssFetcher.fetchAllFeeds();
+        
+        res.json({
+            success: true,
+            message: 'Refresh completed successfully',
+            newArticles: results.newUpdates || 0,
+            totalProcessed: results.total || 0,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Refresh error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Manual refresh endpoint (POST)
+router.post('/manual-refresh', async (req, res) => {
+    try {
+        const manualRefreshService = require('../services/manualRefreshService');
+        const options = req.body || {};
+        
+        console.log('📡 Manual refresh API called with options:', options);
+        
+        const result = await manualRefreshService.performManualRefresh(options);
+        
+        res.json(result);
+        
+    } catch (error) {
+        console.error('Manual refresh API error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Refresh status endpoint (GET)
+router.get('/refresh-status', async (req, res) => {
+    try {
+        const manualRefreshService = require('../services/manualRefreshService');
+        
+        const status = manualRefreshService.getRefreshStatus();
+        const counts = await manualRefreshService.getSystemCounts();
+        
+        res.json({
+            ...status,
+            counts
+        });
+        
+    } catch (error) {
+        console.error('Refresh status API error:', error);
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// =================================================================
+// END OF CRITICAL MISSING ENDPOINTS
+// =================================================================
 
 // Weekly Roundup endpoint (404 fix)
 router.get('/weekly-roundup', async (req, res) => {
@@ -994,10 +1135,6 @@ router.get('/search', async (req, res) => {
         });
     }
 });
-
-// =================================================================
-// END OF MISSING ENDPOINTS - ADD ABOVE THE ERROR HANDLING MIDDLEWARE
-// =================================================================
 
 // UTILITY ENDPOINTS
 router.get('/test', async (req, res) => {

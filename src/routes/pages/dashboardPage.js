@@ -869,6 +869,30 @@ async function renderDashboardPage(req, res) {
             </script>
             
             ${getClientScripts()}
+            
+            <!-- Initialize after scripts load -->
+            <script>
+                // Wait for all scripts to be loaded before calling functions
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('DOM loaded, initializing...');
+                    
+                    // Check if functions exist before calling
+                    if (typeof initializeSystem === 'function') {
+                        initializeSystem();
+                    } else if (typeof updateLiveCounters === 'function') {
+                        // Fallback if initializeSystem doesn't exist
+                        updateLiveCounters();
+                        setInterval(updateLiveCounters, 30000);
+                    }
+                });
+                
+                // Also add a safety check for immediate calls
+                if (typeof updateLiveCounters === 'undefined') {
+                    window.updateLiveCounters = function() {
+                        console.log('updateLiveCounters stub - waiting for real function...');
+                    };
+                }
+            </script>
         </body>
         </html>`;
         

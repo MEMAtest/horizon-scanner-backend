@@ -19,7 +19,14 @@
       "includeFiles": "src/**"
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/refresh",
+      "schedule": "0 */6 * * *"
+    }
+  ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "START_SERVER": "true"
   }
 }

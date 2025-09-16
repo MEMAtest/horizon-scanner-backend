@@ -43,6 +43,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'Financial Conduct Authority - News, Press Releases, Speeches, Statements',
                 priority: 'high',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Banking', 'Investment Management', 'Consumer Credit', 'Insurance']
             },
             {
@@ -52,6 +53,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'Bank of England - News and Speeches',
                 priority: 'high',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Banking', 'Capital Markets', 'Payments', 'Fintech']
             },
             {
@@ -61,6 +63,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'PRA Policy & Supervisory Statements',
                 priority: 'high',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Banking', 'Insurance', 'Capital Markets']
             },
 
@@ -72,6 +75,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'European Securities and Markets Authority - Full Press/News Feed',
                 priority: 'high',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Capital Markets', 'Investment Management', 'Cryptocurrency']
             },
             {
@@ -81,6 +85,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'European Banking Authority - Press Releases',
                 priority: 'high',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime']
             },
             {
@@ -90,6 +95,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'Financial Stability Board - Global Policy & Press Updates',
                 priority: 'high',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Banking', 'Capital Markets', 'Fintech', 'Cryptocurrency']
             },
 
@@ -101,6 +107,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'HM Revenue & Customs Updates',
                 priority: 'medium',
+                recencyDays: 14,  // Added configurable recency window
                 sectors: ['Tax', 'AML & Financial Crime']
             },
             {
@@ -110,6 +117,7 @@ class EnhancedRSSFetcher {
                 type: 'rss',
                 description: 'UK Government Financial Services News',
                 priority: 'medium',
+                recencyDays: 14,  // Added configurable recency window
                 sectors: ['General', 'Banking', 'Insurance']
             },
 
@@ -125,6 +133,7 @@ class EnhancedRSSFetcher {
                 dateSelector: '.listing__item-date',
                 summarySelector: '.listing__item-summary',
                 priority: 'medium',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['Pensions']
             },
             {
@@ -138,6 +147,7 @@ class EnhancedRSSFetcher {
                 dateSelector: '.news-item__date',
                 summarySelector: '.news-item__excerpt',
                 priority: 'medium',
+                recencyDays: 30,  // Added configurable recency window
                 sectors: ['AML & Financial Crime', 'Banking']
             },
             {
@@ -151,6 +161,7 @@ class EnhancedRSSFetcher {
                 dateSelector: '.gem-c-document-list__item-metadata',
                 summarySelector: '.gem-c-document-list__item-description',
                 priority: 'low',
+                recencyDays: 14,  // Added configurable recency window
                 sectors: ['Competition', 'Consumer Protection']
             },
             {
@@ -164,6 +175,7 @@ class EnhancedRSSFetcher {
                 dateSelector: '.news-item__date',
                 summarySelector: '.news-item__excerpt',
                 priority: 'medium',
+                recencyDays: 14,  // Added configurable recency window
                 sectors: ['Data Protection', 'Privacy']
             },
             {
@@ -177,6 +189,7 @@ class EnhancedRSSFetcher {
                 dateSelector: '.news-listing__date',
                 summarySelector: '.news-listing__summary',
                 priority: 'low',
+                recencyDays: 14,  // Added configurable recency window
                 sectors: ['Audit & Accounting', 'Professional Services']
             },
 
@@ -186,7 +199,8 @@ class EnhancedRSSFetcher {
                 authority: 'Demo Authority',
                 url: 'demo',
                 type: 'demo',
-                priority: 'disabled'
+                priority: 'disabled',
+                recencyDays: 7
             }
         ];
 
@@ -341,17 +355,22 @@ class EnhancedRSSFetcher {
                     });
 
                     if (title && link) {
-                        updates.push({
-                            headline: this.cleanText(title),
-                            summary: this.cleanText(description),
-                            url: this.normalizeUrl(link, source.url),
-                            authority: source.authority,
-                            publishedDate: this.parseDate(pubDate),
-                            source: source.name,
-                            feedType: 'rss',
-                            categories: categories,
-                            sectors: source.sectors || []
-                        });
+                        const parsedDate = this.parseDate(pubDate);
+                        
+                        // Check if the item is within the recency window
+                        if (this.isRecent(parsedDate, source.recencyDays || 30)) {
+                            updates.push({
+                                headline: this.cleanText(title),
+                                summary: this.cleanText(description),
+                                url: this.normalizeUrl(link, source.url),
+                                authority: source.authority,
+                                publishedDate: parsedDate,
+                                source: source.name,
+                                feedType: 'rss',
+                                categories: categories,
+                                sectors: source.sectors || []
+                            });
+                        }
                     }
                 } catch (error) {
                     console.warn(`⚠️ Error parsing RSS item from ${source.name}:`, error.message);
@@ -375,7 +394,7 @@ class EnhancedRSSFetcher {
             
             switch(source.authority) {
                 case 'FATF':
-                    scraperResults = await scrapeFATF();
+                    scraperResults = await this.scrapeFATFDirect(source);
                     break;
                     
                 case 'FCA':
@@ -404,11 +423,11 @@ class EnhancedRSSFetcher {
                 console.log(`✅ ${source.name}: Found ${scraperResults.length} items via dedicated scraper`);
                 
                 return scraperResults.map(item => ({
-                    headline: item.title,
-                    summary: `${source.authority} update: ${item.title}`,
-                    url: item.link,
+                    headline: item.title || item.headline,
+                    summary: item.summary || `${source.authority} update: ${item.title}`,
+                    url: item.url || item.link,
                     authority: item.authority || source.authority,
-                    publishedDate: new Date(item.pubDate),
+                    publishedDate: item.publishedDate || new Date(item.pubDate),
                     source: source.name,
                     feedType: 'web_scraping',
                     sectors: source.sectors || []
@@ -475,16 +494,21 @@ class EnhancedRSSFetcher {
                             $item.find(source.dateSelector).text().trim() : '';
 
                 if (title && link) {
-                    updates.push({
-                        headline: this.cleanText(title),
-                        summary: this.cleanText(summary),
-                        url: this.normalizeUrl(link, source.url),
-                        authority: source.authority,
-                        publishedDate: this.parseDate(date),
-                        source: source.name,
-                        feedType: 'web_scraping',
-                        sectors: source.sectors || []
-                    });
+                    const parsedDate = this.parseDate(date);
+                    
+                    // Check if the item is within the recency window
+                    if (this.isRecent(parsedDate, source.recencyDays || 30)) {
+                        updates.push({
+                            headline: this.cleanText(title),
+                            summary: this.cleanText(summary),
+                            url: this.normalizeUrl(link, source.url),
+                            authority: source.authority,
+                            publishedDate: parsedDate,
+                            source: source.name,
+                            feedType: 'web_scraping',
+                            sectors: source.sectors || []
+                        });
+                    }
                 }
             } catch (error) {
                 console.warn(`⚠️ Error parsing web scraping item from ${source.name}:`, error.message);
@@ -523,6 +547,9 @@ class EnhancedRSSFetcher {
                     }
                 }
 
+                // Add fetchedDate field for consistency
+                update.fetchedDate = update.fetchedDate || new Date();
+
                 // Save update to database
                 await dbService.saveUpdate(update);
                 savedCount++;
@@ -554,7 +581,7 @@ class EnhancedRSSFetcher {
     }
 
     // DEDICATED FATF SCRAPER using JSON API
-    async scrapeFATFDirect() {
+    async scrapeFATFDirect(source) {
         console.log('🔍 FATF: trying JSON API first');
         
         try {
@@ -563,7 +590,7 @@ class EnhancedRSSFetcher {
             const found = [];
             const pages = 2;
             const size = 20;
-            const maxDays = 30; // Get last 30 days of updates
+            const maxDays = source?.recencyDays || 30; // Use source's recency window
             
             for (let page = 0; page < pages; page++) {
                 const url = `${base}?page=${page}&size=${size}&sort=Publication%20date%20descending`;
@@ -582,6 +609,7 @@ class EnhancedRSSFetcher {
                     for (const item of response.data.items) {
                         const date = this.parseDate(item.publicationDate);
                         
+                        // FIXED: Use source.recencyDays instead of hardcoded maxDays
                         if (!this.isRecent(date, maxDays)) {
                             console.log(`📅 FATF: Stopping - reached items older than ${maxDays} days`);
                             return found; // Stop if we hit older items
@@ -647,7 +675,8 @@ class EnhancedRSSFetcher {
                 const dateText = $el.find('time, .date, .publication-date').text().trim();
                 const date = this.parseDate(dateText);
                 
-                if (title && this.isRecent(date, 30)) {
+                // FIXED: Use source.recencyDays instead of hardcoded 30
+                if (title && this.isRecent(date, source?.recencyDays || 30)) {
                     articles.push({
                         title: title,
                         headline: title,
@@ -753,6 +782,17 @@ class EnhancedRSSFetcher {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // FIX 2: ADDED THIS MISSING METHOD
+    // Check if a date is within the recency window
+    isRecent(date, maxDays = 7) {
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+            return false;
+        }
+        
+        const cutoffDate = new Date(Date.now() - maxDays * 24 * 60 * 60 * 1000);
+        return date >= cutoffDate;
+    }
+
     // PUBLIC METHODS
     getActiveFeedCount() {
         return this.activeFeedCount;
@@ -768,6 +808,7 @@ class EnhancedRSSFetcher {
                 priority: source.priority,
                 description: source.description,
                 sectors: source.sectors || [],
+                recencyDays: source.recencyDays || 7,
                 url: source.url.substring(0, 100) + (source.url.length > 100 ? '...' : '')
             }));
     }

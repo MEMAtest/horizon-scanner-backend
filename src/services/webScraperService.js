@@ -599,7 +599,7 @@ class WebScraperService {
                 }
                 
                 // Store in database
-                await dbService.addUpdate(item);
+                await dbService.saveUpdate(item);
                 processedResults.push(item);
                 
             } catch (error) {

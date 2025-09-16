@@ -9,10 +9,12 @@ class EnhancedDBService {
     constructor() {
         this.pool = null;
         this.fallbackMode = false;
+        this.usePostgres = false; // Add this for compatibility
         this.jsonDataPath = path.join(__dirname, '../../data');
         this.updatesFile = path.join(this.jsonDataPath, 'updates.json');
         this.insightsFile = path.join(this.jsonDataPath, 'ai_insights.json');
         this.profilesFile = path.join(this.jsonDataPath, 'firm_profiles.json');
+        this.workspaceFile = path.join(this.jsonDataPath, 'workspace.json');
         
         this.initializeDatabase();
     }
@@ -33,6 +35,7 @@ class EnhancedDBService {
                 
                 console.log('✅ PostgreSQL connected successfully');
                 this.fallbackMode = false;
+                this.usePostgres = true; // Set for compatibility
                 
                 // Ensure tables exist
                 await this.ensureTablesExist();
@@ -43,6 +46,7 @@ class EnhancedDBService {
         } catch (error) {
             console.warn('⚠️ PostgreSQL connection failed, using JSON fallback:', error.message);
             this.fallbackMode = true;
+            this.usePostgres = false;
             await this.ensureJSONFiles();
         }
     }
@@ -194,6 +198,18 @@ class EnhancedDBService {
                 await fs.writeFile(this.profilesFile, JSON.stringify([defaultProfile], null, 2));
             }
             
+            // Ensure workspace file exists
+            try {
+                await fs.access(this.workspaceFile);
+            } catch {
+                await fs.writeFile(this.workspaceFile, JSON.stringify({
+                    savedSearches: [],
+                    customAlerts: [],
+                    pinnedItems: [],
+                    firmProfile: null
+                }, null, 2));
+            }
+            
             console.log('✅ JSON fallback files initialized');
             
         } catch (error) {
@@ -203,27 +219,27 @@ class EnhancedDBService {
     }
 
     async checkUpdateExists(url) {
-    try {
-        if (this.fallbackMode) {
-            const updates = await this.loadJSONData(this.updatesFile);
-            return updates.some(u => u.url === url);
-        } else {
-            const client = await this.pool.connect();
-            try {
-                const result = await client.query(
-                    'SELECT EXISTS(SELECT 1 FROM regulatory_updates WHERE url = $1) as exists',
-                    [url]
-                );
-                return result.rows[0].exists;
-            } finally {
-                client.release();
+        try {
+            if (this.fallbackMode) {
+                const updates = await this.loadJSONData(this.updatesFile);
+                return updates.some(u => u.url === url);
+            } else {
+                const client = await this.pool.connect();
+                try {
+                    const result = await client.query(
+                        'SELECT EXISTS(SELECT 1 FROM regulatory_updates WHERE url = $1) as exists',
+                        [url]
+                    );
+                    return result.rows[0].exists;
+                } finally {
+                    client.release();
+                }
             }
+        } catch (error) {
+            console.warn('⚠️ Error checking if update exists:', error.message);
+            return false; // Assume doesn't exist on error to allow saving
         }
-    } catch (error) {
-        console.warn('⚠️ Error checking if update exists:', error.message);
-        return false; // Assume doesn't exist on error to allow saving
     }
-}
 
     // ENHANCED UPDATES METHODS
     async saveUpdate(updateData) {
@@ -258,20 +274,20 @@ class EnhancedDBService {
                 updateData.summary || updateData.impact,
                 updateData.url,
                 updateData.authority,
-                updateData.publishedDate || new Date(),
+                updateData.publishedDate || updateData.fetchedDate || new Date(),
                 updateData.impactLevel,
                 updateData.urgency,
                 updateData.sector,
                 updateData.area,
                 updateData.ai_summary || updateData.impact,
-                updateData.businessImpactScore || 0,
-                JSON.stringify(updateData.aiTags || []),
-                JSON.stringify(updateData.firmTypesAffected || []),
-                updateData.complianceDeadline,
-                updateData.aiConfidenceScore || 0.0,
-                JSON.stringify(updateData.sectorRelevanceScores || {}),
-                JSON.stringify(updateData.implementationPhases || []),
-                JSON.stringify(updateData.requiredResources || {})
+                updateData.businessImpactScore || updateData.business_impact_score || 0,
+                JSON.stringify(updateData.aiTags || updateData.ai_tags || []),
+                JSON.stringify(updateData.firmTypesAffected || updateData.firm_types_affected || []),
+                updateData.complianceDeadline || updateData.compliance_deadline,
+                updateData.aiConfidenceScore || updateData.ai_confidence_score || 0.0,
+                JSON.stringify(updateData.sectorRelevanceScores || updateData.sector_relevance_scores || {}),
+                JSON.stringify(updateData.implementationPhases || updateData.implementation_phases || []),
+                JSON.stringify(updateData.requiredResources || updateData.required_resources || {})
             ];
             
             const result = await client.query(query, values);
@@ -290,16 +306,17 @@ class EnhancedDBService {
         const update = {
             id: newId,
             ...updateData,
+            fetchedDate: updateData.fetchedDate || new Date().toISOString(),
             createdAt: new Date().toISOString(),
             ai_summary: updateData.ai_summary || updateData.impact,
-            business_impact_score: updateData.businessImpactScore || 0,
-            ai_tags: updateData.aiTags || [],
-            firm_types_affected: updateData.firmTypesAffected || [],
-            compliance_deadline: updateData.complianceDeadline,
-            ai_confidence_score: updateData.aiConfidenceScore || 0.0,
-            sector_relevance_scores: updateData.sectorRelevanceScores || {},
-            implementation_phases: updateData.implementationPhases || [],
-            required_resources: updateData.requiredResources || {}
+            business_impact_score: updateData.businessImpactScore || updateData.business_impact_score || 0,
+            ai_tags: updateData.aiTags || updateData.ai_tags || [],
+            firm_types_affected: updateData.firmTypesAffected || updateData.firm_types_affected || [],
+            compliance_deadline: updateData.complianceDeadline || updateData.compliance_deadline,
+            ai_confidence_score: updateData.aiConfidenceScore || updateData.ai_confidence_score || 0.0,
+            sector_relevance_scores: updateData.sectorRelevanceScores || updateData.sector_relevance_scores || {},
+            implementation_phases: updateData.implementationPhases || updateData.implementation_phases || [],
+            required_resources: updateData.requiredResources || updateData.required_resources || {}
         };
         
         updates.push(update);
@@ -327,7 +344,8 @@ class EnhancedDBService {
         try {
             let query = `
                 SELECT 
-                    id, headline, summary, url, authority, published_date, created_at,
+                    id, headline, summary, url, authority, 
+                    published_date, created_at,
                     impact_level, urgency, sector, area,
                     ai_summary, business_impact_score, ai_tags, 
                     firm_types_affected, compliance_deadline, ai_confidence_score,
@@ -357,10 +375,9 @@ class EnhancedDBService {
             }
             
             if (filters.search) {
-                query += ` AND (headline ILIKE $${++paramCount} OR summary ILIKE $${++paramCount} OR ai_summary ILIKE $${++paramCount})`;
+                query += ` AND (headline ILIKE $${++paramCount} OR summary ILIKE $${paramCount} OR ai_summary ILIKE $${paramCount})`;
                 const searchTerm = `%${filters.search}%`;
-                params.push(searchTerm, searchTerm, searchTerm);
-                paramCount += 2;
+                params.push(searchTerm);
             }
             
             // Date range filter
@@ -372,17 +389,12 @@ class EnhancedDBService {
                 }
             }
             
-            // Category-specific filters
+            // Category-specific filters - FIXED VERSION
             if (filters.category && filters.category !== 'all') {
                 const categoryFilter = this.getCategoryFilter(filters.category);
                 if (categoryFilter.sql) {
                     query += ` AND ${categoryFilter.sql}`;
-                    if (categoryFilter.params) {
-                        categoryFilter.params.forEach(param => {
-                            params.push(param);
-                            paramCount++;
-                        });
-                    }
+                    // No need to add params or increment paramCount for most category filters
                 }
             }
             
@@ -398,6 +410,7 @@ class EnhancedDBService {
             // Transform the data for client use
             return result.rows.map(row => ({
                 ...row,
+                fetchedDate: row.published_date || row.created_at,
                 publishedDate: row.published_date,
                 createdAt: row.created_at,
                 impactLevel: row.impact_level,
@@ -448,21 +461,21 @@ class EnhancedDBService {
             const dateFilter = this.getDateRangeFilter(filters.range);
             if (dateFilter) {
                 filtered = filtered.filter(u => {
-                    const updateDate = new Date(u.publishedDate || u.published_date || u.createdAt);
+                    const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt);
                     return updateDate >= dateFilter;
                 });
             }
         }
         
-        // Category filter
+        // Category filter - FIXED VERSION
         if (filters.category && filters.category !== 'all') {
             filtered = this.applyCategoryFilterJSON(filtered, filters.category);
         }
         
         // Sort by date (newest first)
         filtered.sort((a, b) => {
-            const dateA = new Date(a.publishedDate || a.published_date || a.createdAt);
-            const dateB = new Date(b.publishedDate || b.published_date || b.createdAt);
+            const dateA = new Date(a.publishedDate || a.published_date || a.fetchedDate || a.createdAt);
+            const dateB = new Date(b.publishedDate || b.published_date || b.fetchedDate || b.createdAt);
             return dateB - dateA;
         });
         
@@ -490,52 +503,53 @@ class EnhancedDBService {
         }
     }
 
+    // FIXED VERSION - PostgreSQL category filters
     getCategoryFilter(category) {
-        const today = new Date();
-        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        
         switch (category) {
             case 'high-impact':
                 return { sql: "(impact_level = 'Significant' OR business_impact_score >= 7 OR urgency = 'High')" };
             case 'today':
-                return { sql: "published_date >= $" + (arguments.length + 1), params: [today] };
+                return { sql: "DATE(published_date) = CURRENT_DATE" };
             case 'this-week':
-                return { sql: "published_date >= $" + (arguments.length + 1), params: [weekAgo] };
+                return { sql: "published_date >= CURRENT_DATE - INTERVAL '7 days'" };
             case 'consultations':
-                return { sql: "(headline ILIKE '%consultation%' OR area ILIKE '%consultation%' OR ai_tags @> '[\"type:consultation\"]')" };
+                return { sql: "(headline ILIKE '%consultation%' OR area ILIKE '%consultation%' OR ai_tags @> '[\"type:consultation\"]'::jsonb)" };
             case 'enforcement':
-                return { sql: "(headline ILIKE '%enforcement%' OR headline ILIKE '%fine%' OR ai_tags @> '[\"type:enforcement\"]')" };
+                return { sql: "(headline ILIKE '%enforcement%' OR headline ILIKE '%fine%' OR ai_tags @> '[\"type:enforcement\"]'::jsonb)" };
             case 'deadlines':
-                return { sql: "(compliance_deadline IS NOT NULL OR headline ILIKE '%deadline%' OR ai_tags @> '[\"has:deadline\"]')" };
+                return { sql: "(compliance_deadline IS NOT NULL OR headline ILIKE '%deadline%' OR ai_tags @> '[\"has:deadline\"]'::jsonb)" };
             default:
                 return { sql: null };
         }
     }
 
+    // FIXED VERSION - JSON category filters
     applyCategoryFilterJSON(updates, category) {
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        now.setHours(23, 59, 59, 999); // Include all of today
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        todayStart.setHours(0, 0, 0, 0); // Start of today
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         
         switch (category) {
             case 'high-impact':
                 return updates.filter(u => 
                     u.impactLevel === 'Significant' || 
                     u.impact_level === 'Significant' ||
-                    u.business_impact_score >= 7 ||
-                    u.businessImpactScore >= 7 ||
+                    (u.business_impact_score || 0) >= 7 ||
+                    (u.businessImpactScore || 0) >= 7 ||
                     u.urgency === 'High'
                 );
                 
             case 'today':
                 return updates.filter(u => {
-                    const updateDate = new Date(u.publishedDate || u.published_date || u.createdAt);
-                    return updateDate >= today;
+                    const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt);
+                    return updateDate >= todayStart && updateDate <= now;
                 });
                 
             case 'this-week':
                 return updates.filter(u => {
-                    const updateDate = new Date(u.publishedDate || u.published_date || u.createdAt);
+                    const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt);
                     return updateDate >= weekAgo;
                 });
                 
@@ -543,13 +557,13 @@ class EnhancedDBService {
                 return updates.filter(u =>
                     (u.headline && u.headline.toLowerCase().includes('consultation')) ||
                     (u.area && u.area.toLowerCase().includes('consultation')) ||
-                    (u.ai_tags && u.ai_tags.includes('type:consultation'))
+                    (u.ai_tags && Array.isArray(u.ai_tags) && u.ai_tags.includes('type:consultation'))
                 );
                 
             case 'enforcement':
                 return updates.filter(u =>
                     (u.headline && (u.headline.toLowerCase().includes('enforcement') || u.headline.toLowerCase().includes('fine'))) ||
-                    (u.ai_tags && u.ai_tags.includes('type:enforcement'))
+                    (u.ai_tags && Array.isArray(u.ai_tags) && u.ai_tags.includes('type:enforcement'))
                 );
                 
             case 'deadlines':
@@ -557,7 +571,7 @@ class EnhancedDBService {
                     u.compliance_deadline ||
                     u.complianceDeadline ||
                     (u.headline && u.headline.toLowerCase().includes('deadline')) ||
-                    (u.ai_tags && u.ai_tags.includes('has:deadline'))
+                    (u.ai_tags && Array.isArray(u.ai_tags) && u.ai_tags.includes('has:deadline'))
                 );
                 
             default:
@@ -701,11 +715,11 @@ class EnhancedDBService {
         
         const totalUpdates = updates.length;
         const activeAuthorities = new Set(updates.map(u => u.authority)).size;
-        const aiAnalyzed = updates.filter(u => u.ai_summary || u.businessImpactScore).length;
+        const aiAnalyzed = updates.filter(u => u.ai_summary || u.businessImpactScore || u.business_impact_score).length;
         const highImpact = updates.filter(u => 
             u.impactLevel === 'Significant' || 
             u.impact_level === 'Significant' ||
-            (u.business_impact_score || u.businessImpactScore) >= 7
+            (u.business_impact_score || u.businessImpactScore || 0) >= 7
         ).length;
         
         return { totalUpdates, activeAuthorities, aiAnalyzed, highImpact };
@@ -770,12 +784,12 @@ class EnhancedDBService {
         const highImpact = updates.filter(u => 
             u.impactLevel === 'Significant' || 
             u.impact_level === 'Significant' ||
-            (u.business_impact_score || u.businessImpactScore) >= 7
+            (u.business_impact_score || u.businessImpactScore || 0) >= 7
         ).length;
-        const aiAnalyzed = updates.filter(u => u.ai_summary || u.businessImpactScore).length;
+        const aiAnalyzed = updates.filter(u => u.ai_summary || u.businessImpactScore || u.business_impact_score).length;
         const activeAuthorities = new Set(updates.map(u => u.authority)).size;
         const newToday = updates.filter(u => {
-            const updateDate = new Date(u.publishedDate || u.published_date || u.createdAt);
+            const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt);
             return updateDate >= today;
         }).length;
         
@@ -857,16 +871,16 @@ class EnhancedDBService {
         const highImpact = updates.filter(u => 
             u.impactLevel === 'Significant' || 
             u.impact_level === 'Significant' ||
-            (u.business_impact_score || u.businessImpactScore) >= 7
+            (u.business_impact_score || u.businessImpactScore || 0) >= 7
         ).length;
         
         const todayUpdates = updates.filter(u => {
-            const updateDate = new Date(u.publishedDate || u.published_date || u.createdAt);
+            const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt);
             return updateDate >= today;
         }).length;
         
         const weekUpdates = updates.filter(u => {
-            const updateDate = new Date(u.publishedDate || u.published_date || u.createdAt);
+            const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt);
             return updateDate >= weekAgo;
         }).length;
         
@@ -974,12 +988,26 @@ class EnhancedDBService {
     }
 
     // LEGACY COMPATIBILITY METHODS
-    async getRecentUpdates(limit = 10) {
-        return await this.getEnhancedUpdates({ limit });
+    async getRecentUpdates(limit = 10, offset = 0) {
+        return await this.getEnhancedUpdates({ limit, offset });
     }
 
     async getAllUpdates() {
         return await this.getEnhancedUpdates({});
+    }
+
+    async getUpdateByUrl(url) {
+        try {
+            const updates = await this.getEnhancedUpdates({});
+            return updates.find(u => u.url === url) || null;
+        } catch (error) {
+            console.error('Error getting update by URL:', error);
+            return null;
+        }
+    }
+
+    async getUpdatesByAuthority(authority) {
+        return await this.getEnhancedUpdates({ authority });
     }
 
     // JSON FILE UTILITIES
@@ -999,6 +1027,494 @@ class EnhancedDBService {
         } catch (error) {
             console.error(`❌ Error saving JSON to ${filePath}:`, error);
             throw error;
+        }
+    }
+
+    // Initialize method for compatibility
+    async initialize() {
+        return true;
+    }
+
+    // ==========================================
+    // SAVED SEARCHES METHODS
+    // ==========================================
+
+    async getSavedSearches() {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    SELECT id, search_name as "searchName", filter_params as "filterParams", 
+                           created_date as "createdDate"
+                    FROM saved_searches 
+                    ORDER BY created_date DESC
+                `);
+                return result.rows;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for saved searches');
+                return this.getSavedSearchesJSON();
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.getSavedSearchesJSON();
+        }
+    }
+
+    async getSavedSearchesJSON() {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            return workspace.savedSearches || [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async getSavedSearch(searchId) {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    SELECT id, search_name as "searchName", filter_params as "filterParams", 
+                           created_date as "createdDate"
+                    FROM saved_searches WHERE id = $1
+                `, [searchId]);
+                return result.rows[0] || null;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for saved search');
+                return this.getSavedSearchJSON(searchId);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.getSavedSearchJSON(searchId);
+        }
+    }
+
+    async getSavedSearchJSON(searchId) {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            return (workspace.savedSearches || []).find(search => search.id == searchId) || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async deleteSavedSearch(searchId) {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query('DELETE FROM saved_searches WHERE id = $1', [searchId]);
+                console.log(`🗑️ Deleted saved search: ${searchId}`);
+                return result.rowCount > 0;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for delete saved search');
+                return this.deleteSavedSearchJSON(searchId);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.deleteSavedSearchJSON(searchId);
+        }
+    }
+
+    async deleteSavedSearchJSON(searchId) {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            
+            const initialLength = (workspace.savedSearches || []).length;
+            workspace.savedSearches = (workspace.savedSearches || []).filter(search => search.id != searchId);
+            
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            return workspace.savedSearches.length < initialLength;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // ==========================================
+    // CUSTOM ALERTS METHODS
+    // ==========================================
+
+    async createCustomAlert(alertName, alertConditions) {
+        await this.initialize();
+
+        const customAlert = {
+            id: Date.now(),
+            alertName,
+            alertConditions,
+            isActive: true,
+            createdDate: new Date().toISOString()
+        };
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    INSERT INTO custom_alerts (alert_name, alert_conditions, is_active, created_date)
+                    VALUES ($1, $2, $3, $4) RETURNING id
+                `, [alertName, JSON.stringify(alertConditions), true, customAlert.createdDate]);
+                customAlert.id = result.rows[0].id;
+                console.log(`🚨 Created custom alert: ${alertName}`);
+                return customAlert;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for custom alert');
+                return this.createCustomAlertJSON(customAlert);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.createCustomAlertJSON(customAlert);
+        }
+    }
+
+    async createCustomAlertJSON(customAlert) {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8').catch(() => '{"customAlerts":[]}');
+            const workspace = JSON.parse(data);
+            workspace.customAlerts = workspace.customAlerts || [];
+            workspace.customAlerts.push(customAlert);
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            console.log(`🚨 Created custom alert in JSON: ${customAlert.alertName}`);
+            return customAlert;
+        } catch (error) {
+            throw new Error(`Failed to create custom alert: ${error.message}`);
+        }
+    }
+
+    async getCustomAlerts() {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    SELECT id, alert_name as "alertName", alert_conditions as "alertConditions", 
+                           is_active as "isActive", created_date as "createdDate"
+                    FROM custom_alerts 
+                    ORDER BY created_date DESC
+                `);
+                return result.rows;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for custom alerts');
+                return this.getCustomAlertsJSON();
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.getCustomAlertsJSON();
+        }
+    }
+
+    async getCustomAlertsJSON() {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            return workspace.customAlerts || [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async updateAlertStatus(alertId, isActive) {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(
+                    'UPDATE custom_alerts SET is_active = $1 WHERE id = $2', 
+                    [isActive, alertId]
+                );
+                console.log(`🚨 Updated alert status: ${alertId} -> ${isActive}`);
+                return result.rowCount > 0;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for alert status update');
+                return this.updateAlertStatusJSON(alertId, isActive);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.updateAlertStatusJSON(alertId, isActive);
+        }
+    }
+
+    async updateAlertStatusJSON(alertId, isActive) {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            
+            const alert = (workspace.customAlerts || []).find(alert => alert.id == alertId);
+            if (alert) {
+                alert.isActive = isActive;
+                await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async deleteCustomAlert(alertId) {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query('DELETE FROM custom_alerts WHERE id = $1', [alertId]);
+                console.log(`🗑️ Deleted custom alert: ${alertId}`);
+                return result.rowCount > 0;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for delete custom alert');
+                return this.deleteCustomAlertJSON(alertId);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.deleteCustomAlertJSON(alertId);
+        }
+    }
+
+    async deleteCustomAlertJSON(alertId) {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            
+            const initialLength = (workspace.customAlerts || []).length;
+            workspace.customAlerts = (workspace.customAlerts || []).filter(alert => alert.id != alertId);
+            
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            return workspace.customAlerts.length < initialLength;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // ==========================================
+    // PINNED ITEMS METHODS
+    // ==========================================
+
+    async getPinnedItems() {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    SELECT * FROM pinned_items 
+                    ORDER BY pinned_date DESC
+                `);
+                return result.rows;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for pinned items');
+                return this.getPinnedItemsJSON();
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.getPinnedItemsJSON();
+        }
+    }
+
+    async getPinnedItemsJSON() {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            return workspace.pinnedItems || [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async updatePinnedItemNotes(updateUrl, notes) {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(
+                    'UPDATE pinned_items SET notes = $1 WHERE update_url = $2', 
+                    [notes, updateUrl]
+                );
+                console.log(`📝 Updated pinned item notes: ${updateUrl}`);
+                return result.rowCount > 0;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for pinned item notes update');
+                return this.updatePinnedItemNotesJSON(updateUrl, notes);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.updatePinnedItemNotesJSON(updateUrl, notes);
+        }
+    }
+
+    async updatePinnedItemNotesJSON(updateUrl, notes) {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            
+            const pinnedItem = (workspace.pinnedItems || []).find(item => item.updateUrl === updateUrl);
+            if (pinnedItem) {
+                pinnedItem.notes = notes;
+                pinnedItem.updatedDate = new Date().toISOString();
+                await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    // ==========================================
+    // FIRM PROFILE METHODS
+    // ==========================================
+
+    async getFirmProfile() {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    SELECT * FROM firm_profiles 
+                    ORDER BY id DESC 
+                    LIMIT 1
+                `);
+                return result.rows[0] || null;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for firm profile');
+                return this.getFirmProfileJSON();
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.getFirmProfileJSON();
+        }
+    }
+
+    async getFirmProfileJSON() {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            return workspace.firmProfile || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async clearFirmProfile() {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                await client.query('DELETE FROM firm_profiles');
+                console.log('✅ Firm profile cleared from PostgreSQL');
+            } catch (error) {
+                console.log('📊 Using JSON fallback for clear firm profile');
+                return this.clearFirmProfileJSON();
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.clearFirmProfileJSON();
+        }
+    }
+
+    async clearFirmProfileJSON() {
+        try {
+            const data = await fs.readFile(this.workspaceFile, 'utf8');
+            const workspace = JSON.parse(data);
+            workspace.firmProfile = null;
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            console.log('✅ Firm profile cleared from JSON');
+        } catch (error) {
+            console.error('Error clearing firm profile from JSON:', error);
+            throw error;
+        }
+    }
+
+    // ==========================================
+    // SYSTEM STATS METHOD
+    // ==========================================
+
+    async getSystemStats() {
+        await this.initialize();
+
+        try {
+            const updates = await this.getRecentUpdates(1000, 0);
+            const today = new Date();
+            const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+            // Basic counts
+            const stats = {
+                totalUpdates: updates.length,
+                todayUpdates: updates.filter(u => new Date(u.fetchedDate || u.createdAt) >= yesterday).length,
+                weekUpdates: updates.filter(u => new Date(u.fetchedDate || u.createdAt) >= weekAgo).length,
+                authorities: [...new Set(updates.map(u => u.authority).filter(Boolean))].length,
+                sectors: [...new Set(updates.map(u => u.sector).filter(Boolean))].length
+            };
+
+            // Add workspace stats
+            try {
+                const pinnedItems = await this.getPinnedItems();
+                const savedSearches = await this.getSavedSearches();
+                const customAlerts = await this.getCustomAlerts();
+                const firmProfile = await this.getFirmProfile();
+
+                stats.workspace = {
+                    pinnedItems: pinnedItems.length,
+                    savedSearches: savedSearches.length,
+                    customAlerts: customAlerts.length,
+                    activeAlerts: customAlerts.filter(alert => alert.isActive).length,
+                    hasFirmProfile: !!firmProfile
+                };
+            } catch (error) {
+                console.log('📊 Workspace stats not available yet');
+                stats.workspace = {
+                    pinnedItems: 0,
+                    savedSearches: 0,
+                    customAlerts: 0,
+                    activeAlerts: 0,
+                    hasFirmProfile: false
+                };
+            }
+
+            // Authority breakdown
+            const authorityBreakdown = {};
+            updates.forEach(update => {
+                if (update.authority) {
+                    authorityBreakdown[update.authority] = (authorityBreakdown[update.authority] || 0) + 1;
+                }
+            });
+            stats.authorityBreakdown = authorityBreakdown;
+
+            // Recent activity (last 24 hours)
+            const recentUpdates = updates.filter(u => new Date(u.fetchedDate || u.createdAt) >= yesterday);
+            stats.recentActivity = recentUpdates.slice(0, 5).map(update => ({
+                headline: update.headline.substring(0, 80) + '...',
+                authority: update.authority,
+                fetchedDate: update.fetchedDate || update.createdAt
+            }));
+
+            return stats;
+
+        } catch (error) {
+            console.error('Error getting system stats:', error);
+            throw new Error(`Failed to get system statistics: ${error.message}`);
         }
     }
 
@@ -1026,425 +1542,6 @@ class EnhancedDBService {
             return { status: 'unhealthy', error: error.message };
         }
     }
-// ==========================================
-// SAVED SEARCHES METHODS (ADD TO EXISTING dbService.js)
-// ==========================================
-
-async getSavedSearches() {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(`
-                SELECT id, search_name as "searchName", filter_params as "filterParams", 
-                       created_date as "createdDate"
-                FROM saved_searches 
-                ORDER BY created_date DESC
-            `);
-            return result.rows;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for saved searches');
-            return this.getSavedSearchesJSON();
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.getSavedSearchesJSON();
-    }
 }
-
-async getSavedSearchesJSON() {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        return workspace.savedSearches || [];
-    } catch (error) {
-        return [];
-    }
-}
-
-async getSavedSearch(searchId) {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(`
-                SELECT id, search_name as "searchName", filter_params as "filterParams", 
-                       created_date as "createdDate"
-                FROM saved_searches WHERE id = $1
-            `, [searchId]);
-            return result.rows[0] || null;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for saved search');
-            return this.getSavedSearchJSON(searchId);
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.getSavedSearchJSON(searchId);
-    }
-}
-
-async getSavedSearchJSON(searchId) {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        return (workspace.savedSearches || []).find(search => search.id == searchId) || null;
-    } catch (error) {
-        return null;
-    }
-}
-
-async deleteSavedSearch(searchId) {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query('DELETE FROM saved_searches WHERE id = $1', [searchId]);
-            console.log(`🗑️ Deleted saved search: ${searchId}`);
-            return result.rowCount > 0;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for delete saved search');
-            return this.deleteSavedSearchJSON(searchId);
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.deleteSavedSearchJSON(searchId);
-    }
-}
-
-async deleteSavedSearchJSON(searchId) {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        
-        const initialLength = (workspace.savedSearches || []).length;
-        workspace.savedSearches = (workspace.savedSearches || []).filter(search => search.id != searchId);
-        
-        await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
-        return workspace.savedSearches.length < initialLength;
-    } catch (error) {
-        return false;
-    }
-}
-
-// ==========================================
-// CUSTOM ALERTS METHODS (ADD TO EXISTING dbService.js)
-// ==========================================
-
-async createCustomAlert(alertName, alertConditions) {
-    await this.initialize();
-
-    const customAlert = {
-        id: Date.now(),
-        alertName,
-        alertConditions,
-        isActive: true,
-        createdDate: new Date().toISOString()
-    };
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(`
-                INSERT INTO custom_alerts (alert_name, alert_conditions, is_active, created_date)
-                VALUES ($1, $2, $3, $4) RETURNING id
-            `, [alertName, JSON.stringify(alertConditions), true, customAlert.createdDate]);
-            customAlert.id = result.rows[0].id;
-            console.log(`🚨 Created custom alert: ${alertName}`);
-            return customAlert;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for custom alert');
-            return this.createCustomAlertJSON(customAlert);
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.createCustomAlertJSON(customAlert);
-    }
-}
-
-async createCustomAlertJSON(customAlert) {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8').catch(() => '{"customAlerts":[]}');
-        const workspace = JSON.parse(data);
-        workspace.customAlerts = workspace.customAlerts || [];
-        workspace.customAlerts.push(customAlert);
-        await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
-        console.log(`🚨 Created custom alert in JSON: ${customAlert.alertName}`);
-        return customAlert;
-    } catch (error) {
-        throw new Error(`Failed to create custom alert: ${error.message}`);
-    }
-}
-
-async getCustomAlerts() {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(`
-                SELECT id, alert_name as "alertName", alert_conditions as "alertConditions", 
-                       is_active as "isActive", created_date as "createdDate"
-                FROM custom_alerts 
-                ORDER BY created_date DESC
-            `);
-            return result.rows;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for custom alerts');
-            return this.getCustomAlertsJSON();
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.getCustomAlertsJSON();
-    }
-}
-
-async getCustomAlertsJSON() {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        return workspace.customAlerts || [];
-    } catch (error) {
-        return [];
-    }
-}
-
-async updateAlertStatus(alertId, isActive) {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(
-                'UPDATE custom_alerts SET is_active = $1 WHERE id = $2', 
-                [isActive, alertId]
-            );
-            console.log(`🚨 Updated alert status: ${alertId} -> ${isActive}`);
-            return result.rowCount > 0;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for alert status update');
-            return this.updateAlertStatusJSON(alertId, isActive);
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.updateAlertStatusJSON(alertId, isActive);
-    }
-}
-
-async updateAlertStatusJSON(alertId, isActive) {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        
-        const alert = (workspace.customAlerts || []).find(alert => alert.id == alertId);
-        if (alert) {
-            alert.isActive = isActive;
-            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
-            return true;
-        }
-        return false;
-    } catch (error) {
-        return false;
-    }
-}
-
-async deleteCustomAlert(alertId) {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query('DELETE FROM custom_alerts WHERE id = $1', [alertId]);
-            console.log(`🗑️ Deleted custom alert: ${alertId}`);
-            return result.rowCount > 0;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for delete custom alert');
-            return this.deleteCustomAlertJSON(alertId);
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.deleteCustomAlertJSON(alertId);
-    }
-}
-
-async deleteCustomAlertJSON(alertId) {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        
-        const initialLength = (workspace.customAlerts || []).length;
-        workspace.customAlerts = (workspace.customAlerts || []).filter(alert => alert.id != alertId);
-        
-        await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
-        return workspace.customAlerts.length < initialLength;
-    } catch (error) {
-        return false;
-    }
-}
-
-// ==========================================
-// ENHANCED PINNED ITEMS METHODS (ADD TO EXISTING dbService.js)
-// ==========================================
-
-async updatePinnedItemNotes(updateUrl, notes) {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(
-                'UPDATE pinned_items SET notes = $1 WHERE update_url = $2', 
-                [notes, updateUrl]
-            );
-            console.log(`📝 Updated pinned item notes: ${updateUrl}`);
-            return result.rowCount > 0;
-        } catch (error) {
-            console.log('📊 Using JSON fallback for pinned item notes update');
-            return this.updatePinnedItemNotesJSON(updateUrl, notes);
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.updatePinnedItemNotesJSON(updateUrl, notes);
-    }
-}
-
-async updatePinnedItemNotesJSON(updateUrl, notes) {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        
-        const pinnedItem = (workspace.pinnedItems || []).find(item => item.updateUrl === updateUrl);
-        if (pinnedItem) {
-            pinnedItem.notes = notes;
-            pinnedItem.updatedDate = new Date().toISOString();
-            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
-            return true;
-        }
-        return false;
-    } catch (error) {
-        return false;
-    }
-}
-
-// ==========================================
-// FIRM PROFILE METHODS (ADD TO EXISTING dbService.js)
-// ==========================================
-
-async clearFirmProfile() {
-    await this.initialize();
-
-    if (this.usePostgres) {
-        const client = await this.pool.connect();
-        try {
-            await client.query('DELETE FROM firm_profile');
-            console.log('✅ Firm profile cleared from PostgreSQL');
-        } catch (error) {
-            console.log('📊 Using JSON fallback for clear firm profile');
-            return this.clearFirmProfileJSON();
-        } finally {
-            client.release();
-        }
-    } else {
-        return this.clearFirmProfileJSON();
-    }
-}
-
-async clearFirmProfileJSON() {
-    try {
-        const data = await fs.readFile(this.workspaceFile, 'utf8');
-        const workspace = JSON.parse(data);
-        workspace.firmProfile = null;
-        await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
-        console.log('✅ Firm profile cleared from JSON');
-    } catch (error) {
-        console.error('Error clearing firm profile from JSON:', error);
-        throw error;
-    }
-}
-
-// ==========================================
-// SYSTEM STATS METHOD ENHANCEMENT (ADD TO EXISTING dbService.js)
-// ==========================================
-
-async getSystemStats() {
-    await this.initialize();
-
-    try {
-        const updates = await this.getRecentUpdates(1000, 0);
-        const today = new Date();
-        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-        // Basic counts
-        const stats = {
-            totalUpdates: updates.length,
-            todayUpdates: updates.filter(u => new Date(u.fetchedDate) >= yesterday).length,
-            weekUpdates: updates.filter(u => new Date(u.fetchedDate) >= weekAgo).length,
-            authorities: [...new Set(updates.map(u => u.authority).filter(Boolean))].length,
-            sectors: [...new Set(updates.map(u => u.sector).filter(Boolean))].length
-        };
-
-        // Add workspace stats
-        try {
-            const pinnedItems = await this.getPinnedItems();
-            const savedSearches = await this.getSavedSearches();
-            const customAlerts = await this.getCustomAlerts();
-            const firmProfile = await this.getFirmProfile();
-
-            stats.workspace = {
-                pinnedItems: pinnedItems.length,
-                savedSearches: savedSearches.length,
-                customAlerts: customAlerts.length,
-                activeAlerts: customAlerts.filter(alert => alert.isActive).length,
-                hasFirmProfile: !!firmProfile
-            };
-        } catch (error) {
-            console.log('📊 Workspace stats not available yet');
-            stats.workspace = {
-                pinnedItems: 0,
-                savedSearches: 0,
-                customAlerts: 0,
-                activeAlerts: 0,
-                hasFirmProfile: false
-            };
-        }
-
-        // Authority breakdown
-        const authorityBreakdown = {};
-        updates.forEach(update => {
-            if (update.authority) {
-                authorityBreakdown[update.authority] = (authorityBreakdown[update.authority] || 0) + 1;
-            }
-        });
-        stats.authorityBreakdown = authorityBreakdown;
-
-        // Recent activity (last 24 hours)
-        const recentUpdates = updates.filter(u => new Date(u.fetchedDate) >= yesterday);
-        stats.recentActivity = recentUpdates.slice(0, 5).map(update => ({
-            headline: update.headline.substring(0, 80) + '...',
-            authority: update.authority,
-            fetchedDate: update.fetchedDate
-        }));
-
-        return stats;
-
-    } catch (error) {
-        console.error('Error getting system stats:', error);
-        throw new Error(`Failed to get system statistics: ${error.message}`);
-    }
-}
-}
-
-
 
 module.exports = new EnhancedDBService();
