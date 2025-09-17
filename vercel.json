@@ -1,12 +1,5 @@
 {
   "version": 2,
-  "name": "mema-uk-reg-tracker",
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",
