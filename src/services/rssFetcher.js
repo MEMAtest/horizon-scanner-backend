@@ -99,6 +99,16 @@ class EnhancedRSSFetcher {
                 sectors: ['Banking', 'Capital Markets', 'Fintech', 'Cryptocurrency']
             },
 
+            {
+    name: 'FATF News',  // Changed from 'FATF Publications'
+    authority: 'FATF',
+    url: 'https://www.fatf-gafi.org/en/the-fatf/news.html',  // Changed to news URL
+    type: 'web_scraping',
+    description: 'Financial Action Task Force - News and Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    sectors: ['AML & Financial Crime', 'Banking', 'Compliance']
+},
             // EXISTING RSS FEEDS
             {
                 name: 'HMRC Updates RSS',
@@ -581,141 +591,205 @@ class EnhancedRSSFetcher {
     }
 
     // DEDICATED FATF SCRAPER using JSON API
-    async scrapeFATFDirect(source) {
-        console.log('🔍 FATF: trying JSON API first');
+async scrapeFATFDirect(source) {
+    console.log('🔍 FATF: Using Puppeteer to bypass CloudFlare');
+    
+    const puppeteer = require('puppeteer');
+    let browser;
+    
+    try {
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
         
+        const page = await browser.newPage();
+        await page.setUserAgent(this.userAgent);
+        
+        // Try the main news/publications page
+        console.log('📄 FATF: Loading FATF publications page via Puppeteer...');
+        await page.goto('https://www.fatf-gafi.org/en/publications.html', {
+            waitUntil: 'networkidle2',
+            timeout: 30000
+        });
+        
+        // Wait for CloudFlare and content to load
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Wait for content container
         try {
-            // Try JSON API first (most reliable)
-            const base = 'https://www.fatf-gafi.org/en/publications/_jcr_content.results.json';
-            const found = [];
-            const pages = 2;
-            const size = 20;
-            const maxDays = source?.recencyDays || 30; // Use source's recency window
+            await page.waitForSelector('main, .content, [role="main"]', {
+                timeout: 5000
+            });
+        } catch (e) {
+            console.log('⚠️ Main content not found immediately');
+        }
+        
+        // Extract news items - based on the actual HTML structure from the image
+        const newsItems = await page.evaluate(() => {
+            const items = [];
+            const monthMap = {
+                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+            };
             
-            for (let page = 0; page < pages; page++) {
-                const url = `${base}?page=${page}&size=${size}&sort=Publication%20date%20descending`;
+            // Look for the table/list structure shown in the image
+            const rows = document.querySelectorAll('tr, .publication-row, .news-item');
+            
+            rows.forEach(row => {
+                // Look for date cell (like "5 Sep 2025")
+                const dateCell = row.querySelector('td:first-child, .date-column, .publication-date');
+                const linkCell = row.querySelector('td:nth-child(2) a, .title-column a, h3 a, h4 a');
                 
-                try {
-                    const response = await axios.get(url, { 
-                        timeout: 10000,
-                        headers: {
-                            'Accept': 'application/json',
-                            'User-Agent': this.userAgent
-                        }
-                    });
+                if (dateCell && linkCell) {
+                    const dateText = dateCell.textContent.trim();
+                    const title = linkCell.textContent.trim();
+                    const href = linkCell.href;
                     
-                    if (!response.data?.items?.length) break;
+                    // Parse date like "5 Sep 2025" or "28 Aug 2025"
+                    const dateMatch = dateText.match(/(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/i);
                     
-                    for (const item of response.data.items) {
-                        const date = this.parseDate(item.publicationDate);
-                        
-                        // FIXED: Use source.recencyDays instead of hardcoded maxDays
-                        if (!this.isRecent(date, maxDays)) {
-                            console.log(`📅 FATF: Stopping - reached items older than ${maxDays} days`);
-                            return found; // Stop if we hit older items
+                    if (dateMatch && title && href) {
+                        items.push({
+                            title,
+                            url: href,
+                            date: dateText,
+                            sortDate: new Date(`${dateMatch[3]}-${monthMap[dateMatch[2]]}-${dateMatch[1].padStart(2, '0')}`)
+                        });
+                    }
+                }
+            });
+            
+            // Alternative: Look for any date + link pattern if table structure not found
+            if (items.length === 0) {
+                // Find all text nodes that look like dates
+                const walker = document.createTreeWalker(
+                    document.body,
+                    NodeFilter.SHOW_TEXT,
+                    null,
+                    false
+                );
+                
+                let node;
+                while (node = walker.nextNode()) {
+                    const text = node.textContent.trim();
+                    const dateMatch = text.match(/^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$/i);
+                    
+                    if (dateMatch) {
+                        // Look for the next link after this date
+                        let nextElement = node.parentElement;
+                        while (nextElement && nextElement.nextElementSibling) {
+                            nextElement = nextElement.nextElementSibling;
+                            const link = nextElement.querySelector('a') || (nextElement.tagName === 'A' ? nextElement : null);
+                            
+                            if (link) {
+                                const title = link.textContent.trim();
+                                const href = link.href;
+                                
+                                if (title && href && !items.find(i => i.url === href)) {
+                                    items.push({
+                                        title,
+                                        url: href,
+                                        date: text,
+                                        sortDate: new Date(`${dateMatch[3]}-${monthMap[dateMatch[2]]}-${dateMatch[1].padStart(2, '0')}`)
+                                    });
+                                }
+                                break;
+                            }
                         }
-                        
-                        found.push({
-                            title: item.title?.trim(),
-                            headline: item.title?.trim(),
-                            link: item.detailsPage?.absoluteUrl,
-                            url: item.detailsPage?.absoluteUrl,
-                            pubDate: date?.toISOString() || new Date().toISOString(),
-                            publishedDate: date || new Date(),
+                    }
+                }
+            }
+            
+            // Sort by date (newest first) and limit
+            return items
+                .sort((a, b) => b.sortDate - a.sortDate)
+                .slice(0, 20)
+                .map(({ title, url, date }) => ({ title, url, date }));
+        });
+        
+        await browser.close();
+        
+        console.log(`📊 FATF: Found ${newsItems.length} news items`);
+        
+        if (newsItems.length > 0) {
+            const results = [];
+            for (const item of newsItems) {
+                const date = this.parseDate(item.date);
+                
+                // Only include recent items
+                if (this.isRecent(date, source?.recencyDays || 30)) {
+                    // Skip old methodologies and procedures
+                    const skipWords = ['methodology 2013', 'procedure 2013', 'fourth round'];
+                    const shouldSkip = skipWords.some(word => 
+                        item.title.toLowerCase().includes(word)
+                    );
+                    
+                    if (!shouldSkip) {
+                        results.push({
+                            title: item.title,
+                            headline: item.title,
+                            url: item.url,
+                            link: item.url,
+                            publishedDate: date,
                             authority: 'FATF',
-                            source: 'FATF JSON API',
-                            feedType: 'api',
-                            summary: item.summary || item.description || `FATF publication: ${item.title}`,
+                            source: 'FATF News',
+                            feedType: 'web_scraping',
+                            summary: `FATF: ${item.title}`,
                             sectors: ['AML & Financial Crime', 'Banking', 'Compliance']
                         });
                     }
-                } catch (pageError) {
-                    console.warn(`⚠️ FATF JSON page ${page} failed:`, pageError.message);
-                    break;
                 }
             }
             
-            if (found.length > 0) {
-                console.log(`✅ FATF via JSON API: ${found.length} items found`);
-                return found;
+            console.log(`✅ FATF: ${results.length} recent news items within ${source?.recencyDays || 30} days`);
+            
+            if (results.length > 0) {
+                return results;
             }
-            
-            console.log('⚠️ FATF JSON returned 0 items - falling back to HTML scraping');
-            
-        } catch (error) {
-            console.error('⚠️ FATF JSON API failed:', error.message, '- falling back to HTML scraping');
         }
         
-        // Fallback to HTML scraping
-        try {
-            const url = 'https://www.fatf-gafi.org/en/publications.html';
-            const response = await axios.get(url, { 
-                headers: { 
-                    'User-Agent': this.userAgent,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                }, 
-                timeout: 10000 
-            });
-            
-            const $ = cheerio.load(response.data);
-            const articles = [];
-            
-            $('.publication-item, .teaser, .news-item, article').each((i, el) => {
-                if (i >= 20) return false; // Limit to 20 items
-                
-                const $el = $(el);
-                const $link = $el.find('a').first();
-                const title = $link.text().trim() || $el.find('h2, h3, h4').first().text().trim();
-                let href = $link.attr('href') || '';
-                
-                if (!href.startsWith('http')) {
-                    href = new URL(href, url).href;
-                }
-                
-                const dateText = $el.find('time, .date, .publication-date').text().trim();
-                const date = this.parseDate(dateText);
-                
-                // FIXED: Use source.recencyDays instead of hardcoded 30
-                if (title && this.isRecent(date, source?.recencyDays || 30)) {
-                    articles.push({
-                        title: title,
-                        headline: title,
-                        link: href,
-                        url: href,
-                        pubDate: date?.toISOString() || new Date().toISOString(),
-                        publishedDate: date || new Date(),
-                        authority: 'FATF',
-                        source: 'FATF HTML Scraping',
-                        feedType: 'web_scraping',
-                        summary: `FATF publication: ${title}`,
-                        sectors: ['AML & Financial Crime', 'Banking', 'Compliance']
-                    });
-                }
-            });
-            
-            console.log(`📊 FATF via HTML scraping: ${articles.length} items found`);
-            return articles;
-            
-        } catch (htmlError) {
-            console.error('❌ FATF HTML scraping also failed:', htmlError.message);
-            
-            // Ultimate fallback - return a manual entry
-            return [{
-                title: 'FATF Updates Available',
-                headline: 'FATF Updates Available',
-                link: 'https://www.fatf-gafi.org/en/publications.html',
-                url: 'https://www.fatf-gafi.org/en/publications.html',
-                pubDate: new Date().toISOString(),
-                publishedDate: new Date(),
-                authority: 'FATF',
-                source: 'Manual Fallback',
-                feedType: 'manual',
-                summary: 'Please check the FATF website directly for the latest updates on AML/CFT measures.',
-                sectors: ['AML & Financial Crime']
-            }];
+        // Fallback if no news found
+        console.log('⚠️ No news items found, returning manual check notice');
+        return [{
+            title: 'Check FATF Website for Latest Updates',
+            headline: 'Check FATF Website for Latest Updates',
+            url: 'https://www.fatf-gafi.org/en/publications.html',
+            link: 'https://www.fatf-gafi.org/en/publications.html',
+            publishedDate: new Date(),
+            authority: 'FATF',
+            source: 'Manual Check',
+            feedType: 'manual',
+            summary: 'Visit FATF website for latest AML/CFT news and publications.',
+            sectors: ['AML & Financial Crime']
+        }];
+        
+    } catch (error) {
+        console.error('❌ FATF Puppeteer failed:', error.message);
+        
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (e) {
+                console.log('Failed to close browser:', e.message);
+            }
         }
+        
+        return [{
+            title: 'FATF Updates Available',
+            headline: 'FATF Updates Available',
+            url: 'https://www.fatf-gafi.org/en/publications.html',
+            link: 'https://www.fatf-gafi.org/en/publications.html',
+            publishedDate: new Date(),
+            authority: 'FATF',
+            source: 'Manual Fallback',
+            feedType: 'manual',
+            summary: 'Check FATF website for latest AML/CFT updates.',
+            sectors: ['AML & Financial Crime']
+        }];
     }
-
+}
     // UTILITY METHODS
     cleanText(text) {
         if (!text) return '';

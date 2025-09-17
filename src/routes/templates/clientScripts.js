@@ -1,5 +1,22 @@
 // src/routes/templates/clientScripts.js
-// Complete solution with immediate function definitions to prevent errors
+// Complete solution with WorkspaceModule included
+
+const { getWorkspaceModule } = require('./clientModules/workspaceModule');
+
+function getClientScripts() {
+    // Get the workspace module code
+    const workspaceModuleCode = getWorkspaceModule();
+    
+    return `
+    <!-- Include Workspace Module First -->
+    <script>
+        ${workspaceModuleCode}
+    </script>
+    
+    <!-- Then include the rest of the client scripts -->
+    ${getClientScriptsContent()}
+    `;
+}
 
 function getClientScriptsContent() {
     return `
@@ -336,6 +353,11 @@ function getClientScriptsContent() {
             console.log('🚀 Initializing system...');
             
             try {
+                // Initialize WorkspaceModule if it exists
+                if (window.WorkspaceModule && window.WorkspaceModule.init) {
+                    await window.WorkspaceModule.init();
+                }
+                
                 initializeFilters();
                 setupSearchBox();
                 await checkSystemStatus();
@@ -358,6 +380,7 @@ function getClientScriptsContent() {
         
         function filterByCategory(category) {
             console.log('Filtering by category:', category);
+            window.currentFilters = window.currentFilters || {};
             window.currentFilters.category = category;
             window.location.href = \`/dashboard?category=\${category}\`;
         }
@@ -367,6 +390,7 @@ function getClientScriptsContent() {
             if (!authority) {
                 window.location.href = '/dashboard';
             } else {
+                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.authority = authority;
                 window.location.href = \`/dashboard?authority=\${encodeURIComponent(authority)}\`;
             }
@@ -377,6 +401,7 @@ function getClientScriptsContent() {
             if (!sector) {
                 window.location.href = '/dashboard';
             } else {
+                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.sector = sector;
                 window.location.href = \`/dashboard?sector=\${encodeURIComponent(sector)}\`;
             }
@@ -387,6 +412,7 @@ function getClientScriptsContent() {
             if (!level) {
                 window.location.href = '/dashboard';
             } else {
+                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.impact = level;
                 window.location.href = \`/dashboard?impact=\${encodeURIComponent(level)}\`;
             }
@@ -397,6 +423,7 @@ function getClientScriptsContent() {
             if (!range) {
                 window.location.href = '/dashboard';
             } else {
+                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.range = range;
                 window.location.href = \`/dashboard?range=\${range}\`;
             }
@@ -588,8 +615,8 @@ function getClientScriptsContent() {
 // Export all variations for compatibility
 module.exports = { 
     getClientScriptsContent,
-    getCommonClientScripts: getClientScriptsContent,
-    getClientScripts: getClientScriptsContent,
-    getSharedClientScripts: getClientScriptsContent,
-    getCommonScripts: getClientScriptsContent
+    getCommonClientScripts: getClientScripts,
+    getClientScripts: getClientScripts,
+    getSharedClientScripts: getClientScripts,
+    getCommonScripts: getClientScripts
 };

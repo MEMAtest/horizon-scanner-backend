@@ -4,7 +4,15 @@
 const axios = require('axios');
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama3-70b-8192';
+
+// UPDATED: Using currently available Groq models (Sept 2025)
+const PRIMARY_MODEL = 'llama-3.3-70b-versatile'; // Current 70B model
+const FALLBACK_MODELS = [
+    'llama-3.1-8b-instant',       // Fast 8B model
+    'openai/gpt-oss-120b',        // OpenAI's 120B model
+    'qwen/qwen3-32b',             // Qwen 32B model
+    'gemma2-9b-it'                // Gemma 9B as final fallback
+];
 
 const INDUSTRY_SECTORS = [
     'Banking', 'Investment Management', 'Insurance', 'Payment Services', 
@@ -25,16 +33,21 @@ class EnhancedAIAnalyzer {
         this.maxRetries = 3;
         this.retryDelay = 5000;
         this.requestTimeout = 30000;
-        this.lastRequestTime = 0; // Add this
+        this.lastRequestTime = 0;
         this.minRequestInterval = 2000;
         this.cacheExpiry = 6 * 60 * 60 * 1000; // 6 hours
+        
+        // Model management
+        this.currentModel = PRIMARY_MODEL;
+        this.modelFallbackChain = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+        this.modelFailureCount = new Map();
         
         // Initialize caches for performance
         this.weeklyRoundupCache = new Map();
         this.authoritySpotlightCache = new Map();
         this.sectorAnalysisCache = new Map();
         
-        console.log('🤖 Enhanced AI Analyzer initialized');
+        console.log(`🤖 Enhanced AI Analyzer initialized with model: ${PRIMARY_MODEL}`);
     }
 
     // CORE ENHANCED ANALYSIS METHOD
@@ -65,7 +78,7 @@ class EnhancedAIAnalyzer {
             // Add enhanced intelligence fields
             const enhancedAnalysis = await this.addIntelligenceEnhancements(parsedAnalysis, content, url);
             
-            console.log(`✅ Enhanced AI analysis completed successfully`);
+            console.log(`✅ Enhanced AI analysis completed successfully with model: ${this.currentModel}`);
             return enhancedAnalysis;
             
         } catch (error) {
@@ -564,27 +577,30 @@ Ensure accuracy, professionalism, and focus on actionable business intelligence.
         return actions.join('; ');
     }
 
-    // GROQ API REQUEST METHOD
-    async makeGroqRequest(prompt, retryCount = 0) {
+    // UPDATED GROQ API REQUEST METHOD WITH MODEL FALLBACK
+    async makeGroqRequest(prompt, retryCount = 0, modelIndex = 0) {
         if (!this.apiKey) {
             throw new Error('GROQ_API_KEY not configured');
         }
 
-    // Add rate limiting
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-    if (timeSinceLastRequest < this.minRequestInterval) {
-        const waitTime = this.minRequestInterval - timeSinceLastRequest;
-        console.log(`⏳ Rate limiting: waiting ${waitTime}ms`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-    this.lastRequestTime = Date.now();    
+        // Add rate limiting
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        if (timeSinceLastRequest < this.minRequestInterval) {
+            const waitTime = this.minRequestInterval - timeSinceLastRequest;
+            console.log(`⏳ Rate limiting: waiting ${waitTime}ms`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        this.lastRequestTime = Date.now();    
+        
+        // Select model from fallback chain
+        const modelToUse = this.modelFallbackChain[modelIndex] || this.modelFallbackChain[0];
         
         try {
             const response = await axios.post(
                 GROQ_API_URL,
                 {
-                    model: GROQ_MODEL,
+                    model: modelToUse,
                     messages: [
                         {
                             role: 'system',
@@ -607,18 +623,46 @@ Ensure accuracy, professionalism, and focus on actionable business intelligence.
                 }
             );
 
+            // Update current model on success
+            this.currentModel = modelToUse;
+            
+            // Reset failure count for successful model
+            this.modelFailureCount.set(modelToUse, 0);
+            
             return response.data;
 
         } catch (error) {
+            console.error(`❌ Error with model ${modelToUse}:`, error.response?.data?.error || error.message);
+            
+            // Track model failures
+            const failCount = (this.modelFailureCount.get(modelToUse) || 0) + 1;
+            this.modelFailureCount.set(modelToUse, failCount);
+            
+            // Handle specific error types
             if (error.response?.status === 429) {
-            const waitTime = Math.pow(2, retryCount) * 10000; // Exponential backoff: 10s, 20s, 40s
-            console.warn(`⚠️ Rate limited, waiting ${waitTime/1000}s before retry ${retryCount + 1}/${this.maxRetries}`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
+                const waitTime = Math.pow(2, retryCount) * 10000; // Exponential backoff: 10s, 20s, 40s
+                console.warn(`⚠️ Rate limited, waiting ${waitTime/1000}s before retry ${retryCount + 1}/${this.maxRetries}`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            } else if (error.response?.data?.error) {
+                // Check if model is decommissioned or unavailable
+                const errorMessage = typeof error.response.data.error === 'string' 
+                    ? error.response.data.error 
+                    : error.response.data.error.message || JSON.stringify(error.response.data.error);
+                    
+                if (errorMessage.includes('model') || errorMessage.includes('decommissioned')) {
+                    // Model error - try next model in chain
+                    if (modelIndex < this.modelFallbackChain.length - 1) {
+                        console.log(`🔄 Model ${modelToUse} failed, trying fallback model ${this.modelFallbackChain[modelIndex + 1]}`);
+                        return this.makeGroqRequest(prompt, 0, modelIndex + 1); // Reset retry count, increment model index
+                    }
+                }
+            }
+            
+            // Standard retry logic
             if (retryCount < this.maxRetries) {
                 console.warn(`⚠️ AI request failed, retrying (${retryCount + 1}/${this.maxRetries}):`, error.message);
                 await new Promise(resolve => setTimeout(resolve, this.retryDelay * (retryCount + 1)));
-                return this.makeGroqRequest(prompt, retryCount + 1);
+                return this.makeGroqRequest(prompt, retryCount + 1, modelIndex);
             }
             
             throw error;
@@ -871,7 +915,13 @@ Focus on practical business intelligence and actionable insights.`;
             const response = await this.makeGroqRequest(testPrompt);
             
             if (response?.choices?.[0]?.message?.content) {
-                return { status: 'healthy', service: 'ai_analyzer', timestamp: new Date().toISOString() };
+                return { 
+                    status: 'healthy', 
+                    service: 'ai_analyzer', 
+                    currentModel: this.currentModel,
+                    modelChain: this.modelFallbackChain,
+                    timestamp: new Date().toISOString() 
+                };
             } else {
                 return { status: 'unhealthy', reason: 'Invalid API response' };
             }

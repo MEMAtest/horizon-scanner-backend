@@ -300,8 +300,20 @@ class EnhancedDBService {
     }
 
     async saveUpdateJSON(updateData) {
-        const updates = await this.loadJSONData(this.updatesFile);
-        const newId = Math.max(0, ...updates.map(u => u.id || 0)) + 1;
+    try {
+        // Ensure we always get an array from loadJSONData
+        let updates = await this.loadJSONData(this.updatesFile);
+        
+        // Critical fix: ensure updates is always an array
+        if (!Array.isArray(updates)) {
+            console.log('⚠️ Updates was not an array, initializing as empty array');
+            updates = [];
+        }
+        
+        // Generate new ID
+        const newId = updates.length > 0 
+            ? Math.max(...updates.map(u => u.id || 0)) + 1 
+            : 1;
         
         const update = {
             id: newId,
@@ -321,10 +333,13 @@ class EnhancedDBService {
         
         updates.push(update);
         await this.saveJSONData(this.updatesFile, updates);
-        
         console.log(`✅ Update saved to JSON with ID: ${newId}`);
         return newId;
+    } catch (error) {
+        console.error('❌ Error in saveUpdateJSON:', error);
+        throw error;
     }
+}
 
     async getEnhancedUpdates(filters = {}) {
         try {
@@ -1012,14 +1027,29 @@ class EnhancedDBService {
 
     // JSON FILE UTILITIES
     async loadJSONData(filePath) {
-        try {
-            const data = await fs.readFile(filePath, 'utf8');
-            return JSON.parse(data);
-        } catch (error) {
-            console.warn(`⚠️ Error loading JSON from ${filePath}:`, error.message);
+    try {
+        const data = await fs.readFile(filePath, 'utf-8');
+        const parsed = JSON.parse(data);
+        
+        // Always return an array
+        if (!Array.isArray(parsed)) {
+            console.log(`⚠️ JSON file ${filePath} didn't contain an array, returning empty array`);
+            return [];
+        }
+        
+        return parsed;
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // File doesn't exist, return empty array
+            console.log(`📝 Creating new JSON file: ${filePath}`);
+            return [];
+        } else {
+            console.error(`❌ Error loading JSON data from ${filePath}:`, error);
+            // Return empty array as fallback
             return [];
         }
     }
+}
 
     async saveJSONData(filePath, data) {
         try {
@@ -1105,6 +1135,71 @@ class EnhancedDBService {
             return null;
         }
     }
+
+    // Add after getSavedSearches() method (around line 1580)
+    async saveSearch(searchName, filterParams) {
+        await this.initializeDatabase();
+        
+        const search = {
+            id: Date.now(),
+            search_name: searchName,
+            filter_params: filterParams,
+            created_date: new Date().toISOString()
+        };
+        
+        if (!this.fallbackMode) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    INSERT INTO saved_searches (search_name, filter_params, created_date)
+                    VALUES ($1, $2, $3) RETURNING id
+                `, [searchName, JSON.stringify(filterParams), search.created_date]);
+                search.id = result.rows[0].id;
+                return search;
+            } finally {
+                client.release();
+            }
+        } else {
+            const data = await fs.readFile(this.workspaceFile, 'utf8').catch(() => '{}');
+            const workspace = JSON.parse(data);
+            workspace.savedSearches = workspace.savedSearches || [];
+            workspace.savedSearches.push(search);
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            return search;
+        }
+    }
+
+    // In src/services/dbService.js, search for one of these patterns:
+// - "saveUpdate"
+// - "async save"
+// - "async get"
+// Then add deleteUpdate near those methods
+
+async deleteUpdate(id) {
+    if (this.fallbackMode) {
+        // JSON mode - use the actual methods from your dbService
+        const updates = await this.loadJSONData(this.updatesFile);
+        const index = updates.findIndex(u => u.id === id);
+        if (index !== -1) {
+            updates.splice(index, 1);
+            await this.saveJSONData(this.updatesFile, updates);
+            console.log(`✅ Deleted update with ID ${id} from JSON`);
+            return true;
+        }
+        return false;
+    } else {
+        // PostgreSQL mode
+        const client = await this.pool.connect();
+        try {
+            const query = 'DELETE FROM regulatory_updates WHERE id = $1';
+            await client.query(query, [id]);
+            console.log(`✅ Deleted update with ID ${id} from PostgreSQL`);
+            return true;
+        } finally {
+            client.release();
+        }
+    }
+}
 
     async deleteSavedSearch(searchId) {
         await this.initialize();
@@ -1335,6 +1430,70 @@ class EnhancedDBService {
             return [];
         }
     }
+
+    // Add this after getPinnedItems() method (around line 1680)
+    async addPinnedItem(url, title, notes = '', authority = '') {
+        await this.initializeDatabase(); // FIX: Not this.initialize()
+        
+        const pinnedItem = {
+            id: Date.now(),
+            update_url: url,
+            update_title: title,
+            update_authority: authority,
+            notes: notes,
+            pinned_date: new Date().toISOString()
+        };
+        
+        if (!this.fallbackMode) { // FIX: Not this.usePostgres
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(`
+                    INSERT INTO pinned_items (update_url, update_title, notes, pinned_date)
+                    VALUES ($1, $2, $3, $4) RETURNING id
+                `, [url, title, notes, pinnedItem.pinned_date]);
+                pinnedItem.id = result.rows[0].id;
+                return pinnedItem;
+            } finally {
+                client.release();
+            }
+        } else {
+            // JSON fallback
+            const data = await fs.readFile(this.workspaceFile, 'utf8').catch(() => '{}');
+            const workspace = JSON.parse(data);
+            workspace.pinnedItems = workspace.pinnedItems || [];
+            workspace.pinnedItems.push(pinnedItem);
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            return pinnedItem;
+        }
+    }
+
+    async removePinnedItem(url) {
+        await this.initializeDatabase(); // FIX: Not this.initialize()
+        
+        if (!this.fallbackMode) {
+            const client = await this.pool.connect();
+            try {
+                const result = await client.query(
+                    'DELETE FROM pinned_items WHERE update_url = $1', 
+                    [url]
+                );
+                return result.rowCount > 0;
+            } finally {
+                client.release();
+            }
+        } else {
+            // JSON fallback
+            const data = await fs.readFile(this.workspaceFile, 'utf8').catch(() => '{}');
+            const workspace = JSON.parse(data);
+            const initialLength = (workspace.pinnedItems || []).length;
+            workspace.pinnedItems = (workspace.pinnedItems || []).filter(
+                item => item.update_url !== url
+            );
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            return workspace.pinnedItems.length < initialLength;
+        }
+    }
+
 
     async updatePinnedItemNotes(updateUrl, notes) {
         await this.initialize();

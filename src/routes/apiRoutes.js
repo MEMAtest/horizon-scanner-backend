@@ -1,10 +1,14 @@
-// Enhanced API Routes - Phase 1
+// Enhanced API Routes - Phase 1 + Phase 1.3 Workspace Features
 // File: src/routes/apiRoutes.js
 
 const express = require('express');
 const router = express.Router();
 const dbService = require('../services/dbService');
 const aiAnalyzer = require('../services/aiAnalyzer');
+const weeklyRoundupRoutes = require('./weeklyRoundup');
+const relevanceService = require('../services/relevanceService');
+
+router.use('/', weeklyRoundupRoutes);
 
 // ENHANCED UPDATES ENDPOINTS
 router.get('/updates', async (req, res) => {
@@ -30,7 +34,8 @@ router.get('/updates', async (req, res) => {
             filters,
             timestamp: new Date().toISOString()
         });
-        
+    
+
     } catch (error) {
         console.error('❌ API Error getting updates:', error);
         res.status(500).json({
@@ -63,6 +68,52 @@ router.get('/updates/counts', async (req, res) => {
             highImpact: 0,
             today: 0,
             thisWeek: 0
+        });
+    }
+});
+
+// =================================================================
+// 🆕 PHASE 1.3 - RELEVANCE-BASED UPDATES ENDPOINT
+// =================================================================
+
+router.get('/updates/relevant', async (req, res) => {
+    try {
+        console.log('🎯 API: Getting relevance-scored updates');
+        
+        // Get firm profile
+        const firmProfile = await dbService.getFirmProfile();
+        
+        // Get updates with filters
+        const filters = {
+            limit: parseInt(req.query.limit) || 100,
+            ...req.query
+        };
+        const updates = await dbService.getEnhancedUpdates(filters);
+        
+        // Apply relevance scoring and categorization
+        const categorized = relevanceService.categorizeByRelevance(updates, firmProfile);
+        
+        res.json({
+            success: true,
+            firmProfile: firmProfile ? {
+                firmName: firmProfile.firmName || firmProfile.firm_name,
+                primarySectors: firmProfile.primarySectors || firmProfile.primary_sectors
+            } : null,
+            high: categorized.high,
+            medium: categorized.medium,
+            low: categorized.low,
+            totalUpdates: updates.length,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error getting relevant updates:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            high: [],
+            medium: [],
+            low: []
         });
     }
 });
@@ -116,6 +167,11 @@ router.get('/live-counts', async (req, res) => {
         
         const counts = await dbService.getUpdateCounts();
         
+        // Get workspace counts for Phase 1.3
+        const pinnedItems = await dbService.getPinnedItems();
+        const savedSearches = await dbService.getSavedSearches();
+        const customAlerts = await dbService.getCustomAlerts();
+        
         // Ensure all expected fields are present for the sidebar
         const response = {
             success: true,
@@ -125,7 +181,11 @@ router.get('/live-counts', async (req, res) => {
             todayChange: counts.todayChange || 0,
             thisWeek: counts.thisWeek || 0,
             unread: counts.unread || 0,
-            activeSources: counts.activeSources || 12, // Default to 12 if not available
+            activeSources: counts.activeSources || 12,
+            // Phase 1.3 workspace counts
+            pinnedItems: pinnedItems.length,
+            savedSearches: savedSearches.length,
+            activeAlerts: customAlerts.filter(a => a.isActive).length,
             timestamp: new Date().toISOString()
         };
         
@@ -145,12 +205,490 @@ router.get('/live-counts', async (req, res) => {
             thisWeek: 0,
             unread: 0,
             activeSources: 0,
+            pinnedItems: 0,
+            savedSearches: 0,
+            activeAlerts: 0,
             timestamp: new Date().toISOString()
         });
     }
 });
 
-// AI INTELLIGENCE ENDPOINTS
+// =================================================================
+// 🆕 PHASE 1.3 - FIRM PROFILE MANAGEMENT ENDPOINTS
+// =================================================================
+
+router.get('/firm-profile', async (req, res) => {
+    try {
+        console.log('🏢 API: Getting firm profile');
+        
+        const profile = await dbService.getFirmProfile();
+        
+        res.json({
+            success: true,
+            profile: profile,
+            hasProfile: !!profile,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error getting firm profile:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            profile: null
+        });
+    }
+});
+
+router.post('/firm-profile', async (req, res) => {
+    try {
+        console.log('🏢 API: Saving firm profile', req.body);
+        
+        const profileData = {
+            firmName: req.body.firmName || req.body.firm_name,
+            primarySectors: req.body.primarySectors || req.body.primary_sectors || [],
+            firmSize: req.body.firmSize || req.body.firm_size || 'Medium',
+            isActive: true
+        };
+        
+        const savedProfile = await dbService.saveFirmProfile(profileData);
+        
+        // Invalidate relevance cache
+        relevanceService.invalidateProfileCache();
+        
+        res.json({
+            success: true,
+            message: 'Firm profile saved successfully',
+            profile: savedProfile,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error saving firm profile:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.delete('/firm-profile', async (req, res) => {
+    try {
+        console.log('🏢 API: Clearing firm profile');
+        
+        await dbService.clearFirmProfile();
+        relevanceService.invalidateProfileCache();
+        
+        res.json({
+            success: true,
+            message: 'Firm profile cleared successfully',
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error clearing firm profile:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// =================================================================
+// 🆕 PHASE 1.3 - WORKSPACE MANAGEMENT: PINNED ITEMS
+// =================================================================
+
+router.get('/workspace/pinned', async (req, res) => {
+    try {
+        console.log('📌 API: Getting pinned items');
+        
+        const items = await dbService.getPinnedItems();
+        
+        res.json({
+            success: true,
+            items: items,
+            count: items.length,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error getting pinned items:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            items: []
+        });
+    }
+});
+
+router.post('/workspace/pin', async (req, res) => {
+    try {
+        console.log('📌 API: Pinning update', req.body);
+        
+        const { url, title, authority, notes } = req.body;
+        
+        if (!url || !title) {
+            return res.status(400).json({
+                success: false,
+                error: 'URL and title are required'
+            });
+        }
+        
+        const result = await dbService.addPinnedItem(url, title, notes, authority);
+        
+        res.json({
+            success: true,
+            message: 'Update pinned successfully',
+            item: result,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error pinning update:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.delete('/workspace/pin/:url', async (req, res) => {
+    try {
+        const url = decodeURIComponent(req.params.url);
+        console.log('📌 API: Unpinning update', url);
+        
+        const success = await dbService.removePinnedItem(url);
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: 'Update unpinned successfully',
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Pinned item not found'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ API Error unpinning update:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.put('/workspace/pin/:url/notes', async (req, res) => {
+    try {
+        const url = decodeURIComponent(req.params.url);
+        const { notes } = req.body;
+        
+        console.log('📝 API: Updating pinned item notes', url);
+        
+        const success = await dbService.updatePinnedItemNotes(url, notes);
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: 'Notes updated successfully',
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Pinned item not found'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ API Error updating notes:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// =================================================================
+// 🆕 PHASE 1.3 - WORKSPACE MANAGEMENT: SAVED SEARCHES
+// =================================================================
+
+router.get('/workspace/searches', async (req, res) => {
+    try {
+        console.log('🔍 API: Getting saved searches');
+        
+        const searches = await dbService.getSavedSearches();
+        
+        res.json({
+            success: true,
+            searches: searches,
+            count: searches.length,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error getting saved searches:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            searches: []
+        });
+    }
+});
+
+router.post('/workspace/search', async (req, res) => {
+    try {
+        console.log('🔍 API: Saving search', req.body);
+        
+        const { searchName, filterParams } = req.body;
+        
+        if (!searchName) {
+            return res.status(400).json({
+                success: false,
+                error: 'Search name is required'
+            });
+        }
+        
+        const savedSearch = await dbService.saveSearch(searchName, filterParams || {});
+        
+        res.json({
+            success: true,
+            message: 'Search saved successfully',
+            search: savedSearch,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error saving search:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.get('/workspace/search/:id', async (req, res) => {
+    try {
+        const searchId = req.params.id;
+        console.log('🔍 API: Getting saved search', searchId);
+        
+        const search = await dbService.getSavedSearch(searchId);
+        
+        if (search) {
+            res.json({
+                success: true,
+                search: search,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Saved search not found'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ API Error getting saved search:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.delete('/workspace/search/:id', async (req, res) => {
+    try {
+        const searchId = req.params.id;
+        console.log('🔍 API: Deleting saved search', searchId);
+        
+        const success = await dbService.deleteSavedSearch(searchId);
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: 'Search deleted successfully',
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Saved search not found'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ API Error deleting search:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// =================================================================
+// 🆕 PHASE 1.3 - WORKSPACE MANAGEMENT: CUSTOM ALERTS
+// =================================================================
+
+router.get('/workspace/alerts', async (req, res) => {
+    try {
+        console.log('🚨 API: Getting custom alerts');
+        
+        const alerts = await dbService.getCustomAlerts();
+        
+        res.json({
+            success: true,
+            alerts: alerts,
+            count: alerts.length,
+            activeCount: alerts.filter(a => a.isActive).length,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error getting alerts:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            alerts: []
+        });
+    }
+});
+
+router.post('/workspace/alert', async (req, res) => {
+    try {
+        console.log('🚨 API: Creating custom alert', req.body);
+        
+        const { alertName, alertConditions } = req.body;
+        
+        if (!alertName) {
+            return res.status(400).json({
+                success: false,
+                error: 'Alert name is required'
+            });
+        }
+        
+        const alert = await dbService.createCustomAlert(alertName, alertConditions || {});
+        
+        res.json({
+            success: true,
+            message: 'Alert created successfully',
+            alert: alert,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error creating alert:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.put('/workspace/alert/:id', async (req, res) => {
+    try {
+        const alertId = req.params.id;
+        const { isActive } = req.body;
+        
+        console.log(`🚨 API: Updating alert ${alertId} status to ${isActive}`);
+        
+        const success = await dbService.updateAlertStatus(alertId, isActive);
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: `Alert ${isActive ? 'activated' : 'deactivated'} successfully`,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Alert not found'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ API Error updating alert:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+router.delete('/workspace/alert/:id', async (req, res) => {
+    try {
+        const alertId = req.params.id;
+        console.log('🚨 API: Deleting alert', alertId);
+        
+        const success = await dbService.deleteCustomAlert(alertId);
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: 'Alert deleted successfully',
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Alert not found'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ API Error deleting alert:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// =================================================================
+// 🆕 PHASE 1.3 - WORKSPACE STATS ENDPOINT
+// =================================================================
+
+router.get('/workspace/stats', async (req, res) => {
+    try {
+        console.log('📊 API: Getting workspace statistics');
+        
+        const pinnedItems = await dbService.getPinnedItems();
+        const savedSearches = await dbService.getSavedSearches();
+        const customAlerts = await dbService.getCustomAlerts();
+        const firmProfile = await dbService.getFirmProfile();
+        
+        res.json({
+            success: true,
+            stats: {
+                pinnedItems: pinnedItems.length,
+                savedSearches: savedSearches.length,
+                customAlerts: customAlerts.length,
+                activeAlerts: customAlerts.filter(a => a.isActive).length,
+                hasFirmProfile: !!firmProfile
+            },
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ API Error getting workspace stats:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stats: {
+                pinnedItems: 0,
+                savedSearches: 0,
+                customAlerts: 0,
+                activeAlerts: 0,
+                hasFirmProfile: false
+            }
+        });
+    }
+});
+
+// AI INTELLIGENCE ENDPOINTS (existing code continues below...)
 router.get('/ai/insights', async (req, res) => {
     try {
         console.log('🧠 API: Getting AI insights');
@@ -507,10 +1045,6 @@ router.get('/status', async (req, res) => {
     }
 });
 
-// =================================================================
-// 🆕 CRITICAL MISSING ENDPOINTS - ADD THESE HERE
-// =================================================================
-
 // System status endpoint (different from /status - frontend expects this exact endpoint)
 router.get('/system-status', async (req, res) => {
     try {
@@ -610,10 +1144,6 @@ router.get('/refresh-status', async (req, res) => {
         });
     }
 });
-
-// =================================================================
-// END OF CRITICAL MISSING ENDPOINTS
-// =================================================================
 
 // Weekly Roundup endpoint (404 fix)
 router.get('/weekly-roundup', async (req, res) => {
@@ -860,28 +1390,6 @@ router.post('/analytics/refresh', async (req, res) => {
     }
 });
 
-// Workspace endpoints (for workspace functions)
-router.get('/workspace/stats', async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            stats: {
-                pinnedItems: 0,
-                savedSearches: 0,
-                activeAlerts: 0
-            }
-        });
-        
-    } catch (error) {
-        console.error('Workspace stats error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get workspace stats',
-            details: error.message
-        });
-    }
-});
-
 // Filter endpoints for sidebar functions
 router.get('/updates/category/:category', async (req, res) => {
     try {
@@ -1083,26 +1591,6 @@ router.post('/alerts', async (req, res) => {
     }
 });
 
-router.post('/firm-profile', async (req, res) => {
-    try {
-        const profile = req.body;
-        
-        res.json({
-            success: true,
-            message: 'Firm profile saved successfully',
-            profile: profile
-        });
-        
-    } catch (error) {
-        console.error('Firm profile error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to save firm profile',
-            details: error.message
-        });
-    }
-});
-
 // ADD THE SEARCH ENDPOINT HERE:
 router.get('/search', async (req, res) => {
     try {
@@ -1154,7 +1642,8 @@ router.get('/test', async (req, res) => {
                 'Weekly AI Roundups',
                 'Trend Analysis',
                 'Early Warning System (Phase 1.2)',
-                'Proactive Intelligence'
+                'Proactive Intelligence',
+                'Phase 1.3 Workspace Management'
             ]
         });
         
@@ -1167,7 +1656,7 @@ router.get('/test', async (req, res) => {
     }
 });
 
-// HELPER FUNCTIONS FOR AI ANALYSIS
+// HELPER FUNCTIONS FOR AI ANALYSIS (existing helper functions continue below...)
 async function generateAuthoritySpotlight(authority, updates) {
     console.log(`🏛️ Generating spotlight analysis for ${authority}`);
     

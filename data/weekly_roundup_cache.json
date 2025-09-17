@@ -1,0 +1,401 @@
+{
+  "success": true,
+  "roundup": {
+    "weekSummary": "340 regulatory updates published this week across 11 authorities. 42 high-impact items requiring immediate attention.",
+    "keyThemes": [
+      "consumer protection",
+      "competition law",
+      "competition law and policy"
+    ],
+    "topAuthorities": [
+      {
+        "authority": "HM Government",
+        "updateCount": 99,
+        "focusArea": "Policy and legislation"
+      },
+      {
+        "authority": "HMRC",
+        "updateCount": 61,
+        "focusArea": "Tax and customs"
+      },
+      {
+        "authority": "FCA",
+        "updateCount": 44,
+        "focusArea": "Consumer protection, market integrity"
+      },
+      {
+        "authority": "HM Treasury",
+        "updateCount": 39,
+        "focusArea": "Economic policy, financial services"
+      },
+      {
+        "authority": "Bank of England",
+        "updateCount": 35,
+        "focusArea": "Monetary policy, systemic risk"
+      }
+    ],
+    "highImpactUpdates": [
+      {
+        "id": 78,
+        "title": "UK tightens Oil Price Cap in blow to Putin's war machine",
+        "authority": "HM Treasury",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The UK and EU's decision to lower the crude Oil Price Cap will likely disrupt the global energy market, affecting firms involved in oil trade and financing. This move aims to limit Russia's revenue from oil exports, but may also impact energy prices and availability.",
+        "url": "https://www.gov.uk/government/news/uk-tightens-oil-price-cap-in-blow-to-putins-war-machine",
+        "publishedDate": "2025-07-18T00:00:00.000Z",
+        "sectors": [
+          "Energy",
+          "Banking",
+          "Insurance",
+          "Capital Markets"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:high",
+          "sector:energy",
+          "sector:banking",
+          "sector:insurance",
+          "sector:capital-markets",
+          "area:sanctions-and-trade-restrictions"
+        ]
+      },
+      {
+        "id": 115,
+        "title": "UK sanctions Russian spies at the heart of Putin’s malicious regime",
+        "authority": "HM Government",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The UK has imposed sanctions on Russian spies, which may impact financial institutions' dealings with Russian entities and individuals. Firms must ensure compliance with the sanctions to avoid legal and reputational risks.",
+        "url": "https://www.gov.uk/government/news/uk-sanctions-russian-spies-at-the-heart-of-putins-malicious-regime",
+        "publishedDate": "2025-07-17T23:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Insurance",
+          "Payment Services",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:high",
+          "sector:banking",
+          "sector:investment-management",
+          "sector:insurance",
+          "sector:payment-services",
+          "area:sanctions-and-embargoes"
+        ]
+      },
+      {
+        "id": 82,
+        "title": "Engines of AI primed to accelerate new breakthroughs, economic growth, and transform the UK into an AI maker",
+        "authority": "HM Treasury",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The UK government's Compute Roadmap aims to harness AI to drive economic growth and transform the UK into an AI leader. This initiative may lead to new business opportunities and investments in AI technology, but also raises concerns about data privacy, security, and regulatory oversight.",
+        "url": "https://www.gov.uk/government/news/engines-of-ai-primed-to-accelerate-new-breakthroughs-economic-growth-and-transform-the-uk-into-an-ai-maker",
+        "publishedDate": "2025-07-17T00:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
+          "Insurance",
+          "Payment Services"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:fintech",
+          "sector:payment-services",
+          "sector:insurance",
+          "sector:banking",
+          "area:artificial-intelligence"
+        ]
+      },
+      {
+        "id": 88,
+        "title": "Reeves to cut financial red tape to boost homeownership",
+        "authority": "HM Treasury",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The UK government's plan to reduce financial regulation will simplify the mortgage application process, increasing homeownership and putting more money into people's pockets. This reform is expected to benefit consumers and lenders alike, with potential cost savings and increased competition in the mortgage market.",
+        "url": "https://www.gov.uk/government/news/reeves-to-cut-financial-red-tape-to-boost-homeownership",
+        "publishedDate": "2025-07-15T00:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Consumer Credit",
+          "Real Estate Finance"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:real-estate-finance",
+          "sector:banking",
+          "sector:consumer-credit",
+          "area:financial-regulation-reform"
+        ]
+      },
+      {
+        "id": 86,
+        "title": "Leeds Reforms to rewire financial system, boost investment and create skilled jobs across UK",
+        "authority": "HM Treasury",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The Leeds Reforms aim to rewire the UK's financial system, cutting red tape and supporting savers to invest, leading to increased investment and creation of skilled jobs across the UK. This reform is expected to have a significant impact on the financial services industry, with practical implications for firms operating in the UK.",
+        "url": "https://www.gov.uk/government/news/leeds-reforms-to-rewire-financial-system-boost-investment-and-create-skilled-jobs-across-uk",
+        "publishedDate": "2025-07-15T00:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Capital Markets",
+          "Corporate Finance",
+          "Wealth Management",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:banking",
+          "sector:investment-management",
+          "sector:capital-markets",
+          "sector:wealth-management",
+          "sector:corporate-finance",
+          "area:financial-services-regulation"
+        ]
+      },
+      {
+        "id": 85,
+        "title": "Rachel Reeves Mansion House 2025 speech",
+        "authority": "HM Treasury",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "Chancellor Rachel Reeves' Mansion House speech sets out a vision for the UK's financial services sector, emphasizing competitiveness, innovation, and consumer protection. The speech hints at potential reforms to the regulatory framework, which may impact firms' business models and operations.",
+        "url": "https://www.gov.uk/government/speeches/rachel-reeves-mansion-house-2025-speech",
+        "publishedDate": "2025-07-15T00:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
+          "Insurance",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:banking",
+          "sector:investment-management",
+          "sector:insurance",
+          "sector:fintech",
+          "sector:capital-markets",
+          "area:financial-services-regulation"
+        ]
+      },
+      {
+        "id": 93,
+        "title": "Recommendations for the Financial Conduct Authority: November 2024",
+        "authority": "HM Treasury",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The Chancellor's letter outlines key priorities for the FCA, focusing on consumer protection, financial stability, and innovation. Firms should review their compliance frameworks to ensure alignment with the FCA's revised priorities.",
+        "url": "https://www.gov.uk/government/publications/recommendations-for-the-financial-conduct-authority-november-2024",
+        "publishedDate": "2025-07-10T00:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
+          "Insurance",
+          "Capital Markets",
+          "Consumer Credit",
+          "Payment Services",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:banking",
+          "sector:investment-management",
+          "sector:insurance",
+          "sector:payment-services",
+          "sector:fintech",
+          "sector:consumer-credit",
+          "sector:capital-markets",
+          "area:financial-conduct-authority-(fca)-regulatory-priorities"
+        ]
+      },
+      {
+        "id": 60,
+        "title": "FCA Publishes Final Rules on Consumer Duty Implementation",
+        "authority": "FCA",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The FCA's final rules on Consumer Duty require firms to demonstrate good outcomes for retail customers, impacting business operations, product design, and customer interactions. Firms must ensure they can evidence good customer outcomes, potentially leading to changes in product development, sales practices, and customer service.",
+        "url": "https://www.fca.org.uk/news/consumer-duty-final-rules-2024",
+        "publishedDate": "2025-07-02T10:59:21.626Z",
+        "sectors": [
+          "Banking",
+          "Insurance",
+          "Consumer Credit",
+          "Wealth Management",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:high",
+          "sector:banking",
+          "sector:insurance",
+          "sector:investment-management",
+          "sector:consumer-credit",
+          "sector:wealth-management",
+          "type:final-rule",
+          "area:consumer-protection"
+        ]
+      },
+      {
+        "id": 62,
+        "title": "PRA Consultation on AI Governance in Banking",
+        "authority": "PRA",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The PRA's consultation on AI governance frameworks for banks and building societies may lead to new requirements for AI risk management, governance, and oversight, potentially impacting operational efficiency and risk profiles.",
+        "url": "https://www.bankofengland.co.uk/prudential-regulation/consultation-ai-governance",
+        "publishedDate": "2025-07-02T04:59:21.626Z",
+        "sectors": [
+          "Banking",
+          "Building Societies"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:banking",
+          "sector:building-societies",
+          "type:consultation",
+          "area:artificial-intelligence-governance"
+        ]
+      },
+      {
+        "id": 52,
+        "title": "Regulatory Innovation Office to help streamline regulation, helping UK’s world-leading fintech sector",
+        "authority": "HM Government",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The Regulatory Innovation Office aims to streamline regulation, reducing red tape and supporting fintech innovation, aligning with the government's Plan for Change. This initiative will facilitate growth in the UK's fintech sector, enhancing its global competitiveness.",
+        "url": "https://www.gov.uk/government/news/regulatory-innovation-office-to-help-streamline-regulation-helping-uks-world-leading-fintech-sector",
+        "publishedDate": "2025-07-01T11:00:02.000Z",
+        "sectors": [
+          "Fintech",
+          "RegTech",
+          "Payment Services"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:fintech",
+          "sector:payment-services",
+          "sector:regtech",
+          "area:fintech-regulation"
+        ]
+      }
+    ],
+    "sectorInsights": {
+      "Banking": "34 updates affecting Banking, 31 with significant impact. Key authorities: HM Government, HM Treasury, FCA",
+      "Real Estate Finance": "28 updates affecting Real Estate Finance, 21 with significant impact. Key authorities: HM Government, HM Treasury, Competition and Markets Authority",
+      "Investment Management": "25 updates affecting Investment Management, 21 with significant impact. Key authorities: HM Treasury, HM Government, FCA"
+    },
+    "upcomingDeadlines": [],
+    "weeklyPriorities": [
+      "**Conduct a sanctions compliance review**: Ensure that your firm is compliant with the latest UK sanctions on Russian entities and individuals, including the newly imposed sanctions on Russian spies. Review your customer base, transactions, and dealings with Russian entities to mitigate legal and reputational risks.",
+      "**Assess energy market exposure**: Evaluate your firm's exposure to the global energy market, particularly in relation to oil trade and financing. Consider the potential impact of the lowered crude Oil Price Cap on your business, including potential disruptions to energy prices and availability, and develop strategies to mitigate any adverse effects.",
+      "**Explore AI investment opportunities**: Consider the potential benefits and risks of investing in AI technology, as outlined in the UK government's Compute Roadmap. Identify areas where AI can drive business growth and improve operations, while also addressing concerns around data privacy, security, and regulatory oversight.",
+      "**Review mortgage application processes**: Prepare for the simplification of the mortgage application process, as part of the UK government's plan to reduce financial regulation. Review your current processes and consider how you can benefit from the expected cost savings and increased competition in the mortgage market.",
+      "**Engage with the Leeds Reforms**: Stay informed about the Leeds Reforms and their potential impact on the UK's financial system. Consider how your firm can support savers to invest and contribute to the creation of skilled jobs across the UK, while also navigating the changes to the financial services industry and ensuring compliance with any new regulatory requirements."
+    ],
+    "statistics": {
+      "authorityBreakdown": {
+        "HM Government": 99,
+        "HMRC": 61,
+        "FCA": 44,
+        "HM Treasury": 39,
+        "Bank of England": 35,
+        "Competition and Markets Authority": 28,
+        "ESMA": 16,
+        "FSB": 14,
+        "SFO": 2,
+        "FATF": 1,
+        "PRA": 1
+      },
+      "sectorBreakdown": {
+        "Infrastructure": 5,
+        "Transportation": 1,
+        "Insurance": 20,
+        "Healthcare": 6,
+        "Agriculture": 1,
+        "Food Production": 1,
+        "Banking": 34,
+        "Fintech": 24,
+        "Payment Services": 24,
+        "Manufacturing": 2,
+        "Export-oriented industries": 1,
+        "Financial Services": 2,
+        "Travel and Tourism": 2,
+        "Logistics and Transportation": 1,
+        "Government": 1,
+        "Consumer Credit": 16,
+        "Real Estate Finance": 28,
+        "RegTech": 3,
+        "Corporate Finance": 18,
+        "Capital Markets": 9,
+        "Investment Management": 25,
+        "Energy": 4,
+        "Infrastructure and Construction": 1,
+        "Public Sector": 2,
+        "Government Agencies": 2,
+        "Pension Funds": 2,
+        "Wealth Management": 5,
+        "Sustainable Finance": 1,
+        "Water Services": 1,
+        "Building Societies": 1,
+        "Hedge Funds": 1,
+        "Private Equity": 3,
+        "Credit Unions": 1,
+        "Fuel Retail": 1,
+        "Logistics": 2,
+        "E-commerce": 3,
+        "Construction": 1,
+        "Retail": 2,
+        "Public Finance": 1,
+        "Digital Marketplaces": 1,
+        "Retail Banking": 1,
+        "Renewable Energy": 1,
+        "Water Industry": 1,
+        "Pharmaceuticals": 1,
+        "Oilfield Services": 1,
+        "Chemical Solutions": 1,
+        "Aerospace": 1
+      },
+      "impactBreakdown": {
+        "Significant": 31,
+        "Moderate": 40,
+        "Informational": 269
+      },
+      "avgImpactScore": 2
+    },
+    "totalUpdates": 340,
+    "weekStart": "2025-09-10",
+    "weekEnd": "2025-09-17",
+    "generatedAt": "2025-09-17T10:07:11.858Z",
+    "dataQuality": {
+      "aiGenerated": true,
+      "confidence": 0.87,
+      "sourceCount": 340,
+      "aiCoverage": 1,
+      "completeness": 0.34411764705882353
+    }
+  },
+  "sourceUpdates": 340,
+  "timestamp": "2025-09-17T10:07:11.858Z"
+}

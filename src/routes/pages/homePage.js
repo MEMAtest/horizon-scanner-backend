@@ -423,6 +423,211 @@ async function renderHomePage(req, res) {
             </style>
         </head>
         <body>
+         <!-- Firm Profile Modal -->
+            <div id="firmProfileModal" class="modal-overlay" style="display:none;">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>Firm Profile Settings</h3>
+                        <button onclick="closeFirmProfileModal()" class="close-btn">×</button>
+                    </div>
+                    <div class="modal-content">
+                        <form id="firmProfileForm">
+                            <div class="form-group">
+                                <label>Firm Name:</label>
+                                <input type="text" id="firmNameInput" class="form-input" placeholder="Enter your firm name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Firm Size:</label>
+                                <select id="firmSizeInput" class="form-input">
+                                    <option value="Small">Small</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="Large">Large</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Primary Sectors (select up to 3):</label>
+                                <div id="sectorGrid" class="sectors-grid"></div>
+                            </div>
+                            <div id="messageContainer"></div>
+                            <button type="submit" id="saveProfileBtn" class="btn btn-primary">Save Profile</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add modal styles -->
+            <style>
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                }
+                
+                .modal {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 0;
+                    max-width: 600px;
+                    width: 90%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                }
+                
+                .modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 20px 30px;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                
+                .modal-header h3 {
+                    margin: 0;
+                    font-size: 1.5rem;
+                    color: #1f2937;
+                }
+                
+                .close-btn {
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    color: #6b7280;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 4px;
+                    transition: background-color 0.2s;
+                }
+                
+                .close-btn:hover {
+                    background-color: #f3f4f6;
+                    color: #1f2937;
+                }
+                
+                .modal-content {
+                    padding: 30px;
+                }
+                
+                .form-group {
+                    margin-bottom: 25px;
+                }
+                
+                .form-group label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 500;
+                    color: #374151;
+                }
+                
+                .form-input {
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 1rem;
+                    transition: border-color 0.2s;
+                }
+                
+                .form-input:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+                
+                .sectors-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                    margin-top: 10px;
+                }
+                
+                .sector-checkbox {
+                    padding: 10px;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .sector-checkbox:hover {
+                    background-color: #f9fafb;
+                }
+                
+                .sector-checkbox.selected {
+                    background-color: #eef2ff;
+                    border-color: #4f46e5;
+                }
+                
+                .sector-checkbox input {
+                    margin-right: 8px;
+                }
+                
+                .sector-checkbox label {
+                    cursor: pointer;
+                    margin-bottom: 0;
+                    font-weight: normal;
+                }
+                
+                #messageContainer {
+                    margin-top: 15px;
+                    padding: 10px;
+                    border-radius: 6px;
+                    display: none;
+                }
+                
+                #messageContainer.error {
+                    background-color: #fef2f2;
+                    color: #dc2626;
+                    border: 1px solid #fecaca;
+                    display: block;
+                }
+                
+                #messageContainer.success {
+                    background-color: #f0fdf4;
+                    color: #16a34a;
+                    border: 1px solid #bbf7d0;
+                    display: block;
+                }
+                
+                .btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    border: none;
+                    font-size: 1rem;
+                }
+                
+                .btn-primary {
+                    background-color: #4f46e5;
+                    color: white;
+                }
+                
+                .btn-primary:hover {
+                    background-color: #4338ca;
+                }
+                
+                .btn-primary:disabled {
+                    background-color: #9ca3af;
+                    cursor: not-allowed;
+                }
+            </style>
+
+            
             <div class="app-container">
                 ${sidebar}
                 

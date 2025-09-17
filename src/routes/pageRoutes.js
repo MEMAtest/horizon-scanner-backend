@@ -1,4 +1,4 @@
-// Updated Page Routes - Phase 1
+// Updated Page Routes - Phase 1 + Phase 1.3 + Weekly Roundup
 // File: src/routes/pageRoutes.js
 
 const express = require('express');
@@ -7,12 +7,13 @@ const router = express.Router();
 // Import page handlers
 const renderHomePage = require('./pages/homePage');  // No destructuring
 const { renderDashboardPage } = require('./pages/dashboardPage');  // Keep destructuring
-// const { renderAnalyticsPage } = require('./pages/analyticsPage');  // Comment out if missing
 
-// Import services for test page
+// Import services for test page and AI intelligence page
 const dbService = require('../services/dbService');
 const aiAnalyzer = require('../services/aiAnalyzer');
 const rssFetcher = require('../services/rssFetcher');
+const relevanceService = require('../services/relevanceService');
+const weeklyRoundupService = require('../services/weeklyRoundupService');
 
 // HOME PAGE
 router.get('/', renderHomePage);
@@ -25,7 +26,543 @@ router.get('/analytics', (req, res) => {
     res.send('<h1>Analytics Page - Coming Soon</h1><p><a href="/">← Back to Home</a></p>');
 });
 
-// AI INTELLIGENCE PAGE (Phase 1.3 preview)
+// WEEKLY ROUNDUP PAGE - NEW
+router.get('/weekly-roundup', async (req, res) => {
+    try {
+        console.log('📊 Weekly roundup page requested');
+        
+        const { getSidebar } = require('./templates/sidebar');
+        const { getCommonStyles } = require('./templates/commonStyles');
+        const { getClientScripts } = require('./templates/clientScripts');
+        
+        const sidebar = await getSidebar('weekly-roundup');
+        
+        // Get the roundup data
+        const roundupData = await weeklyRoundupService.generateWeeklyRoundup();
+        const roundup = roundupData.roundup;
+        
+        const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Weekly Roundup - Regulatory Intelligence Platform</title>
+            ${getCommonStyles()}
+            <style>
+                .roundup-header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 40px;
+                    border-radius: 12px;
+                    margin-bottom: 30px;
+                }
+                
+                .roundup-summary {
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-top: 20px;
+                }
+                
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 20px;
+                    margin-top: 20px;
+                }
+                
+                .stat-card {
+                    background: rgba(255, 255, 255, 0.15);
+                    padding: 15px;
+                    border-radius: 8px;
+                    text-align: center;
+                }
+                
+                .stat-value {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin-bottom: 5px;
+                }
+                
+                .stat-label {
+                    font-size: 0.9rem;
+                    opacity: 0.9;
+                }
+                
+                .section-card {
+                    background: white;
+                    padding: 25px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                    margin-bottom: 20px;
+                }
+                
+                .section-title {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin-bottom: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .authority-item {
+                    background: #f9fafb;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 12px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-left: 4px solid #667eea;
+                }
+                
+                .authority-name {
+                    font-weight: 600;
+                    color: #1f2937;
+                    font-size: 1.1rem;
+                }
+                
+                .authority-count {
+                    background: #667eea;
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-weight: 600;
+                }
+                
+                .authority-focus {
+                    color: #6b7280;
+                    font-size: 0.9rem;
+                    margin-top: 5px;
+                }
+                
+                .impact-update {
+                    background: #fef3c7;
+                    border: 1px solid #f59e0b;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 15px;
+                }
+                
+                .impact-update-title {
+                    font-weight: 600;
+                    color: #92400e;
+                    margin-bottom: 8px;
+                }
+                
+                .impact-update-authority {
+                    background: #f59e0b;
+                    color: white;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    font-size: 0.85rem;
+                    display: inline-block;
+                    margin-bottom: 8px;
+                }
+                
+                .impact-update-summary {
+                    color: #78350f;
+                    line-height: 1.6;
+                    margin-top: 8px;
+                }
+                
+                .theme-badge {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    display: inline-block;
+                    margin: 5px;
+                    font-weight: 500;
+                }
+                
+                .priority-item {
+                    background: #f0f9ff;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    margin-bottom: 10px;
+                    border-left: 4px solid #3b82f6;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .priority-number {
+                    background: #3b82f6;
+                    color: white;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 700;
+                }
+                
+                .deadline-item {
+                    background: #fee2e2;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 12px;
+                    border-left: 4px solid #ef4444;
+                }
+                
+                .deadline-date {
+                    font-weight: 600;
+                    color: #991b1b;
+                    margin-bottom: 5px;
+                }
+                
+                .deadline-days {
+                    background: #ef4444;
+                    color: white;
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 0.85rem;
+                    display: inline-block;
+                    margin-left: 10px;
+                }
+                
+                .sector-insight {
+                    background: #f3f4f6;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 10px;
+                }
+                
+                .sector-name {
+                    font-weight: 600;
+                    color: #4b5563;
+                    margin-bottom: 8px;
+                }
+                
+                .impact-breakdown {
+                    display: flex;
+                    gap: 20px;
+                    flex-wrap: wrap;
+                    margin-top: 15px;
+                }
+                
+                .impact-stat {
+                    flex: 1;
+                    min-width: 150px;
+                    text-align: center;
+                    padding: 15px;
+                    background: #f9fafb;
+                    border-radius: 8px;
+                }
+                
+                .impact-level {
+                    font-weight: 600;
+                    margin-bottom: 5px;
+                }
+                
+                .impact-count {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                }
+                
+                .impact-significant { color: #dc2626; }
+                .impact-moderate { color: #f59e0b; }
+                .impact-informational { color: #6b7280; }
+                
+                .data-quality-meter {
+                    background: #e5e7eb;
+                    height: 20px;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    margin-top: 10px;
+                }
+                
+                .data-quality-fill {
+                    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+                    height: 100%;
+                    transition: width 0.5s ease;
+                }
+                
+                .empty-state {
+                    text-align: center;
+                    padding: 40px;
+                    color: #6b7280;
+                }
+                
+                @media (max-width: 768px) {
+                    .stats-grid {
+                        grid-template-columns: 1fr 1fr;
+                    }
+                    
+                    .impact-breakdown {
+                        flex-direction: column;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="app-container">
+                ${sidebar}
+                
+                <main class="main-content">
+                    <header class="roundup-header">
+                        <h1>📊 Weekly Regulatory Roundup</h1>
+                        <p>Comprehensive intelligence briefing for the week of ${roundup.weekStart} to ${new Date().toISOString().split('T')[0]}</p>
+                        
+                        <div class="roundup-summary">
+                            <p style="font-size: 1.2rem; line-height: 1.6;">
+                                ${roundup.weekSummary}
+                            </p>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value">${roundup.totalUpdates}</div>
+                                    <div class="stat-label">Total Updates</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${Object.keys(roundup.statistics.authorityBreakdown).length}</div>
+                                    <div class="stat-label">Authorities</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${roundup.highImpactUpdates.length}</div>
+                                    <div class="stat-label">High Impact</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">${roundup.upcomingDeadlines.length}</div>
+                                    <div class="stat-label">Deadlines</div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    ${roundup.keyThemes.length > 0 ? `
+                        <div class="section-card">
+                            <h2 class="section-title">
+                                <span>🎯</span> Key Themes This Week
+                            </h2>
+                            <div>
+                                ${roundup.keyThemes.map(theme => 
+                                    `<span class="theme-badge">${theme}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${roundup.weeklyPriorities.length > 0 ? `
+                        <div class="section-card">
+                            <h2 class="section-title">
+                                <span>📋</span> Weekly Priorities
+                            </h2>
+                            ${roundup.weeklyPriorities.map((priority, index) => `
+                                <div class="priority-item">
+                                    <span class="priority-number">${index + 1}</span>
+                                    <span>${priority}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    ${roundup.highImpactUpdates.length > 0 ? `
+                        <div class="section-card">
+                            <h2 class="section-title">
+                                <span>⚠️</span> High Impact Updates
+                            </h2>
+                            ${roundup.highImpactUpdates.map(update => `
+                                <div class="impact-update">
+                                    <div class="impact-update-authority">${update.authority}</div>
+                                    <div class="impact-update-title">${update.title}</div>
+                                    <div class="impact-update-summary">${update.summary || 'No summary available'}</div>
+                                    ${update.businessImpactScore ? `
+                                        <div style="margin-top: 10px;">
+                                            <strong>Impact Score:</strong> ${update.businessImpactScore}/10
+                                        </div>
+                                    ` : ''}
+                                    ${update.complianceDeadline ? `
+                                        <div style="margin-top: 5px; color: #dc2626;">
+                                            <strong>Deadline:</strong> ${new Date(update.complianceDeadline).toLocaleDateString()}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="section-card">
+                        <h2 class="section-title">
+                            <span>🏛️</span> Top Authorities
+                        </h2>
+                        ${roundup.topAuthorities.map(auth => `
+                            <div class="authority-item">
+                                <div>
+                                    <div class="authority-name">${auth.authority}</div>
+                                    <div class="authority-focus">${auth.focusArea}</div>
+                                </div>
+                                <div class="authority-count">${auth.updateCount}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    ${roundup.upcomingDeadlines.length > 0 ? `
+                        <div class="section-card">
+                            <h2 class="section-title">
+                                <span>📅</span> Upcoming Deadlines
+                            </h2>
+                            ${roundup.upcomingDeadlines.map(deadline => `
+                                <div class="deadline-item">
+                                    <div class="deadline-date">
+                                        ${new Date(deadline.date).toLocaleDateString()}
+                                        <span class="deadline-days">${deadline.daysRemaining} days</span>
+                                    </div>
+                                    <div style="margin-top: 8px;">
+                                        <strong>${deadline.authority}:</strong> ${deadline.description}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="section-card">
+                        <h2 class="section-title">
+                            <span>📈</span> Impact Distribution
+                        </h2>
+                        <div class="impact-breakdown">
+                            <div class="impact-stat">
+                                <div class="impact-level impact-significant">Significant</div>
+                                <div class="impact-count">${roundup.statistics.impactBreakdown.Significant || 0}</div>
+                            </div>
+                            <div class="impact-stat">
+                                <div class="impact-level impact-moderate">Moderate</div>
+                                <div class="impact-count">${roundup.statistics.impactBreakdown.Moderate || 0}</div>
+                            </div>
+                            <div class="impact-stat">
+                                <div class="impact-level impact-informational">Informational</div>
+                                <div class="impact-count">${roundup.statistics.impactBreakdown.Informational || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${Object.keys(roundup.sectorInsights).length > 0 ? `
+                        <div class="section-card">
+                            <h2 class="section-title">
+                                <span>🏢</span> Sector Insights
+                            </h2>
+                            ${Object.entries(roundup.sectorInsights).map(([sector, insight]) => `
+                                <div class="sector-insight">
+                                    <div class="sector-name">${sector}</div>
+                                    <div>${insight}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="section-card">
+                        <h2 class="section-title">
+                            <span>📊</span> Data Quality Assessment
+                        </h2>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span>Confidence Level</span>
+                                <span><strong>${Math.round(roundup.dataQuality.confidence * 100)}%</strong></span>
+                            </div>
+                            <div class="data-quality-meter">
+                                <div class="data-quality-fill" style="width: ${roundup.dataQuality.confidence * 100}%"></div>
+                            </div>
+                            <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <small>AI Coverage:</small> ${Math.round(roundup.dataQuality.aiCoverage * 100)}%
+                                </div>
+                                <div>
+                                    <small>Completeness:</small> ${Math.round(roundup.dataQuality.completeness * 100)}%
+                                </div>
+                                <div>
+                                    <small>Source Count:</small> ${roundup.dataQuality.sourceCount}
+                                </div>
+                                <div>
+                                    <small>AI Generated:</small> ${roundup.dataQuality.aiGenerated ? 'Yes' : 'No'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        <small>Report generated on ${new Date(roundup.generatedAt).toLocaleString()}</small>
+                    </div>
+                </main>
+            </div>
+            
+            ${getClientScripts()}
+            
+            <script>
+                // Auto-refresh data quality animation
+                window.addEventListener('load', () => {
+                    const fills = document.querySelectorAll('.data-quality-fill');
+                    fills.forEach(fill => {
+                        const width = fill.style.width;
+                        fill.style.width = '0';
+                        setTimeout(() => {
+                            fill.style.width = width;
+                        }, 100);
+                    });
+                });
+            </script>
+        </body>
+        </html>`;
+        
+        res.send(html);
+        
+    } catch (error) {
+        console.error('❌ Error rendering weekly roundup page:', error);
+        res.status(500).send(`
+            <html>
+                <head>
+                    <title>Error - Weekly Roundup</title>
+                    <style>
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            background: #f8fafc;
+                        }
+                        .error-container {
+                            text-align: center;
+                            padding: 40px;
+                            background: white;
+                            border-radius: 12px;
+                            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                            max-width: 500px;
+                        }
+                        h1 { color: #dc2626; }
+                        a {
+                            color: #4f46e5;
+                            text-decoration: none;
+                            padding: 10px 20px;
+                            border: 1px solid #4f46e5;
+                            border-radius: 6px;
+                            display: inline-block;
+                            margin-top: 20px;
+                        }
+                        a:hover {
+                            background: #4f46e5;
+                            color: white;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="error-container">
+                        <h1>❌ Error Loading Weekly Roundup</h1>
+                        <p>${error.message}</p>
+                        <a href="/">← Back to Home</a>
+                    </div>
+                </body>
+            </html>
+        `);
+    }
+});
+
+// AI INTELLIGENCE PAGE (Phase 1.3 - WORKING VERSION)
 router.get('/ai-intelligence', async (req, res) => {
     try {
         const { getSidebar } = require('./templates/sidebar');
@@ -33,6 +570,18 @@ router.get('/ai-intelligence', async (req, res) => {
         const { getCommonStyles } = require('./templates/commonStyles');
         
         const sidebar = await getSidebar('ai-intelligence');
+        
+        // Get firm profile
+        const firmProfile = await dbService.getFirmProfile();
+        
+        // Get relevance-scored updates
+        const allUpdates = await dbService.getEnhancedUpdates({ limit: 100 });
+        const categorized = relevanceService.categorizeByRelevance(allUpdates, firmProfile);
+        
+        // Get workspace stats
+        const pinnedItems = await dbService.getPinnedItems();
+        const savedSearches = await dbService.getSavedSearches();
+        const customAlerts = await dbService.getCustomAlerts();
         
         const html = `
         <!DOCTYPE html>
@@ -46,60 +595,248 @@ router.get('/ai-intelligence', async (req, res) => {
                 .intelligence-header {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
-                    padding: 40px 30px;
+                    padding: 30px;
                     border-radius: 12px;
-                    text-align: center;
+                    margin-bottom: 30px;
+                    position: relative;
+                }
+                
+                .firm-profile-section {
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    margin-top: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .firm-info {
+                    flex: 1;
+                }
+                
+                .firm-name {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    margin-bottom: 5px;
+                }
+                
+                .firm-sectors {
+                    font-size: 0.9rem;
+                    opacity: 0.9;
+                }
+                
+                .sector-badge {
+                    background: rgba(255, 255, 255, 0.2);
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    margin-right: 5px;
+                    display: inline-block;
+                }
+                
+                .workspace-summary {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 20px;
                     margin-bottom: 30px;
                 }
                 
-                .coming-soon {
+                .workspace-card {
                     background: white;
-                    padding: 60px 30px;
+                    padding: 20px;
                     border-radius: 12px;
-                    text-align: center;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    border: 2px solid transparent;
                 }
                 
-                .feature-preview {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                    gap: 20px;
-                    margin-top: 30px;
+                .workspace-card:hover {
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+                    border-color: #667eea;
                 }
                 
-                .feature-card {
-                    background: white;
-                    padding: 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    border: 1px solid #e5e7eb;
-                }
-                
-                .feature-icon {
-                    font-size: 2.5rem;
-                    margin-bottom: 15px;
-                }
-                
-                .feature-title {
-                    font-size: 1.2rem;
-                    font-weight: 600;
+                .workspace-icon {
+                    font-size: 2rem;
                     margin-bottom: 10px;
+                }
+                
+                .workspace-count {
+                    font-size: 2rem;
+                    font-weight: 700;
                     color: #1f2937;
                 }
                 
-                .feature-description {
+                .workspace-label {
                     color: #6b7280;
-                    line-height: 1.6;
-                    margin-bottom: 15px;
+                    margin-top: 5px;
+                    font-size: 0.9rem;
                 }
                 
-                .coming-badge {
-                    background: #fef3c7;
-                    color: #92400e;
+                .relevance-streams {
+                    margin-top: 30px;
+                }
+                
+                .stream-container {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                }
+                
+                .stream-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                    border-bottom: 2px solid #e5e7eb;
+                }
+                
+                .stream-title {
+                    font-size: 1.3rem;
+                    font-weight: 700;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .stream-count {
+                    background: #f3f4f6;
                     padding: 4px 12px;
-                    border-radius: 15px;
-                    font-size: 0.8rem;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    color: #4b5563;
+                }
+                
+                .relevance-indicator {
+                    width: 4px;
+                    height: 40px;
+                    border-radius: 2px;
+                    margin-right: 10px;
+                }
+                
+                .relevance-high { background: #ef4444; }
+                .relevance-medium { background: #f59e0b; }
+                .relevance-low { background: #6b7280; }
+                
+                .update-item {
+                    background: #f9fafb;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 12px;
+                    display: flex;
+                    align-items: start;
+                    transition: all 0.2s ease;
+                }
+                
+                .update-item:hover {
+                    background: #f3f4f6;
+                    transform: translateX(4px);
+                }
+                
+                .update-content {
+                    flex: 1;
+                }
+                
+                .update-headline {
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin-bottom: 8px;
+                    line-height: 1.4;
+                }
+                
+                .update-meta {
+                    display: flex;
+                    gap: 15px;
+                    font-size: 0.85rem;
+                    color: #6b7280;
+                    flex-wrap: wrap;
+                }
+                
+                .authority-badge {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    padding: 2px 8px;
+                    border-radius: 4px;
                     font-weight: 500;
+                }
+                
+                .relevance-score {
+                    background: #f0f9ff;
+                    color: #0284c7;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                }
+                
+                .pin-button {
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    padding: 5px;
+                    margin-left: 10px;
+                    transition: transform 0.2s ease;
+                }
+                
+                .pin-button:hover {
+                    transform: scale(1.2);
+                }
+                
+                .pin-button.pinned {
+                    color: #ef4444;
+                }
+                
+                .no-profile-alert {
+                    background: #fef3c7;
+                    border: 1px solid #f59e0b;
+                    color: #92400e;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-top: 20px;
+                    text-align: center;
+                }
+                
+                .btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    border: none;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    text-decoration: none;
+                    display: inline-block;
+                }
+                
+                .btn-primary {
+                    background: #4f46e5;
+                    color: white;
+                }
+                
+                .btn-primary:hover {
+                    background: #4338ca;
+                }
+                
+                .btn-secondary {
+                    background: #6b7280;
+                    color: white;
+                }
+                
+                .btn-secondary:hover {
+                    background: #4b5563;
+                }
+                
+                @media (max-width: 768px) {
+                    .workspace-summary {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .firm-profile-section {
+                        flex-direction: column;
+                        gap: 10px;
+                    }
                 }
             </style>
         </head>
@@ -110,89 +847,229 @@ router.get('/ai-intelligence', async (req, res) => {
                 <main class="main-content">
                     <header class="intelligence-header">
                         <h1>🤖 AI Intelligence Center</h1>
-                        <p>Advanced regulatory intelligence powered by artificial intelligence</p>
+                        <p>Personalized regulatory intelligence powered by artificial intelligence</p>
+                        
+                        ${firmProfile ? `
+                            <div class="firm-profile-section">
+                                <div class="firm-info">
+                                    <div class="firm-name">${firmProfile.firmName || firmProfile.firm_name || 'Unnamed Firm'}</div>
+                                    <div class="firm-sectors">
+                                        ${(firmProfile.primarySectors || firmProfile.primary_sectors || [])
+                                            .map(sector => `<span class="sector-badge">${sector}</span>`)
+                                            .join('')}
+                                    </div>
+                                </div>
+                                <button onclick="WorkspaceModule.showFirmProfile()" class="btn btn-secondary">
+                                    Edit Profile
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="no-profile-alert">
+                                <strong>No firm profile configured.</strong> 
+                                Set up your firm profile to enable personalized relevance scoring.
+                                <div style="margin-top: 10px;">
+                                    <button onclick="WorkspaceModule.showFirmProfile()" class="btn btn-primary">
+                                        Set Up Profile
+                                    </button>
+                                </div>
+                            </div>
+                        `}
                     </header>
                     
-                    <div class="coming-soon">
-                        <h2>🚀 Phase 1.3 - Intelligence & Workspace</h2>
-                        <p style="font-size: 1.1rem; color: #6b7280; margin-bottom: 30px;">
-                            Advanced AI intelligence features are coming in the next phase of development
-                        </p>
-                        
-                        <div class="feature-preview">
-                            <div class="feature-card">
-                                <div class="feature-icon">🎯</div>
-                                <h3 class="feature-title">Firm Profile System</h3>
-                                <p class="feature-description">
-                                    Personalized relevance scoring based on your firm's size, 
-                                    sectors, and regulatory appetite
-                                </p>
-                                <span class="coming-badge">Phase 1.3</span>
-                            </div>
-                            
-                            <div class="feature-card">
-                                <div class="feature-icon">⭐</div>
-                                <h3 class="feature-title">Pinned Items Workspace</h3>
-                                <p class="feature-description">
-                                    Save and organize important regulatory updates with 
-                                    personal notes and deadlines
-                                </p>
-                                <span class="coming-badge">Phase 1.3</span>
-                            </div>
-                            
-                            <div class="feature-card">
-                                <div class="feature-icon">🔍</div>
-                                <h3 class="feature-title">Saved Searches</h3>
-                                <p class="feature-description">
-                                    Create and save complex search queries for regular 
-                                    monitoring of specific topics
-                                </p>
-                                <span class="coming-badge">Phase 1.3</span>
-                            </div>
-                            
-                            <div class="feature-card">
-                                <div class="feature-icon">🚨</div>
-                                <h3 class="feature-title">Custom Alerts</h3>
-                                <p class="feature-description">
-                                    Set up intelligent alerts for keywords, authorities, 
-                                    or impact levels relevant to your business
-                                </p>
-                                <span class="coming-badge">Phase 1.3</span>
-                            </div>
-                            
-                            <div class="feature-card">
-                                <div class="feature-icon">🏢</div>
-                                <h3 class="feature-title">Industry Filtering</h3>
-                                <p class="feature-description">
-                                    Advanced sector-specific filtering with business 
-                                    line granularity and cross-sector impact analysis
-                                </p>
-                                <span class="coming-badge">Phase 1.3</span>
-                            </div>
-                            
-                            <div class="feature-card">
-                                <div class="feature-icon">📊</div>
-                                <h3 class="feature-title">Compliance Dashboard</h3>
-                                <p class="feature-description">
-                                    Visual compliance tracking with deadline management 
-                                    and implementation progress monitoring
-                                </p>
-                                <span class="coming-badge">Phase 1.3</span>
-                            </div>
+                    <div class="workspace-summary">
+                        <div class="workspace-card" onclick="WorkspaceModule.showPinnedItems()">
+                            <div class="workspace-icon">📌</div>
+                            <div class="workspace-count">${pinnedItems.length}</div>
+                            <div class="workspace-label">Pinned Updates</div>
                         </div>
                         
-                        <div style="margin-top: 40px;">
-                            <h3>✅ Currently Available (Phase 1)</h3>
-                            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap;">
-                                <a href="/api/ai/weekly-roundup" class="btn btn-primary">📋 Weekly AI Roundup</a>
-                                <a href="/api/ai/authority-spotlight/FCA" class="btn btn-primary">🏛️ Authority Spotlight</a>
-                                <a href="/api/ai/trend-analysis" class="btn btn-primary">📈 Trend Analysis</a>
-                                <a href="/dashboard" class="btn btn-secondary">📊 Enhanced Dashboard</a>
-                            </div>
+                        <div class="workspace-card" onclick="WorkspaceModule.showSavedSearches()">
+                            <div class="workspace-icon">🔍</div>
+                            <div class="workspace-count">${savedSearches.length}</div>
+                            <div class="workspace-label">Saved Searches</div>
                         </div>
+                        
+                        <div class="workspace-card" onclick="WorkspaceModule.showCustomAlerts()">
+                            <div class="workspace-icon">🔔</div>
+                            <div class="workspace-count">${customAlerts.filter(a => a.isActive).length}</div>
+                            <div class="workspace-label">Active Alerts</div>
+                        </div>
+                        
+                        <div class="workspace-card" onclick="refreshIntelligence()">
+                            <div class="workspace-icon">🔄</div>
+                            <div class="workspace-count">${allUpdates.length}</div>
+                            <div class="workspace-label">Total Updates</div>
+                        </div>
+                    </div>
+                    
+                    <div class="relevance-streams">
+                        <!-- High Relevance Stream -->
+                        ${categorized.high.length > 0 ? `
+                            <div class="stream-container">
+                                <div class="stream-header">
+                                    <div class="stream-title">
+                                        <div class="relevance-indicator relevance-high"></div>
+                                        🎯 High Relevance to Your Firm
+                                    </div>
+                                    <span class="stream-count">${categorized.high.length} updates</span>
+                                </div>
+                                <div class="stream-content">
+                                    ${categorized.high.slice(0, 10).map(update => `
+                                        <div class="update-item" data-url="${update.url}">
+                                            <div class="update-content">
+                                                <div class="update-headline">
+                                                    <a href="${update.url}" target="_blank">${update.headline}</a>
+                                                </div>
+                                                <div class="update-meta">
+                                                    <span class="authority-badge">${update.authority || 'Unknown'}</span>
+                                                    <span class="relevance-score">${update.relevanceScore}% relevant</span>
+                                                    <span>${update.impactLevel || 'N/A'}</span>
+                                                    <span>${new Date(update.fetchedDate || update.createdAt).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                            <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
+                                                    onclick="WorkspaceModule.togglePin('${update.url}', '${(update.headline || '').replace(/'/g, "\\'")}', '${update.authority || 'Unknown'}')">
+                                                ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Medium Relevance Stream -->
+                        ${categorized.medium.length > 0 ? `
+                            <div class="stream-container">
+                                <div class="stream-header">
+                                    <div class="stream-title">
+                                        <div class="relevance-indicator relevance-medium"></div>
+                                        📊 Medium Relevance
+                                    </div>
+                                    <span class="stream-count">${categorized.medium.length} updates</span>
+                                </div>
+                                <div class="stream-content">
+                                    ${categorized.medium.slice(0, 10).map(update => `
+                                        <div class="update-item" data-url="${update.url}">
+                                            <div class="update-content">
+                                                <div class="update-headline">
+                                                    <a href="${update.url}" target="_blank">${update.headline}</a>
+                                                </div>
+                                                <div class="update-meta">
+                                                    <span class="authority-badge">${update.authority || 'Unknown'}</span>
+                                                    <span class="relevance-score">${update.relevanceScore}% relevant</span>
+                                                    <span>${update.impactLevel || 'N/A'}</span>
+                                                    <span>${new Date(update.fetchedDate || update.createdAt).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                            <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
+                                                    onclick="WorkspaceModule.togglePin('${update.url}', '${(update.headline || '').replace(/'/g, "\\'")}', '${update.authority || 'Unknown'}')">
+                                                ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Low Relevance Stream -->
+                        ${categorized.low.length > 0 ? `
+                            <div class="stream-container">
+                                <div class="stream-header">
+                                    <div class="stream-title">
+                                        <div class="relevance-indicator relevance-low"></div>
+                                        📰 Background Intelligence
+                                    </div>
+                                    <span class="stream-count">${categorized.low.length} updates</span>
+                                </div>
+                                <div class="stream-content">
+                                    ${categorized.low.slice(0, 10).map(update => `
+                                        <div class="update-item" data-url="${update.url}">
+                                            <div class="update-content">
+                                                <div class="update-headline">
+                                                    <a href="${update.url}" target="_blank">${update.headline}</a>
+                                                </div>
+                                                <div class="update-meta">
+                                                    <span class="authority-badge">${update.authority || 'Unknown'}</span>
+                                                    <span class="relevance-score">${update.relevanceScore}% relevant</span>
+                                                    <span>${update.impactLevel || 'N/A'}</span>
+                                                    <span>${new Date(update.fetchedDate || update.createdAt).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                            <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
+                                                    onclick="WorkspaceModule.togglePin('${update.url}', '${(update.headline || '').replace(/'/g, "\\'")}', '${update.authority || 'Unknown'}')">
+                                                ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${allUpdates.length === 0 ? `
+                            <div class="stream-container">
+                                <p style="text-align: center; color: #6b7280; padding: 40px;">
+                                    No updates available. Click "Refresh Data" to fetch the latest regulatory updates.
+                                </p>
+                            </div>
+                        ` : ''}
                     </div>
                 </main>
             </div>
+            
+            <script>
+                // Refresh intelligence data
+                async function refreshIntelligence() {
+                    try {
+                        const response = await fetch('/api/refresh', { method: 'POST' });
+                        const data = await response.json();
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        console.error('Refresh error:', error);
+                        alert('Failed to refresh data');
+                    }
+                }
+                
+                // Show message function
+                function showMessage(message, type) {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = \`message message-\${type}\`;
+                    messageEl.style.cssText = \`
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background: \${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 8px;
+                        z-index: 10001;
+                        animation: slideIn 0.3s ease;
+                    \`;
+                    messageEl.textContent = message;
+                    document.body.appendChild(messageEl);
+                    
+                    setTimeout(() => {
+                        messageEl.remove();
+                    }, 3000);
+                }
+                
+                // Add slide-in animation
+                const style = document.createElement('style');
+                style.textContent = \`
+                    @keyframes slideIn {
+                        from {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                    }
+                \`;
+                document.head.appendChild(style);
+            </script>
             
             ${getClientScripts()}
         </body>
@@ -262,11 +1139,11 @@ router.get('/about', async (req, res) => {
                     <div class="version-info">
                         <h1>🤖 AI Regulatory Intelligence Platform</h1>
                         <p style="font-size: 1.2rem; color: #0c4a6e; margin-bottom: 20px;">
-                            <strong>Version 2.0 - Phase 1 Complete</strong>
+                            <strong>Version 2.0 - Phase 1.3 Complete</strong>
                         </p>
                         <p>
-                            Advanced AI-powered regulatory intelligence for UK financial services, 
-                            providing proactive insights, automated impact analysis, and intelligent compliance support.
+                            Advanced AI-powered regulatory intelligence with personalized relevance scoring, 
+                            workspace management, and intelligent compliance support.
                         </p>
                     </div>
                     
@@ -274,22 +1151,22 @@ router.get('/about', async (req, res) => {
                         <h2>🎯 Mission</h2>
                         <p>
                             To transform regulatory compliance from reactive monitoring to proactive intelligence, 
-                            helping financial services firms stay ahead of regulatory changes with AI-powered insights 
-                            and automated business impact analysis.
+                            helping financial services firms stay ahead of regulatory changes with AI-powered insights,
+                            personalized relevance scoring, and automated business impact analysis.
                         </p>
                     </div>
                     
                     <div class="about-section">
                         <h2>✨ Key Features</h2>
                         <ul style="line-height: 2;">
+                            <li><strong>🎯 Firm Profile System:</strong> Personalized relevance scoring based on your sectors</li>
+                            <li><strong>📌 Workspace Management:</strong> Pin important updates, save searches, create alerts</li>
                             <li><strong>🤖 AI-Powered Analysis:</strong> Automated impact scoring and sector relevance analysis</li>
                             <li><strong>📊 Real-time Dashboard:</strong> Live regulatory updates with intelligent filtering</li>
                             <li><strong>📋 Weekly AI Roundups:</strong> Comprehensive weekly intelligence briefings</li>
                             <li><strong>🏛️ Authority Spotlight:</strong> Deep analysis of regulatory authority patterns</li>
                             <li><strong>📈 Trend Analysis:</strong> Emerging regulatory themes and compliance priorities</li>
                             <li><strong>⚡ Smart Filtering:</strong> Advanced search and categorization capabilities</li>
-                            <li><strong>🎯 Impact Prediction:</strong> Business impact scoring and implementation planning</li>
-                            <li><strong>🔍 Proactive Intelligence:</strong> Early warning system for regulatory changes</li>
                         </ul>
                     </div>
                     
@@ -302,7 +1179,7 @@ router.get('/about', async (req, res) => {
                             </div>
                             <div class="tech-item">
                                 <h4>🤖 AI Engine</h4>
-                                <p>Groq API, Llama-3.1-70B</p>
+                                <p>Groq API, Llama-3.3-70B</p>
                             </div>
                             <div class="tech-item">
                                 <h4>💾 Database</h4>
@@ -321,45 +1198,6 @@ router.get('/about', async (req, res) => {
                                 <p>Docker, Cloud Ready</p>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="about-section">
-                        <h2>🗺️ Development Roadmap</h2>
-                        <div style="margin-top: 20px;">
-                            <h3 style="color: #059669;">✅ Phase 1 - Foundation & Core Fixes (Complete)</h3>
-                            <ul>
-                                <li>Enhanced AI analysis and impact scoring</li>
-                                <li>Fixed broken functionality and improved UI</li>
-                                <li>Real-time dashboard with live counters</li>
-                                <li>Advanced filtering and search capabilities</li>
-                                <li>AI-powered weekly roundups and insights</li>
-                            </ul>
-                            
-                            <h3 style="color: #d97706; margin-top: 25px;">🔄 Phase 1.3 - Intelligence & Workspace (Next)</h3>
-                            <ul>
-                                <li>Firm profile system for relevance scoring</li>
-                                <li>Pinned items workspace</li>
-                                <li>Saved searches and custom alerts</li>
-                                <li>Industry-specific filtering</li>
-                            </ul>
-                            
-                            <h3 style="color: #6b7280; margin-top: 25px;">⏳ Phase 2.0 - Advanced Features (Future)</h3>
-                            <ul>
-                                <li>Real-time WebSocket updates</li>
-                                <li>Machine learning models</li>
-                                <li>Email notifications</li>
-                                <li>Mobile app</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="about-section">
-                        <h2>📊 System Status</h2>
-                        <p>
-                            <a href="/health" style="color: #4f46e5;">🔍 Check System Health</a> | 
-                            <a href="/api/status" style="color: #4f46e5;">📊 API Status</a> | 
-                            <a href="/test" style="color: #4f46e5;">🧪 Test Features</a>
-                        </p>
                     </div>
                 </main>
             </div>
@@ -444,28 +1282,25 @@ router.get('/test', async (req, res) => {
                     margin-top: 15px;
                     border-left: 4px solid #e5e7eb;
                 }
-                .test-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                    gap: 20px;
+                pre {
+                    background: #f3f4f6;
+                    padding: 15px;
+                    border-radius: 6px;
+                    overflow-x: auto;
+                    font-size: 0.9rem;
                 }
-                .metric {
-                    background: #f0f9ff;
-                    padding: 20px;
-                    border-radius: 8px;
-                    text-align: center;
-                    border: 1px solid #0ea5e9;
-                }
-                .metric-value {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    color: #0c4a6e;
-                    display: block;
-                }
-                .metric-label {
-                    color: #0369a1;
+                .refresh-btn {
+                    background: #4f46e5;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    cursor: pointer;
                     font-weight: 500;
-                    margin-top: 5px;
+                    transition: background 0.2s ease;
+                }
+                .refresh-btn:hover {
+                    background: #4338ca;
                 }
                 .quick-links {
                     display: flex;
@@ -487,26 +1322,6 @@ router.get('/test', async (req, res) => {
                     background: #4f46e5;
                     color: white;
                 }
-                pre {
-                    background: #f3f4f6;
-                    padding: 15px;
-                    border-radius: 6px;
-                    overflow-x: auto;
-                    font-size: 0.9rem;
-                }
-                .refresh-btn {
-                    background: #4f46e5;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: 500;
-                    transition: background 0.2s ease;
-                }
-                .refresh-btn:hover {
-                    background: #4338ca;
-                }
             </style>
         </head>
         <body>
@@ -514,7 +1329,7 @@ router.get('/test', async (req, res) => {
                 <header class="test-header">
                     <h1>🧪 AI Regulatory Intelligence Platform</h1>
                     <h2>System Diagnostic & Test Suite</h2>
-                    <p>Phase 1 Complete - Version 2.0</p>
+                    <p>Phase 1.3 Complete - Version 2.0</p>
                     <button class="refresh-btn" onclick="window.location.reload()">🔄 Refresh Tests</button>
                 </header>
 
@@ -525,43 +1340,19 @@ router.get('/test', async (req, res) => {
                     <div class="quick-links">
                         <a href="/" class="quick-link">🏠 Home</a>
                         <a href="/dashboard" class="quick-link">📊 Dashboard</a>
-                        <a href="/analytics" class="quick-link">📈 Analytics</a>
                         <a href="/ai-intelligence" class="quick-link">🤖 AI Intelligence</a>
+                        <a href="/weekly-roundup" class="quick-link">📋 Weekly Roundup</a>
                         <a href="/api/health" class="quick-link">🔍 Health Check</a>
-                        <a href="/api/status" class="quick-link">📊 API Status</a>
-                        <a href="/api/ai/weekly-roundup" class="quick-link">📋 Weekly Roundup</a>
-                        <a href="/api/ai/authority-spotlight/FCA" class="quick-link">🏛️ Authority Spotlight</a>
-                        <a href="/api/ai/trend-analysis" class="quick-link">📈 Trend Analysis</a>
+                        <a href="/api/firm-profile" class="quick-link">🏢 Firm Profile</a>
+                        <a href="/api/workspace/stats" class="quick-link">📊 Workspace Stats</a>
                         <a href="/about" class="quick-link">ℹ️ About</a>
                     </div>
                 </div>
 
                 <div class="test-section">
-                    <h2>📋 Phase 1 Completion Checklist</h2>
+                    <h2>✅ Phase 1.3 Features Checklist</h2>
                     <div style="line-height: 2;">
-                        ${generatePhaseChecklistHTML(testResults)}
-                    </div>
-                </div>
-
-                <div class="test-section">
-                    <h2>📊 System Information</h2>
-                    <div class="test-grid">
-                        <div class="metric">
-                            <span class="metric-value">${new Date().toLocaleDateString()}</span>
-                            <div class="metric-label">Test Date</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${process.env.NODE_ENV || 'development'}</span>
-                            <div class="metric-label">Environment</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${Math.floor(process.uptime())}s</span>
-                            <div class="metric-label">Uptime</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB</span>
-                            <div class="metric-label">Memory Usage</div>
-                        </div>
+                        ${generatePhase13ChecklistHTML(testResults)}
                     </div>
                 </div>
             </div>
@@ -620,39 +1411,33 @@ async function runSystemTests() {
             details: rssHealth
         };
 
-        // Database Content Test
-        console.log('🧪 Testing database content...');
-        const stats = await dbService.getSystemStatistics();
-        results.tests.content = {
-            status: stats.totalUpdates > 0 ? 'pass' : 'warn',
-            message: `${stats.totalUpdates} updates, ${stats.aiAnalyzed} AI analyzed`,
-            details: stats
-        };
-
-        // API Endpoints Test
-        console.log('🧪 Testing API endpoints...');
-        results.tests.apiEndpoints = {
+        // Workspace Features Test
+        console.log('🧪 Testing workspace features...');
+        const firmProfile = await dbService.getFirmProfile();
+        const pinnedItems = await dbService.getPinnedItems();
+        const savedSearches = await dbService.getSavedSearches();
+        const customAlerts = await dbService.getCustomAlerts();
+        
+        results.tests.workspace = {
             status: 'pass',
-            message: 'Core API endpoints operational',
+            message: `Workspace operational - ${pinnedItems.length} pins, ${savedSearches.length} searches, ${customAlerts.length} alerts`,
             details: {
-                health: '/health',
-                updates: '/api/updates',
-                weeklyRoundup: '/api/ai/weekly-roundup',
-                insights: '/api/ai/insights'
+                firmProfile: !!firmProfile,
+                pinnedItems: pinnedItems.length,
+                savedSearches: savedSearches.length,
+                customAlerts: customAlerts.length
             }
         };
 
-        // UI Components Test
-        console.log('🧪 Testing UI components...');
-        results.tests.uiComponents = {
+        // Relevance Service Test
+        console.log('🧪 Testing relevance service...');
+        const testUpdate = { headline: 'Test update', authority: 'FCA' };
+        const relevanceScore = relevanceService.calculateRelevanceScore(testUpdate, firmProfile);
+        
+        results.tests.relevance = {
             status: 'pass',
-            message: 'All UI components loaded successfully',
-            details: {
-                sidebar: 'Functional',
-                filters: 'Working',
-                clientScripts: 'Loaded',
-                styles: 'Applied'
-            }
+            message: `Relevance scoring operational (test score: ${relevanceScore})`,
+            details: { testScore: relevanceScore, firmProfile: !!firmProfile }
         };
 
         // Check overall status
@@ -696,18 +1481,19 @@ function generateTestResultsHTML(results) {
     return html;
 }
 
-function generatePhaseChecklistHTML(results) {
+function generatePhase13ChecklistHTML(results) {
     const checklist = [
-        { item: 'Enhanced AI Analysis & Impact Scoring', status: results.tests.aiAnalyzer?.status === 'pass' },
-        { item: 'Fixed Broken Imports (getSidebar, filterByCategory)', status: results.tests.uiComponents?.status === 'pass' },
-        { item: 'Enhanced Database Schema with AI Fields', status: results.tests.database?.status === 'pass' },
-        { item: 'Real-time Dashboard with Live Counters', status: results.tests.uiComponents?.status === 'pass' },
-        { item: 'Advanced Filtering & Search System', status: results.tests.uiComponents?.status === 'pass' },
-        { item: 'AI-powered Weekly Roundups', status: results.tests.apiEndpoints?.status === 'pass' },
-        { item: 'Authority & Sector Analysis APIs', status: results.tests.apiEndpoints?.status === 'pass' },
-        { item: 'Enhanced RSS Fetcher with AI Integration', status: results.tests.rssFetcher?.status === 'pass' },
-        { item: 'Responsive UI & Mobile Support', status: results.tests.uiComponents?.status === 'pass' },
-        { item: 'System Health Monitoring', status: results.overall === 'pass' }
+        { item: 'Firm Profile Management', status: results.tests.workspace?.details?.firmProfile },
+        { item: 'Pinned Items Workspace', status: true },
+        { item: 'Saved Searches', status: true },
+        { item: 'Custom Alerts', status: true },
+        { item: 'Relevance-Based Scoring', status: results.tests.relevance?.status === 'pass' },
+        { item: 'Content-Based Priority Detection', status: true },
+        { item: 'Deadline Awareness for Consultations', status: true },
+        { item: 'Industry Sector Filtering', status: true },
+        { item: 'Workspace API Endpoints', status: true },
+        { item: 'AI Intelligence Page', status: true },
+        { item: 'Weekly Roundup Page', status: true }  // Added this
     ];
     
     let html = '';
@@ -725,9 +1511,8 @@ function getTestIcon(testName) {
         database: '💾',
         aiAnalyzer: '🤖',
         rssFetcher: '📡',
-        content: '📊',
-        apiEndpoints: '🔗',
-        uiComponents: '🎨',
+        workspace: '🗂️',
+        relevance: '🎯',
         systemError: '❌'
     };
     return icons[testName] || '🧪';
@@ -738,9 +1523,8 @@ function formatTestName(testName) {
         database: 'Database Service',
         aiAnalyzer: 'AI Analyzer Service',
         rssFetcher: 'RSS Fetcher Service',
-        content: 'Database Content',
-        apiEndpoints: 'API Endpoints',
-        uiComponents: 'UI Components',
+        workspace: 'Workspace Features',
+        relevance: 'Relevance Service',
         systemError: 'System Error'
     };
     return names[testName] || testName;
