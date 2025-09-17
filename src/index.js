@@ -444,12 +444,15 @@ const server = new AIRegulatoryIntelligenceServer();
 // Detect environment and handle appropriately
 const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
 const isProduction = process.env.NODE_ENV === 'production';
-const shouldStartServer = process.env.START_SERVER === 'true';
+const startServerFlag = process.env.START_SERVER;
+const explicitlyEnabled = startServerFlag === 'true';
+const explicitlyDisabled = startServerFlag === 'false';
+const executedDirectly = require.main === module;
 
 if (isVercel) {
     // Vercel serverless environment
     console.log('🚀 Running on Vercel - initializing for serverless...');
-    
+
     // Initialize services without starting the server
     (async () => {
         try {
@@ -463,25 +466,31 @@ if (isVercel) {
     
     // Export the Express app for Vercel
     module.exports = server.getApp();
-    
-} else if (!isProduction || shouldStartServer) {
-    // Local development OR production with explicit start
-    console.log('🚀 Starting server in traditional mode...');
-    
-    server.start().catch(error => {
-        console.error('❌ Failed to start server:', error);
-        process.exit(1);
-    });
-    
-    // Still export for compatibility
-    module.exports = server.getApp();
-    
+
 } else {
-    // Production without explicit start (for imports)
-    console.log('📦 Production mode - app exported without starting server');
-    console.log('ℹ️ Set START_SERVER=true to start the server');
-    
-    // Just export the app
+    const shouldAutoStart = executedDirectly && !explicitlyDisabled;
+    const shouldStartFromImport = !executedDirectly && explicitlyEnabled;
+
+    if (shouldAutoStart || shouldStartFromImport) {
+        if (!executedDirectly && explicitlyEnabled) {
+            console.log('🚀 START_SERVER=true detected - starting server on import...');
+        } else if (!isProduction) {
+            console.log('🚀 Starting server in traditional mode...');
+        } else {
+            console.log('🚀 Starting server (production mode)...');
+        }
+
+        server.start().catch(error => {
+            console.error('❌ Failed to start server:', error);
+            process.exit(1);
+        });
+    } else if (executedDirectly && explicitlyDisabled) {
+        console.log('⏸️  START_SERVER=false detected - skipping automatic start');
+    } else {
+        console.log('📦 Application loaded without starting server');
+        console.log('ℹ️  Use START_SERVER=true to force the listener to start in this context');
+    }
+
     module.exports = server.getApp();
 }
 
