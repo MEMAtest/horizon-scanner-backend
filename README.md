@@ -528,7 +528,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Groq** for AI analysis capabilities
+- **Groq** for **AI** analysis capabilities
 - **UK Regulatory Authorities** for public data availability
 - **Open Source Community** for excellent libraries and tools
 - **Financial Services Industry** for regulatory transparency
