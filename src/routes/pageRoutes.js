@@ -7,6 +7,7 @@ const router = express.Router();
 // Import page handlers
 const renderHomePage = require('./pages/homePage');  // No destructuring
 const { renderDashboardPage } = require('./pages/dashboardPage');  // Keep destructuring
+const { renderAnalyticsPage } = require('./pages/analyticsPage');
 
 // Import services for test page and AI intelligence page
 const dbService = require('../services/dbService');
@@ -22,9 +23,7 @@ router.get('/', renderHomePage);
 router.get('/dashboard', renderDashboardPage);
 
 // ANALYTICS PAGE
-router.get('/analytics', (req, res) => {
-    res.send('<h1>Analytics Page - Coming Soon</h1><p><a href="/">← Back to Home</a></p>');
-});
+router.get('/analytics', renderAnalyticsPage);
 
 // WEEKLY ROUNDUP PAGE - NEW
 router.get('/weekly-roundup', async (req, res) => {
