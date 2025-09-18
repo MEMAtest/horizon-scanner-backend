@@ -60,7 +60,43 @@ async function renderHomePage(req, res) {
                     margin-left: auto;
                     margin-right: auto;
                 }
-                
+
+                .hero-actions {
+                    display: flex;
+                    justify-content: center;
+                    gap: 16px;
+                    margin-bottom: 32px;
+                    flex-wrap: wrap;
+                }
+
+                .hero-button {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 14px 24px;
+                    border-radius: 999px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+                }
+
+                .hero-button.primary {
+                    background: #ffffff;
+                    color: #4f46e5;
+                }
+
+                .hero-button.secondary {
+                    background: rgba(255, 255, 255, 0.15);
+                    color: #ffffff;
+                    border: 1px solid rgba(255, 255, 255, 0.4);
+                }
+
+                .hero-button:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.25);
+                }
+
                 .hero-stats {
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -402,7 +438,17 @@ async function renderHomePage(req, res) {
                     .hero-title {
                         font-size: 2rem;
                     }
-                    
+
+                    .hero-actions {
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+
+                    .hero-button {
+                        justify-content: center;
+                        width: 100%;
+                    }
+
                     .hero-stats {
                         grid-template-columns: repeat(2, 1fr);
                     }
@@ -636,10 +682,21 @@ async function renderHomePage(req, res) {
                     <section class="hero-section">
                         <h1 class="hero-title">🤖 AI Regulatory Intelligence Platform</h1>
                         <p class="hero-subtitle">
-                            Transform regulatory compliance with AI-powered insights, proactive intelligence, 
+                            Transform regulatory compliance with AI-powered insights, proactive intelligence,
                             and automated business impact analysis for UK financial services
                         </p>
-                        
+
+                        <div class="hero-actions">
+                            <a href="/analytics" class="hero-button primary">
+                                <span>📈</span>
+                                <span>Launch Analytics Dashboard</span>
+                            </a>
+                            <a href="/dashboard" class="hero-button secondary">
+                                <span>📊</span>
+                                <span>View Live Intelligence</span>
+                            </a>
+                        </div>
+
                         <div class="hero-stats">
                             <div class="hero-stat">
                                 <span class="hero-stat-number">${systemStats.totalUpdates}</span>

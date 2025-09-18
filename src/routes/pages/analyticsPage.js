@@ -1,865 +1,595 @@
 // src/routes/pages/analyticsPage.js
-// CLEANED: Removed duplicate functions, kept only analytics-specific logic
+// Server-rendered analytics dashboard that surfaces database statistics and
+// provides an interactive impact distribution view.
 
 const { getCommonStyles } = require('../templates/commonStyles');
 const { getSidebar } = require('../templates/sidebar');
-const { getCommonClientScripts } = require('../templates/clientScripts');
+const { getClientScripts } = require('../templates/clientScripts');
 const dbService = require('../../services/dbService');
 
-// Helper functions remain the same for fallback compatibility
-const getAnalyticsService = () => {
-    try {
-        return require('../../services/analyticsService');
-    } catch (error) {
-        console.warn('Analytics service not available, using fallback');
-        return {
-            getAnalyticsDashboard: () => ({ 
-                success: false, 
-                dashboard: { 
-                    overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 }, 
-                    velocity: {}, 
-                    hotspots: [], 
-                    predictions: [] 
-                } 
-            })
-        };
-    }
+const IMPACT_LEVELS = ['Significant', 'Moderate', 'Informational'];
+const DEFAULT_PERIOD = 'month';
+
+const serializeForScript = (payload) => {
+    return JSON.stringify(payload).replace(/</g, '\\u003c');
 };
 
-const getRelevanceService = () => {
-    try {
-        return require('../../services/relevanceService');
-    } catch (error) {
-        console.warn('Relevance service not available, using fallback');
-        return {
-            calculateRelevanceScore: () => 0,
-            categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
-        };
-    }
+const formatNumber = (value) => {
+    if (value === undefined || value === null || Number.isNaN(value)) return '0';
+    return Number(value).toLocaleString('en-GB');
 };
 
-const getWorkspaceService = () => {
-    try {
-        return require('../../services/workspaceService');
-    } catch (error) {
-        console.warn('Workspace service not available, using fallback');
-        return {
-            getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } })
-        };
-    }
-};
+const calculateImpactDistribution = (updates = []) => {
+    const distribution = {
+        byLevel: { Significant: 0, Moderate: 0, Informational: 0 },
+        byScore: {},
+        byAuthority: {},
+        bySector: {},
+        timeline: []
+    };
 
-const analyticsPage = async (req, res) => {
-    try {
-        // Get analytics data from services
-        const analyticsService = getAnalyticsService();
-        let analyticsData = null;
-        
-        try {
-            const result = await analyticsService.getAnalyticsDashboard();
-            analyticsData = result.success ? result.dashboard : null;
-        } catch (error) {
-            console.warn('Analytics service error:', error.message);
+    updates.forEach(update => {
+        const level = update.impactLevel || update.impact_level || 'Informational';
+        distribution.byLevel[level] = (distribution.byLevel[level] || 0) + 1;
+
+        const score = update.business_impact_score || update.businessImpactScore || 0;
+        const bucketLabel = `${Math.floor(score)}-${Math.floor(score) + 1}`;
+        distribution.byScore[bucketLabel] = (distribution.byScore[bucketLabel] || 0) + 1;
+
+        const authority = update.authority || 'Unknown';
+        if (!distribution.byAuthority[authority]) {
+            distribution.byAuthority[authority] = { total: 0, highImpact: 0 };
+        }
+        distribution.byAuthority[authority].total++;
+        if (level === 'Significant' || score >= 7) {
+            distribution.byAuthority[authority].highImpact++;
         }
 
-        // Get basic data for sidebar counts
-        const updates = await dbService.getAllUpdates();
-        
-        // Calculate enhanced counts for the new filtering sections
-        let consultationCount = 0, guidanceCount = 0, enforcementCount = 0;
-        let speechCount = 0, newsCount = 0, policyCount = 0;
-        let finalRuleCount = 0, proposalCount = 0, noticeCount = 0, reportCount = 0;
-        let rssCount = 0, scrapedCount = 0, directCount = 0;
-        
-        updates.forEach(update => {
-            const headline = (update.headline || '').toLowerCase();
-            const impact = (update.impact || '').toLowerCase();
-            const content = headline + ' ' + impact;
-            const url = update.url || '';
-            
-            // Category classification
-            if (content.includes('consultation')) consultationCount++;
-            else if (content.includes('guidance')) guidanceCount++;
-            else if (content.includes('enforcement') || content.includes('fine')) enforcementCount++;
-            else if (content.includes('speech')) speechCount++;
-            else if (content.includes('policy')) policyCount++;
-            else newsCount++;
-            
-            // Content type classification
-            if (content.includes('final rule')) finalRuleCount++;
-            else if (content.includes('proposal')) proposalCount++;
-            else if (content.includes('notice')) noticeCount++;
-            else if (content.includes('report')) reportCount++;
-            
-            // Source type classification
-            if (url.includes('rss') || url.includes('feed') || update.sourceType === 'rss') rssCount++;
-            else if (url.includes('gov.uk') || update.sourceType === 'direct') directCount++;
-            else scrapedCount++;
+        const sectors = update.firm_types_affected || update.primarySectors || [];
+        sectors.forEach(sector => {
+            const sectorName = sector || 'Other';
+            if (!distribution.bySector[sectorName]) {
+                distribution.bySector[sectorName] = { total: 0, avgImpact: 0 };
+            }
+            distribution.bySector[sectorName].total++;
+            distribution.bySector[sectorName].avgImpact += score;
         });
-        
-        const authorityCount = {};
-        updates.forEach(update => {
-            const auth = update.authority || 'Unknown';
-            authorityCount[auth] = (authorityCount[auth] || 0) + 1;
-        });
-        
-        const counts = {
-            totalUpdates: updates.length,
-            urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
-            moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
-            informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length,
-            fcaCount: authorityCount.FCA || 0,
-            boeCount: authorityCount.BoE || 0,
-            praCount: authorityCount.PRA || 0,
-            tprCount: authorityCount.TPR || 0,
-            sfoCount: authorityCount.SFO || 0,
-            fatfCount: authorityCount.FATF || 0,
-            // Enhanced counts for filtering
-            consultationCount,
-            guidanceCount,
-            enforcementCount,
-            speechCount,
-            newsCount,
-            policyCount,
-            finalRuleCount,
-            proposalCount,
-            noticeCount,
-            reportCount,
-            rssCount,
-            scrapedCount,
-            directCount
-        };
+    });
 
-        // Helper functions for safe data rendering
-        const renderMetricValue = (value, fallback = 'Loading...') => {
-            return analyticsData ? (value || 0) : fallback;
-        };
+    Object.keys(distribution.bySector).forEach(sector => {
+        const entry = distribution.bySector[sector];
+        entry.avgImpact = entry.total > 0 ? entry.avgImpact / entry.total : 0;
+    });
 
-        const renderVelocityData = () => {
-            if (!analyticsData || !analyticsData.velocity) return '';
-            
-            return Object.entries(analyticsData.velocity).slice(0, 4).map(([auth, data]) => {
-                const weeklyRate = (data.updatesPerWeek || 0).toFixed(1);
-                return `
-                    <div class="chart-stat">
-                        <div class="chart-stat-value">${weeklyRate}</div>
-                        <div class="chart-stat-label">${auth} per week</div>
-                    </div>
-                `;
-            }).join('');
-        };
+    return distribution;
+};
 
-        const renderHotspotData = () => {
-            if (!analyticsData || !analyticsData.hotspots) return '';
-            
-            return analyticsData.hotspots.slice(0, 4).map(hotspot => {
-                return `
-                    <div class="chart-stat">
-                        <div class="chart-stat-value">${hotspot.activityScore || 0}</div>
-                        <div class="chart-stat-label">${hotspot.sector || 'Unknown'}</div>
-                    </div>
-                `;
-            }).join('');
-        };
+const getTopAuthorities = (distribution, limit = 5) => {
+    return Object.entries(distribution.byAuthority || {})
+        .map(([name, data]) => ({
+            name: name || 'Unknown',
+            total: data.total || 0,
+            highImpact: data.highImpact || 0,
+            percentage: data.total > 0 ? Math.round((data.highImpact / data.total) * 100) : 0
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, limit);
+};
 
-        const renderPredictionStats = () => {
-            if (!analyticsData || !analyticsData.predictions) return '';
-            
-            const highConfidence = analyticsData.predictions.filter(p => p.confidence >= 70).length;
-            const highPriority = analyticsData.predictions.filter(p => p.priority === 'high').length;
-            const overallConfidence = Math.round(analyticsData.confidence || 0);
-            
-            return `
-                <div class="chart-stat">
-                    <div class="chart-stat-value">${highConfidence}</div>
-                    <div class="chart-stat-label">High Confidence</div>
+const getTopSectors = (distribution, limit = 5) => {
+    return Object.entries(distribution.bySector || {})
+        .map(([name, data]) => ({
+            name: name || 'Other',
+            total: data.total || 0,
+            avgImpact: data.avgImpact || 0
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, limit);
+};
+
+const renderImpactRows = (distribution) => {
+    const total = IMPACT_LEVELS.reduce((acc, level) => acc + (distribution.byLevel?.[level] || 0), 0);
+
+    return IMPACT_LEVELS.map(level => {
+        const count = distribution.byLevel?.[level] || 0;
+        const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+        const levelKey = level.toLowerCase();
+
+        return `
+            <div class="impact-row" data-impact-level="${level}">
+                <div class="impact-label">${level}</div>
+                <div class="impact-bar">
+                    <div class="impact-bar-fill impact-${levelKey}" style="width: ${percentage}%"></div>
                 </div>
-                <div class="chart-stat">
-                    <div class="chart-stat-value">${highPriority}</div>
-                    <div class="chart-stat-label">Priority Alerts</div>
+                <div class="impact-value">
+                    <span class="impact-count">${formatNumber(count)}</span>
+                    <span class="impact-percent">${percentage}%</span>
                 </div>
-                <div class="chart-stat">
-                    <div class="chart-stat-value">${overallConfidence}%</div>
-                    <div class="chart-stat-label">Overall Confidence</div>
-                </div>
-            `;
-        };
+            </div>
+        `;
+    }).join('');
+};
+
+const renderAuthorityTable = (distribution) => {
+    const rows = getTopAuthorities(distribution).map(authority => {
+        return `
+            <tr>
+                <td>${authority.name}</td>
+                <td>${formatNumber(authority.total)}</td>
+                <td>${formatNumber(authority.highImpact)}</td>
+                <td>${authority.percentage}%</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (!rows) {
+        return '<tr><td colspan="4" class="empty">No authority data available</td></tr>';
+    }
+
+    return rows;
+};
+
+const renderSectorTable = (distribution) => {
+    const rows = getTopSectors(distribution).map(sector => {
+        return `
+            <tr>
+                <td>${sector.name}</td>
+                <td>${formatNumber(sector.total)}</td>
+                <td>${sector.avgImpact.toFixed(1)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (!rows) {
+        return '<tr><td colspan="3" class="empty">No sector data available</td></tr>';
+    }
+
+    return rows;
+};
+
+const renderSelectOptions = (options = [], selectedValue = '') => {
+    return options.map(option => {
+        const value = option.name || option;
+        const count = option.count !== undefined ? ` (${option.count})` : '';
+        const selected = selectedValue && selectedValue === value ? 'selected' : '';
+        return `<option value="${value}" ${selected}>${value}${count}</option>`;
+    }).join('');
+};
+
+const getSummaryCards = (stats) => {
+    const cards = [
+        { label: 'Total Updates', key: 'totalUpdates', trendKey: 'impactTrend' },
+        { label: 'High Impact', key: 'highImpact', trendKey: 'impactTrend' },
+        { label: 'AI Analyzed', key: 'aiAnalyzed', trendKey: 'impactTrend' },
+        { label: 'Active Authorities', key: 'activeAuthorities', trendKey: 'impactTrend' },
+        { label: 'New Today', key: 'newToday', trendKey: 'impactTrend' }
+    ];
+
+    return cards.map(card => {
+        const value = stats?.[card.key] ?? 0;
+        return `
+            <div class="summary-card">
+                <div class="summary-label">${card.label}</div>
+                <div class="summary-value">${formatNumber(value)}</div>
+            </div>
+        `;
+    }).join('');
+};
+
+async function renderAnalyticsPage(req, res) {
+    try {
+        const { authority = '', sector = '', period = DEFAULT_PERIOD } = req.query;
+
+        const [statistics, filterOptions, recentUpdates] = await Promise.all([
+            dbService.getDashboardStatistics(),
+            dbService.getFilterOptions(),
+            dbService.getEnhancedUpdates({
+                authority: authority || undefined,
+                sector: sector || undefined,
+                range: period || DEFAULT_PERIOD,
+                limit: 500
+            })
+        ]);
+
+        const impactDistribution = calculateImpactDistribution(recentUpdates);
+        const totalDistributionCount = IMPACT_LEVELS.reduce((acc, level) => acc + (impactDistribution.byLevel?.[level] || 0), 0);
+        const sidebar = await getSidebar('analytics');
 
         const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Predictive Analytics Dashboard - Horizon Scanner</title>
+    <title>Analytics Dashboard - Regulatory Intelligence</title>
     ${getCommonStyles()}
     <style>
-        /* Analytics-specific styles */
-        .analytics-container { 
-            display: grid; 
-            grid-template-columns: 280px 1fr; 
-            min-height: 100vh; 
-        }
-        
-        .analytics-main { 
-            padding: 2rem; 
-            overflow-y: auto;
-            background: #fafbfc;
-        }
-        
-        .analytics-header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            padding: 2rem; 
-            border-radius: 12px; 
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .analytics-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-        }
-        
-        .analytics-header > * {
-            position: relative;
-            z-index: 2;
-        }
-        
-        .analytics-title { 
-            font-size: 2rem; 
-            font-weight: 700; 
-            margin-bottom: 0.5rem;
+        .analytics-page {
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            flex-direction: column;
+            gap: 24px;
         }
 
-        .analytics-title a {
-            color: white;
-            text-decoration: none;
-            transition: opacity 0.15s ease;
+        .analytics-header {
+            background: white;
+            padding: 28px;
+            border-radius: 14px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
         }
 
-        .analytics-title a:hover {
-            opacity: 0.8;
-        }
-        
-        .analytics-subtitle { 
-            font-size: 1.125rem; 
-            opacity: 0.9;
-        }
-        
-        .back-link {
-            display: inline-block;
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            margin-bottom: 1rem;
-            transition: color 0.15s ease;
-            font-size: 0.875rem;
-        }
-        
-        .back-link:hover {
-            color: white;
-        }
-        
-        .metrics-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-            gap: 1.5rem; 
-            margin-bottom: 2rem;
-        }
-        
-        .metric-card { 
-            background: #ffffff; 
-            padding: 1.5rem; 
-            border-radius: 12px; 
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            transition: all 0.15s ease;
-        }
-        
-        .metric-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transform: translateY(-1px);
-        }
-        
-        .metric-value { 
-            font-size: 2rem; 
-            font-weight: 700; 
-            color: #1f2937; 
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .metric-icon {
-            font-size: 1.5rem;
-        }
-        
-        .metric-label { 
-            color: #6b7280; 
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-weight: 500;
-        }
-        
-        .metric-trend {
-            font-size: 0.75rem;
-            color: #059669;
-            font-weight: 500;
-            margin-top: 0.25rem;
-        }
-        
-        .metric-trend.negative {
-            color: #dc2626;
-        }
-        
-        .chart-container { 
-            background: #ffffff; 
-            padding: 1.5rem; 
-            border-radius: 12px; 
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            margin-bottom: 1.5rem;
-        }
-        
-        .chart-title { 
-            font-size: 1.125rem; 
-            font-weight: 600; 
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+        .analytics-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
             color: #1f2937;
+            margin-bottom: 12px;
         }
-        
-        .chart-placeholder {
-            text-align: center;
-            padding: 3rem;
+
+        .analytics-header p {
             color: #6b7280;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 2px dashed #e5e7eb;
-            position: relative;
-            overflow: hidden;
+            margin-bottom: 18px;
         }
-        
-        .chart-placeholder::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.05) 50%, transparent 70%);
-            animation: shimmer 2s infinite;
+
+        .analytics-meta {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #6b7280;
         }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .chart-stats {
+
+        .analytics-summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-            position: relative;
-            z-index: 2;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 18px;
         }
-        
-        .chart-stat {
-            text-align: center;
-            padding: 0.75rem;
-            background: rgba(255,255,255,0.8);
-            border-radius: 6px;
+
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
             border: 1px solid #e5e7eb;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
         }
-        
-        .chart-stat-value {
-            font-size: 1.25rem;
+
+        .summary-label {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
             font-weight: 700;
             color: #1f2937;
         }
-        
-        .chart-stat-label {
-            font-size: 0.75rem;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f4f6;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-        
-        .status-card {
-            background: #ffffff;
-            padding: 1rem;
-            border-radius: 8px;
+
+        .analytics-filters {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
             border: 1px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            align-items: flex-end;
         }
-        
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        
-        .status-indicator.operational {
-            background: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-        }
-        
-        .status-indicator.error {
-            background: #ef4444;
-            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-        }
-        
-        .status-text {
-            font-size: 0.875rem;
-            font-weight: 500;
+
+        .filter-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
             color: #374151;
+            margin-bottom: 6px;
         }
-        
-        .insights-grid {
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: #f9fafb;
+            font-size: 0.95rem;
+        }
+
+        .analytics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            gap: 20px;
         }
-        
-        .insight-card {
-            background: #ffffff;
-            padding: 1.5rem;
-            border-radius: 12px;
+
+        .analytics-card {
+            background: white;
+            border-radius: 14px;
             border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+            padding: 24px;
         }
-        
-        .insight-header {
+
+        .analytics-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 18px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
         }
-        
-        .insight-icon {
-            font-size: 1.5rem;
+
+        .impact-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
-        
-        .insight-title {
-            font-size: 1rem;
+
+        .impact-row {
+            display: grid;
+            grid-template-columns: 120px 1fr 120px;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .impact-label {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .impact-bar {
+            background: #f1f5f9;
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+        }
+
+        .impact-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s ease;
+        }
+
+        .impact-significant { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .impact-moderate { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .impact-informational { background: linear-gradient(90deg, #38bdf8, #0ea5e9); }
+
+        .impact-value {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
             font-weight: 600;
             color: #1f2937;
         }
-        
-        .insight-content {
-            color: #4b5563;
-            font-size: 0.875rem;
-            line-height: 1.5;
+
+        .impact-percent {
+            color: #6b7280;
+            font-weight: 500;
         }
-        
-        .insight-metric {
-            font-size: 1.25rem;
-            font-weight: 700;
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
             color: #1f2937;
-            margin-bottom: 0.25rem;
+            font-weight: 500;
         }
-        
-        .confidence-bar {
-            height: 4px;
-            background: #f3f4f6;
-            border-radius: 2px;
-            overflow: hidden;
-            margin-top: 0.5rem;
+
+        .score-row:last-child {
+            border-bottom: none;
         }
-        
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
-            transition: width 0.3s ease;
+
+        .analytics-card table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        
-        .action-buttons { 
-            display: flex; 
-            gap: 1rem; 
-            margin-top: 2rem; 
-            justify-content: center; 
+
+        .analytics-card table th,
+        .analytics-card table td {
+            text-align: left;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .analytics-card table th {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #9ca3af;
+        }
+
+        .analytics-card table td {
+            color: #1f2937;
+            font-weight: 500;
+        }
+
+        .analytics-card table td:last-child {
+            text-align: right;
+        }
+
+        .analytics-card table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .analytics-card table td.empty {
+            text-align: center;
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .analytics-actions {
+            display: flex;
+            gap: 12px;
             flex-wrap: wrap;
+            justify-content: flex-end;
         }
-        
-        .btn { 
-            padding: 0.75rem 1.5rem; 
-            border-radius: 8px; 
-            text-decoration: none; 
-            font-weight: 500; 
-            font-size: 0.875rem;
-            transition: all 0.15s ease; 
+
+        .analytics-button {
+            background: #4f46e5;
+            color: white;
             border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .analytics-button.secondary {
+            background: white;
+            color: #4f46e5;
+            border: 1px solid #4f46e5;
+        }
+
+        .analytics-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 15px rgba(79, 70, 229, 0.2);
+        }
+
+        .analytics-loading {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            display: none;
+        }
+
+        .analytics-loading.active {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 6px;
         }
-        
-        .btn-primary { 
-            background: #3b82f6; 
-            color: white; 
-        }
-        
-        .btn-primary:hover { 
-            background: #2563eb; 
-            transform: translateY(-1px);
-        }
-        
-        .btn-secondary { 
-            background: #f3f4f6; 
-            color: #374151; 
-            border: 1px solid #e5e7eb;
-        }
-        
-        .btn-secondary:hover { 
-            background: #e5e7eb; 
-        }
-        
-        .refresh-btn {
-            background: #059669;
-            color: white;
-        }
-        
-        .refresh-btn:hover {
-            background: #047857;
-        }
-        
-        @media (max-width: 768px) { 
-            .analytics-container {
+
+        @media (max-width: 1024px) {
+            .impact-row {
                 grid-template-columns: 1fr;
+                gap: 8px;
             }
-            
-            .sidebar {
-                display: none;
-            }
-            
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
+
+            .impact-value {
+                justify-content: flex-start;
             }
         }
     </style>
 </head>
 <body>
-    <div class="analytics-container">
-        ${getSidebar('analytics', counts)}
-        
-        <div class="analytics-main">
-            <div class="analytics-header">
-                <a href="/" class="back-link">← Back to Home</a>
-                <h1 class="analytics-title">
-                    <a href="/">🔮 Predictive Analytics Dashboard</a>
-                </h1>
-                <p class="analytics-subtitle">AI-powered regulatory intelligence and forecasting</p>
-            </div>
-            
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-value">
-                        <span class="metric-icon">📊</span>
-                        <span id="totalUpdates">${renderMetricValue(analyticsData?.overview?.totalUpdates)}</span>
-                    </div>
-                    <div class="metric-label">Total Updates</div>
-                    <div class="metric-trend">↗ Updated continuously</div>
+    <div class="app-container">
+        ${sidebar}
+        <main class="main-content analytics-page" data-page="analytics" data-selected-authority="${authority}" data-selected-sector="${sector}" data-selected-period="${period || DEFAULT_PERIOD}">
+            <section class="analytics-header">
+                <h1>Predictive Analytics Dashboard</h1>
+                <p>Explore regulatory impact trends, authority performance and sector exposure using live data from the Horizon Scanner knowledge base.</p>
+                <div class="analytics-meta">
+                    <span>Last refresh: ${new Date().toLocaleString('en-GB')}</span>
+                    <span>Total analysed updates: ${formatNumber(statistics?.totalUpdates || 0)}</span>
+                    <span>Filters applied: ${authority ? `Authority - ${authority}` : 'All authorities'}, ${sector ? `Sector - ${sector}` : 'All sectors'}</span>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value">
-                        <span class="metric-icon">⚡</span>
-                        <span id="averageRisk">${analyticsData ? Math.round(analyticsData.overview?.averageRiskScore || 0) + '%' : 'Loading...'}</span>
-                    </div>
-                    <div class="metric-label">Average Risk Score</div>
-                    <div class="metric-trend">Risk assessment active</div>
+            </section>
+
+            <section class="analytics-summary">
+                ${getSummaryCards(statistics)}
+            </section>
+
+            <form id="analytics-filter-form" class="analytics-filters">
+                <div class="filter-group">
+                    <label for="analytics-authority">Authority</label>
+                    <select id="analytics-authority" name="authority">
+                        <option value="">All authorities</option>
+                        ${renderSelectOptions(filterOptions?.authorities || [], authority)}
+                    </select>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value">
-                        <span class="metric-icon">🎯</span>
-                        <span id="activePredictions">${renderMetricValue(analyticsData?.predictions?.length)}</span>
-                    </div>
-                    <div class="metric-label">Active Predictions</div>
-                    <div class="metric-trend">AI models running</div>
+                <div class="filter-group">
+                    <label for="analytics-sector">Sector</label>
+                    <select id="analytics-sector" name="sector">
+                        <option value="">All sectors</option>
+                        ${renderSelectOptions(filterOptions?.sectors || [], sector)}
+                    </select>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value">
-                        <span class="metric-icon">🔥</span>
-                        <span id="hotspotCount">${analyticsData ? (analyticsData.hotspots?.filter(h => h.riskLevel === 'high').length || 0) : 'Loading...'}</span>
-                    </div>
-                    <div class="metric-label">High Risk Sectors</div>
-                    <div class="metric-trend">Monitoring active</div>
+                <div class="filter-group">
+                    <label for="analytics-period">Time range</label>
+                    <select id="analytics-period" name="period">
+                        <option value="week" ${period === 'week' ? 'selected' : ''}>Last 7 days</option>
+                        <option value="month" ${(!period || period === 'month') ? 'selected' : ''}>Last 30 days</option>
+                        <option value="quarter" ${period === 'quarter' ? 'selected' : ''}>Last 90 days</option>
+                        <option value="year" ${period === 'year' ? 'selected' : ''}>Last 12 months</option>
+                    </select>
                 </div>
-            </div>
-            
-            <div class="insights-grid">
-                <div class="insight-card">
-                    <div class="insight-header">
-                        <span class="insight-icon">🚀</span>
-                        <span class="insight-title">Regulatory Velocity</span>
-                    </div>
-                    <div class="insight-metric" id="velocityMetric">
-                        ${analyticsData ? Object.values(analyticsData.velocity || {}).reduce((sum, auth) => sum + (auth.updatesPerWeek || 0), 0).toFixed(1) : '0'} updates/week
-                    </div>
-                    <div class="insight-content">
-                        Cross-authority regulatory activity monitoring with trend analysis and velocity predictions.
-                    </div>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" style="width: 85%"></div>
+                <div class="filter-group">
+                    <div class="analytics-actions">
+                        <span id="analytics-loading" class="analytics-loading">Loading latest analytics…</span>
+                        <button type="button" id="analytics-reset" class="analytics-button secondary">Reset</button>
                     </div>
                 </div>
-                
-                <div class="insight-card">
-                    <div class="insight-header">
-                        <span class="insight-icon">🎯</span>
-                        <span class="insight-title">Sector Hotspots</span>
-                    </div>
-                    <div class="insight-metric" id="hotspotMetric">
-                        ${analyticsData ? (analyticsData.hotspots?.length || 0) : 0} sectors analyzed
-                    </div>
-                    <div class="insight-content">
-                        AI-powered identification of sectors with elevated regulatory activity and impact assessment.
-                    </div>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" style="width: 92%"></div>
+            </form>
+
+            <section class="analytics-grid">
+                <div class="analytics-card">
+                    <h3>Impact distribution <span id="impact-total">${formatNumber(totalDistributionCount)} total</span></h3>
+                    <div id="impact-level-chart" class="impact-chart">
+                        ${renderImpactRows(impactDistribution)}
                     </div>
                 </div>
-                
-                <div class="insight-card">
-                    <div class="insight-header">
-                        <span class="insight-icon">📈</span>
-                        <span class="insight-title">Impact Forecasting</span>
-                    </div>
-                    <div class="insight-metric" id="forecastMetric">
-                        ${analyticsData ? (analyticsData.predictions?.length || 0) : 0} predictions active
-                    </div>
-                    <div class="insight-content">
-                        Predictive modeling for regulatory developments, deadline estimation, and compliance impact analysis.
-                    </div>
-                    <div class="confidence-bar">
-                        <div class="confidence-fill" style="width: 78%"></div>
+                <div class="analytics-card">
+                    <h3>Authority focus</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Authority</th>
+                                <th>Total</th>
+                                <th>High impact</th>
+                                <th>High %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="authority-distribution">
+                            ${renderAuthorityTable(impactDistribution)}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="analytics-grid">
+                <div class="analytics-card">
+                    <h3>Impact score distribution</h3>
+                    <div id="impact-score-table">
+                        ${Object.entries(impactDistribution.byScore || {}).sort(([aKey], [bKey]) => {
+                            const aStart = parseInt(aKey.split('-')[0], 10);
+                            const bStart = parseInt(bKey.split('-')[0], 10);
+                            return aStart - bStart;
+                        }).map(([bucket, value]) => `
+                            <div class="score-row" data-score-range="${bucket}">
+                                <span>${bucket}</span>
+                                <span>${formatNumber(value)}</span>
+                            </div>
+                        `).join('') || '<div class="empty">No score data available</div>'}
                     </div>
                 </div>
-            </div>
-            
-            <div class="chart-container">
-                <h2 class="chart-title">
-                    🚀 Regulatory Velocity Trends
-                </h2>
-                ${analyticsData ? `
-                    <div class="chart-placeholder">
-                        <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Advanced Analytics Engine Active</p>
-                        <p>Velocity analysis tracks regulatory activity patterns across ${Object.keys(analyticsData.velocity || {}).length} authorities</p>
-                        <div class="chart-stats">
-                            ${renderVelocityData()}
-                        </div>
-                    </div>
-                ` : `
-                    <div class="chart-placeholder">
-                        <div class="loading-spinner"></div>
-                        <p>Loading velocity analytics...</p>
-                    </div>
-                `}
-            </div>
-            
-            <div class="chart-container">
-                <h2 class="chart-title">
-                    🔥 Sector Hotspots Analysis
-                </h2>
-                ${analyticsData ? `
-                    <div class="chart-placeholder">
-                        <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">AI Hotspot Detection</p>
-                        <p>Identified ${analyticsData.hotspots?.length || 0} sector activity patterns with ${analyticsData.hotspots?.filter(h => h.riskLevel === 'high').length || 0} high-risk areas</p>
-                        <div class="chart-stats">
-                            ${renderHotspotData()}
-                        </div>
-                    </div>
-                ` : `
-                    <div class="chart-placeholder">
-                        <div class="loading-spinner"></div>
-                        <p>Loading sector analysis...</p>
-                    </div>
-                `}
-            </div>
-            
-            <div class="chart-container">
-                <h2 class="chart-title">
-                    📈 Predictive Insights
-                </h2>
-                ${analyticsData ? `
-                    <div class="chart-placeholder">
-                        <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Machine Learning Predictions</p>
-                        <p>Generated ${analyticsData.predictions?.length || 0} predictive insights with confidence scoring and trend analysis</p>
-                        <div class="chart-stats">
-                            ${renderPredictionStats()}
-                        </div>
-                    </div>
-                ` : `
-                    <div class="chart-placeholder">
-                        <div class="loading-spinner"></div>
-                        <p>Loading predictive models...</p>
-                    </div>
-                `}
-            </div>
-            
-            <div class="chart-container">
-                <h2 class="chart-title">📊 System Status</h2>
-                <div class="status-grid">
-                    <div class="status-card">
-                        <div class="status-indicator ${analyticsData ? 'operational' : 'error'}"></div>
-                        <div class="status-text">Analytics Engine</div>
-                    </div>
-                    <div class="status-card">
-                        <div class="status-indicator operational"></div>
-                        <div class="status-text">Data Pipeline</div>
-                    </div>
-                    <div class="status-card">
-                        <div class="status-indicator operational"></div>
-                        <div class="status-text">Prediction Models</div>
-                    </div>
-                    <div class="status-card">
-                        <div class="status-indicator operational"></div>
-                        <div class="status-text">Risk Assessment</div>
-                    </div>
+                <div class="analytics-card">
+                    <h3>Sector exposure</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Sector</th>
+                                <th>Total</th>
+                                <th>Avg impact</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sector-distribution">
+                            ${renderSectorTable(impactDistribution)}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            
-            <div class="action-buttons">
-                <button onclick="refreshAnalytics()" class="btn refresh-btn">
-                    🔄 Refresh Analytics
-                </button>
-                <a href="/dashboard" class="btn btn-primary">
-                    📰 View News Feed
-                </a>
-                <a href="/api/analytics/dashboard" class="btn btn-secondary">
-                    📊 Raw Data (JSON)
-                </a>
-                <a href="/" class="btn btn-secondary">
-                    🏠 Return to Home
-                </a>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
-    
-    ${getCommonClientScripts()}
-    
+
     <script>
-        // =================
-        // ANALYTICS PAGE SPECIFIC LOGIC ONLY
-        // =================
-        
-        // Analytics data for this page
-        let analyticsData = ${analyticsData ? JSON.stringify(analyticsData) : 'null'};
-        
-        // Initialize analytics dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📊 Analytics Page: Initializing...');
-            
-            if (!analyticsData) {
-                loadAnalyticsDashboard();
-            } else {
-                updateMetrics();
-            }
-            
-            // Auto-refresh every 2 minutes
-            setInterval(loadAnalyticsDashboard, 120000);
-            
-            console.log('✅ Analytics Dashboard initialized');
-        });
-
-        async function loadAnalyticsDashboard() {
-            try {
-                const response = await fetch('/api/analytics/dashboard');
-                const data = await response.json();
-                
-                if (data.success) {
-                    analyticsData = data.dashboard;
-                    updateMetrics();
-                    console.log('✅ Analytics dashboard loaded');
-                } else {
-                    console.error('Failed to load analytics dashboard');
-                }
-            } catch (error) {
-                console.error('Error loading analytics:', error);
-            }
-        }
-        
-        function updateMetrics() {
-            if (!analyticsData) return;
-            
-            // Update main metrics
-            const totalElement = document.getElementById('totalUpdates');
-            const riskElement = document.getElementById('averageRisk');
-            const predictionsElement = document.getElementById('activePredictions');
-            const hotspotsElement = document.getElementById('hotspotCount');
-            
-            if (totalElement) totalElement.textContent = analyticsData.overview.totalUpdates;
-            if (riskElement) riskElement.textContent = Math.round(analyticsData.overview.averageRiskScore) + '%';
-            if (predictionsElement) predictionsElement.textContent = analyticsData.predictions.length;
-            if (hotspotsElement) hotspotsElement.textContent = analyticsData.hotspots.filter(h => h.riskLevel === 'high').length;
-            
-            // Update insight metrics
-            const totalVelocity = Object.values(analyticsData.velocity || {})
-                .reduce((sum, auth) => sum + (auth.updatesPerWeek || 0), 0);
-            
-            const velocityElement = document.getElementById('velocityMetric');
-            const hotspotMetricElement = document.getElementById('hotspotMetric');
-            const forecastElement = document.getElementById('forecastMetric');
-            
-            if (velocityElement) velocityElement.textContent = totalVelocity.toFixed(1) + ' updates/week';
-            if (hotspotMetricElement) hotspotMetricElement.textContent = analyticsData.hotspots.length + ' sectors analyzed';
-            if (forecastElement) forecastElement.textContent = analyticsData.predictions.length + ' predictions active';
-        }
-
-        // Make analytics-specific functions globally available
-        window.loadAnalyticsDashboard = loadAnalyticsDashboard;
-        window.updateMetrics = updateMetrics;
-        
-        console.log('📊 Analytics Page: Script loaded and ready');
+        window.initialAnalyticsData = ${serializeForScript({
+            statistics,
+            filterOptions,
+            impactDistribution,
+            filters: { authority, sector, period: period || DEFAULT_PERIOD }
+        })};
     </script>
+    ${getClientScripts()}
 </body>
 </html>`;
-        
+
         res.send(html);
-        
     } catch (error) {
         console.error('Analytics page error:', error);
         res.status(500).send(`
@@ -870,6 +600,8 @@ const analyticsPage = async (req, res) => {
             </div>
         `);
     }
-};
+}
 
-module.exports = analyticsPage;
+module.exports = {
+    renderAnalyticsPage
+};

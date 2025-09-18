@@ -42,6 +42,7 @@ async function getSidebar(currentPage = '') {
                         <a href="/analytics" class="nav-link">
                             <span class="nav-icon">📈</span>
                             <span class="nav-text">Analytics</span>
+                            <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'ai-intelligence' ? 'active' : ''}">

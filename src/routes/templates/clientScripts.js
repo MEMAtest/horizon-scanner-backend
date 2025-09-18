@@ -127,6 +127,12 @@ function getClientScriptsContent() {
         let availableSectors = [];
         let workspaceStats = { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 };
         let analyticsPreviewData = null;
+        const ANALYTICS_LEVELS = ['Significant', 'Moderate', 'Informational'];
+        const DEFAULT_ANALYTICS_PERIOD = 'month';
+        let analyticsState = {
+            filters: { authority: '', sector: '', period: DEFAULT_ANALYTICS_PERIOD },
+            impactDistribution: null
+        };
         let expandedStreams = new Set();
         let selectedAuthorities = new Set();
         let selectedImpactLevels = new Set();
@@ -313,6 +319,238 @@ function getClientScriptsContent() {
                 \`;
             }
         }
+
+        async function initializeAnalyticsDashboard() {
+            const analyticsPage = document.querySelector('.analytics-page');
+            if (!analyticsPage) return;
+
+            console.log('📈 Initializing analytics dashboard...');
+
+            analyticsState.filters = {
+                authority: analyticsPage.dataset.selectedAuthority || '',
+                sector: analyticsPage.dataset.selectedSector || '',
+                period: analyticsPage.dataset.selectedPeriod || DEFAULT_ANALYTICS_PERIOD
+            };
+
+            setupAnalyticsFilters();
+
+            if (window.initialAnalyticsData?.impactDistribution) {
+                analyticsState.impactDistribution = window.initialAnalyticsData.impactDistribution;
+                renderAnalyticsDistribution(window.initialAnalyticsData.impactDistribution);
+                updateAnalyticsUrl();
+            } else {
+                await refreshAnalyticsDistribution();
+            }
+        }
+
+        function setupAnalyticsFilters() {
+            const form = document.getElementById('analytics-filter-form');
+            if (!form) return;
+
+            const authoritySelect = document.getElementById('analytics-authority');
+            const sectorSelect = document.getElementById('analytics-sector');
+            const periodSelect = document.getElementById('analytics-period');
+            const resetButton = document.getElementById('analytics-reset');
+
+            const selects = [authoritySelect, sectorSelect, periodSelect].filter(Boolean);
+
+            selects.forEach(select => {
+                if (select.name && analyticsState.filters[select.name] !== undefined) {
+                    select.value = analyticsState.filters[select.name] || '';
+                }
+
+                select.addEventListener('change', () => handleAnalyticsFilterChange(form));
+            });
+
+            if (resetButton) {
+                resetButton.addEventListener('click', () => {
+                    form.reset();
+                    if (authoritySelect) authoritySelect.value = '';
+                    if (sectorSelect) sectorSelect.value = '';
+                    if (periodSelect) periodSelect.value = DEFAULT_ANALYTICS_PERIOD;
+
+                    analyticsState.filters = { authority: '', sector: '', period: DEFAULT_ANALYTICS_PERIOD };
+                    refreshAnalyticsDistribution();
+                });
+            }
+        }
+
+        async function handleAnalyticsFilterChange(form) {
+            const formData = new FormData(form);
+            analyticsState.filters = {
+                authority: formData.get('authority') || '',
+                sector: formData.get('sector') || '',
+                period: formData.get('period') || DEFAULT_ANALYTICS_PERIOD
+            };
+
+            await refreshAnalyticsDistribution();
+        }
+
+        function setAnalyticsLoadingState(isLoading) {
+            const loadingEl = document.getElementById('analytics-loading');
+            if (loadingEl) {
+                loadingEl.classList.toggle('active', Boolean(isLoading));
+            }
+        }
+
+        function updateAnalyticsUrl() {
+            const params = new URLSearchParams();
+            if (analyticsState.filters.authority) params.set('authority', analyticsState.filters.authority);
+            if (analyticsState.filters.sector) params.set('sector', analyticsState.filters.sector);
+            if (analyticsState.filters.period && analyticsState.filters.period !== DEFAULT_ANALYTICS_PERIOD) {
+                params.set('period', analyticsState.filters.period);
+            }
+
+            const queryString = params.toString();
+            const newUrl = queryString ? `/analytics?${queryString}` : '/analytics';
+            if (window.location.pathname === '/analytics') {
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+
+        async function refreshAnalyticsDistribution() {
+            const analyticsPage = document.querySelector('.analytics-page');
+            if (!analyticsPage) return;
+
+            try {
+                setAnalyticsLoadingState(true);
+
+                const params = new URLSearchParams();
+                if (analyticsState.filters.authority) params.set('authority', analyticsState.filters.authority);
+                if (analyticsState.filters.sector) params.set('sector', analyticsState.filters.sector);
+                if (analyticsState.filters.period) params.set('period', analyticsState.filters.period);
+
+                const response = await fetch(`/api/analytics/impact-distribution?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.success && data.distribution) {
+                    analyticsState.impactDistribution = data.distribution;
+                    renderAnalyticsDistribution(data.distribution);
+                    updateAnalyticsUrl();
+                } else {
+                    throw new Error(data.error || 'Unknown analytics error');
+                }
+            } catch (error) {
+                console.error('Analytics refresh failed:', error);
+                showMessage('Unable to update analytics data. Please try again later.', 'error');
+            } finally {
+                setAnalyticsLoadingState(false);
+            }
+        }
+
+        function renderAnalyticsDistribution(distribution) {
+            if (!distribution) return;
+
+            updateImpactLevelRows(distribution.byLevel || {});
+            updateAuthorityTable(distribution.byAuthority || {});
+            updateSectorTable(distribution.bySector || {});
+            updateScoreTable(distribution.byScore || {});
+        }
+
+        function updateImpactLevelRows(levelData) {
+            const container = document.getElementById('impact-level-chart');
+            if (!container) return;
+
+            const total = Object.values(levelData || {}).reduce((sum, value) => sum + value, 0);
+
+            ANALYTICS_LEVELS.forEach(level => {
+                const row = container.querySelector(`[data-impact-level="${level}"]`);
+                if (!row) return;
+
+                const count = levelData[level] || 0;
+                const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                const countEl = row.querySelector('.impact-count');
+                const percentEl = row.querySelector('.impact-percent');
+                const barEl = row.querySelector('.impact-bar-fill');
+
+                if (countEl) countEl.textContent = count.toLocaleString('en-GB');
+                if (percentEl) percentEl.textContent = `${percentage}%`;
+                if (barEl) barEl.style.width = `${percentage}%`;
+            });
+
+            const totalEl = document.getElementById('impact-total');
+            if (totalEl) totalEl.textContent = `${total.toLocaleString('en-GB')} total`;
+        }
+
+        function updateAuthorityTable(authorityData) {
+            const tableBody = document.getElementById('authority-distribution');
+            if (!tableBody) return;
+
+            const rows = Object.entries(authorityData || {})
+                .map(([name, stats]) => ({
+                    name: name || 'Unknown',
+                    total: stats.total || 0,
+                    highImpact: stats.highImpact || 0,
+                    percentage: stats.total ? Math.round((stats.highImpact / stats.total) * 100) : 0
+                }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+            if (!rows.length) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="empty">No authority data available</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.name}</td>
+                    <td>${row.total.toLocaleString('en-GB')}</td>
+                    <td>${row.highImpact.toLocaleString('en-GB')}</td>
+                    <td>${row.percentage}%</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateSectorTable(sectorData) {
+            const tableBody = document.getElementById('sector-distribution');
+            if (!tableBody) return;
+
+            const rows = Object.entries(sectorData || {})
+                .map(([name, stats]) => ({
+                    name: name || 'Other',
+                    total: stats.total || 0,
+                    avgImpact: stats.avgImpact || 0
+                }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+            if (!rows.length) {
+                tableBody.innerHTML = '<tr><td colspan="3" class="empty">No sector data available</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.name}</td>
+                    <td>${row.total.toLocaleString('en-GB')}</td>
+                    <td>${row.avgImpact.toFixed(1)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateScoreTable(scoreData) {
+            const container = document.getElementById('impact-score-table');
+            if (!container) return;
+
+            const rows = Object.entries(scoreData || {})
+                .sort(([aKey], [bKey]) => {
+                    const aStart = parseInt(aKey.split('-')[0], 10);
+                    const bStart = parseInt(bKey.split('-')[0], 10);
+                    return aStart - bStart;
+                });
+
+            if (!rows.length) {
+                container.innerHTML = '<div class="empty">No score data available</div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(([range, value]) => `
+                <div class="score-row" data-score-range="${range}">
+                    <span>${range}</span>
+                    <span>${value.toLocaleString('en-GB')}</span>
+                </div>
+            `).join('');
+        }
         
         function applyActiveFilters() {
             console.log('🎯 Applying filters');
@@ -364,10 +602,11 @@ function getClientScriptsContent() {
                 await loadIntelligenceStreams();
                 await loadAnalyticsPreview();
                 await checkLiveSubscriptions();
-                
+                await initializeAnalyticsDashboard();
+
                 updateLiveCounters();
                 setInterval(updateLiveCounters, 30000);
-                
+
                 console.log('✅ System initialized');
             } catch (error) {
                 console.error('❌ Initialization failed:', error);
