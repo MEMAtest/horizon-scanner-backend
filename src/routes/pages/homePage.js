@@ -680,7 +680,7 @@ async function renderHomePage(req, res) {
                             <div>Live Dashboard</div>
                         </a>
                         
-                        <a href="/api/ai/weekly-roundup" class="action-button">
+                        <a href="/weekly-roundup" class="action-button">
                             <span class="action-icon">📋</span>
                             <div>Weekly AI Roundup</div>
                         </a>
@@ -725,7 +725,7 @@ async function renderHomePage(req, res) {
                                 Deep analysis of regulatory authority patterns, enforcement trends, 
                                 and upcoming policy directions
                             </p>
-                            <a href="/api/ai/authority-spotlight/FCA" class="feature-link">View Spotlight →</a>
+                            <a href="/ai/authority-spotlight?authority=FCA" class="feature-link">View Spotlight →</a>
                         </div>
                         
                         <div class="feature-card">
@@ -735,7 +735,7 @@ async function renderHomePage(req, res) {
                                 Sector-specific regulatory pressure analysis and 
                                 compliance priority recommendations
                             </p>
-                            <a href="/api/ai/sector-analysis/Banking" class="feature-link">Banking Analysis →</a>
+                            <a href="/ai/sector-intelligence?sector=Banking" class="feature-link">Banking Analysis →</a>
                         </div>
                         
                         <div class="feature-card">
@@ -745,7 +745,7 @@ async function renderHomePage(req, res) {
                                 Comprehensive weekly intelligence briefings with key themes, 
                                 priorities, and strategic recommendations
                             </p>
-                            <a href="/api/ai/weekly-roundup" class="feature-link">Latest Roundup →</a>
+                            <a href="/weekly-roundup" class="feature-link">Latest Roundup →</a>
                         </div>
                         
                         <div class="feature-card">

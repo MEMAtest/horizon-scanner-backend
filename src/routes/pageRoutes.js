@@ -7,6 +7,8 @@ const router = express.Router();
 // Import page handlers
 const renderHomePage = require('./pages/homePage');  // No destructuring
 const { renderDashboardPage } = require('./pages/dashboardPage');  // Keep destructuring
+const { renderAuthoritySpotlightPage } = require('./pages/authoritySpotlightPage');
+const { renderSectorIntelligencePage } = require('./pages/sectorIntelligencePage');
 
 // Import services for test page and AI intelligence page
 const dbService = require('../services/dbService');
@@ -561,6 +563,14 @@ router.get('/weekly-roundup', async (req, res) => {
         `);
     }
 });
+
+// AUTHORITY SPOTLIGHT PAGE
+router.get('/ai/authority-spotlight', renderAuthoritySpotlightPage);
+router.get('/ai/authority-spotlight/:authority', renderAuthoritySpotlightPage);
+
+// SECTOR INTELLIGENCE PAGE
+router.get('/ai/sector-intelligence', renderSectorIntelligencePage);
+router.get('/ai/sector-intelligence/:sector', renderSectorIntelligencePage);
 
 // AI INTELLIGENCE PAGE (Phase 1.3 - WORKING VERSION)
 router.get('/ai-intelligence', async (req, res) => {
@@ -1342,6 +1352,8 @@ router.get('/test', async (req, res) => {
                         <a href="/dashboard" class="quick-link">📊 Dashboard</a>
                         <a href="/ai-intelligence" class="quick-link">🤖 AI Intelligence</a>
                         <a href="/weekly-roundup" class="quick-link">📋 Weekly Roundup</a>
+                        <a href="/ai/authority-spotlight" class="quick-link">🏛️ Authority Spotlight</a>
+                        <a href="/ai/sector-intelligence" class="quick-link">🏢 Sector Intelligence</a>
                         <a href="/api/health" class="quick-link">🔍 Health Check</a>
                         <a href="/api/firm-profile" class="quick-link">🏢 Firm Profile</a>
                         <a href="/api/workspace/stats" class="quick-link">📊 Workspace Stats</a>

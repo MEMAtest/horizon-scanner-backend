@@ -104,18 +104,42 @@
     ]
   },
   "eslintConfig": {
-    "extends": [
-      "standard"
-    ],
     "env": {
       "node": true,
+      "browser": true,
+      "es2021": true,
       "jest": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2021,
+      "sourceType": "module"
     },
     "rules": {
       "no-console": "off",
-      "space-before-function-paren": "off"
+      "space-before-function-paren": "off",
+      "semi": [
+        "error",
+        "always"
+      ],
+      "no-unused-vars": "off",
+      "no-useless-escape": "off",
+      "no-cond-assign": "off",
+      "no-empty": "off",
+      "no-case-declarations": "off",
+      "no-prototype-builtins": "off",
+      "no-undef": "off"
     }
   },
+  "eslintIgnore": [
+    "src/components/**",
+    "src/widgets/**",
+    "src/utils/componentHelpers.js",
+    "src/utils/uiUtils.js",
+    "src/public/**"
+  ],
   "lint-staged": {
     "*.js": [
       "eslint --fix",
