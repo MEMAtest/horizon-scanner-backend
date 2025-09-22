@@ -633,54 +633,54 @@ const enforcementPage = async (req, res) => {
                         const container = document.getElementById('stats-container');
                         const overview = stats.overview;
 
-                        container.innerHTML = `
+                        container.innerHTML = \`
                             <div class="stat-card">
                                 <span class="stat-icon">⚖️</span>
-                                <div class="stat-value">${overview.total_fines || 0}</div>
+                                <div class="stat-value">\$\{overview.total_fines || 0\}</div>
                                 <div class="stat-label">Total Enforcement Actions</div>
                                 <div class="stat-change change-positive">
-                                    📈 ${overview.fines_this_year || 0} this year
+                                    📈 \$\{overview.fines_this_year || 0\} this year
                                 </div>
                             </div>
                             <div class="stat-card">
                                 <span class="stat-icon">💰</span>
-                                <div class="stat-value">${this.formatCurrency(overview.total_amount)}</div>
+                                <div class="stat-value">\$\{this.formatCurrency(overview.total_amount)\}</div>
                                 <div class="stat-label">Total Fines Issued</div>
                                 <div class="stat-change">
-                                    📊 Avg: ${this.formatCurrency(overview.average_amount)}
+                                    📊 Avg: \$\{this.formatCurrency(overview.average_amount)\}
                                 </div>
                             </div>
                             <div class="stat-card">
                                 <span class="stat-icon">📅</span>
-                                <div class="stat-value">${overview.fines_last_30_days || 0}</div>
+                                <div class="stat-value">\$\{overview.fines_last_30_days || 0\}</div>
                                 <div class="stat-label">Last 30 Days</div>
                                 <div class="stat-change">
-                                    🔴 Largest: ${this.formatCurrency(overview.largest_fine)}
+                                    🔴 Largest: \$\{this.formatCurrency(overview.largest_fine)\}
                                 </div>
                             </div>
                             <div class="stat-card">
                                 <span class="stat-icon">⚠️</span>
-                                <div class="stat-value">${overview.systemic_risk_cases || 0}</div>
+                                <div class="stat-value">\$\{overview.systemic_risk_cases || 0\}</div>
                                 <div class="stat-label">Systemic Risk Cases</div>
                                 <div class="stat-change">
-                                    🎯 Risk Score: ${Math.round(overview.average_risk_score || 0)}/100
+                                    🎯 Risk Score: \$\{Math.round(overview.average_risk_score || 0)\}/100
                                 </div>
                             </div>
-                        `;
+                        \`;
 
                         // Update last update time
                         document.getElementById('last-update').textContent =
-                            `Updated: ${new Date().toLocaleTimeString()}`;
+                            \`Updated: \$\{new Date().toLocaleTimeString()\}\`;
                     }
 
                     renderStatsError(error) {
                         const container = document.getElementById('stats-container');
-                        container.innerHTML = `
+                        container.innerHTML = \`
                             <div class="error-state">
                                 <strong>Failed to load statistics</strong><br>
-                                ${error}
+                                \$\{error\}
                             </div>
-                        `;
+                        \`;
                     }
 
                     async loadRecentFines() {
@@ -709,7 +709,7 @@ const enforcementPage = async (req, res) => {
                             return;
                         }
 
-                        const tableHTML = `
+                        const tableHTML = \`
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -723,52 +723,52 @@ const enforcementPage = async (req, res) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${fines.map(fine => `
+                                    \$\{fines.map(fine => \\\`
                                         <tr>
                                             <td>
-                                                <span class="fine-reference">${fine.fine_reference || 'N/A'}</span>
+                                                <span class="fine-reference">\$\{fine.fine_reference || 'N/A'\}</span>
                                             </td>
-                                            <td>${this.formatDate(fine.date_issued)}</td>
+                                            <td>\$\{this.formatDate(fine.date_issued)\}</td>
                                             <td>
-                                                <strong>${fine.firm_individual || 'Unknown'}</strong>
-                                                ${fine.ai_summary ? `<br><small style="color: #6b7280;">${fine.ai_summary.substring(0, 100)}...</small>` : ''}
+                                                <strong>\$\{fine.firm_individual || 'Unknown'\}</strong>
+                                                \$\{fine.ai_summary ? \\\`<br><small style="color: #6b7280;">\$\{fine.ai_summary.substring(0, 100)\}...</small>\\\` : ''\}
                                             </td>
                                             <td>
-                                                <span class="fine-amount">${this.formatCurrency(fine.amount)}</span>
+                                                <span class="fine-amount">\$\{this.formatCurrency(fine.amount)\}</span>
                                             </td>
                                             <td>
                                                 <div class="breach-tags">
-                                                    ${(fine.breach_categories || []).map(category =>
-                                                        `<span class="breach-tag">${category}</span>`
-                                                    ).join('')}
+                                                    \$\{(fine.breach_categories || []).map(category =>
+                                                        \\\`<span class="breach-tag">\$\{category\}</span>\\\`
+                                                    ).join('')\}
                                                 </div>
                                             </td>
                                             <td>
-                                                ${this.renderRiskBadge(fine.risk_score)}
+                                                \$\{this.renderRiskBadge(fine.risk_score)\}
                                             </td>
                                             <td>
-                                                ${fine.final_notice_url ?
-                                                    `<a href="${fine.final_notice_url}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.75rem;">View Notice</a>` :
+                                                \$\{fine.final_notice_url ?
+                                                    \\\`<a href="\$\{fine.final_notice_url\}" target="_blank" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.75rem;">View Notice</a>\\\` :
                                                     'N/A'
-                                                }
+                                                \}
                                             </td>
                                         </tr>
-                                    `).join('')}
+                                    \\\`).join('')\}
                                 </tbody>
                             </table>
-                        `;
+                        \`;
 
                         container.innerHTML = tableHTML;
                     }
 
                     renderFinesError(error) {
                         const container = document.getElementById('fines-container');
-                        container.innerHTML = `
+                        container.innerHTML = \`
                             <div class="error-state">
                                 <strong>Failed to load enforcement actions</strong><br>
-                                ${error}
+                                \$\{error\}
                             </div>
-                        `;
+                        \`;
                     }
 
                     async loadTrends() {
@@ -776,7 +776,7 @@ const enforcementPage = async (req, res) => {
                             console.log('📈 Loading trends...');
 
                             const period = document.getElementById('trends-period').value || 'monthly';
-                            const response = await fetch(`/api/enforcement/trends?period=${period}&limit=12`);
+                            const response = await fetch(\`/api/enforcement/trends?period=\$\{period\}&limit=12\`);
                             const data = await response.json();
 
                             if (data.success) {
@@ -799,7 +799,7 @@ const enforcementPage = async (req, res) => {
                         }
 
                         // Simple table view for trends (could be enhanced with charts later)
-                        const tableHTML = `
+                        const tableHTML = \`
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -811,30 +811,30 @@ const enforcementPage = async (req, res) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${trends.map(trend => `
+                                    \$\{trends.map(trend => \\\`
                                         <tr>
-                                            <td><strong>${trend.period}</strong></td>
-                                            <td>${trend.fine_count || 0}</td>
-                                            <td class="fine-amount">${this.formatCurrency(trend.total_amount)}</td>
-                                            <td>${this.formatCurrency(trend.average_amount)}</td>
-                                            <td>${Math.round(trend.average_risk_score || 0)}/100</td>
+                                            <td><strong>\$\{trend.period\}</strong></td>
+                                            <td>\$\{trend.fine_count || 0\}</td>
+                                            <td class="fine-amount">\$\{this.formatCurrency(trend.total_amount)\}</td>
+                                            <td>\$\{this.formatCurrency(trend.average_amount)\}</td>
+                                            <td>\$\{Math.round(trend.average_risk_score || 0)\}/100</td>
                                         </tr>
-                                    `).join('')}
+                                    \\\`).join('')\}
                                 </tbody>
                             </table>
-                        `;
+                        \`;
 
                         container.innerHTML = tableHTML;
                     }
 
                     renderTrendsError(error) {
                         const container = document.getElementById('trends-container');
-                        container.innerHTML = `
+                        container.innerHTML = \`
                             <div class="error-state">
                                 <strong>Failed to load trends</strong><br>
-                                ${error}
+                                \$\{error\}
                             </div>
-                        `;
+                        \`;
                     }
 
                     async loadTopFirms() {
@@ -863,7 +863,7 @@ const enforcementPage = async (req, res) => {
                             return;
                         }
 
-                        const tableHTML = `
+                        const tableHTML = \`
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -877,43 +877,43 @@ const enforcementPage = async (req, res) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${firms.map((firm, index) => `
+                                    \$\{firms.map((firm, index) => \\\`
                                         <tr>
-                                            <td><strong>${index + 1}</strong></td>
-                                            <td>${firm.firm_name || 'Unknown'}</td>
-                                            <td class="fine-amount">${this.formatCurrency(firm.total_fines)}</td>
-                                            <td>${firm.fine_count || 0}</td>
-                                            <td>${this.formatDate(firm.first_fine_date)}</td>
-                                            <td>${this.formatDate(firm.latest_fine_date)}</td>
-                                            <td>${firm.is_repeat_offender ? '⚠️ Yes' : '✅ No'}</td>
+                                            <td><strong>\$\{index + 1\}</strong></td>
+                                            <td>\$\{firm.firm_name || 'Unknown'\}</td>
+                                            <td class="fine-amount">\$\{this.formatCurrency(firm.total_fines)\}</td>
+                                            <td>\$\{firm.fine_count || 0\}</td>
+                                            <td>\$\{this.formatDate(firm.first_fine_date)\}</td>
+                                            <td>\$\{this.formatDate(firm.latest_fine_date)\}</td>
+                                            <td>\$\{firm.is_repeat_offender ? '⚠️ Yes' : '✅ No'\}</td>
                                         </tr>
-                                    `).join('')}
+                                    \\\`).join('')\}
                                 </tbody>
                             </table>
-                        `;
+                        \`;
 
                         container.innerHTML = tableHTML;
                     }
 
                     renderTopFirmsError(error) {
                         const container = document.getElementById('top-firms-container');
-                        container.innerHTML = `
+                        container.innerHTML = \`
                             <div class="error-state">
                                 <strong>Failed to load top firms</strong><br>
-                                ${error}
+                                \$\{error\}
                             </div>
-                        `;
+                        \`;
                     }
 
                     renderRiskBadge(riskScore) {
                         if (!riskScore) return '<span class="risk-badge">N/A</span>';
 
                         if (riskScore >= 70) {
-                            return `<span class="risk-badge risk-high">High (${riskScore})</span>`;
+                            return \`<span class="risk-badge risk-high">High (\$\{riskScore\})</span>\`;
                         } else if (riskScore >= 40) {
-                            return `<span class="risk-badge risk-medium">Medium (${riskScore})</span>`;
+                            return \`<span class="risk-badge risk-medium">Medium (\$\{riskScore\})</span>\`;
                         } else {
-                            return `<span class="risk-badge risk-low">Low (${riskScore})</span>`;
+                            return \`<span class="risk-badge risk-low">Low (\$\{riskScore\})</span>\`;
                         }
                     }
 
@@ -982,7 +982,7 @@ const enforcementPage = async (req, res) => {
                         params.append('limit', '50');
 
                         try {
-                            const response = await fetch(`/api/enforcement/search?${params}`);
+                            const response = await fetch(\`/api/enforcement/search?\$\{params\}\`);
                             const data = await response.json();
 
                             if (data.success) {
@@ -1014,7 +1014,7 @@ const enforcementPage = async (req, res) => {
                         }
                     } catch (error) {
                         console.error('❌ Refresh error:', error);
-                        showMessage(`❌ Refresh failed: ${error.message}`, 'error');
+                        showMessage(\`❌ Refresh failed: \$\{error.message\}\`, 'error');
                     }
                 };
 
@@ -1035,23 +1035,23 @@ const enforcementPage = async (req, res) => {
                     if (minAmount) searchParams.append('min_amount', minAmount);
                     if (riskLevel) searchParams.append('risk_level', riskLevel);
 
-                    const exportUrl = `/api/enforcement/export?${searchParams}`;
+                    const exportUrl = \`/api/enforcement/export?\$\{searchParams\}\`;
                     window.open(exportUrl, '_blank');
                 };
 
                 function showMessage(message, type) {
                     const messageEl = document.createElement('div');
-                    messageEl.style.cssText = `
+                    messageEl.style.cssText = \`
                         position: fixed;
                         top: 20px;
                         right: 20px;
-                        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                        background: \$\{type === 'success' ? '#10b981' : '#ef4444'\};
                         color: white;
                         padding: 15px 20px;
                         border-radius: 8px;
                         z-index: 10001;
                         animation: slideIn 0.3s ease;
-                    `;
+                    \`;
                     messageEl.textContent = message;
                     document.body.appendChild(messageEl);
 
