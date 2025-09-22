@@ -75,7 +75,7 @@ class ManualRefreshService {
             if (options.type === 'ai-only') {
                 // AI-only mode: re-analyze existing items
                 this.updateProgress(50, 'Re-analyzing existing items...');
-                const aiResults = await this.reanalyzeExistingItems();
+                const aiResults = await this.reanalyzeExistingItems(options);
                 results.results.aiAnalysis = aiResults;
                 this.updateProgress(95, 'AI re-analysis complete');
             } else if (options.skipAI !== true) {
@@ -196,7 +196,7 @@ class ManualRefreshService {
         try {
             // Get recent unanalyzed updates
             const recentUpdates = await dbService.getEnhancedUpdates({
-                limit: options.aiLimit || 50
+                limit: options.aiLimit || 500
             });
 
             // Filter for updates without AI analysis
@@ -208,22 +208,18 @@ class ManualRefreshService {
 
             for (const update of unanalyzedUpdates) {
                 try {
-                    if (aiAnalyzer && typeof aiAnalyzer.analyzeRegulatoryContent === 'function') {
-                        const content = (update.headline || '') + ' ' + (update.summary || '');
-                        const analysis = await aiAnalyzer.analyzeRegulatoryContent(
-                            content,
-                            update.url,
-                            { 
-                                authority: update.authority,
-                                publishedDate: update.publishedDate 
-                            }
-                        );
+                    if (aiAnalyzer && typeof aiAnalyzer.analyzeUpdate === 'function') {
+                        const analysisResult = await aiAnalyzer.analyzeUpdate(update);
+                        const aiData = analysisResult?.data || analysisResult;
 
-                        // Store the AI analysis (you may need to implement this method in dbService)
-                        // For now, we'll just count it as successful
-                        results.successful++;
-                        
-                        console.log(`✅ AI analysis completed for: ${update.headline?.substring(0, 50)}...`);
+                        if (aiData && update.url) {
+                            await dbService.updateRegulatoryUpdate(update.url, aiData);
+                            results.successful++;
+                            console.log(`✅ AI analysis completed for: ${update.headline?.substring(0, 50)}...`);
+                        } else {
+                            results.errors++;
+                            console.warn(`⚠️ AI analysis returned no data for update ${update.id}`);
+                        }
                     }
                 } catch (error) {
                     console.error(`❌ AI analysis failed for update ${update.id}:`, error.message);
@@ -242,34 +238,33 @@ class ManualRefreshService {
     }
 
     // Re-analyze existing items (for AI-only mode)
-    async reanalyzeExistingItems() {
+    async reanalyzeExistingItems(options = {}) {
         console.log('🔄 Re-analyzing existing items...');
         const results = { total: 0, successful: 0, errors: 0 };
 
         try {
-            // Get recent updates for re-analysis
+            // Get updates for re-analysis
             const updates = await dbService.getEnhancedUpdates({
-                limit: 100,
-                range: 'week'
+                limit: options.aiLimit || 500,
+                range: options.range || null
             });
 
             results.total = updates.length;
 
             for (const update of updates) {
                 try {
-                    if (aiAnalyzer && typeof aiAnalyzer.analyzeRegulatoryContent === 'function') {
-                        const content = (update.headline || '') + ' ' + (update.summary || '');
-                        const analysis = await aiAnalyzer.analyzeRegulatoryContent(
-                            content,
-                            update.url,
-                            { 
-                                authority: update.authority,
-                                publishedDate: update.publishedDate 
-                            }
-                        );
+                    if (aiAnalyzer && typeof aiAnalyzer.analyzeUpdate === 'function') {
+                        const analysisResult = await aiAnalyzer.analyzeUpdate(update);
+                        const aiData = analysisResult?.data || analysisResult;
 
-                        results.successful++;
-                        console.log(`✅ Re-analyzed: ${update.headline?.substring(0, 50)}...`);
+                        if (aiData && update.url) {
+                            await dbService.updateRegulatoryUpdate(update.url, aiData);
+                            results.successful++;
+                            console.log(`✅ Re-analyzed: ${update.headline?.substring(0, 50)}...`);
+                        } else {
+                            results.errors++;
+                            console.warn(`⚠️ Re-analysis produced no data for update ${update.id}`);
+                        }
                     }
                 } catch (error) {
                     console.error(`❌ Re-analysis failed for update ${update.id}:`, error.message);

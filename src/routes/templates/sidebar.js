@@ -52,6 +52,35 @@ async function getSidebar(currentPage = '') {
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
+                    <li class="nav-item ${currentPage === 'weekly-roundup' ? 'active' : ''}">
+                        <a href="/weekly-roundup" class="nav-link">
+                            <span class="nav-icon">📋</span>
+                            <span class="nav-text">Weekly Roundup</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="nav-section-title">ANALYSIS</div>
+                <ul class="nav-list">
+                    <li class="nav-item ${currentPage === 'enforcement' ? 'active' : ''}">
+                        <a href="/enforcement" class="nav-link">
+                            <span class="nav-icon">⚖️</span>
+                            <span class="nav-text">Enforcement</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'authority-spotlight' ? 'active' : ''}">
+                        <a href="/authority-spotlight/FCA" class="nav-link">
+                            <span class="nav-icon">🏛️</span>
+                            <span class="nav-text">Authority Spotlight</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'sector-intelligence' ? 'active' : ''}">
+                        <a href="/sector-intelligence/Banking" class="nav-link">
+                            <span class="nav-icon">🏢</span>
+                            <span class="nav-text">Sector Intelligence</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
             

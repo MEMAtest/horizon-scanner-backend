@@ -213,11 +213,8 @@ const UK_ENHANCED_SOURCES = {
         priority: 'HIGH',
         
         rssFeeds: [
-            {
-                url: 'https://www.bankofengland.co.uk/prudential-regulation/rss',
-                type: 'publications',
-                description: 'PRA Publications'
-            }
+            // PRA content is included in Bank of England News RSS feed
+            // Removed broken URL: https://www.bankofengland.co.uk/prudential-regulation/rss (404)
         ],
         
         deepScraping: {
@@ -383,7 +380,7 @@ const INTERNATIONAL_SOURCES = {
         
         rssFeeds: [
             {
-                url: 'https://www.eba.europa.eu/rss/news.xml',
+                url: 'https://www.eba.europa.eu/news-press/news/rss.xml',
                 type: 'news',
                 description: 'EBA News'
             }

@@ -318,28 +318,53 @@ class EnhancedDataCollection {
             try {
                 // AI analysis for each item
                 const aiAnalysis = await aiAnalyzer.analyzeUpdate(item);
-                
+                const aiData = aiAnalysis?.data || aiAnalysis;
+
                 const aiEnhancedItem = {
                     ...item,
-                    impact: aiAnalysis.impact,
-                    urgency: aiAnalysis.urgency,
-                    sector: aiAnalysis.sector,
-                    key_dates: aiAnalysis.key_dates,
-                    
+                    impact: aiData.impact,
+                    impactLevel: aiData.impactLevel,
+                    impact_level: aiData.impactLevel,
+                    urgency: aiData.urgency,
+                    sector: aiData.sector,
+                    primarySectors: aiData.primarySectors,
+                    primary_sectors: aiData.primary_sectors,
+                    key_dates: aiData.key_dates,
+                    keyDates: aiData.key_dates,
+                    area: aiData.area,
+                    ai_summary: aiData.ai_summary,
+                    ai_tags: aiData.ai_tags,
+                    ai_confidence_score: aiData.ai_confidence_score,
+                    businessImpactScore: aiData.businessImpactScore,
+                    business_impact_score: aiData.businessImpactScore,
+                    sectorRelevanceScores: aiData.sectorRelevanceScores,
+                    sector_relevance_scores: aiData.sector_relevance_scores,
+                    implementationPhases: aiData.implementationPhases,
+                    implementation_phases: aiData.implementation_phases,
+                    requiredResources: aiData.requiredResources,
+                    required_resources: aiData.required_resources,
+                    complianceDeadline: aiData.complianceDeadline,
+                    compliance_deadline: aiData.compliance_deadline,
+                    firmTypesAffected: aiData.firmTypesAffected,
+                    firm_types_affected: aiData.firm_types_affected,
+                    aiModelUsed: aiData.aiModelUsed,
+                    enhancedAt: aiData.enhancedAt,
+
                     // Store AI analysis in enrichment data
                     enrichment: {
                         ...item.enrichment,
                         aiAnalysis: {
-                            confidence: aiAnalysis.confidence || 'medium',
+                            confidence: aiAnalysis.confidence || aiData.ai_confidence_score || 'medium',
                             analysisDate: new Date().toISOString(),
-                            version: '2.0'
+                            version: '2.0',
+                            fallback: aiAnalysis.fallback || aiData.fallbackAnalysis || false
                         }
                     }
                 };
-                
+
                 aiResults.push(aiEnhancedItem);
                 aiSuccessCount++;
-                
+
             } catch (error) {
                 console.error(`⚠️ AI analysis failed for item: ${error.message}`);
                 // Include item without AI analysis
@@ -363,7 +388,61 @@ class EnhancedDataCollection {
             
             for (const item of results) {
                 try {
-                    await dbService.addUpdate(item);
+                    // Enhance item with AI analysis if available
+                    if (aiAnalyzer && aiAnalyzer.analyzeUpdate) {
+                        try {
+                            const analysisResult = await aiAnalyzer.analyzeUpdate(item);
+                            if (analysisResult && analysisResult.success && analysisResult.data) {
+                                const analysis = analysisResult.data;
+
+                                // Map AI analysis data to item fields - complete payload
+                                item.impact = analysis.impact;
+                                item.impactLevel = analysis.impactLevel;
+                                item.impact_level = analysis.impactLevel; // Both formats
+                                item.businessImpactScore = analysis.businessImpactScore;
+                                item.business_impact_score = analysis.businessImpactScore; // Both formats
+                                item.urgency = analysis.urgency;
+                                item.sector = analysis.sector;
+                                item.primarySectors = analysis.primarySectors;
+                                item.ai_summary = analysis.ai_summary;
+                                item.content_type = analysis.content_type || analysis.contentType;
+                                item.area = analysis.area;
+                                item.ai_tags = analysis.ai_tags;
+                                item.aiTags = analysis.aiTags || analysis.ai_tags; // Both formats
+                                item.ai_confidence_score = analysis.confidence;
+                                item.complianceActions = analysis.complianceActions;
+                                item.riskLevel = analysis.riskLevel;
+                                item.affectedFirmSizes = analysis.affectedFirmSizes;
+                                item.category = analysis.category;
+                                item.key_dates = analysis.key_dates;
+                                item.keyDates = analysis.key_dates; // Both formats
+                                item.sectorRelevanceScores = analysis.sectorRelevanceScores;
+
+                                // Additional AI analysis fields from full payload
+                                item.businessOpportunities = analysis.businessOpportunities;
+                                item.implementationComplexity = analysis.implementationComplexity;
+                                item.enhancedAt = analysis.enhancedAt;
+                                item.aiModelUsed = analysis.aiModelUsed;
+                                item.fallbackAnalysis = analysis.fallbackAnalysis;
+
+                                // Map compliance-related fields
+                                item.compliance_deadline = analysis.compliance_deadline;
+                                item.complianceDeadline = analysis.compliance_deadline; // Both formats
+                                item.firm_types_affected = analysis.firm_types_affected || [];
+                                item.firmTypesAffected = analysis.firm_types_affected || []; // Both formats
+                                item.implementation_phases = analysis.implementation_phases || [];
+                                item.implementationPhases = analysis.implementation_phases || []; // Both formats
+                                item.required_resources = analysis.required_resources || {};
+                                item.requiredResources = analysis.required_resources || {}; // Both formats
+
+                                console.log(`✅ AI analysis applied to item: ${item.url}`);
+                            }
+                        } catch (aiError) {
+                            console.warn(`⚠️ AI analysis failed for item:`, aiError.message);
+                        }
+                    }
+
+                    await dbService.saveUpdate(item);
                     storedCount++;
                 } catch (error) {
                     console.error(`⚠️ Failed to store item: ${error.message}`);

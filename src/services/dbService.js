@@ -19,6 +19,22 @@ class EnhancedDBService {
         this.initializeDatabase();
     }
 
+    // Normalize field names for consistent API responses
+    normalizeUpdateFields(update) {
+        return {
+            ...update,
+            impactLevel: update.impactLevel || update.impact_level,
+            businessImpactScore: update.businessImpactScore || update.business_impact_score,
+            aiSummary: update.ai_summary || update.aiSummary,
+            contentType: update.content_type || update.contentType,
+            aiTags: update.ai_tags || update.aiTags,
+            impact_level: update.impactLevel || update.impact_level, // Ensure both exist
+            business_impact_score: update.businessImpactScore || update.business_impact_score,
+            ai_summary: update.ai_summary || update.aiSummary,
+            content_type: update.content_type || update.contentType
+        };
+    }
+
     async initializeDatabase() {
         try {
             if (process.env.DATABASE_URL) {
@@ -77,8 +93,9 @@ class EnhancedDBService {
         try {
             // Add AI intelligence fields to regulatory_updates
             await client.query(`
-                ALTER TABLE regulatory_updates 
+                ALTER TABLE regulatory_updates
                 ADD COLUMN IF NOT EXISTS ai_summary TEXT,
+                ADD COLUMN IF NOT EXISTS content_type VARCHAR(20) DEFAULT 'OTHER',
                 ADD COLUMN IF NOT EXISTS business_impact_score INTEGER DEFAULT 0,
                 ADD COLUMN IF NOT EXISTS ai_tags JSONB DEFAULT '[]'::jsonb,
                 ADD COLUMN IF NOT EXISTS cross_references JSONB DEFAULT '[]'::jsonb,
@@ -358,14 +375,14 @@ class EnhancedDBService {
         const client = await this.pool.connect();
         try {
             let query = `
-                SELECT 
-                    id, headline, summary, url, authority, 
+                SELECT
+                    id, headline, summary, url, authority,
                     published_date, created_at,
                     impact_level, urgency, sector, area,
-                    ai_summary, business_impact_score, ai_tags, 
+                    ai_summary, content_type, business_impact_score, ai_tags,
                     firm_types_affected, compliance_deadline, ai_confidence_score,
                     sector_relevance_scores, implementation_phases, required_resources
-                FROM regulatory_updates 
+                FROM regulatory_updates
                 WHERE 1=1
             `;
             
@@ -423,7 +440,7 @@ class EnhancedDBService {
             const result = await client.query(query, params);
             
             // Transform the data for client use
-            return result.rows.map(row => ({
+            return result.rows.map(row => this.normalizeUpdateFields({
                 ...row,
                 fetchedDate: row.published_date || row.created_at,
                 publishedDate: row.published_date,
@@ -683,6 +700,142 @@ class EnhancedDBService {
         } catch (error) {
             console.error('❌ Error getting AI insights:', error);
             return [];
+        }
+    }
+
+    // ALIAS METHOD FOR COMPATIBILITY
+    async storeAIInsight(insightData) {
+        // Alias for saveAIInsight to maintain compatibility
+        return await this.saveAIInsight(insightData);
+    }
+
+    // UPDATE REGULATORY UPDATE WITH AI ANALYSIS
+    async updateRegulatoryUpdate(url, aiAnalysisData) {
+        console.log(`🔄 Updating regulatory update with AI analysis: ${url}`);
+
+        try {
+            if (this.fallbackMode) {
+                return await this.updateRegulatoryUpdateJSON(url, aiAnalysisData);
+            } else {
+                return await this.updateRegulatoryUpdatePG(url, aiAnalysisData);
+            }
+        } catch (error) {
+            console.error('❌ Error updating regulatory update with AI data:', error);
+            throw error;
+        }
+    }
+
+    async updateRegulatoryUpdatePG(url, aiAnalysisData) {
+        const client = await this.pool.connect();
+        try {
+            const query = `
+                UPDATE regulatory_updates
+                SET
+                    ai_summary = $2,
+                    content_type = $3,
+                    impact_level = $4,
+                    urgency = $5,
+                    sector = $6,
+                    area = $7,
+                    business_impact_score = $8,
+                    ai_tags = $9,
+                    firm_types_affected = $10,
+                    compliance_deadline = $11,
+                    ai_confidence_score = $12,
+                    sector_relevance_scores = $13,
+                    implementation_phases = $14,
+                    required_resources = $15,
+                    updated_at = NOW()
+                WHERE url = $1
+                RETURNING id
+            `;
+
+            const values = [
+                url,
+                aiAnalysisData.ai_summary || aiAnalysisData.analysis,
+                aiAnalysisData.content_type || 'OTHER',
+                aiAnalysisData.impactLevel,
+                aiAnalysisData.urgency,
+                aiAnalysisData.sector,
+                aiAnalysisData.area || 'General Regulation',
+                aiAnalysisData.businessImpactScore,
+                JSON.stringify(aiAnalysisData.ai_tags || []),
+                JSON.stringify(aiAnalysisData.firmTypesAffected || aiAnalysisData.firm_types_affected || []),
+                aiAnalysisData.complianceDeadline || aiAnalysisData.compliance_deadline,
+                aiAnalysisData.confidence || aiAnalysisData.ai_confidence_score || 0.75,
+                JSON.stringify(aiAnalysisData.sectorRelevanceScores || {}),
+                JSON.stringify(aiAnalysisData.implementationPhases || aiAnalysisData.implementation_phases || []),
+                JSON.stringify(aiAnalysisData.requiredResources || aiAnalysisData.required_resources || {})
+            ];
+
+            const result = await client.query(query, values);
+
+            if (result.rows.length > 0) {
+                console.log(`✅ Updated regulatory update ${url} with AI analysis`);
+                return { success: true, id: result.rows[0].id };
+            } else {
+                console.warn(`⚠️ No regulatory update found with URL: ${url}`);
+                return { success: false, error: 'Update not found' };
+            }
+
+        } finally {
+            client.release();
+        }
+    }
+
+    async updateRegulatoryUpdateJSON(url, aiAnalysisData) {
+        try {
+            let updates = await this.loadJSONData(this.updatesFile);
+
+            if (!Array.isArray(updates)) {
+                updates = [];
+            }
+
+            const updateIndex = updates.findIndex(u => u.url === url);
+
+            if (updateIndex !== -1) {
+                // Update the existing update with AI analysis
+                updates[updateIndex] = {
+                    ...updates[updateIndex],
+                    ai_summary: aiAnalysisData.ai_summary || aiAnalysisData.analysis,
+                    impactLevel: aiAnalysisData.impactLevel,
+                    impact_level: aiAnalysisData.impactLevel,
+                    urgency: aiAnalysisData.urgency,
+                    sector: aiAnalysisData.sector,
+                    area: aiAnalysisData.area || 'General Regulation',
+                    businessImpactScore: aiAnalysisData.businessImpactScore,
+                    business_impact_score: aiAnalysisData.businessImpactScore,
+                    ai_tags: aiAnalysisData.ai_tags || [],
+                    aiTags: aiAnalysisData.aiTags || aiAnalysisData.ai_tags || [],
+                    primarySectors: aiAnalysisData.primarySectors || [],
+                    primary_sectors: aiAnalysisData.primary_sectors || aiAnalysisData.primarySectors || [],
+                    firmTypesAffected: aiAnalysisData.firmTypesAffected || aiAnalysisData.firm_types_affected || [],
+                    firm_types_affected: aiAnalysisData.firmTypesAffected || aiAnalysisData.firm_types_affected || [],
+                    complianceDeadline: aiAnalysisData.complianceDeadline || aiAnalysisData.compliance_deadline,
+                    compliance_deadline: aiAnalysisData.complianceDeadline || aiAnalysisData.compliance_deadline,
+                    ai_confidence_score: aiAnalysisData.confidence || aiAnalysisData.ai_confidence_score || 0.75,
+                    sectorRelevanceScores: aiAnalysisData.sectorRelevanceScores || {},
+                    sector_relevance_scores: aiAnalysisData.sector_relevance_scores || aiAnalysisData.sectorRelevanceScores || {},
+                    implementationPhases: aiAnalysisData.implementationPhases || aiAnalysisData.implementation_phases || [],
+                    implementation_phases: aiAnalysisData.implementation_phases || aiAnalysisData.implementationPhases || [],
+                    requiredResources: aiAnalysisData.requiredResources || aiAnalysisData.required_resources || {},
+                    required_resources: aiAnalysisData.required_resources || aiAnalysisData.requiredResources || {},
+                    aiModelUsed: aiAnalysisData.aiModelUsed || updates[updateIndex].aiModelUsed,
+                    enhancedAt: aiAnalysisData.enhancedAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                await this.saveJSONData(this.updatesFile, updates);
+                console.log(`✅ Updated regulatory update ${url} with AI analysis (JSON)`);
+                return { success: true, id: updates[updateIndex].id };
+            } else {
+                console.warn(`⚠️ No regulatory update found with URL: ${url}`);
+                return { success: false, error: 'Update not found' };
+            }
+
+        } catch (error) {
+            console.error('❌ Error updating regulatory update in JSON:', error);
+            throw error;
         }
     }
 
@@ -1017,6 +1170,16 @@ class EnhancedDBService {
             return updates.find(u => u.url === url) || null;
         } catch (error) {
             console.error('Error getting update by URL:', error);
+            return null;
+        }
+    }
+
+    async getUpdateById(id) {
+        try {
+            const updates = await this.getEnhancedUpdates({});
+            return updates.find(u => u.id === parseInt(id) || u.id === id) || null;
+        } catch (error) {
+            console.error('Error getting update by ID:', error);
             return null;
         }
     }
@@ -1605,6 +1768,73 @@ async deleteUpdate(id) {
         }
     }
 
+    async saveFirmProfile(profileData) {
+        await this.initialize();
+
+        if (this.usePostgres) {
+            const client = await this.pool.connect();
+            try {
+                // Delete existing profile first
+                await client.query('DELETE FROM firm_profiles');
+
+                // Insert new profile
+                await client.query(`
+                    INSERT INTO firm_profiles (firm_name, primary_sectors, firm_size, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                `, [
+                    profileData.firmName,
+                    JSON.stringify(profileData.primarySectors || []),
+                    profileData.firmSize || 'Medium'
+                ]);
+
+                console.log('✅ Firm profile saved to PostgreSQL');
+                return profileData;
+            } catch (error) {
+                console.log('📊 Using JSON fallback for save firm profile');
+                return this.saveFirmProfileJSON(profileData);
+            } finally {
+                client.release();
+            }
+        } else {
+            return this.saveFirmProfileJSON(profileData);
+        }
+    }
+
+    async saveFirmProfileJSON(profileData) {
+        try {
+            // Ensure workspace file exists
+            let workspace = {};
+            try {
+                const data = await fs.readFile(this.workspaceFile, 'utf8');
+                workspace = JSON.parse(data);
+            } catch (error) {
+                // File doesn't exist, start with empty workspace
+                workspace = {
+                    pinnedUpdates: [],
+                    savedSearches: [],
+                    alerts: [],
+                    firmProfile: null
+                };
+            }
+
+            // Save the profile
+            workspace.firmProfile = {
+                firmName: profileData.firmName,
+                primarySectors: profileData.primarySectors || [],
+                firmSize: profileData.firmSize || 'Medium',
+                isActive: true,
+                createdDate: new Date().toISOString()
+            };
+
+            await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2));
+            console.log('✅ Firm profile saved to JSON');
+            return workspace.firmProfile;
+        } catch (error) {
+            console.error('Error saving firm profile to JSON:', error);
+            throw error;
+        }
+    }
+
     // ==========================================
     // SYSTEM STATS METHOD
     // ==========================================
@@ -1704,3 +1934,4 @@ async deleteUpdate(id) {
 }
 
 module.exports = new EnhancedDBService();
+

@@ -4,22 +4,49 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const net = require('net');
 require('dotenv').config();
 
 // Import enhanced services
 const dbService = require('./services/dbService');
 const rssFetcher = require('./services/rssFetcher');
 const aiAnalyzer = require('./services/aiAnalyzer');
+const FCAEnforcementService = require('./services/fcaEnforcementService');
 
 // Import routes
 const pageRoutes = require('./routes/pageRoutes');
 const apiRoutes = require('./routes/apiRoutes');
 
+// Helper function to check if a port is available
+function isPortAvailable(port) {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.listen(port, () => {
+            server.once('close', () => resolve(true));
+            server.close();
+        });
+        server.on('error', () => resolve(false));
+    });
+}
+
+// Helper function to find an available port starting from a preferred port
+async function findAvailablePort(preferredPort = 3000) {
+    let port = preferredPort;
+    while (port < preferredPort + 100) { // Try up to 100 ports
+        if (await isPortAvailable(port)) {
+            return port;
+        }
+        port++;
+    }
+    throw new Error('No available ports found');
+}
+
 class AIRegulatoryIntelligenceServer {
     constructor() {
         this.app = express();
-        this.port = process.env.PORT || 3000;
+        this.port = null; // Will be set dynamically in start()
         this.server = null;
+        this.enforcementService = null; // FCA Enforcement Service instance
         this.initializeMiddleware();
         this.initializeRoutes();
         this.initializeErrorHandling();
@@ -297,27 +324,51 @@ class AIRegulatoryIntelligenceServer {
 
     async initializeServices() {
         console.log('🚀 Initializing enhanced services...');
-        
+
         try {
             // Initialize database service (already auto-initializes)
             console.log('📊 Database service initialized');
-            
+
             // Initialize RSS fetcher
             await rssFetcher.initialize();
             console.log('📡 RSS fetcher service initialized');
-            
+
             // Initialize AI analyzer (already initialized)
             console.log('🤖 AI analyzer service initialized');
-            
+
+            // Initialize FCA Enforcement Service
+            if (process.env.DATABASE_URL) {
+                console.log('⚖️ Initializing FCA Enforcement Service...');
+                try {
+                    const dbConfig = {
+                        connectionString: process.env.DATABASE_URL,
+                        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+                    };
+
+                    this.enforcementService = new FCAEnforcementService(dbConfig, aiAnalyzer);
+                    await this.enforcementService.initialize();
+
+                    // Make enforcement service available to routes
+                    this.app.locals.enforcementService = this.enforcementService;
+
+                    console.log('✅ FCA Enforcement Service initialized successfully');
+                } catch (enforcementError) {
+                    console.error('⚠️ FCA Enforcement Service initialization failed:', enforcementError);
+                    // Continue without enforcement service - it's not critical for core functionality
+                }
+            } else {
+                console.log('⚠️ No database URL found - FCA Enforcement Service disabled');
+            }
+
             // Start background tasks if not on Vercel
             if (!process.env.VERCEL) {
                 await this.startBackgroundTasks();
             } else {
                 console.log('📝 Vercel environment - background tasks handled via cron');
             }
-            
+
             console.log('✅ All services initialized successfully');
-            
+
         } catch (error) {
             console.error('❌ Service initialization failed:', error);
             throw error;
@@ -361,6 +412,21 @@ class AIRegulatoryIntelligenceServer {
                     console.error('❌ Scheduled weekly roundup failed:', error);
                 }
             }, 60 * 1000); // Check every minute
+
+            // FCA Enforcement data updates (daily at 2 AM)
+            if (this.enforcementService) {
+                setInterval(async () => {
+                    try {
+                        const now = new Date();
+                        if (now.getHours() === 2 && now.getMinutes() === 0) {
+                            console.log('⚖️ Running scheduled FCA enforcement update...');
+                            await this.enforcementService.runScheduledUpdate();
+                        }
+                    } catch (error) {
+                        console.error('❌ Scheduled enforcement update failed:', error);
+                    }
+                }, 60 * 1000); // Check every minute
+            }
             
             console.log('✅ Background tasks started');
             
@@ -373,7 +439,15 @@ class AIRegulatoryIntelligenceServer {
         try {
             console.log('🚀 Starting AI Regulatory Intelligence Platform...');
             console.log('================================================\n');
-            
+
+            // Find an available port (prefer environment variable, then 3000, then any available)
+            const preferredPort = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+            this.port = await findAvailablePort(preferredPort);
+
+            if (this.port !== preferredPort) {
+                console.log(`⚠️  Port ${preferredPort} was in use, using port ${this.port} instead\n`);
+            }
+
             // Initialize services first
             await this.initializeServices();
             
@@ -399,6 +473,7 @@ class AIRegulatoryIntelligenceServer {
                 console.log(' ✅ Proactive Intelligence System');
                 console.log(' ✅ Enhanced Database Schema');
                 console.log(' ✅ Responsive UI & Mobile Support');
+                console.log(' ⚖️  FCA Enforcement Data & Analytics');
                 console.log('================================================');
                 console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
                 console.log(`💾 Database: ${dbService.fallbackMode ? 'JSON Mode' : 'PostgreSQL'}`);
@@ -414,23 +489,29 @@ class AIRegulatoryIntelligenceServer {
 
     async shutdown() {
         console.log('🛑 Shutting down server...');
-        
+
         try {
             if (this.server) {
                 this.server.close(() => {
                     console.log('✅ HTTP server closed');
                 });
             }
-            
+
+            // Close enforcement service
+            if (this.enforcementService) {
+                await this.enforcementService.close();
+                console.log('✅ Enforcement service closed');
+            }
+
             // Close database connections
             if (dbService.pool) {
                 await dbService.pool.end();
                 console.log('✅ Database connections closed');
             }
-            
+
             console.log('✅ Graceful shutdown completed');
             process.exit(0);
-            
+
         } catch (error) {
             console.error('❌ Error during shutdown:', error);
             process.exit(1);

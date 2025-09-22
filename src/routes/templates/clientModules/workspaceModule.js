@@ -664,7 +664,10 @@ function getWorkspaceModule() {
             closeModal,
             exportData
         };
-    })();`;
+    })();`;  // <-- This line already exists (around line 619)
+    
+    // ADD THIS NEW LINE RIGHT HERE:
+    + '\n    window.WorkspaceModule = WorkspaceModule;\n';
 }
 
 module.exports = { getWorkspaceModule };

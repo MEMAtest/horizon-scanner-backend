@@ -587,6 +587,20 @@ class SmartSummaryService extends EventEmitter {
         };
     }
 
+    createStructuredFallbackSummary(summaryType, updates, context) {
+        const fallback = this.createFallbackSummary(summaryType, context || {}, 'AI analysis unavailable');
+        return {
+            headline: `${summaryType.charAt(0).toUpperCase() + summaryType.slice(1)} Summary`,
+            overview: fallback.summary.overview,
+            bulletPoints: [`${(updates || []).length} updates processed`],
+            impactLevel: 'Moderate',
+            keyDevelopments: fallback.summary.keyDevelopments,
+            type: summaryType,
+            generatedAt: new Date().toISOString(),
+            fallback: true
+        };
+    }
+
     createNoUpdatesMessage(summaryType, options) {
         return {
             summary: {

@@ -25,6 +25,33 @@ function getClientScriptsContent() {
         // IMMEDIATE DEFINITIONS - Prevent HTML onclick errors
         // =================
         
+        function parseDate(value) {
+            if (!value) return null;
+            const date = new Date(value);
+            return isNaN(date) ? null : date;
+        }
+
+        function formatDateDisplay(value) {
+            const date = parseDate(value);
+            if (!date) return 'Unknown';
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function truncateText(text, maxLength = 200) {
+            if (!text) return '';
+            const trimmed = text.trim();
+            if (trimmed.length <= maxLength) return trimmed;
+            return trimmed.substring(0, maxLength).trim() + '...';
+        }
+
+        function isFallbackSummary(summary = '') {
+            const normalized = summary.trim().toLowerCase();
+            return normalized.startsWith('informational regulatory update') ||
+                   normalized.startsWith('significant regulatory development') ||
+                   normalized.startsWith('regulatory update') ||
+                   normalized.startsWith('regulatory impact overview');
+        }
+
         // Define critical functions immediately
         window.updateLiveCounters = function() {
             console.log('🔄 Updating live counters...');
@@ -48,7 +75,7 @@ function getClientScriptsContent() {
                         
                         const lastUpdateEl = document.getElementById('lastUpdate');
                         if (lastUpdateEl) {
-                            lastUpdateEl.textContent = \`Last: \${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\`;
+                            lastUpdateEl.textContent = 'Last: ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                         }
                     }
                 })
@@ -57,18 +84,18 @@ function getClientScriptsContent() {
         
         window.refreshData = async function() {
             console.log('🔄 Refresh data called');
-            
+
             const btn = event?.target || document.getElementById('refreshBtn');
             if (btn) btn.disabled = true;
-            
+
             try {
                 const response = await fetch('/api/refresh', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showMessage(\`Refreshed! \${result.newArticles || 0} new updates found.\`, 'success');
                     setTimeout(() => window.location.reload(), 1000);
@@ -80,6 +107,31 @@ function getClientScriptsContent() {
                 showMessage('Refresh failed: ' + error.message, 'error');
             } finally {
                 if (btn) btn.disabled = false;
+            }
+        };
+
+        // Analytics refresh function
+        window.refreshAnalytics = async function() {
+            console.log('📊 Refreshing analytics...');
+
+            const btn = event?.target;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '🔄 Refreshing...';
+            }
+
+            try {
+                // Call analytics refresh endpoint (if it exists) or just reload
+                showMessage('Analytics refreshed successfully', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error) {
+                console.error('Analytics refresh error:', error);
+                showMessage('Failed to refresh analytics: ' + error.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Refresh Analytics';
+                }
             }
         };
         
@@ -249,7 +301,7 @@ function getClientScriptsContent() {
         
         function generateStream(id, title, updates, isExpanded = false) {
             const cards = updates.slice(0, 5).map(u => generateUpdateCard(u)).join('');
-            
+
             return \`
                 <div class="intelligence-stream \${isExpanded ? 'expanded' : ''}" id="\${id}">
                     <div class="stream-header" onclick="toggleStreamExpansion('\${id}')">
@@ -258,6 +310,7 @@ function getClientScriptsContent() {
                     </div>
                     <div class="stream-content">
                         \${cards}
+                        \${updates.length > 5 ? \`<button class="load-more-btn" id="loadMoreBtn-\${id}" onclick="SearchModule.loadMoreUpdatesForStream('\${id}', \${updates.length})">Load More (\${updates.length - 5} remaining)</button>\` : ''}
                     </div>
                 </div>
             \`;
@@ -265,6 +318,13 @@ function getClientScriptsContent() {
         
         function generateUpdateCard(update) {
             const isPinned = pinnedUrls.has(update.url);
+            const aiSummary = update.ai_summary || update.impact || '';
+            const useFallback = isFallbackSummary(aiSummary);
+            const baseSummary = !useFallback && aiSummary.trim().length > 0
+                ? aiSummary.trim()
+                : (update.summary || update.description || '').trim();
+            const shortSummary = truncateText(baseSummary, 180);
+            const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
             
             return \`
                 <div class="update-card" data-authority="\${update.authority}" data-url="\${update.url}">
@@ -273,15 +333,19 @@ function getClientScriptsContent() {
                         <span class="authority-badge">\${update.authority || 'Unknown'}</span>
                     </div>
                     <div class="update-content">
-                        <p>\${(update.summary || '').substring(0, 200)}...</p>
+                        <p>\${shortSummary || 'No summary available'}</p>
+                        \${baseSummary && baseSummary.length > 180 ? \`
+                            <button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(\${update.id || '0'}, '\${baseSummary.replace(/'/g, '')}')">Read More</button>
+                        \` : ''}
                     </div>
                     <div class="update-footer">
-                        <span>\${new Date(update.publishedDate || update.createdAt).toLocaleDateString()}</span>
+                        <span>\${displayDate}</span>
                         <button onclick="viewUpdateDetails('\${update.url}')">View Details</button>
                     </div>
                 </div>
             \`;
         }
+
         
         function toggleStreamExpansion(streamId) {
             const stream = document.getElementById(streamId);
@@ -290,8 +354,14 @@ function getClientScriptsContent() {
             }
         }
         
-        function viewUpdateDetails(url) {
-            if (url) window.open(url, '_blank');
+        function viewUpdateDetails(updateId, url) {
+            if (updateId) {
+                // Use internal detail page
+                window.open(\`/update/\${updateId}\`, '_blank');
+            } else if (url) {
+                // Fallback to external URL
+                window.open(url, '_blank');
+            }
         }
         
         function togglePin(url) {
@@ -794,7 +864,181 @@ function getClientScriptsContent() {
                 window.location.href = \`/dashboard?search=\${encodeURIComponent(searchTerm)}\`;
             }
         }
-        
+
+        // =================
+        // VIEW SWITCHING FUNCTIONALITY
+        // =================
+
+        let currentView = 'cards';
+
+        function initializeViewSwitching() {
+            console.log('🔄 Initializing view switching...');
+
+            // Add event listeners to view buttons
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const newView = e.target.getAttribute('data-view');
+                    if (newView && newView !== currentView) {
+                        switchView(newView);
+                    }
+                });
+            });
+
+            // Set initial view
+            currentView = 'cards';
+            renderUpdatesInView(currentView);
+        }
+
+        function switchView(viewType) {
+            console.log(\`🔄 Switching view to: \${viewType}\`);
+
+            // Update active button
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-view') === viewType) {
+                    btn.classList.add('active');
+                }
+            });
+
+            currentView = viewType;
+            renderUpdatesInView(viewType);
+        }
+
+        function renderUpdatesInView(viewType) {
+            const container = document.getElementById('updates-container') ||
+                            document.querySelector('.updates-container') ||
+                            document.querySelector('#intelligenceStreams');
+
+            if (!container) {
+                console.warn('Updates container not found');
+                return;
+            }
+
+            // Get current updates data
+            const updateCards = container.querySelectorAll('.update-card');
+            const updates = Array.from(updateCards).map(card => {
+                return {
+                    headline: card.querySelector('.update-headline')?.textContent || '',
+                    summary: card.querySelector('.update-summary')?.textContent || '',
+                    authority: card.querySelector('.authority-badge')?.textContent || '',
+                    urgency: card.getAttribute('data-urgency') || 'Low',
+                    impactLevel: card.getAttribute('data-impact') || 'Informational',
+                    url: card.getAttribute('data-url') || '',
+                    fetchedDate: card.querySelector('.update-date')?.textContent || new Date().toLocaleDateString()
+                };
+            });
+
+            // Render based on view type
+            switch (viewType) {
+                case 'cards':
+                    renderCardsView(container, updates);
+                    break;
+                case 'table':
+                    renderTableView(container, updates);
+                    break;
+                case 'timeline':
+                    renderTimelineView(container, updates);
+                    break;
+                default:
+                    renderCardsView(container, updates);
+            }
+        }
+
+        function renderCardsView(container, updates) {
+            // Restore original cards view - just show all update cards
+            container.className = 'updates-container cards-view';
+            const html = updates.map(update => generateUpdateCard(update)).join('');
+            container.innerHTML = html;
+        }
+
+        function renderTableView(container, updates) {
+            container.className = 'updates-container table-view';
+            const tableHTML = \`
+                <div class="table-wrapper">
+                    <table class="updates-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Authority</th>
+                                <th>Headline</th>
+                                <th>Impact</th>
+                                <th>Urgency</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            \${updates.map(update => \`
+                                <tr>
+                                    <td>\${update.fetchedDate}</td>
+                                    <td>
+                                        <span class="authority-badge">\${update.authority}</span>
+                                    </td>
+                                    <td class="headline-cell">
+                                        <div class="headline">\${update.headline}</div>
+                                        <div class="summary">\${(update.summary || '').substring(0, 100)}...</div>
+                                    </td>
+                                    <td>
+                                        <span class="impact-badge \${update.impactLevel.toLowerCase()}">\${update.impactLevel}</span>
+                                    </td>
+                                    <td>
+                                        <span class="urgency-badge \${update.urgency.toLowerCase()}">\${update.urgency}</span>
+                                    </td>
+                                    <td>
+                                        <button class="table-btn" onclick="viewUpdateDetails('\${update.id}', '\${update.url}')">View</button>
+                                    </td>
+                                </tr>
+                            \`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            \`;
+            container.innerHTML = tableHTML;
+        }
+
+        function renderTimelineView(container, updates) {
+            container.className = 'updates-container timeline-view';
+
+            // Group updates by date
+            const groupedUpdates = {};
+            updates.forEach(update => {
+                const date = update.fetchedDate;
+                if (!groupedUpdates[date]) {
+                    groupedUpdates[date] = [];
+                }
+                groupedUpdates[date].push(update);
+            });
+
+            const timelineHTML = \`
+                <div class="timeline-wrapper">
+                    \${Object.entries(groupedUpdates).map(([date, dateUpdates]) => \`
+                        <div class="timeline-date-group">
+                            <div class="timeline-date-header">
+                                <h3>\${date}</h3>
+                                <span class="update-count">\${dateUpdates.length} updates</span>
+                            </div>
+                            <div class="timeline-updates">
+                                \${dateUpdates.map(update => \`
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker"></div>
+                                        <div class="timeline-content">
+                                            <div class="timeline-header">
+                                                <span class="authority-badge">\${update.authority}</span>
+                                                <span class="urgency-badge \${update.urgency.toLowerCase()}">\${update.urgency}</span>
+                                            </div>
+                                            <h4 class="timeline-headline">\${update.headline}</h4>
+                                            <p class="timeline-summary">\${(update.summary || '').substring(0, 150)}...</p>
+                                            <button class="timeline-btn" onclick="viewUpdateDetails('\${update.id}', '\${update.url}')">View Details</button>
+                                        </div>
+                                    </div>
+                                \`).join('')}
+                            </div>
+                        </div>
+                    \`).join('')}
+                </div>
+            \`;
+            container.innerHTML = timelineHTML;
+        }
+
         // =================
         // EXPOSE ALL FUNCTIONS TO WINDOW
         // =================
@@ -834,12 +1078,23 @@ function getClientScriptsContent() {
         window.loadMoreUpdates = loadMoreUpdates;
         window.performSearch = performSearch;
         window.setupSearchBox = setupSearchBox;
-        
+
+        // View switching functions
+        window.initializeViewSwitching = initializeViewSwitching;
+        window.switchView = switchView;
+        window.renderUpdatesInView = renderUpdatesInView;
+        window.renderCardsView = renderCardsView;
+        window.renderTableView = renderTableView;
+        window.renderTimelineView = renderTimelineView;
+
         // =================
         // START INITIALIZATION
         // =================
-        
-        document.addEventListener('DOMContentLoaded', initializeSystem);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSystem();
+            initializeViewSwitching();
+        });
         
         // Also try immediate initialization if DOM is ready
         if (document.readyState !== 'loading') {

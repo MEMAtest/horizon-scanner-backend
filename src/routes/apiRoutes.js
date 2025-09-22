@@ -8,7 +8,11 @@ const aiAnalyzer = require('../services/aiAnalyzer');
 const weeklyRoundupRoutes = require('./weeklyRoundup');
 const relevanceService = require('../services/relevanceService');
 
+// Import FCA enforcement routes
+const enforcementRoutes = require('./api/enforcement');
+
 router.use('/', weeklyRoundupRoutes);
+router.use('/enforcement', enforcementRoutes);
 
 // ENHANCED UPDATES ENDPOINTS
 router.get('/updates', async (req, res) => {
@@ -904,34 +908,125 @@ router.get('/ai/trend-analysis', async (req, res) => {
     }
 });
 
+// Add this route to your src/routes/apiRoutes.js file
+
+// AI Early Warnings Endpoint - NEW ADDITION
 router.get('/ai/early-warnings', async (req, res) => {
     try {
-        console.log('⚠️ API: Getting early warning signals');
+        console.log('🔮 Generating AI early warnings...');
         
-        // TODO: Implement early warning system in Phase 1.2
-        const warnings = {
-            brewingRegulations: [],
-            earlySignals: [],
-            riskFactors: [],
-            scanTimestamp: new Date().toISOString(),
-            nextScanDue: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() // 12 hours
-        };
+        // Get recent updates and firm profile
+        const updates = await dbService.getAllUpdates();
+        const firmProfile = await dbService.getFirmProfile();
+        
+        // Generate early warnings based on patterns and trends
+        const warnings = await generateEarlyWarnings(updates, firmProfile);
         
         res.json({
             success: true,
-            warnings,
-            message: 'Early warning system coming in Phase 1.2'
+            warnings: warnings,
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                firmProfile: !!firmProfile,
+                dataPoints: updates.length
+            }
         });
         
     } catch (error) {
-        console.error('❌ API Error getting early warnings:', error);
+        console.error('Error generating early warnings:', error);
         res.status(500).json({
             success: false,
             error: error.message,
-            warnings: null
+            warnings: []
         });
     }
 });
+
+// Helper function to generate early warnings
+async function generateEarlyWarnings(updates, firmProfile) {
+    const warnings = [];
+    
+    // Check for consultation deadlines in next 30 days
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    
+    updates.forEach(update => {
+        // Deadline warnings
+        if (update.keyDates && update.keyDates.includes('deadline')) {
+            warnings.push({
+                type: 'deadline',
+                urgency: 'High',
+                title: `Upcoming deadline: ${update.headline}`,
+                description: `${update.authority} has a consultation deadline approaching`,
+                date: update.keyDates,
+                action: 'Review and submit response if applicable',
+                url: update.url
+            });
+        }
+        
+        // High impact warnings
+        if (update.impactLevel === 'Significant' && update.urgency === 'High') {
+            warnings.push({
+                type: 'high-impact',
+                urgency: 'High',
+                title: `High impact regulation: ${update.headline}`,
+                description: update.impact,
+                sectors: update.primarySectors || [],
+                action: 'Immediate review and impact assessment required',
+                url: update.url
+            });
+        }
+    });
+    
+    // Authority pattern warnings
+    const authorityActivity = {};
+    updates.forEach(update => {
+        if (update.authority) {
+            authorityActivity[update.authority] = (authorityActivity[update.authority] || 0) + 1;
+        }
+    });
+    
+    Object.entries(authorityActivity).forEach(([authority, count]) => {
+        if (count >= 5) {
+            warnings.push({
+                type: 'authority-activity',
+                urgency: 'Medium',
+                title: `Increased ${authority} activity`,
+                description: `${authority} has published ${count} updates recently, indicating heightened regulatory focus`,
+                action: 'Monitor for emerging themes and prepare for potential changes',
+                count: count
+            });
+        }
+    });
+    
+    // Sector-specific warnings (if firm profile exists)
+    if (firmProfile && firmProfile.primarySectors) {
+        firmProfile.primarySectors.forEach(sector => {
+            const sectorUpdates = updates.filter(u => 
+                u.primarySectors && u.primarySectors.includes(sector)
+            );
+            
+            if (sectorUpdates.length >= 3) {
+                warnings.push({
+                    type: 'sector-focus',
+                    urgency: 'Medium',
+                    title: `Regulatory focus on ${sector}`,
+                    description: `${sectorUpdates.length} recent updates affecting ${sector} sector`,
+                    action: 'Review sector-specific compliance requirements',
+                    updateCount: sectorUpdates.length
+                });
+            }
+        });
+    }
+    
+    // Sort warnings by urgency
+    warnings.sort((a, b) => {
+        const urgencyOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+    });
+    
+    return warnings.slice(0, 10); // Return top 10 warnings
+}
 
 // ANALYTICS AND STATISTICS ENDPOINTS
 router.get('/analytics/dashboard', async (req, res) => {

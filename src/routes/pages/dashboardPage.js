@@ -30,6 +30,36 @@ async function renderDashboardPage(req, res) {
             search,
             limit: 50
         });
+
+        // Clean up any existing AI summaries with "undefined" suffix
+        let cleanedCount = 0;
+        updates.forEach(update => {
+            if (update.ai_summary && update.ai_summary.includes('undefined')) {
+                const original = update.ai_summary;
+                update.ai_summary = update.ai_summary
+                    .replace(/\. undefined/g, '')
+                    .replace(/\.\. undefined/g, '')
+                    .replace(/ undefined/g, '')
+                    .replace(/undefined/g, '')
+                    .trim();
+                if (original !== update.ai_summary) {
+                    cleanedCount++;
+                }
+            }
+        });
+
+        if (cleanedCount > 0) {
+            console.log(`🧹 Cleaned ${cleanedCount} AI summaries with "undefined" suffix`);
+        }
+
+        // Debug: Check if ai_summary exists in first few updates
+        if (updates.length > 0) {
+            console.log('🔍 DEBUG - Sample update fields:', {
+                ai_summary: updates[0].ai_summary,
+                summary: updates[0].summary ? updates[0].summary.substring(0, 100) + '...' : null,
+                headline: updates[0].headline
+            });
+        }
         
         // Get dashboard statistics
         const dashboardStats = await getDashboardStatistics();
@@ -171,7 +201,7 @@ async function renderDashboardPage(req, res) {
                 
                 .search-button {
                     position: absolute;
-                    right: 8px;
+                    right: 45px;
                     top: 50%;
                     transform: translateY(-50%);
                     background: none;
@@ -182,9 +212,29 @@ async function renderDashboardPage(req, res) {
                     border-radius: 4px;
                     transition: color 0.2s;
                 }
-                
+
                 .search-button:hover {
                     color: #4f46e5;
+                }
+
+                .save-search-button {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: none;
+                    border: none;
+                    color: #6b7280;
+                    cursor: pointer;
+                    padding: 6px;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                    font-size: 14px;
+                }
+
+                .save-search-button:hover {
+                    color: #059669;
+                    background: #f0fdf4;
                 }
                 
                 .filters-row {
@@ -410,6 +460,69 @@ async function renderDashboardPage(req, res) {
                     background: #f0f9ff;
                     color: #0284c7;
                     border: 1px solid #bae6fd;
+                }
+
+                .content-type-badge {
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .content-type-badge.speech {
+                    background: #fef3c7;
+                    color: #92400e;
+                    border: 1px solid #fcd34d;
+                }
+
+                .content-type-badge.consultation {
+                    background: #e0e7ff;
+                    color: #4338ca;
+                    border: 1px solid #a5b4fc;
+                }
+
+                .content-type-badge.enforcement {
+                    background: #fecaca;
+                    color: #dc2626;
+                    border: 1px solid #f87171;
+                }
+
+                .content-type-badge.guidance {
+                    background: #d1fae5;
+                    color: #059669;
+                    border: 1px solid #6ee7b7;
+                }
+
+                .content-type-badge.policy {
+                    background: #ddd6fe;
+                    color: #7c3aed;
+                    border: 1px solid #a78bfa;
+                }
+
+                .content-type-badge.regulation {
+                    background: #fde68a;
+                    color: #d97706;
+                    border: 1px solid #fbbf24;
+                }
+
+                .content-type-badge.report {
+                    background: #f3e8ff;
+                    color: #8b5cf6;
+                    border: 1px solid #c4b5fd;
+                }
+
+                .content-type-badge.news {
+                    background: #dbeafe;
+                    color: #3b82f6;
+                    border: 1px solid #93c5fd;
+                }
+
+                .content-type-badge.other {
+                    background: #f3f4f6;
+                    color: #6b7280;
+                    border: 1px solid #d1d5db;
                 }
                 
                 .update-actions {
@@ -727,14 +840,15 @@ async function renderDashboardPage(req, res) {
                         <div class="controls-header">
                             <h2 class="controls-title">Filter & Search</h2>
                             <div class="search-container">
-                                <input 
-                                    type="text" 
-                                    id="search-input" 
-                                    class="search-input" 
+                                <input
+                                    type="text"
+                                    id="search-input"
+                                    class="search-input"
                                     placeholder="Search updates, authorities, sectors..."
                                     value="${search || ''}"
                                 >
                                 <button id="search-button" class="search-button">🔍</button>
+                                <button id="save-search-button" class="save-search-button" onclick="WorkspaceModule.saveCurrentSearch()" title="Save current search & filters">💾</button>
                             </div>
                         </div>
                         
@@ -866,6 +980,20 @@ async function renderDashboardPage(req, res) {
                     range: '${range || ''}',
                     search: '${search || ''}'
                 };
+
+                // Simple FilterModule for WorkspaceModule integration
+                window.FilterModule = {
+                    getCurrentFilters: function() {
+                        return {
+                            category: window.currentFilters.category,
+                            authority: window.currentFilters.authority || null,
+                            sector: window.currentFilters.sector || null,
+                            impact: window.currentFilters.impact || null,
+                            range: window.currentFilters.range || null,
+                            search: window.currentFilters.search || null
+                        };
+                    }
+                };
             </script>
             
             ${getClientScripts()}
@@ -990,17 +1118,25 @@ function generateUpdatesHTML(updates) {
 }
 
 function generateUpdateCard(update) {
-    const publishedDate = formatDate(update.publishedDate || update.createdAt);
+    const publishedDate = formatDate(getDateValue(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt));
     const impactBadge = getImpactBadge(update);
+    const contentTypeBadge = getContentTypeBadge(update);
     const sectorTags = getSectorTags(update);
     const aiFeatures = getAIFeatures(update);
-    
+
+    const aiSummary = update.ai_summary ? update.ai_summary.trim() : '';
+    const useFallbackSummary = isFallbackSummary(aiSummary);
+    const summaryText = !useFallbackSummary && aiSummary
+        ? aiSummary
+        : (update.summary && update.summary.trim() ? update.summary.trim() : '')
+
     return `
         <div class="update-card" data-id="${update.id}">
             <div class="update-header">
                 <div class="update-meta-primary">
                     <span class="authority-badge">${update.authority}</span>
                     <span class="date-badge">${publishedDate}</span>
+                    ${contentTypeBadge}
                     ${impactBadge}
                 </div>
                 <div class="update-actions">
@@ -1015,7 +1151,7 @@ function generateUpdateCard(update) {
             </h3>
             
             <div class="update-summary">
-                ${update.impact || update.summary || update.ai_summary || 'No summary available'}
+                ${summaryText ? truncateText(summaryText, 200) : 'No summary available'}
             </div>
             
             <div class="update-details">
@@ -1048,7 +1184,7 @@ function generateUpdateCard(update) {
                 ${update.compliance_deadline ? `
                 <div class="detail-item">
                     <div class="detail-label">Compliance Deadline</div>
-                    <div class="detail-value">${formatDate(update.compliance_deadline)}</div>
+                    <div class="detail-value">${formatDate(update.compliance_deadline || update.complianceDeadline)}</div>
                 </div>
                 ` : ''}
                 
@@ -1072,20 +1208,28 @@ function generateUpdateCard(update) {
     `;
 }
 
+function getContentTypeBadge(update) {
+    const contentType = update.content_type || 'OTHER';
+    const badgeClass = contentType.toLowerCase();
+    const badgeText = contentType === 'OTHER' ? 'INFO' : contentType;
+
+    return `<span class="content-type-badge ${badgeClass}">${badgeText}</span>`;
+}
+
 function getImpactBadge(update) {
     const level = update.impactLevel || 'Informational';
     const score = update.business_impact_score;
-    
+
     let badgeClass = level.toLowerCase();
     let badgeText = level;
-    
+
     if (score && score >= 8) {
         badgeClass = 'significant critical';
         badgeText = `${level} (${score}/10)`;
     } else if (score) {
         badgeText = `${level} (${score}/10)`;
     }
-    
+
     return `<span class="impact-badge ${badgeClass}">${badgeText}</span>`;
 }
 
@@ -1104,8 +1248,9 @@ function getAIFeatures(update) {
         features.push(`<span class="ai-feature high-impact">🔥 High Impact (${update.business_impact_score}/10)</span>`);
     }
     
-    if (update.compliance_deadline) {
-        const deadline = new Date(update.compliance_deadline);
+    const complianceDeadline = getDateValue(update.compliance_deadline || update.complianceDeadline);
+    if (complianceDeadline) {
+        const deadline = complianceDeadline;
         const daysUntil = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
         if (daysUntil <= 30 && daysUntil > 0) {
             features.push(`<span class="ai-feature deadline">⏰ Deadline in ${daysUntil} days</span>`);
@@ -1127,14 +1272,38 @@ function getAIFeatures(update) {
     return features.join('');
 }
 
-function formatDate(dateString) {
-    if (!dateString) return 'Unknown';
-    
-    const date = new Date(dateString);
+function getDateValue(rawValue) {
+    if (!rawValue) return null;
+    if (rawValue instanceof Date) {
+        return isNaN(rawValue) ? null : rawValue;
+    }
+    const parsed = new Date(rawValue);
+    return isNaN(parsed) ? null : parsed;
+}
+
+function truncateText(text, maxLength = 200) {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return `${text.substring(0, maxLength).trim()}...`;
+}
+
+function isFallbackSummary(summary) {
+    if (!summary) return true;
+    const normalized = summary.toLowerCase();
+    return normalized.startsWith('informational regulatory update:') ||
+        normalized.startsWith('significant regulatory development') ||
+        normalized.startsWith('regulatory update:') ||
+        normalized.startsWith('regulatory impact overview:');
+}
+
+function formatDate(dateValue) {
+    const date = getDateValue(dateValue);
+    if (!date) return 'Unknown';
+
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return 'Today';
     if (diffDays === 2) return 'Yesterday';
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
@@ -1147,5 +1316,9 @@ function formatDate(dateString) {
 }
 
 module.exports = {
-    renderDashboardPage
+    renderDashboardPage,
+    formatDate,
+    getDateValue,
+    truncateText,
+    isFallbackSummary
 };

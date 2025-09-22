@@ -455,7 +455,10 @@ function getCommonClientScripts() {
                                     \${update.urgency ? \`<div class="badge" style="background: #fff7ed; color: #ea580c;">\${update.urgency}</div>\` : ''}
                                 </div>
                                 <div class="update-summary">
-                                    \${update.impact && update.impact.length > 150 ? update.impact.substring(0, 150) + '...' : update.impact || 'No description available'}
+                                    \${(() => {
+                                        const summary = update.ai_summary || update.impact || update.summary || 'No description available';
+                                        return summary.length > 150 ? summary.substring(0, 150) + '...' : summary;
+                                    })()}
                                 </div>
                                 <div class="update-footer">
                                     <div class="update-time">

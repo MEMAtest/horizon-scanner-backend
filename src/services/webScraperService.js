@@ -1209,12 +1209,58 @@ class WebScraperService {
                 
                 if (aiAnalyzer && typeof aiAnalyzer.analyzeUpdate === 'function') {
                     try {
-                        const aiAnalysis = await aiAnalyzer.analyzeUpdate(item);
-                        item.impact = aiAnalysis.impact;
-                        item.urgency = aiAnalysis.urgency;
-                        item.sector = aiAnalysis.sector;
-                        item.key_dates = aiAnalysis.key_dates;
-                        item.raw_data.aiAnalysis = aiAnalysis;
+                        const analysisResult = await aiAnalyzer.analyzeUpdate(item);
+                        if (analysisResult && analysisResult.success && analysisResult.data) {
+                            const analysis = analysisResult.data;
+
+                            // Map AI analysis data to item fields - complete payload
+                            item.impact = analysis.impact;
+                            item.impactLevel = analysis.impactLevel;
+                            item.impact_level = analysis.impactLevel; // Both formats
+                            item.businessImpactScore = analysis.businessImpactScore;
+                            item.business_impact_score = analysis.businessImpactScore; // Both formats
+                            item.urgency = analysis.urgency;
+                            item.sector = analysis.sector;
+                            item.primarySectors = analysis.primarySectors;
+                            item.ai_summary = analysis.ai_summary;
+                            item.content_type = analysis.content_type || analysis.contentType;
+                            item.area = analysis.area;
+                            item.ai_tags = analysis.ai_tags;
+                            item.aiTags = analysis.aiTags || analysis.ai_tags; // Both formats
+                            item.ai_confidence_score = analysis.ai_confidence_score;
+                            item.complianceActions = analysis.complianceActions;
+                            item.riskLevel = analysis.riskLevel;
+                            item.affectedFirmSizes = analysis.affectedFirmSizes;
+                            item.category = analysis.category;
+                            item.key_dates = analysis.key_dates;
+                            item.keyDates = analysis.key_dates; // Both formats
+                            item.sectorRelevanceScores = analysis.sectorRelevanceScores;
+
+                            // Additional AI analysis fields from full payload
+                            item.businessOpportunities = analysis.businessOpportunities;
+                            item.implementationComplexity = analysis.implementationComplexity;
+                            item.enhancedAt = analysis.enhancedAt;
+                            item.aiModelUsed = analysis.aiModelUsed;
+                            item.fallbackAnalysis = analysis.fallbackAnalysis;
+
+                            // Map compliance-related fields
+                            item.compliance_deadline = analysis.compliance_deadline;
+                            item.complianceDeadline = analysis.compliance_deadline; // Both formats
+                            item.firm_types_affected = analysis.firm_types_affected || [];
+                            item.firmTypesAffected = analysis.firm_types_affected || []; // Both formats
+                            item.primary_sectors = analysis.primary_sectors || analysis.primarySectors || [];
+                            item.implementation_phases = analysis.implementation_phases || [];
+                            item.implementationPhases = analysis.implementation_phases || []; // Both formats
+                            item.required_resources = analysis.required_resources || {};
+                            item.requiredResources = analysis.required_resources || {}; // Both formats
+
+                            // Store full analysis in raw_data
+                            if (item.raw_data) {
+                                item.raw_data.aiAnalysis = analysis;
+                            }
+
+                            console.log(`✅ AI analysis applied to item: ${item.url}`);
+                        }
                     } catch (aiError) {
                         console.log(`⚠️ AI analysis failed: ${aiError.message}`);
                     }

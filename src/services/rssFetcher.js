@@ -8,7 +8,20 @@ const cheerio = require('cheerio');
 
 const aiAnalyzer = require('./aiAnalyzer');
 const dbService = require('./dbService');
-const { scrapeFATF, scrapeFCA, scrapeSFO, scrapePensionRegulator } = require('./webScraper');
+const { 
+    scrapeFATF, 
+    scrapeFCA, 
+    scrapeSFO, 
+    scrapePensionRegulator,
+    scrapeICO,
+    scrapeFRC,
+    scrapeFOS,
+    scrapeJMLSG,
+    scrapeBoE,
+    scrapePRA,
+    scrapeEBA,
+    normalizeAuthority
+} = require('./webScraper');
 
 class EnhancedRSSFetcher {
     constructor() {
@@ -56,16 +69,6 @@ class EnhancedRSSFetcher {
                 recencyDays: 30,  // Added configurable recency window
                 sectors: ['Banking', 'Capital Markets', 'Payments', 'Fintech']
             },
-            {
-                name: 'Bank of England/PRA Publications RSS',
-                authority: 'PRA',
-                url: 'https://www.bankofengland.co.uk/prudential-regulation/publication/rss',
-                type: 'rss',
-                description: 'PRA Policy & Supervisory Statements',
-                priority: 'high',
-                recencyDays: 30,  // Added configurable recency window
-                sectors: ['Banking', 'Insurance', 'Capital Markets']
-            },
 
             // INTERNATIONAL RSS FEEDS - European & Global
             {
@@ -77,16 +80,6 @@ class EnhancedRSSFetcher {
                 priority: 'high',
                 recencyDays: 30,  // Added configurable recency window
                 sectors: ['Capital Markets', 'Investment Management', 'Cryptocurrency']
-            },
-            {
-                name: 'EBA News & Press',
-                authority: 'EBA',
-                url: 'https://www.eba.europa.eu/news-press/rss.xml',
-                type: 'rss',
-                description: 'European Banking Authority - Press Releases',
-                priority: 'high',
-                recencyDays: 30,  // Added configurable recency window
-                sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime']
             },
             {
                 name: 'FSB Publications',
@@ -201,6 +194,26 @@ class EnhancedRSSFetcher {
                 priority: 'low',
                 recencyDays: 14,  // Added configurable recency window
                 sectors: ['Audit & Accounting', 'Professional Services']
+            },
+            {
+                name: 'JMLSG News',
+                authority: 'JMLSG',
+                url: 'https://www.jmlsg.org.uk/latest-news/',
+                type: 'web_scraping',
+                description: 'Joint Money Laundering Steering Group - Latest News',
+                priority: 'high',
+                recencyDays: 30,
+                sectors: ['AML & Financial Crime', 'Banking', 'Compliance']
+            },
+            {
+                name: 'Financial Ombudsman Service News',
+                authority: 'FOS',
+                url: 'https://www.financial-ombudsman.org.uk/news',
+                type: 'web_scraping',
+                description: 'Financial Ombudsman Service - News and Updates',
+                priority: 'medium',
+                recencyDays: 30,
+                sectors: ['Consumer Protection', 'Dispute Resolution', 'Financial Services']
             },
 
             // Demo feed for development
@@ -403,46 +416,69 @@ class EnhancedRSSFetcher {
             let scraperResults = [];
             
             switch(source.authority) {
-                case 'FATF':
-                    scraperResults = await this.scrapeFATFDirect(source);
-                    break;
-                    
-                case 'FCA':
-                    // FCA has RSS feed, but use scraper as fallback
-                    scraperResults = await scrapeFCA();
-                    break;
-                    
-                case 'SFO':
-                case 'Serious Fraud Office':
-                    scraperResults = await scrapeSFO();
-                    break;
-                    
-                case 'TPR':
-                case 'The Pensions Regulator':
-                    scraperResults = await scrapePensionRegulator();
-                    break;
-                    
-                default:
-                    // For other sources, use traditional HTML scraping
-                    console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`);
-                    return await this.genericWebScraping(source);
-            }
+    case 'FATF':
+        scraperResults = await scrapeFATF();
+        break;
+    case 'FCA':
+        scraperResults = await scrapeFCA();
+        break;
+    case 'SFO':
+    case 'Serious Fraud Office':
+        scraperResults = await scrapeSFO();
+        break;
+    case 'TPR':
+    case 'The Pensions Regulator':
+        scraperResults = await scrapePensionRegulator();
+        break;
+    // ADD THESE NEW CASES:
+    case 'ICO':
+    case 'Information Commissioner\'s Office':
+        scraperResults = await scrapeICO();
+        break;
+    case 'FRC':
+    case 'Financial Reporting Council':
+        scraperResults = await scrapeFRC();
+        break;
+    case 'FOS':
+    case 'Financial Ombudsman Service':
+        scraperResults = await scrapeFOS();
+        break;
+    case 'JMLSG':
+    case 'Joint Money Laundering Steering Group':
+        scraperResults = await scrapeJMLSG();
+        break;
+    case 'BoE':
+    case 'Bank of England':
+        scraperResults = await scrapeBoE('BoE');
+        break;
+    case 'PRA':
+    case 'Prudential Regulation Authority':
+        scraperResults = await scrapePRA();
+        break;
+    case 'EBA':
+    case 'European Banking Authority':
+        scraperResults = await scrapeEBA();
+        break;
+    default:
+        console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`);
+        return await this.genericWebScraping(source);
+}
             
             // Transform scraper results to match our expected format
             if (scraperResults && scraperResults.length > 0) {
-                console.log(`✅ ${source.name}: Found ${scraperResults.length} items via dedicated scraper`);
-                
-                return scraperResults.map(item => ({
-                    headline: item.title || item.headline,
-                    summary: item.summary || `${source.authority} update: ${item.title}`,
-                    url: item.url || item.link,
-                    authority: item.authority || source.authority,
-                    publishedDate: item.publishedDate || new Date(item.pubDate),
-                    source: source.name,
-                    feedType: 'web_scraping',
-                    sectors: source.sectors || []
-                }));
-            }
+    console.log(`✅ ${source.name}: Found ${scraperResults.length} items via dedicated scraper`);
+    
+    return scraperResults.map(item => ({
+        headline: item.title || item.headline,
+        summary: item.summary || `${source.authority} update: ${item.title}`,  // Now uses actual summary from scraper
+        url: item.url || item.link,
+        authority: normalizeAuthority(item.authority || source.authority),  // Added normalization
+        publishedDate: item.publishedDate || new Date(item.pubDate),
+        source: source.name,
+        feedType: 'web_scraping',
+        sectors: source.sectors || []
+    }));
+}
             
             console.log(`⚠️ No results from dedicated scraper for ${source.name}`);
             return [];
@@ -540,16 +576,46 @@ class EnhancedRSSFetcher {
                 }
 
                 // Enhance update with AI analysis if available
-                if (aiAnalyzer && aiAnalyzer.analyzeUpdate) {
+                if (aiAnalyzer && typeof aiAnalyzer.analyzeUpdate === 'function') {
                     try {
-                        const analysis = await aiAnalyzer.analyzeUpdate(update);
-                        if (analysis) {
-                            update.aiAnalysis = analysis.analysis;
-                            update.businessImpact = analysis.businessImpact;
-                            update.confidence = analysis.confidence;
-                            update.sectors = analysis.sectors || update.sectors;
-                            update.category = analysis.category;
-                            update.urgency = analysis.urgency;
+                        const analysisResult = await aiAnalyzer.analyzeUpdate(update);
+                        const aiData = analysisResult?.data || analysisResult;
+
+                        if (analysisResult?.success && aiData) {
+                            update.aiAnalysis = aiData;
+                            update.businessImpact = analysisResult.businessImpact || aiData.ai_summary;
+                            update.confidence = analysisResult.confidence || aiData.ai_confidence_score;
+                            update.sectors = analysisResult.sectors || aiData.primarySectors || update.sectors;
+                            update.category = analysisResult.category || aiData.area;
+                            update.urgency = analysisResult.urgency || aiData.urgency;
+
+                            update.ai_summary = aiData.ai_summary;
+                            update.impactLevel = aiData.impactLevel;
+                            update.impact_level = aiData.impactLevel;
+                            update.businessImpactScore = aiData.businessImpactScore;
+                            update.business_impact_score = aiData.business_impact_score;
+                            update.ai_tags = aiData.ai_tags;
+                            update.aiTags = aiData.aiTags;
+                            update.ai_confidence_score = aiData.ai_confidence_score;
+                            update.sector = aiData.sector || update.sector;
+                            update.primarySectors = aiData.primarySectors;
+                            update.primary_sectors = aiData.primary_sectors;
+                            update.complianceDeadline = aiData.complianceDeadline;
+                            update.compliance_deadline = aiData.compliance_deadline;
+                            update.sectorRelevanceScores = aiData.sectorRelevanceScores;
+                            update.sector_relevance_scores = aiData.sector_relevance_scores;
+                            update.implementationPhases = aiData.implementationPhases;
+                            update.implementation_phases = aiData.implementation_phases;
+                            update.requiredResources = aiData.requiredResources;
+                            update.required_resources = aiData.required_resources;
+                            update.firmTypesAffected = aiData.firmTypesAffected;
+                            update.firm_types_affected = aiData.firm_types_affected;
+                            update.area = aiData.area || update.area;
+                            update.content_type = aiData.content_type || update.content_type;
+                            update.contentType = aiData.contentType || update.contentType;
+                            update.aiModelUsed = aiData.aiModelUsed;
+                            update.enhancedAt = aiData.enhancedAt;
+
                             this.processingStats.aiAnalysisSuccess++;
                         }
                     } catch (aiError) {

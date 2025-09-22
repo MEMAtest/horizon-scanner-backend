@@ -17,7 +17,7 @@ class AIIntelligenceService extends EventEmitter {
         // AI Service Configuration
         this.groqApiKey = process.env.GROQ_API_KEY;
         this.groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-        this.model = 'llama-3.1-70b-versatile';
+        this.model = 'llama-3.3-70b-versatile';
         this.maxRetries = 3;
         this.requestTimeout = 30000;
         this.rateLimitDelay = 2000;
