@@ -136,7 +136,7 @@ function getClientScriptsContent() {
         };
         
         window.showMessage = function(message, type = 'info') {
-            console.log(\`\\${type.toUpperCase()}: \\${message}\`);
+            console.log(type.toUpperCase() + ': ' + message);
             
             const toast = document.createElement('div');
             const bgColor = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : type === 'warning' ? '#fffbeb' : '#f0f9ff';
