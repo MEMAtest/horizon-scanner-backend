@@ -97,7 +97,7 @@ function getClientScriptsContent() {
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage(\`Refreshed! \\${result.newArticles || 0} new updates found.\`, 'success');
+                    showMessage('Refreshed! ' + (result.newArticles || 0) + ' new updates found.', 'success');
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
                     showMessage('Refresh failed: ' + (result.error || 'Unknown error'), 'error');
