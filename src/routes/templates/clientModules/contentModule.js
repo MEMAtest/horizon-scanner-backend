@@ -83,7 +83,7 @@ function getContentModule() {
             const isPinned = pinnedUrls.has(update.url);
             const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
             
-            return `
+            return \`
                 <div class="update-card" data-authority="\${update.authority}" data-impact="\${update.impactLevel}" data-urgency="\${update.urgency}" data-url="\${update.url}">
                     <div class="update-header">
                         <h4 class="update-headline">\${update.headline || 'No headline'}</h4>
@@ -95,16 +95,16 @@ function getContentModule() {
                     </div>
                     <div class="update-content">
                         <p class="update-summary truncated" id="summary-\${update.id}">\${shortSummary || 'No summary available'}</p>
-                        \${baseSummary && baseSummary.length > 120 ? `
+                        \${baseSummary && baseSummary.length > 120 ? \`
                             <button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(\${update.id}, \\\`\${baseSummary.replace(/'/g, '')}\\\`)">Read More</button>
-                        ` : ''}
+                        \` : ''}
                     </div>
                     <div class="update-footer">
                         <span class="update-date">\${displayDate}</span>
                         <button class="view-details-btn" onclick="ContentModule.viewUpdateDetails('\${update.id}', '\${update.url}')">View Details</button>
                     </div>
                 </div>
-            `;
+            \`;
         }
 
         
@@ -129,7 +129,7 @@ function getContentModule() {
         }
         
         function toggleSummaryExpansion(updateId, fullContent) {
-            const summaryElement = document.getElementById(\`summary-\${updateId}\`);
+            const summaryElement = document.getElementById('summary-' + updateId);
             const readMoreBtn = summaryElement?.nextElementSibling;
             
             if (!summaryElement) return;
@@ -151,7 +151,7 @@ function getContentModule() {
         function viewUpdateDetails(updateId, url) {
             if (updateId) {
                 // Use internal detail page
-                window.open(\`/update/\${updateId}\`, '_blank');
+                window.open('/update/' + updateId, '_blank');
             } else if (url) {
                 // Fallback to external URL
                 window.open(url, '_blank');
@@ -163,16 +163,15 @@ function getContentModule() {
             
             const previewContainer = document.getElementById('analyticsPreview');
             if (previewContainer) {
-                previewContainer.innerHTML = \`
-                    <div class="analytics-metric">
-                        <span class="metric-label">Total Updates</span>
-                        <span class="metric-value">\${analyticsPreviewData.totalUpdates || 0}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="metric-label">Avg Risk Score</span>
-                        <span class="metric-value">\${(analyticsPreviewData.averageRiskScore || 0).toFixed(1)}</span>
-                    </div>
-                \`;
+                previewContainer.innerHTML =
+                    '<div class="analytics-metric">' +
+                        '<span class="metric-label">Total Updates</span>' +
+                        '<span class="metric-value">' + (analyticsPreviewData.totalUpdates || 0) + '</span>' +
+                    '</div>' +
+                    '<div class="analytics-metric">' +
+                        '<span class="metric-label">Avg Risk Score</span>' +
+                        '<span class="metric-value">' + (analyticsPreviewData.averageRiskScore || 0).toFixed(1) + '</span>' +
+                    '</div>';
             }
         }
         

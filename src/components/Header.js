@@ -1,6 +1,6 @@
-/ ==========================================
-// 🧩 src/components/Header.js - Header Component
 // ==========================================
+// 🧩 src/components/Header.js - Header Component
+/// ==========================================
 
 function render(options = {}) {
     const {
