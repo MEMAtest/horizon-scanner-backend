@@ -345,8 +345,11 @@ function getClientScriptsContent() {
             const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
 
             const readMore = baseSummary && baseSummary.length > 180
-                ? '<button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(' + (update.id || '0') + ', \'' + baseSummary.replace(/'/g, '') + '\');">Read More</button>'
+                ? '<button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(' + (update.id || '0') + ', ' + JSON.stringify(baseSummary) + ')">Read More</button>'
                 : '';
+
+            const idArg = JSON.stringify(update.id || '');
+            const urlArg = JSON.stringify(update.url || '');
 
             return (
                 '<div class="update-card" data-authority="' + (update.authority || '') + '" data-url="' + (update.url || '') + '">' +
@@ -360,7 +363,7 @@ function getClientScriptsContent() {
                     '</div>' +
                     '<div class="update-footer">' +
                         '<span>' + displayDate + '</span>' +
-                        '<button onclick="viewUpdateDetails(\'' + (update.url || '') + '\')">View Details</button>' +
+                        '<button onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View Details</button>' +
                     '</div>' +
                 '</div>'
             );
@@ -974,19 +977,23 @@ function getClientScriptsContent() {
         function renderTableView(container, updates) {
             container.className = 'updates-container table-view';
 
-            const rows = updates.map(update => (
-                '<tr>' +
-                    '<td>' + update.fetchedDate + '</td>' +
-                    '<td><span class="authority-badge">' + update.authority + '</span></td>' +
-                    '<td class="headline-cell">' +
-                        '<div class="headline">' + update.headline + '</div>' +
-                        '<div class="summary">' + (update.summary || '').substring(0, 100) + '...</div>' +
-                    '</td>' +
-                    '<td><span class="impact-badge ' + update.impactLevel.toLowerCase() + '">' + update.impactLevel + '</span></td>' +
-                    '<td><span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span></td>' +
-                    '<td><button class="table-btn" onclick="viewUpdateDetails(\'' + (update.id || '') + '\', \'' + (update.url || '') + '\')">View</button></td>' +
-                '</tr>'
-            )).join('');
+            const rows = updates.map(update => {
+                const idArg = JSON.stringify(update.id || '');
+                const urlArg = JSON.stringify(update.url || '');
+                return (
+                    '<tr>' +
+                        '<td>' + update.fetchedDate + '</td>' +
+                        '<td><span class="authority-badge">' + update.authority + '</span></td>' +
+                        '<td class="headline-cell">' +
+                            '<div class="headline">' + update.headline + '</div>' +
+                            '<div class="summary">' + (update.summary || '').substring(0, 100) + '...</div>' +
+                        '</td>' +
+                        '<td><span class="impact-badge ' + update.impactLevel.toLowerCase() + '">' + update.impactLevel + '</span></td>' +
+                        '<td><span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span></td>' +
+                        '<td><button class="table-btn" onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View</button></td>' +
+                    '</tr>'
+                );
+            }).join('');
 
             const tableHTML =
                 '<div class="table-wrapper">' +
@@ -1030,20 +1037,24 @@ function getClientScriptsContent() {
                                 '<span class="update-count">' + dateUpdates.length + ' updates</span>' +
                             '</div>' +
                             '<div class="timeline-updates">' +
-                                dateUpdates.map(update => (
-                                    '<div class="timeline-item">' +
-                                        '<div class="timeline-marker"></div>' +
-                                        '<div class="timeline-content">' +
-                                            '<div class="timeline-header">' +
-                                                '<span class="authority-badge">' + update.authority + '</span>' +
-                                                '<span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span>' +
+                                dateUpdates.map(update => {
+                                    const idArg = JSON.stringify(update.id || '');
+                                    const urlArg = JSON.stringify(update.url || '');
+                                    return (
+                                        '<div class="timeline-item">' +
+                                            '<div class="timeline-marker"></div>' +
+                                            '<div class="timeline-content">' +
+                                                '<div class="timeline-header">' +
+                                                    '<span class="authority-badge">' + update.authority + '</span>' +
+                                                    '<span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span>' +
+                                                '</div>' +
+                                                '<h4 class="timeline-headline">' + update.headline + '</h4>' +
+                                                '<p class="timeline-summary">' + (update.summary || '').substring(0, 150) + '...</p>' +
+                                                '<button class="timeline-btn" onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View Details</button>' +
                                             '</div>' +
-                                            '<h4 class="timeline-headline">' + update.headline + '</h4>' +
-                                            '<p class="timeline-summary">' + (update.summary || '').substring(0, 150) + '...</p>' +
-                                            '<button class="timeline-btn" onclick="viewUpdateDetails(\'' + (update.id || '') + '\', \'' + (update.url || '') + '\')">View Details</button>' +
-                                        '</div>' +
-                                    '</div>'
-                                )).join('') +
+                                        '</div>'
+                                    );
+                                }).join('') +
                             '</div>' +
                         '</div>'
                     )).join('') +

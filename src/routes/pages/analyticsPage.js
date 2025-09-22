@@ -122,6 +122,8 @@ const analyticsPage = async (req, res) => {
             directCount
         };
 
+        const sidebarHtml = await getSidebar('analytics');
+
         // Helper functions for safe data rendering
         const renderMetricValue = (value, fallback = 'Loading...') => {
             return analyticsData ? (value || 0) : fallback;
@@ -576,7 +578,7 @@ const analyticsPage = async (req, res) => {
 </head>
 <body>
     <div class="analytics-container">
-        ${getSidebar('analytics', counts)}
+        ${sidebarHtml}
         
         <div class="analytics-main">
             <div class="analytics-header">

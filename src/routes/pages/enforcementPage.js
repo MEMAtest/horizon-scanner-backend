@@ -55,7 +55,7 @@ const enforcementPage = async (req, res) => {
             ${getCommonStyles()}
             <style>
                 .enforcement-header {
-                    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
                     color: white;
                     padding: 30px;
                     border-radius: 12px;
@@ -76,20 +76,45 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .status-indicator {
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 15px 20px;
-                    border-radius: 8px;
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
+                    background: rgba(255, 255, 255, 0.14);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    padding: 12px 18px;
+                    border-radius: 999px;
+                    width: fit-content;
+                    font-size: 0.95rem;
                 }
 
-                .status-dot {
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 50%;
-                    background: #10b981;
-                    animation: pulse 2s infinite;
+                .status-label {
+                    opacity: 0.85;
+                    letter-spacing: 0.02em;
+                }
+
+                .status-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(16, 185, 129, 0.18);
+                    color: #d1fae5;
+                    border: 1px solid rgba(16, 185, 129, 0.35);
+                    border-radius: 999px;
+                    padding: 4px 12px;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                }
+
+                .status-pill::before {
+                    content: '●';
+                    font-size: 0.6rem;
+                    color: #bbf7d0;
+                }
+
+                .status-update-time {
+                    margin-left: 12px;
+                    font-size: 0.85rem;
+                    opacity: 0.85;
                 }
 
                 .stats-grid {
@@ -461,9 +486,9 @@ const enforcementPage = async (req, res) => {
                         <h1>⚖️ FCA Enforcement Dashboard</h1>
                         <p class="enforcement-subtitle">Comprehensive analysis of Financial Conduct Authority enforcement actions, fines, and regulatory penalties</p>
                         <div class="status-indicator">
-                            <div class="status-dot"></div>
-                            <span>Enforcement service active</span>
-                            <span style="margin-left: auto; font-size: 0.875rem;" id="last-update">Loading...</span>
+                            <span class="status-label">Status</span>
+                            <span class="status-pill">Active</span>
+                            <span class="status-update-time" id="last-update">Loading...</span>
                         </div>
                     </header>
 
