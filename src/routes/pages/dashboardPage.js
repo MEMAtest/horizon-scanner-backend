@@ -1118,7 +1118,11 @@ function generateUpdatesHTML(updates) {
 }
 
 function generateUpdateCard(update) {
-    const publishedDate = formatDate(getDateValue(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt));
+    const impactLevel = update.impactLevel || update.impact_level || 'Informational';
+    const urgency = update.urgency || 'Low';
+    const publishedAt = getDateValue(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
+    const publishedDate = formatDate(publishedAt || new Date());
+    const isoDate = publishedAt ? publishedAt.toISOString() : '';
     const impactBadge = getImpactBadge(update);
     const contentTypeBadge = getContentTypeBadge(update);
     const sectorTags = getSectorTags(update);
@@ -1128,10 +1132,18 @@ function generateUpdateCard(update) {
     const useFallbackSummary = isFallbackSummary(aiSummary);
     const summaryText = !useFallbackSummary && aiSummary
         ? aiSummary
-        : (update.summary && update.summary.trim() ? update.summary.trim() : '')
+        : (update.summary && update.summary.trim() ? update.summary.trim() : '');
 
     return `
-        <div class="update-card" data-id="${update.id}">
+        <div 
+            class="update-card" 
+            data-id="${update.id || ''}"
+            data-url="${update.url || ''}"
+            data-authority="${update.authority || ''}"
+            data-impact="${impactLevel}"
+            data-urgency="${urgency}"
+            data-date="${isoDate}"
+        >
             <div class="update-header">
                 <div class="update-meta-primary">
                     <span class="authority-badge">${update.authority}</span>
