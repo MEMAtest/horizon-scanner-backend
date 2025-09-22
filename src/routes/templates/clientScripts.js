@@ -316,19 +316,22 @@ function getClientScriptsContent() {
         
         function generateStream(id, title, updates, isExpanded = false) {
             const cards = updates.slice(0, 5).map(u => generateUpdateCard(u)).join('');
+            const loadMore = updates.length > 5
+                ? '<button class="load-more-btn" id="loadMoreBtn-' + id + '" onclick="SearchModule.loadMoreUpdatesForStream(\'' + id + '\', ' + updates.length + ')">Load More (' + (updates.length - 5) + ' remaining)</button>'
+                : '';
 
-            return \`
-                <div class="intelligence-stream \\${isExpanded ? 'expanded' : ''}" id="\\${id}">
-                    <div class="stream-header" onclick="toggleStreamExpansion('\\${id}')">
-                        <h3>\\${title}</h3>
-                        <span class="update-count">\\${updates.length} updates</span>
-                    </div>
-                    <div class="stream-content">
-                        \\${cards}
-                        \${updates.length > 5 ? '<button class="load-more-btn" id="loadMoreBtn-' + id + '" onclick="SearchModule.loadMoreUpdatesForStream(\''+id+'\', '+updates.length+')">Load More (' + (updates.length - 5) + ' remaining)</button>' : ''}
-                    </div>
-                </div>
-            \`;
+            return (
+                '<div class="intelligence-stream ' + (isExpanded ? 'expanded' : '') + '" id="' + id + '">' +
+                    '<div class="stream-header" onclick="toggleStreamExpansion(\'' + id + '\')">' +
+                        '<h3>' + title + '</h3>' +
+                        '<span class="update-count">' + updates.length + ' updates</span>' +
+                    '</div>' +
+                    '<div class="stream-content">' +
+                        cards +
+                        loadMore +
+                    '</div>' +
+                '</div>'
+            );
         }
         
         function generateUpdateCard(update) {
@@ -340,23 +343,27 @@ function getClientScriptsContent() {
                 : (update.summary || update.description || '').trim();
             const shortSummary = truncateText(baseSummary, 180);
             const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
-            
-            return \`
-                <div class="update-card" data-authority="\\${update.authority}" data-url="\\${update.url}">
-                    <div class="update-header">
-                        <h4>\\${update.headline || 'No headline'}</h4>
-                        <span class="authority-badge">\\${update.authority || 'Unknown'}</span>
-                    </div>
-                    <div class="update-content">
-                        <p>\\${shortSummary || 'No summary available'}</p>
-                        \${baseSummary && baseSummary.length > 180 ? '<button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(' + (update.id || '0') + ', \''+baseSummary.replace(/'/g, '')+'\');">Read More</button>' : ''}
-                    </div>
-                    <div class="update-footer">
-                        <span>\\${displayDate}</span>
-                        <button onclick="viewUpdateDetails('\\${update.url}')">View Details</button>
-                    </div>
-                </div>
-            \`;
+
+            const readMore = baseSummary && baseSummary.length > 180
+                ? '<button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(' + (update.id || '0') + ', \'' + baseSummary.replace(/'/g, '') + '\');">Read More</button>'
+                : '';
+
+            return (
+                '<div class="update-card" data-authority="' + (update.authority || '') + '" data-url="' + (update.url || '') + '">' +
+                    '<div class="update-header">' +
+                        '<h4>' + (update.headline || 'No headline') + '</h4>' +
+                        '<span class="authority-badge">' + (update.authority || 'Unknown') + '</span>' +
+                    '</div>' +
+                    '<div class="update-content">' +
+                        '<p>' + (shortSummary || 'No summary available') + '</p>' +
+                        readMore +
+                    '</div>' +
+                    '<div class="update-footer">' +
+                        '<span>' + displayDate + '</span>' +
+                        '<button onclick="viewUpdateDetails(\'' + (update.url || '') + '\')">View Details</button>' +
+                    '</div>' +
+                '</div>'
+            );
         }
 
         
@@ -370,7 +377,7 @@ function getClientScriptsContent() {
         function viewUpdateDetails(updateId, url) {
             if (updateId) {
                 // Use internal detail page
-                window.open(\`/update/\\${updateId}\`, '_blank');
+                window.open(\`/update/\${updateId}\`, '_blank');
             } else if (url) {
                 // Fallback to external URL
                 window.open(url, '_blank');
@@ -397,8 +404,8 @@ function getClientScriptsContent() {
             const container = document.getElementById('analyticsPreview');
             if (container && analyticsPreviewData) {
                 container.innerHTML = \`
-                    <div>Total: \\${analyticsPreviewData.totalUpdates || 0}</div>
-                    <div>Risk: \\${(analyticsPreviewData.averageRiskScore || 0).toFixed(1)}</div>
+                    <div>Total: \${analyticsPreviewData.totalUpdates || 0}</div>
+                    <div>Risk: \${(analyticsPreviewData.averageRiskScore || 0).toFixed(1)}</div>
                 \`;
             }
         }
@@ -704,7 +711,7 @@ function getClientScriptsContent() {
             console.log('Filtering by category:', category);
             window.currentFilters = window.currentFilters || {};
             window.currentFilters.category = category;
-            window.location.href = \`/dashboard?category=\\${category}\`;
+            window.location.href = \`/dashboard?category=\${category}\`;
         }
         
         function filterByAuthority(authority) {
@@ -714,7 +721,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.authority = authority;
-                window.location.href = \`/dashboard?authority=\\${encodeURIComponent(authority)}\`;
+                window.location.href = \`/dashboard?authority=\${encodeURIComponent(authority)}\`;
             }
         }
         
@@ -725,7 +732,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.sector = sector;
-                window.location.href = \`/dashboard?sector=\\${encodeURIComponent(sector)}\`;
+                window.location.href = \`/dashboard?sector=\${encodeURIComponent(sector)}\`;
             }
         }
         
@@ -736,7 +743,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.impact = level;
-                window.location.href = \`/dashboard?impact=\\${encodeURIComponent(level)}\`;
+                window.location.href = \`/dashboard?impact=\${encodeURIComponent(level)}\`;
             }
         }
         
@@ -747,7 +754,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.range = range;
-                window.location.href = \`/dashboard?range=\\${range}\`;
+                window.location.href = \`/dashboard?range=\${range}\`;
             }
         }
         
@@ -816,7 +823,7 @@ function getClientScriptsContent() {
         
         function viewDetails(updateId) {
             console.log('Viewing details for:', updateId);
-            window.open(\`/api/updates/\\${updateId}\`, '_blank');
+            window.open(\`/api/updates/\${updateId}\`, '_blank');
         }
         
         function bookmarkUpdate(updateId) {
@@ -828,7 +835,7 @@ function getClientScriptsContent() {
         
         function shareUpdate(updateId) {
             console.log('Sharing:', updateId);
-            const url = \`\\${window.location.origin}/api/updates/\\${updateId}\`;
+            const url = \`\${window.location.origin}/api/updates/\${updateId}\`;
             
             if (navigator.share) {
                 navigator.share({
@@ -862,7 +869,7 @@ function getClientScriptsContent() {
             params.set('offset', newOffset);
             
             // Redirect with new offset
-            window.location.href = \`/dashboard?\\${params.toString()}\`;
+            window.location.href = \`/dashboard?\${params.toString()}\`;
         }
         
         // Search functionality
@@ -874,7 +881,7 @@ function getClientScriptsContent() {
             if (!searchTerm) {
                 window.location.href = '/dashboard';
             } else {
-                window.location.href = \`/dashboard?search=\\${encodeURIComponent(searchTerm)}\`;
+                window.location.href = \`/dashboard?search=\${encodeURIComponent(searchTerm)}\`;
             }
         }
 
@@ -903,7 +910,7 @@ function getClientScriptsContent() {
         }
 
         function switchView(viewType) {
-            console.log(\`🔄 Switching view to: \\${viewType}\`);
+            console.log(\`🔄 Switching view to: \${viewType}\`);
 
             // Update active button
             document.querySelectorAll('.view-btn').forEach(btn => {
@@ -966,45 +973,38 @@ function getClientScriptsContent() {
 
         function renderTableView(container, updates) {
             container.className = 'updates-container table-view';
-            const tableHTML = \`
-                <div class="table-wrapper">
-                    <table class="updates-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Authority</th>
-                                <th>Headline</th>
-                                <th>Impact</th>
-                                <th>Urgency</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${updates.map(update =>
-                                '<tr>' +
-                                    '<td>' + update.fetchedDate + '</td>' +
-                                    '<td>' +
-                                        '<span class="authority-badge">' + update.authority + '</span>' +
-                                    '</td>' +
-                                    '<td class="headline-cell">' +
-                                        '<div class="headline">' + update.headline + '</div>' +
-                                        '<div class="summary">' + (update.summary || '').substring(0, 100) + '...</div>' +
-                                    '</td>' +
-                                    '<td>' +
-                                        '<span class="impact-badge ' + update.impactLevel.toLowerCase() + '">' + update.impactLevel + '</span>' +
-                                    '</td>' +
-                                    '<td>' +
-                                        '<span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span>' +
-                                    '</td>' +
-                                    '<td>' +
-                                        '<button class="table-btn" onclick="viewUpdateDetails(\'' + update.id + '\', \'' + update.url + '\')">View</button>' +
-                                    '</td>' +
-                                '</tr>'
-                            ).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            \`;
+
+            const rows = updates.map(update => (
+                '<tr>' +
+                    '<td>' + update.fetchedDate + '</td>' +
+                    '<td><span class="authority-badge">' + update.authority + '</span></td>' +
+                    '<td class="headline-cell">' +
+                        '<div class="headline">' + update.headline + '</div>' +
+                        '<div class="summary">' + (update.summary || '').substring(0, 100) + '...</div>' +
+                    '</td>' +
+                    '<td><span class="impact-badge ' + update.impactLevel.toLowerCase() + '">' + update.impactLevel + '</span></td>' +
+                    '<td><span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span></td>' +
+                    '<td><button class="table-btn" onclick="viewUpdateDetails(\'' + (update.id || '') + '\', \'' + (update.url || '') + '\')">View</button></td>' +
+                '</tr>'
+            )).join('');
+
+            const tableHTML =
+                '<div class="table-wrapper">' +
+                    '<table class="updates-table">' +
+                        '<thead>' +
+                            '<tr>' +
+                                '<th>Date</th>' +
+                                '<th>Authority</th>' +
+                                '<th>Headline</th>' +
+                                '<th>Impact</th>' +
+                                '<th>Urgency</th>' +
+                                '<th>Actions</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                    '</table>' +
+                '</div>';
+
             container.innerHTML = tableHTML;
         }
 
@@ -1021,16 +1021,16 @@ function getClientScriptsContent() {
                 groupedUpdates[date].push(update);
             });
 
-            const timelineHTML = \`
-                <div class="timeline-wrapper">
-                    ${Object.entries(groupedUpdates).map(([date, dateUpdates]) =>
+            const timelineHTML =
+                '<div class="timeline-wrapper">' +
+                    Object.entries(groupedUpdates).map(([date, dateUpdates]) => (
                         '<div class="timeline-date-group">' +
                             '<div class="timeline-date-header">' +
                                 '<h3>' + date + '</h3>' +
                                 '<span class="update-count">' + dateUpdates.length + ' updates</span>' +
                             '</div>' +
                             '<div class="timeline-updates">' +
-                                dateUpdates.map(update =>
+                                dateUpdates.map(update => (
                                     '<div class="timeline-item">' +
                                         '<div class="timeline-marker"></div>' +
                                         '<div class="timeline-content">' +
@@ -1040,15 +1040,14 @@ function getClientScriptsContent() {
                                             '</div>' +
                                             '<h4 class="timeline-headline">' + update.headline + '</h4>' +
                                             '<p class="timeline-summary">' + (update.summary || '').substring(0, 150) + '...</p>' +
-                                            '<button class="timeline-btn" onclick="viewUpdateDetails(\'' + update.id + '\', \'' + update.url + '\')">View Details</button>' +
+                                            '<button class="timeline-btn" onclick="viewUpdateDetails(\'' + (update.id || '') + '\', \'' + (update.url || '') + '\')">View Details</button>' +
                                         '</div>' +
                                     '</div>'
-                                ).join('') +
+                                )).join('') +
                             '</div>' +
                         '</div>'
-                    ).join('')}
-                </div>
-            \`;
+                    )).join('') +
+                '</div>';
             container.innerHTML = timelineHTML;
         }
 
