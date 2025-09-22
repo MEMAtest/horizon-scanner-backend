@@ -287,16 +287,31 @@ function getClientScriptsContent() {
             
             const container = document.getElementById('intelligenceStreams');
             if (!container) return;
-            
-            const urgent = updates.filter(u => u.urgency === 'High');
-            const moderate = updates.filter(u => u.urgency === 'Medium');
-            const background = updates.filter(u => u.urgency === 'Low');
-            
-            container.innerHTML = \`
-                \\${generateStream('urgent', '🔴 Critical Impact', urgent, true)}
-                \\${generateStream('moderate', '🟡 Active Monitoring', moderate, false)}
-                \\${generateStream('background', '🟢 Background Intelligence', background, false)}
-            \`;
+
+            const streams = [
+                {
+                    id: 'urgent',
+                    title: '🔴 Critical Impact',
+                    updates: updates.filter(u => u.urgency === 'High'),
+                    expanded: true
+                },
+                {
+                    id: 'moderate',
+                    title: '🟡 Active Monitoring',
+                    updates: updates.filter(u => u.urgency === 'Medium'),
+                    expanded: false
+                },
+                {
+                    id: 'background',
+                    title: '🟢 Background Intelligence',
+                    updates: updates.filter(u => u.urgency === 'Low'),
+                    expanded: false
+                }
+            ];
+
+            container.innerHTML = streams
+                .map(stream => generateStream(stream.id, stream.title, stream.updates, stream.expanded))
+                .join('');
         }
         
         function generateStream(id, title, updates, isExpanded = false) {
