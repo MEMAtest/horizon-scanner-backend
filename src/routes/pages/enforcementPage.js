@@ -1074,7 +1074,7 @@ const enforcementPage = async (req, res) => {
                                 params.append('years', filterParams.years);
                             }
 
-                            const url = `/api/enforcement/trends?${params.toString()}`;
+                            const url = '/api/enforcement/trends?' + params.toString();
                             const response = await fetch(url);
                             const data = await response.json();
 
