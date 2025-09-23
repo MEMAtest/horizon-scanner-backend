@@ -142,7 +142,7 @@ class FCAFinesScraper {
         const fines = [];
 
         try {
-            console.log(`   📋 Trying structured fines page for ${year}...`);
+            console.log(`   📋 Trying FCA enforcement actions page for ${year}...`);
 
             browser = await puppeteer.launch({
                 headless: useHeadless,
@@ -152,77 +152,185 @@ class FCAFinesScraper {
             const page = await browser.newPage();
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
 
-            // FCA uses this URL pattern for annual fines pages
-            const url = `https://www.fca.org.uk/news/news-stories/${year}-fines`;
+            // FCA enforcement actions are typically found at this URL pattern
+            const url = `https://www.fca.org.uk/publication/fines/${year}`;
+            console.log(`   🔍 Accessing enforcement actions: ${url}`);
 
-            console.log(`   🔍 Accessing: ${url}`);
-
-            const response = await page.goto(url, {
+            let response = await page.goto(url, {
                 waitUntil: 'networkidle2',
                 timeout: 30000
             });
 
+            // If direct fines page doesn't exist, try alternative patterns
             if (!response || response.status() !== 200) {
-                console.log(`   ⚠️ Page not found or error for ${year}`);
-                return { fines: [] };
+                const alternativeUrls = [
+                    `https://www.fca.org.uk/firms/enforcement/${year}`,
+                    `https://www.fca.org.uk/publications/fines/${year}`,
+                    `https://www.fca.org.uk/news/enforcement-actions?year=${year}`,
+                    `https://www.fca.org.uk/publication/notices/${year}`,
+                    `https://www.fca.org.uk/news/search?search=enforcement&year=${year}`
+                ];
+
+                let found = false;
+                for (const altUrl of alternativeUrls) {
+                    try {
+                        console.log(`   🔍 Trying alternative URL: ${altUrl}`);
+                        response = await page.goto(altUrl, {
+                            waitUntil: 'networkidle2',
+                            timeout: 30000
+                        });
+                        if (response && response.status() === 200) {
+                            found = true;
+                            break;
+                        }
+                    } catch (error) {
+                        console.log(`   ⚠️ Alternative URL failed: ${altUrl}`);
+                    }
+                }
+
+                if (!found) {
+                    console.log(`   ⚠️ No valid enforcement page found for ${year}`);
+                    return { fines: [] };
+                }
             }
 
-            // Extract fines from the table
+            // Extract fines from tables and other structured content
             const tableData = await page.evaluate(() => {
                 const results = [];
 
-                // Find the main content table with fines data
-                const tables = document.querySelectorAll('table');
+                // Look for all possible table structures
+                const tables = document.querySelectorAll('table, .table, .enforcement-table, .fines-table');
+                console.log(`Found ${tables.length} potential tables`);
 
                 for (const table of tables) {
-                    const rows = table.querySelectorAll('tr');
+                    const rows = Array.from(table.querySelectorAll('tr, .table-row, .enforcement-row'));
 
-                    // Skip if less than 2 rows (header + data)
                     if (rows.length < 2) continue;
 
-                    // Check if this looks like a fines table by examining headers
-                    const headerRow = rows[0];
-                    const headerText = headerRow.textContent.toLowerCase();
+                    // Try to identify headers
+                    const firstRow = rows[0];
+                    const headerText = firstRow.textContent.toLowerCase();
+                    console.log(`Examining table with header: ${headerText.substring(0, 100)}`);
 
-                    if (headerText.includes('firm') && (headerText.includes('amount') || headerText.includes('fine'))) {
-                        console.log('Found fines table');
+                    // More flexible header detection
+                    const hasEnforcementIndicators = (
+                        headerText.includes('firm') || headerText.includes('company') || headerText.includes('individual') ||
+                        headerText.includes('amount') || headerText.includes('fine') || headerText.includes('penalty') ||
+                        headerText.includes('enforcement') || headerText.includes('action') || headerText.includes('date')
+                    );
 
-                        // Process data rows (skip header)
+                    if (hasEnforcementIndicators) {
+                        console.log('Found potential enforcement table');
+
+                        // Process each row (skip header)
                         for (let i = 1; i < rows.length; i++) {
                             const row = rows[i];
-                            const cells = row.querySelectorAll('td, th');
+                            const cells = Array.from(row.querySelectorAll('td, th, .cell, .table-cell'));
 
-                            if (cells.length >= 3) {
-                                const firmCell = cells[0];
-                                const dateCell = cells[1];
-                                const amountCell = cells[2];
-                                const reasonCell = cells[3] || { textContent: '' };
+                            if (cells.length >= 2) {
+                                let firm = '', dateText = '', amountText = '', reason = '', url = '';
 
-                                const firm = firmCell.textContent?.trim();
-                                const dateText = dateCell.textContent?.trim();
-                                const amountText = amountCell.textContent?.trim();
-                                const reason = reasonCell.textContent?.trim();
+                                // Flexible cell extraction - look for patterns in cell content
+                                for (let j = 0; j < cells.length; j++) {
+                                    const cellText = cells[j].textContent?.trim() || '';
+                                    const cellLower = cellText.toLowerCase();
 
-                                // Extract links if present
-                                const linkEl = firmCell.querySelector('a') || row.querySelector('a');
-                                const url = linkEl ? linkEl.href : '';
+                                    // Detect firm/company names (usually first column or contains company indicators)
+                                    if (!firm && (
+                                        j === 0 ||
+                                        cellText.match(/\b(ltd|limited|plc|bank|group|holdings|services|insurance|asset|management)\b/i) ||
+                                        cellText.match(/^[A-Z][a-zA-Z\s&.,-]{3,}$/)
+                                    )) {
+                                        firm = cellText;
+                                    }
 
-                                if (firm && amountText && amountText.match(/£|[0-9]/)) {
+                                    // Detect amounts (contains £ or numbers with specific patterns)
+                                    if (!amountText && (
+                                        cellText.includes('£') ||
+                                        cellText.match(/\b\d{1,3}(,\d{3})*(\.\d{2})?\b/) ||
+                                        cellLower.includes('million') || cellLower.includes('thousand')
+                                    )) {
+                                        amountText = cellText;
+                                    }
+
+                                    // Detect dates (various date patterns)
+                                    if (!dateText && (
+                                        cellText.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/) ||
+                                        cellText.match(/\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i) ||
+                                        cellText.match(/\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/)
+                                    )) {
+                                        dateText = cellText;
+                                    }
+
+                                    // Look for breach/reason descriptions
+                                    if (!reason && cellText.length > 10 && (
+                                        cellLower.includes('breach') || cellLower.includes('failure') ||
+                                        cellLower.includes('money laundering') || cellLower.includes('aml') ||
+                                        cellLower.includes('market') || cellLower.includes('conduct') ||
+                                        cellLower.includes('customer') || cellLower.includes('reporting')
+                                    )) {
+                                        reason = cellText;
+                                    }
+
+                                    // Extract links
+                                    const linkEl = cells[j].querySelector('a');
+                                    if (linkEl && !url) {
+                                        url = linkEl.href;
+                                    }
+                                }
+
+                                // Also check the entire row for a link
+                                if (!url) {
+                                    const rowLink = row.querySelector('a');
+                                    if (rowLink) url = rowLink.href;
+                                }
+
+                                // If we found firm and some monetary indicator, include this row
+                                if (firm && (amountText || reason)) {
+                                    console.log(`Found enforcement entry: ${firm} - ${amountText}`);
                                     results.push({
                                         firm,
                                         dateText,
                                         amountText,
                                         reason,
                                         url,
-                                        source: 'structured_table'
+                                        source: 'enhanced_table_parsing'
                                     });
                                 }
                             }
                         }
-                        break; // Found the main table, stop looking
                     }
                 }
 
+                // Also look for enforcement actions in lists or other structures
+                const listItems = document.querySelectorAll('li, .enforcement-item, .action-item, .fine-item');
+                for (const item of listItems) {
+                    const text = item.textContent || '';
+                    const textLower = text.toLowerCase();
+
+                    // Look for enforcement action patterns in list items
+                    if ((textLower.includes('fine') || textLower.includes('penalty') || textLower.includes('enforcement')) &&
+                        text.includes('£') && text.length > 20) {
+
+                        const firmMatch = text.match(/([A-Z][a-zA-Z\s&.,-]+?)(?:\s+(?:fined|penalised|penalty))/i);
+                        const amountMatch = text.match(/£([\d,]+(?:\.\d{2})?(?:\s*million)?)/i);
+                        const dateMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{1,2}\s+\w+\s+\d{4})/);
+
+                        if (firmMatch && amountMatch) {
+                            const linkEl = item.querySelector('a');
+                            results.push({
+                                firm: firmMatch[1].trim(),
+                                dateText: dateMatch ? dateMatch[1] : '',
+                                amountText: '£' + amountMatch[1],
+                                reason: text.substring(0, 200) + '...',
+                                url: linkEl ? linkEl.href : '',
+                                source: 'list_item_parsing'
+                            });
+                        }
+                    }
+                }
+
+                console.log(`Total enforcement entries found: ${results.length}`);
                 return results;
             });
 
@@ -231,27 +339,36 @@ class FCAFinesScraper {
             // Process each entry
             for (const entry of tableData) {
                 try {
+                    const parsedAmount = this.parseAmountFromText(entry.amountText);
+                    const parsedDate = this.parseDateFromText(entry.dateText, year);
+                    const breachCategories = this.extractBreachCategories(entry.reason || '');
+                    const affectedSectors = this.extractSectors(entry.firm || '');
+
                     const fine = {
                         fine_reference: `FCA-${year}-${String(fines.length + 1).padStart(3, '0')}`,
-                        firm_individual: entry.firm,
-                        amount: this.parseAmount(entry.amountText),
-                        amount_text: entry.amountText,
-                        date_issued: this.parseDate(entry.dateText, year),
-                        summary: entry.reason || `Enforcement action against ${entry.firm}`,
-                        final_notice_url: entry.url || `https://www.fca.org.uk/news/news-stories/${year}-fines`,
-                        source_url: `https://www.fca.org.uk/news/news-stories/${year}-fines`,
+                        firm_individual: entry.firm || 'Unknown Firm',
+                        amount: parsedAmount,
+                        amount_text: entry.amountText || 'Amount not specified',
+                        date_issued: parsedDate,
+                        summary: entry.reason || `Enforcement action against ${entry.firm || 'firm'} (${year})`,
+                        breach_categories: JSON.stringify(breachCategories),
+                        affected_sectors: JSON.stringify(affectedSectors),
+                        customer_impact_level: this.assessImpactLevel(parsedAmount, entry.reason),
+                        risk_score: this.calculateRiskScore(parsedAmount, entry.reason),
+                        systemic_risk: this.assessSystemicRisk(parsedAmount, entry.reason, entry.firm),
+                        precedent_setting: this.assessPrecedentSetting(entry.reason, parsedAmount),
+                        final_notice_url: entry.url || `https://www.fca.org.uk/publication/fines/${year}`,
+                        source_url: page.url(),
                         year_issued: year,
-                        month_issued: this.parseDate(entry.dateText, year) ? new Date(this.parseDate(entry.dateText, year)).getMonth() + 1 : 1,
-                        quarter_issued: this.parseDate(entry.dateText, year) ? Math.ceil((new Date(this.parseDate(entry.dateText, year)).getMonth() + 1) / 3) : 1,
-                        processing_status: 'completed',
-                        breach_categories: this.extractBreachCategories(entry.reason),
-                        affected_sectors: this.extractSectors(entry.firm),
-                        customer_impact_level: this.assessImpactLevel(entry.amountText),
-                        risk_score: this.calculateRiskScore(entry.amountText, entry.reason),
+                        month_issued: parsedDate ? parsedDate.getMonth() + 1 : 6, // Default to mid-year
+                        quarter_issued: parsedDate ? Math.ceil((parsedDate.getMonth() + 1) / 3) : 2,
+                        processing_status: 'pending', // Will be processed by AI later
+                        processed_by_ai: false,
                         scraped_content: JSON.stringify(entry)
                     };
 
                     fines.push(fine);
+                    console.log(`   ✅ Processed: ${entry.firm} - ${entry.amountText}`);
                 } catch (error) {
                     console.error(`   ⚠️ Error processing entry:`, error.message);
                 }
@@ -938,6 +1055,131 @@ class FCAFinesScraper {
         }
 
         return categories;
+    }
+
+    extractSectors(firmName) {
+        if (!firmName) return [];
+
+        const text = firmName.toLowerCase();
+        const sectors = [];
+
+        // Sector classification based on firm name patterns
+        const sectorKeywords = {
+            'Banking': ['bank', 'banking', 'hsbc', 'barclays', 'natwest', 'rbs', 'lloyds', 'santander', 'building society'],
+            'Insurance': ['insurance', 'insurer', 'life', 'general insurance', 'underwriter', 'mutual'],
+            'Asset Management': ['asset management', 'fund', 'investment', 'capital', 'wealth', 'portfolio'],
+            'Investment Banking': ['investment bank', 'securities', 'corporate finance', 'merger', 'acquisition'],
+            'Retail Banking': ['retail', 'personal banking', 'current account', 'savings', 'mortgage'],
+            'Commercial Banking': ['commercial', 'business banking', 'corporate banking', 'trade finance'],
+            'Fintech': ['fintech', 'digital', 'online', 'app', 'technology', 'payments', 'crypto'],
+            'Brokerage': ['broker', 'brokerage', 'dealing', 'trading', 'execution'],
+            'Financial Advisory': ['adviser', 'advisor', 'advisory', 'consultancy', 'financial planning'],
+            'Credit': ['credit', 'lending', 'loan', 'finance company', 'consumer credit'],
+            'Pensions': ['pension', 'retirement', 'superannuation', 'annuity']
+        };
+
+        for (const [sector, keywords] of Object.entries(sectorKeywords)) {
+            for (const keyword of keywords) {
+                if (text.includes(keyword)) {
+                    if (!sectors.includes(sector)) {
+                        sectors.push(sector);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Default to 'Financial Services' if no specific sector identified
+        if (sectors.length === 0) {
+            sectors.push('Financial Services');
+        }
+
+        return sectors;
+    }
+
+    assessImpactLevel(amount, reason = '') {
+        if (!amount) return 'Low';
+
+        const numericAmount = typeof amount === 'string' ? this.parseAmountFromText(amount) : amount;
+        const reasonLower = reason.toLowerCase();
+
+        // High impact criteria
+        if (numericAmount >= 10000000 || // £10M+
+            reasonLower.includes('systemic') ||
+            reasonLower.includes('money laundering') ||
+            reasonLower.includes('market manipulation') ||
+            reasonLower.includes('customer detriment')) {
+            return 'High';
+        }
+
+        // Medium impact criteria
+        if (numericAmount >= 1000000 || // £1M+
+            reasonLower.includes('conduct') ||
+            reasonLower.includes('mis-selling') ||
+            reasonLower.includes('governance')) {
+            return 'Medium';
+        }
+
+        return 'Low';
+    }
+
+    calculateRiskScore(amount, reason = '') {
+        let score = 30; // Base score
+
+        const numericAmount = typeof amount === 'string' ? this.parseAmountFromText(amount) : amount;
+        const reasonLower = reason.toLowerCase();
+
+        // Amount-based scoring (0-40 points)
+        if (numericAmount >= 100000000) score += 40; // £100M+
+        else if (numericAmount >= 50000000) score += 35; // £50M+
+        else if (numericAmount >= 10000000) score += 30; // £10M+
+        else if (numericAmount >= 5000000) score += 25; // £5M+
+        else if (numericAmount >= 1000000) score += 20; // £1M+
+        else if (numericAmount >= 500000) score += 15; // £500K+
+        else if (numericAmount >= 100000) score += 10; // £100K+
+
+        // Breach type scoring (0-30 points)
+        if (reasonLower.includes('money laundering') || reasonLower.includes('aml')) score += 30;
+        else if (reasonLower.includes('market manipulation') || reasonLower.includes('insider dealing')) score += 25;
+        else if (reasonLower.includes('systemic') || reasonLower.includes('governance')) score += 20;
+        else if (reasonLower.includes('customer treatment') || reasonLower.includes('conduct')) score += 15;
+        else if (reasonLower.includes('reporting') || reasonLower.includes('disclosure')) score += 10;
+
+        return Math.min(100, score); // Cap at 100
+    }
+
+    assessSystemicRisk(amount, reason = '', firmName = '') {
+        const numericAmount = typeof amount === 'string' ? this.parseAmountFromText(amount) : amount;
+        const reasonLower = reason.toLowerCase();
+        const firmLower = firmName.toLowerCase();
+
+        // High systemic risk indicators
+        const systemicIndicators = [
+            numericAmount >= 50000000, // £50M+ fine
+            reasonLower.includes('systemic'),
+            reasonLower.includes('money laundering'),
+            reasonLower.includes('market manipulation'),
+            reasonLower.includes('1mdb'), // Specific high-profile case
+            firmLower.includes('major bank') || firmLower.includes('systemically important')
+        ];
+
+        return systemicIndicators.some(indicator => indicator);
+    }
+
+    assessPrecedentSetting(reason = '', amount = 0) {
+        const reasonLower = reason.toLowerCase();
+        const numericAmount = typeof amount === 'string' ? this.parseAmountFromText(amount) : amount;
+
+        // Precedent-setting indicators
+        const precedentIndicators = [
+            numericAmount >= 100000000, // £100M+ is likely precedent-setting
+            reasonLower.includes('first') || reasonLower.includes('unprecedented'),
+            reasonLower.includes('landmark') || reasonLower.includes('significant'),
+            reasonLower.includes('new type') || reasonLower.includes('novel'),
+            reasonLower.includes('industry-wide')
+        ];
+
+        return precedentIndicators.some(indicator => indicator);
     }
 
     async saveFine(fine, forceScrape = false) {
