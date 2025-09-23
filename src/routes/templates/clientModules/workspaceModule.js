@@ -165,11 +165,12 @@ function getWorkspaceModule() {
                 savedSearches.forEach(search => {
                     const searchItem = document.createElement('div');
                     searchItem.className = 'saved-search-item';
+                    const searchId = ${'${JSON.stringify(search.id)}'};
                     searchItem.innerHTML = \`
                         <div class="search-name">\${search.searchName || search.search_name}</div>
                         <div class="search-actions">
-                            <button onclick="WorkspaceModule.loadSearch('\${search.id}')" class="btn-small">Load</button>
-                            <button onclick="WorkspaceModule.deleteSearch('\${search.id}')" class="btn-small btn-danger">Delete</button>
+                            <button onclick="WorkspaceModule.loadSearch(\${searchId})" class="btn-small">Load</button>
+                            <button onclick="WorkspaceModule.deleteSearch(\${searchId})" class="btn-small btn-danger">Delete</button>
                         </div>
                     \`;
                     searchList.appendChild(searchItem);
