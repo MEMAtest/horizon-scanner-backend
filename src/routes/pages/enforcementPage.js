@@ -55,12 +55,14 @@ const enforcementPage = async (req, res) => {
             ${getCommonStyles()}
             <style>
                 .enforcement-header {
-                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                    color: white;
+                    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+                    color: #1f2937;
                     padding: 30px;
                     border-radius: 12px;
                     margin-bottom: 30px;
                     position: relative;
+                    border: 1px solid #e5e7eb;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
                 }
 
                 .enforcement-header h1 {
@@ -125,17 +127,17 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .stat-card {
-                    background: white;
+                    background: #ffffff;
                     padding: 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-                    border-left: 4px solid #dc2626;
-                    transition: transform 0.2s ease;
+                    border-radius: 8px;
+                    border: 1px solid #e5e7eb;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    transition: all 0.2s ease;
                 }
 
                 .stat-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+                    border-color: #d1d5db;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 }
 
                 .stat-icon {
@@ -145,9 +147,9 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .stat-value {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    color: #1f2937;
+                    font-size: 2.2rem;
+                    font-weight: 600;
+                    color: #374151;
                     margin-bottom: 5px;
                 }
 
@@ -174,11 +176,12 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .dashboard-section {
-                    background: white;
-                    border-radius: 12px;
+                    background: #ffffff;
+                    border-radius: 8px;
                     padding: 25px;
                     margin-bottom: 20px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                    border: 1px solid #e5e7eb;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
 
                 .section-header {
@@ -211,12 +214,12 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .btn-primary {
-                    background: #4f46e5;
+                    background: #3b82f6;
                     color: white;
                 }
 
                 .btn-primary:hover {
-                    background: #4338ca;
+                    background: #2563eb;
                 }
 
                 .btn-secondary {
@@ -235,10 +238,10 @@ const enforcementPage = async (req, res) => {
                     gap: 15px;
                     margin-bottom: 20px;
                     align-items: end;
-                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    background: #f9fafb;
                     padding: 20px;
-                    border-radius: 12px;
-                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    border: 1px solid #e5e7eb;
                 }
 
                 .filter-group {
@@ -262,8 +265,176 @@ const enforcementPage = async (req, res) => {
 
                 .filter-input:focus {
                     outline: none;
-                    border-color: #dc2626;
-                    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                }
+
+                .filter-input[multiple] {
+                    min-height: 120px;
+                    resize: vertical;
+                }
+
+                .filter-hint {
+                    font-size: 0.75rem;
+                    color: #6b7280;
+                    margin-top: 4px;
+                    font-style: italic;
+                }
+
+                /* Enhanced Trends Styling */
+                .trends-summary {
+                    margin-bottom: 25px;
+                }
+
+                .trends-filter-info {
+                    margin-bottom: 15px;
+                    display: flex;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+
+                .filter-badge {
+                    background: #3b82f6;
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 15px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                }
+
+                .trends-metrics {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 15px;
+                    margin-top: 15px;
+                }
+
+                .metric-card {
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+
+                .metric-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }
+
+                .metric-icon {
+                    font-size: 2rem;
+                    line-height: 1;
+                }
+
+                .metric-content {
+                    flex: 1;
+                }
+
+                .metric-value {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin-bottom: 2px;
+                }
+
+                .metric-label {
+                    font-size: 0.875rem;
+                    color: #64748b;
+                    font-weight: 500;
+                }
+
+                /* Enhanced table styling */
+                .enhanced-trends-table {
+                    margin-top: 20px;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                }
+
+                .trends-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    background: white;
+                }
+
+                .trends-table th {
+                    background: #f8fafc;
+                    color: #374151;
+                    padding: 15px 12px;
+                    text-align: left;
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                    border-bottom: 2px solid #e5e7eb;
+                }
+
+                .trends-table td {
+                    padding: 12px;
+                    border-bottom: 1px solid #f1f5f9;
+                    vertical-align: middle;
+                }
+
+                .trends-table tr:hover {
+                    background: #f8fafc;
+                }
+
+                .fine-count-cell {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .count-number {
+                    font-weight: 600;
+                    color: #1e293b;
+                }
+
+                .trend-up {
+                    color: #10b981;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                }
+
+                .trend-down {
+                    color: #ef4444;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                }
+
+                .trend-stable {
+                    color: #6b7280;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                }
+
+                .risk-score-bar {
+                    position: relative;
+                    background: #f1f5f9;
+                    border-radius: 8px;
+                    height: 24px;
+                    min-width: 80px;
+                    overflow: hidden;
+                }
+
+                .risk-score-fill {
+                    background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+                    height: 100%;
+                    transition: width 0.3s ease;
+                    border-radius: 8px;
+                }
+
+                .risk-score-text {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #1e293b;
+                    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
                 }
 
                 .data-table {
@@ -273,7 +444,7 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .data-table th {
-                    background: #f9fafb;
+                    background: #f8fafc;
                     padding: 12px 15px;
                     text-align: left;
                     font-weight: 600;
@@ -293,7 +464,7 @@ const enforcementPage = async (req, res) => {
 
                 .fine-amount {
                     font-weight: 700;
-                    color: #dc2626;
+                    color: #059669;
                 }
 
                 .fine-reference {
@@ -358,7 +529,7 @@ const enforcementPage = async (req, res) => {
                 }
 
                 .error-state {
-                    background: #fee2e2;
+                    background: #fef2f2;
                     border: 1px solid #fecaca;
                     color: #991b1b;
                     padding: 20px;
@@ -376,9 +547,9 @@ const enforcementPage = async (req, res) => {
                 .trend-summary {
                     margin-bottom: 25px;
                     padding: 20px;
-                    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-                    border-radius: 12px;
-                    border: 1px solid #0ea5e9;
+                    background: #f8fafc;
+                    border-radius: 8px;
+                    border: 1px solid #e5e7eb;
                 }
 
                 .trend-stats {
@@ -518,9 +689,8 @@ const enforcementPage = async (req, res) => {
                                 <input type="text" class="filter-input" id="search-input" placeholder="Search firms, breach types, or descriptions...">
                             </div>
                             <div class="filter-group">
-                                <label class="filter-label">Year</label>
-                                <select class="filter-input" id="year-filter">
-                                    <option value="">All Years</option>
+                                <label class="filter-label">Year (Multi-select)</label>
+                                <select class="filter-input" id="year-filter" multiple size="6">
                                     <option value="2024">2024</option>
                                     <option value="2023">2023</option>
                                     <option value="2022">2022</option>
@@ -534,6 +704,7 @@ const enforcementPage = async (req, res) => {
                                     <option value="2014">2014</option>
                                     <option value="2013">2013</option>
                                 </select>
+                                <small class="filter-hint">Hold Ctrl/Cmd to select multiple years</small>
                             </div>
                             <div class="filter-group">
                                 <label class="filter-label">Breach Category</label>
@@ -637,14 +808,33 @@ const enforcementPage = async (req, res) => {
                     }
 
                     async loadStats() {
+                        await this.loadStatsWithFilters();
+                    }
+
+                    async loadStatsWithFilters(filterParams = {}) {
                         try {
                             console.log('📊 Loading enforcement statistics...');
 
-                            const response = await fetch('/api/enforcement/stats');
+                            // Build query string from filter parameters
+                            const params = new URLSearchParams();
+                            Object.entries(filterParams).forEach(([key, value]) => {
+                                if (value) params.append(key, value);
+                            });
+
+                            const queryString = params.toString();
+                            const url = queryString ? `/api/enforcement/search?${queryString}` : '/api/enforcement/stats';
+
+                            const response = await fetch(url);
                             const data = await response.json();
 
                             if (data.success) {
-                                this.renderStats(data.stats);
+                                if (queryString) {
+                                    // For filtered stats, calculate stats from search results
+                                    this.renderFilteredStats(data.results);
+                                } else {
+                                    // Use the overview stats from the dedicated stats endpoint
+                                    this.renderStats(data.stats);
+                                }
                             } else {
                                 throw new Error(data.error || 'Failed to load stats');
                             }
@@ -695,6 +885,73 @@ const enforcementPage = async (req, res) => {
                         // Update last update time
                         document.getElementById('last-update').textContent =
                             'Updated: ' + new Date().toLocaleTimeString();
+                    }
+
+                    renderFilteredStats(searchResults) {
+                        const container = document.getElementById('stats-container');
+                        const fines = searchResults.fines || [];
+
+                        // Calculate stats from filtered results
+                        const totalFines = fines.length;
+                        const totalAmount = fines.reduce((sum, fine) => sum + (fine.amount || 0), 0);
+                        const averageAmount = totalFines > 0 ? totalAmount / totalFines : 0;
+                        const largestFine = fines.reduce((max, fine) => Math.max(max, fine.amount || 0), 0);
+                        const systemicRiskCases = fines.filter(fine => fine.systemic_risk).length;
+                        const averageRiskScore = totalFines > 0 ?
+                            fines.reduce((sum, fine) => sum + (fine.risk_score || 0), 0) / totalFines : 0;
+
+                        // Current year stats
+                        const currentYear = new Date().getFullYear();
+                        const thisYearFines = fines.filter(fine => {
+                            const fineYear = new Date(fine.date_issued).getFullYear();
+                            return fineYear === currentYear;
+                        }).length;
+
+                        // Last 30 days stats
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        const recentFines = fines.filter(fine => {
+                            const fineDate = new Date(fine.date_issued);
+                            return fineDate >= thirtyDaysAgo;
+                        }).length;
+
+                        container.innerHTML =
+                            '<div class="stat-card">' +
+                                '<span class="stat-icon">⚖️</span>' +
+                                '<div class="stat-value">' + totalFines + '</div>' +
+                                '<div class="stat-label">Filtered Enforcement Actions</div>' +
+                                '<div class="stat-change change-positive">' +
+                                    '📈 ' + thisYearFines + ' this year' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="stat-card">' +
+                                '<span class="stat-icon">💰</span>' +
+                                '<div class="stat-value">' + this.formatCurrency(totalAmount) + '</div>' +
+                                '<div class="stat-label">Total Filtered Fines</div>' +
+                                '<div class="stat-change">' +
+                                    '📊 Avg: ' + this.formatCurrency(averageAmount) +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="stat-card">' +
+                                '<span class="stat-icon">📅</span>' +
+                                '<div class="stat-value">' + recentFines + '</div>' +
+                                '<div class="stat-label">Last 30 Days (Filtered)</div>' +
+                                '<div class="stat-change">' +
+                                    '🔴 Largest: ' + this.formatCurrency(largestFine) +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="stat-card">' +
+                                '<span class="stat-icon">⚠️</span>' +
+                                '<div class="stat-value">' + systemicRiskCases + '</div>' +
+                                '<div class="stat-label">Systemic Risk Cases (Filtered)</div>' +
+                                '<div class="stat-change">' +
+                                    '🎯 Risk Score: ' + Math.round(averageRiskScore) + '/100' +
+                                '</div>' +
+                            '</div>';
+
+                        // Update last update time
+                        document.getElementById('last-update').textContent =
+                            'Updated: ' + new Date().toLocaleTimeString() + ' (Filtered View)';
                     }
 
                     renderStatsError(error) {
@@ -805,11 +1062,24 @@ const enforcementPage = async (req, res) => {
                             console.log('📈 Loading trends...');
 
                             const period = document.getElementById('trends-period').value || 'monthly';
-                            const response = await fetch('/api/enforcement/trends?period=' + period + '&limit=12');
+                            const filterParams = this.getCurrentFilterParams();
+
+                            // Add filter parameters to trends request if any filters are applied
+                            const params = new URLSearchParams();
+                            params.append('period', period);
+                            params.append('limit', '24'); // More data points for better trends
+
+                            // If years are filtered, append them to the trends request
+                            if (filterParams.years) {
+                                params.append('years', filterParams.years);
+                            }
+
+                            const url = `/api/enforcement/trends?${params.toString()}`;
+                            const response = await fetch(url);
                             const data = await response.json();
 
                             if (data.success) {
-                                this.renderTrends(data.trends);
+                                this.renderEnhancedTrends(data.trends, filterParams);
                             } else {
                                 throw new Error(data.error || 'Failed to load trends');
                             }
@@ -855,6 +1125,124 @@ const enforcementPage = async (req, res) => {
                             '</table>';
 
                         container.innerHTML = tableHTML;
+                    }
+
+                    renderEnhancedTrends(trends, filterParams = {}) {
+                        const container = document.getElementById('trends-container');
+
+                        if (!trends || trends.length === 0) {
+                            const filterMessage = Object.keys(filterParams).length > 0 ? ' for selected filters' : '';
+                            container.innerHTML = `<div class="trends-chart"><p>📊 No trend data available${filterMessage}</p></div>`;
+                            return;
+                        }
+
+                        // Calculate totals and averages
+                        const totalFines = trends.reduce((sum, trend) => sum + (parseInt(trend.fine_count) || 0), 0);
+                        const totalAmount = trends.reduce((sum, trend) => sum + (parseFloat(trend.total_amount) || 0), 0);
+                        const averageAmount = totalFines > 0 ? totalAmount / totalFines : 0;
+                        const highestPeriod = trends.reduce((max, trend) =>
+                            (parseInt(trend.fine_count) || 0) > (parseInt(max.fine_count) || 0) ? trend : max, trends[0]);
+
+                        // Create filter info
+                        const filterInfo = Object.keys(filterParams).length > 0 ?
+                            `<div class="trends-filter-info">
+                                <span class="filter-badge">📊 Filtered View</span>
+                                ${filterParams.years ? `<span class="filter-badge">📅 Years: ${filterParams.years.replace(/,/g, ', ')}</span>` : ''}
+                             </div>` : '';
+
+                        // Enhanced visualization with summary cards and table
+                        const summaryCards = `
+                            <div class="trends-summary">
+                                ${filterInfo}
+                                <div class="trends-metrics">
+                                    <div class="metric-card">
+                                        <div class="metric-icon">📊</div>
+                                        <div class="metric-content">
+                                            <div class="metric-value">${totalFines}</div>
+                                            <div class="metric-label">Total Fines</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">💰</div>
+                                        <div class="metric-content">
+                                            <div class="metric-value">${this.formatCurrency(totalAmount)}</div>
+                                            <div class="metric-label">Total Amount</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">📈</div>
+                                        <div class="metric-content">
+                                            <div class="metric-value">${this.formatCurrency(averageAmount)}</div>
+                                            <div class="metric-label">Average Fine</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">🔥</div>
+                                        <div class="metric-content">
+                                            <div class="metric-value">${highestPeriod.period}</div>
+                                            <div class="metric-label">Peak Period (${highestPeriod.fine_count} fines)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        // Enhanced table with better styling and trend indicators
+                        const tableRows = trends.map((trend, index) => {
+                            const prevTrend = index > 0 ? trends[index - 1] : null;
+                            const currentCount = parseInt(trend.fine_count) || 0;
+                            const prevCount = prevTrend ? parseInt(prevTrend.fine_count) || 0 : 0;
+
+                            let trendIndicator = '';
+                            if (prevTrend) {
+                                if (currentCount > prevCount) {
+                                    trendIndicator = '<span class="trend-up">📈 +' + (currentCount - prevCount) + '</span>';
+                                } else if (currentCount < prevCount) {
+                                    trendIndicator = '<span class="trend-down">📉 -' + (prevCount - currentCount) + '</span>';
+                                } else {
+                                    trendIndicator = '<span class="trend-stable">➡️ ±0</span>';
+                                }
+                            }
+
+                            return `<tr>
+                                <td><strong>${trend.period}</strong></td>
+                                <td>
+                                    <div class="fine-count-cell">
+                                        <span class="count-number">${currentCount}</span>
+                                        ${trendIndicator}
+                                    </div>
+                                </td>
+                                <td class="fine-amount">${this.formatCurrency(trend.total_amount)}</td>
+                                <td>${this.formatCurrency(trend.average_amount)}</td>
+                                <td>
+                                    <div class="risk-score-bar">
+                                        <div class="risk-score-fill" style="width: ${Math.round(trend.average_risk_score || 0)}%"></div>
+                                        <span class="risk-score-text">${Math.round(trend.average_risk_score || 0)}/100</span>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        }).join('');
+
+                        const enhancedTable = `
+                            <div class="enhanced-trends-table">
+                                <table class="data-table trends-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Period</th>
+                                            <th>Fine Count <small>(vs prev)</small></th>
+                                            <th>Total Amount</th>
+                                            <th>Average Amount</th>
+                                            <th>Risk Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${tableRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+
+                        container.innerHTML = summaryCards + enhancedTable;
                     }
 
                     renderTrendsError(error) {
@@ -990,20 +1378,50 @@ const enforcementPage = async (req, res) => {
 
                         // Trends period change
                         trendsSelect.addEventListener('change', () => this.loadTrends());
+
+                        // Add specific event listener for year filter to update stats and trends immediately
+                        yearFilter.addEventListener('change', () => {
+                            this.updateStatsWithCurrentFilters();
+                            this.loadTrends(); // Also update trends when year filter changes
+                        });
+                    }
+
+                    getCurrentFilterParams() {
+                        const yearSelect = document.getElementById('year-filter');
+                        const selectedYears = Array.from(yearSelect.selectedOptions).map(option => option.value);
+                        const query = document.getElementById('search-input').value;
+                        const breachCategory = document.getElementById('breach-category').value;
+                        const minAmount = document.getElementById('min-amount').value;
+                        const riskLevel = document.getElementById('risk-level').value;
+
+                        const filterParams = {};
+                        if (query) filterParams.q = query;
+                        if (selectedYears.length > 0) filterParams.years = selectedYears.join(',');
+                        if (breachCategory) filterParams.breach_type = breachCategory;
+                        if (minAmount) filterParams.min_amount = minAmount;
+                        if (riskLevel) filterParams.risk_level = riskLevel;
+
+                        return filterParams;
+                    }
+
+                    async updateStatsWithCurrentFilters() {
+                        const filterParams = this.getCurrentFilterParams();
+                        await this.loadStatsWithFilters(filterParams);
                     }
 
                     async performSearch() {
                         const query = document.getElementById('search-input').value;
-                        const year = document.getElementById('year-filter').value;
+                        const yearSelect = document.getElementById('year-filter');
+                        const selectedYears = Array.from(yearSelect.selectedOptions).map(option => option.value);
                         const breachCategory = document.getElementById('breach-category').value;
                         const minAmount = document.getElementById('min-amount').value;
                         const riskLevel = document.getElementById('risk-level').value;
 
                         const params = new URLSearchParams();
                         if (query) params.append('q', query);
-                        if (year) {
-                            params.append('start_date', year + '-01-01');
-                            params.append('end_date', year + '-12-31');
+                        if (selectedYears.length > 0) {
+                            // For multiple years, we'll send them as comma-separated values
+                            params.append('years', selectedYears.join(','));
                         }
                         if (breachCategory) params.append('breach_type', breachCategory);
                         if (minAmount) params.append('min_amount', minAmount);
@@ -1050,15 +1468,15 @@ const enforcementPage = async (req, res) => {
                 window.exportData = function() {
                     const searchParams = new URLSearchParams();
                     const query = document.getElementById('search-input').value;
-                    const year = document.getElementById('year-filter').value;
+                    const yearSelect = document.getElementById('year-filter');
+                    const selectedYears = Array.from(yearSelect.selectedOptions).map(option => option.value);
                     const breachCategory = document.getElementById('breach-category').value;
                     const minAmount = document.getElementById('min-amount').value;
                     const riskLevel = document.getElementById('risk-level').value;
 
                     if (query) searchParams.append('q', query);
-                    if (year) {
-                        searchParams.append('start_date', year + '-01-01');
-                        searchParams.append('end_date', year + '-12-31');
+                    if (selectedYears.length > 0) {
+                        searchParams.append('years', selectedYears.join(','));
                     }
                     if (breachCategory) searchParams.append('breach_type', breachCategory);
                     if (minAmount) searchParams.append('min_amount', minAmount);

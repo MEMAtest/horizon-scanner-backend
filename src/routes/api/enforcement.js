@@ -126,6 +126,7 @@ router.get('/search', async (req, res) => {
             maxAmount: req.query.max_amount ? parseFloat(req.query.max_amount) : undefined,
             startDate: req.query.start_date,
             endDate: req.query.end_date,
+            years: req.query.years ? req.query.years.split(',').map(y => y.trim()) : undefined,
             riskLevel: req.query.risk_level,
             systemicRisk: req.query.systemic_risk === 'true' ? true :
                          req.query.systemic_risk === 'false' ? false : undefined,

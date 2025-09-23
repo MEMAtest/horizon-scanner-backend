@@ -253,6 +253,7 @@ class FCAEnforcementService {
                 maxAmount,
                 startDate,
                 endDate,
+                years,
                 riskLevel,
                 systemicRisk,
                 limit = 50,
@@ -297,16 +298,27 @@ class FCAEnforcementService {
                 queryParams.push(maxAmount);
             }
 
-            if (startDate) {
+            // Handle years parameter (multi-select) or individual start/end dates
+            if (years && years.length > 0) {
+                // Use years for filtering (takes precedence over start/end dates)
                 paramCount++;
-                whereConditions.push(`date_issued >= $${paramCount}`);
-                queryParams.push(startDate);
-            }
+                const yearPlaceholders = years.map((_, index) => `$${paramCount + index}`).join(',');
+                whereConditions.push(`year_issued IN (${yearPlaceholders})`);
+                queryParams.push(...years.map(year => parseInt(year)));
+                paramCount += years.length - 1;
+            } else {
+                // Fallback to start/end date filtering
+                if (startDate) {
+                    paramCount++;
+                    whereConditions.push(`date_issued >= $${paramCount}`);
+                    queryParams.push(startDate);
+                }
 
-            if (endDate) {
-                paramCount++;
-                whereConditions.push(`date_issued <= $${paramCount}`);
-                queryParams.push(endDate);
+                if (endDate) {
+                    paramCount++;
+                    whereConditions.push(`date_issued <= $${paramCount}`);
+                    queryParams.push(endDate);
+                }
             }
 
             if (riskLevel) {

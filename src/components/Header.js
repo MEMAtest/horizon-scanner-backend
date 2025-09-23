@@ -17,14 +17,14 @@ function render(options = {}) {
             <div class="header-content">
                 <h1 class="title">${title}</h1>
                 <p class="subtitle">${subtitle}</p>
-                
+
                 ${showStatus ? `
                 <div class="system-status">
                     <div class="status-indicator" id="systemIndicator"></div>
                     <span class="status-text">System Operational</span>
                 </div>
                 ` : ''}
-                
+
                 ${showStats ? `
                 <div class="stats-grid">
                     <div class="stat-item">
@@ -41,10 +41,11 @@ function render(options = {}) {
                     </div>
                 </div>
                 ` : ''}
-                
+
                 <div class="header-actions">
                     <a href="/" class="button button-secondary">🏠 Home</a>
                     <a href="/dashboard" class="button button-primary">📊 Dashboard</a>
+                    <a href="/enforcement" class="button button-secondary">⚖️ Enforcement</a>
                     <a href="/debug/test" class="button button-secondary">🔧 System Test</a>
                 </div>
             </div>
