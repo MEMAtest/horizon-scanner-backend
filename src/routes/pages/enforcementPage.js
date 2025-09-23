@@ -1132,7 +1132,7 @@ const enforcementPage = async (req, res) => {
 
                         if (!trends || trends.length === 0) {
                             const filterMessage = Object.keys(filterParams).length > 0 ? ' for selected filters' : '';
-                            container.innerHTML = `<div class="trends-chart"><p>📊 No trend data available${filterMessage}</p></div>`;
+                            container.innerHTML = '<div class="trends-chart"><p>📊 No trend data available' + filterMessage + '</p></div>';
                             return;
                         }
 
@@ -1145,47 +1145,46 @@ const enforcementPage = async (req, res) => {
 
                         // Create filter info
                         const filterInfo = Object.keys(filterParams).length > 0 ?
-                            `<div class="trends-filter-info">
-                                <span class="filter-badge">📊 Filtered View</span>
-                                ${filterParams.years ? `<span class="filter-badge">📅 Years: ${filterParams.years.replace(/,/g, ', ')}</span>` : ''}
-                             </div>` : '';
+                            '<div class="trends-filter-info">' +
+                                '<span class="filter-badge">📊 Filtered View</span>' +
+                                (filterParams.years ? '<span class="filter-badge">📅 Years: ' + filterParams.years.replace(/,/g, ', ') + '</span>' : '') +
+                             '</div>' : '';
 
                         // Enhanced visualization with summary cards and table
-                        const summaryCards = `
-                            <div class="trends-summary">
-                                ${filterInfo}
-                                <div class="trends-metrics">
-                                    <div class="metric-card">
-                                        <div class="metric-icon">📊</div>
-                                        <div class="metric-content">
-                                            <div class="metric-value">${totalFines}</div>
-                                            <div class="metric-label">Total Fines</div>
-                                        </div>
-                                    </div>
-                                    <div class="metric-card">
-                                        <div class="metric-icon">💰</div>
-                                        <div class="metric-content">
-                                            <div class="metric-value">${this.formatCurrency(totalAmount)}</div>
-                                            <div class="metric-label">Total Amount</div>
-                                        </div>
-                                    </div>
-                                    <div class="metric-card">
-                                        <div class="metric-icon">📈</div>
-                                        <div class="metric-content">
-                                            <div class="metric-value">${this.formatCurrency(averageAmount)}</div>
-                                            <div class="metric-label">Average Fine</div>
-                                        </div>
-                                    </div>
-                                    <div class="metric-card">
-                                        <div class="metric-icon">🔥</div>
-                                        <div class="metric-content">
-                                            <div class="metric-value">${highestPeriod.period}</div>
-                                            <div class="metric-label">Peak Period (${highestPeriod.fine_count} fines)</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        const summaryCards =
+                            '<div class="trends-summary">' +
+                                filterInfo +
+                                '<div class="trends-metrics">' +
+                                    '<div class="metric-card">' +
+                                        '<div class="metric-icon">📊</div>' +
+                                        '<div class="metric-content">' +
+                                            '<div class="metric-value">' + totalFines + '</div>' +
+                                            '<div class="metric-label">Total Fines</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="metric-card">' +
+                                        '<div class="metric-icon">💰</div>' +
+                                        '<div class="metric-content">' +
+                                            '<div class="metric-value">' + this.formatCurrency(totalAmount) + '</div>' +
+                                            '<div class="metric-label">Total Amount</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="metric-card">' +
+                                        '<div class="metric-icon">📈</div>' +
+                                        '<div class="metric-content">' +
+                                            '<div class="metric-value">' + this.formatCurrency(averageAmount) + '</div>' +
+                                            '<div class="metric-label">Average Fine</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="metric-card">' +
+                                        '<div class="metric-icon">🔥</div>' +
+                                        '<div class="metric-content">' +
+                                            '<div class="metric-value">' + highestPeriod.period + '</div>' +
+                                            '<div class="metric-label">Peak Period (' + highestPeriod.fine_count + ' fines)</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>';
 
                         // Enhanced table with better styling and trend indicators
                         const tableRows = trends.map((trend, index) => {
@@ -1204,43 +1203,42 @@ const enforcementPage = async (req, res) => {
                                 }
                             }
 
-                            return `<tr>
-                                <td><strong>${trend.period}</strong></td>
-                                <td>
-                                    <div class="fine-count-cell">
-                                        <span class="count-number">${currentCount}</span>
-                                        ${trendIndicator}
-                                    </div>
-                                </td>
-                                <td class="fine-amount">${this.formatCurrency(trend.total_amount)}</td>
-                                <td>${this.formatCurrency(trend.average_amount)}</td>
-                                <td>
-                                    <div class="risk-score-bar">
-                                        <div class="risk-score-fill" style="width: ${Math.round(trend.average_risk_score || 0)}%"></div>
-                                        <span class="risk-score-text">${Math.round(trend.average_risk_score || 0)}/100</span>
-                                    </div>
-                                </td>
-                            </tr>`;
+                            return '<tr>' +
+                                '<td><strong>' + trend.period + '</strong></td>' +
+                                '<td>' +
+                                    '<div class="fine-count-cell">' +
+                                        '<span class="count-number">' + currentCount + '</span>' +
+                                        trendIndicator +
+                                    '</div>' +
+                                '</td>' +
+                                '<td class="fine-amount">' + this.formatCurrency(trend.total_amount) + '</td>' +
+                                '<td>' + this.formatCurrency(trend.average_amount) + '</td>' +
+                                '<td>' +
+                                    '<div class="risk-score-bar">' +
+                                        '<div class="risk-score-fill" style="width: ' + Math.round(trend.average_risk_score || 0) + '%"></div>' +
+                                        '<span class="risk-score-text">' + Math.round(trend.average_risk_score || 0) + '/100</span>' +
+                                    '</div>' +
+                                '</td>' +
+                            '</tr>';
                         }).join('');
 
-                        const enhancedTable = `
-                            <div class="enhanced-trends-table">
-                                <table class="data-table trends-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Period</th>
-                                            <th>Fine Count <small>(vs prev)</small></th>
-                                            <th>Total Amount</th>
-                                            <th>Average Amount</th>
-                                            <th>Risk Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${tableRows}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
+                        const enhancedTable =
+                            '<div class="enhanced-trends-table">' +
+                                '<table class="data-table trends-table">' +
+                                    '<thead>' +
+                                        '<tr>' +
+                                            '<th>Period</th>' +
+                                            '<th>Fine Count <small>(vs prev)</small></th>' +
+                                            '<th>Total Amount</th>' +
+                                            '<th>Average Amount</th>' +
+                                            '<th>Risk Score</th>' +
+                                        '</tr>' +
+                                    '</thead>' +
+                                    '<tbody>' +
+                                        tableRows +
+                                    '</tbody>' +
+                                '</table>' +
+                            '</div>';
 
                         container.innerHTML = summaryCards + enhancedTable;
                     }
