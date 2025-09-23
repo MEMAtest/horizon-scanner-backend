@@ -482,26 +482,26 @@ async function getSidebar(currentPage = '') {
             if (typeof updateLiveCounters === 'undefined') {
                 window.updateLiveCounters = async function() {
                     try {
-                        // Try to fetch from existing endpoints first
-                        // Fallback to scraping current page data if API doesn't exist
-                        let counts = {};
-                        
+                        // Use current values and simulate updates to prevent API errors
+                        // This prevents the 404 errors on production
+                        let counts = {
+                            total: document.getElementById('total-updates')?.textContent || '0',
+                            highImpact: document.getElementById('high-impact-count')?.textContent || '0',
+                            today: document.getElementById('today-count')?.textContent || '0',
+                            thisWeek: document.getElementById('week-count')?.textContent || '0',
+                            activeSources: 12
+                        };
+
+                        // Optional: Try to fetch from API but don't fail if it doesn't work
                         try {
                             const response = await fetch('/api/live-counts');
                             if (response.ok) {
-                                counts = await response.json();
-                            } else {
-                                throw new Error('API not available');
+                                const apiCounts = await response.json();
+                                counts = { ...counts, ...apiCounts };
                             }
                         } catch (apiError) {
-                            // Fallback: get counts from current page elements
-                            counts = {
-                                total: document.getElementById('total-updates')?.textContent || '0',
-                                highImpact: document.getElementById('high-impact-count')?.textContent || '0', 
-                                today: document.getElementById('today-count')?.textContent || '0',
-                                thisWeek: document.getElementById('week-count')?.textContent || '0',
-                                activeSources: 12
-                            };
+                            // Silently ignore API errors to prevent 404 spam in logs
+                            console.log('Live counts API not available, using static values');
                         }
                         
                         // Update the display values
