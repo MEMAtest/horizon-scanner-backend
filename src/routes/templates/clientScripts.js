@@ -142,21 +142,20 @@ function getClientScriptsContent() {
             const bgColor = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : type === 'warning' ? '#fffbeb' : '#f0f9ff';
             const textColor = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : type === 'warning' ? '#d97706' : '#2563eb';
             
-            toast.style.cssText = \`
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: \${bgColor};
-                color: \${textColor};
-                padding: 12px 16px;
-                border-radius: 8px;
-                border: 1px solid \${textColor}33;
-                font-size: 14px;
-                z-index: 10000;
-                max-width: 350px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                animation: slideIn 0.3s ease;
-            \`;
+            toast.style.cssText =
+                'position: fixed;' +
+                'top: 20px;' +
+                'right: 20px;' +
+                'background: ' + bgColor + ';' +
+                'color: ' + textColor + ';' +
+                'padding: 12px 16px;' +
+                'border-radius: 8px;' +
+                'border: 1px solid ' + textColor + '33;' +
+                'font-size: 14px;' +
+                'z-index: 10000;' +
+                'max-width: 350px;' +
+                'box-shadow: 0 4px 6px rgba(0,0,0,0.1);' +
+                'animation: slideIn 0.3s ease;';
             toast.textContent = message;
             
             document.body.appendChild(toast);
@@ -380,7 +379,7 @@ function getClientScriptsContent() {
         function viewUpdateDetails(updateId, url) {
             if (updateId) {
                 // Use internal detail page
-                window.open(\`/update/\${updateId}\`, '_blank');
+                window.open('/update/' + updateId, '_blank');
             } else if (url) {
                 // Fallback to external URL
                 window.open(url, '_blank');
@@ -406,10 +405,9 @@ function getClientScriptsContent() {
         function updateAnalyticsPreview() {
             const container = document.getElementById('analyticsPreview');
             if (container && analyticsPreviewData) {
-                container.innerHTML = \`
-                    <div>Total: \${analyticsPreviewData.totalUpdates || 0}</div>
-                    <div>Risk: \${(analyticsPreviewData.averageRiskScore || 0).toFixed(1)}</div>
-                \`;
+                container.innerHTML =
+                    '<div>Total: ' + (analyticsPreviewData.totalUpdates || 0) + '</div>' +
+                    '<div>Risk: ' + (analyticsPreviewData.averageRiskScore || 0).toFixed(1) + '</div>';
             }
         }
 
@@ -714,7 +712,7 @@ function getClientScriptsContent() {
             console.log('Filtering by category:', category);
             window.currentFilters = window.currentFilters || {};
             window.currentFilters.category = category;
-            window.location.href = \`/dashboard?category=\${category}\`;
+            window.location.href = '/dashboard?category=' + category;
         }
         
         function filterByAuthority(authority) {
@@ -724,7 +722,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.authority = authority;
-                window.location.href = \`/dashboard?authority=\${encodeURIComponent(authority)}\`;
+                window.location.href = '/dashboard?authority=' + encodeURIComponent(authority);
             }
         }
         
@@ -735,7 +733,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.sector = sector;
-                window.location.href = \`/dashboard?sector=\${encodeURIComponent(sector)}\`;
+                window.location.href = '/dashboard?sector=' + encodeURIComponent(sector);
             }
         }
         
@@ -746,7 +744,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.impact = level;
-                window.location.href = \`/dashboard?impact=\${encodeURIComponent(level)}\`;
+                window.location.href = '/dashboard?impact=' + encodeURIComponent(level);
             }
         }
         
@@ -757,7 +755,7 @@ function getClientScriptsContent() {
             } else {
                 window.currentFilters = window.currentFilters || {};
                 window.currentFilters.range = range;
-                window.location.href = \`/dashboard?range=\${range}\`;
+                window.location.href = '/dashboard?range=' + range;
             }
         }
         
@@ -826,7 +824,7 @@ function getClientScriptsContent() {
         
         function viewDetails(updateId) {
             console.log('Viewing details for:', updateId);
-            window.open(\`/api/updates/\${updateId}\`, '_blank');
+            window.open('/api/updates/' + updateId, '_blank');
         }
         
         function bookmarkUpdate(updateId) {
@@ -838,7 +836,7 @@ function getClientScriptsContent() {
         
         function shareUpdate(updateId) {
             console.log('Sharing:', updateId);
-            const url = \`\${window.location.origin}/api/updates/\${updateId}\`;
+            const url = window.location.origin + '/api/updates/' + updateId;
             
             if (navigator.share) {
                 navigator.share({
@@ -872,7 +870,7 @@ function getClientScriptsContent() {
             params.set('offset', newOffset);
             
             // Redirect with new offset
-            window.location.href = \`/dashboard?\${params.toString()}\`;
+            window.location.href = '/dashboard?' + params.toString();
         }
         
         // Search functionality
@@ -884,7 +882,7 @@ function getClientScriptsContent() {
             if (!searchTerm) {
                 window.location.href = '/dashboard';
             } else {
-                window.location.href = \`/dashboard?search=\${encodeURIComponent(searchTerm)}\`;
+                window.location.href = '/dashboard?search=' + encodeURIComponent(searchTerm);
             }
         }
 
@@ -913,7 +911,7 @@ function getClientScriptsContent() {
         }
 
         function switchView(viewType) {
-            console.log(\`🔄 Switching view to: \${viewType}\`);
+            console.log('🔄 Switching view to: ' + viewType);
 
             // Update active button
             document.querySelectorAll('.view-btn').forEach(btn => {
