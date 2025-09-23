@@ -822,7 +822,7 @@ const enforcementPage = async (req, res) => {
                             });
 
                             const queryString = params.toString();
-                            const url = queryString ? `/api/enforcement/search?${queryString}` : '/api/enforcement/stats';
+                            const url = queryString ? '/api/enforcement/search?' + queryString : '/api/enforcement/stats';
 
                             const response = await fetch(url);
                             const data = await response.json();
