@@ -10,24 +10,25 @@
    ========================================== */
 
 :root {
-    /* Primary Colors - Replacing Purple */
-    --primary-navy: #0A2342;
-    --primary-charcoal: #252A31;
-    
-    /* Accent Colors - Replacing Light Purple */
-    --accent-teal: #4091A8;
-    --accent-teal-hover: #357a8c;
-    
-    /* Neutral Colors */
+    /* Primary Colors - Professional but readable */
+    --primary-navy: #1e40af;
+    --primary-dark: #1e3a8a;
+
+    /* Accent Colors */
+    --accent-blue: #3b82f6;
+    --accent-blue-hover: #2563eb;
+
+    /* Neutral Colors - Light and readable */
     --neutral-white: #FFFFFF;
-    --neutral-light-grey: #DDE1E6;
-    --neutral-dark-grey: #1D242B;
-    --neutral-mid-grey: #6B7280;
-    
-    /* Status Colors (desaturated) */
-    --status-high: #B91C1C;
-    --status-medium: #D97706;
-    --status-low: #047857;
+    --neutral-light: #f8fafc;
+    --neutral-grey: #64748b;
+    --neutral-dark: #334155;
+    --neutral-border: #e2e8f0;
+
+    /* Status Colors */
+    --status-high: #dc2626;
+    --status-medium: #d97706;
+    --status-low: #059669;
 }
 
 /* ========================================
@@ -35,18 +36,23 @@
    ======================================== */
 
 body {
-    background: linear-gradient(135deg, var(--neutral-light-grey) 0%, #F3F4F6 100%) !important;
-    color: var(--neutral-dark-grey) !important;
+    background: var(--neutral-light) !important;
+    color: var(--neutral-dark) !important;
 }
 
 /* ========================================
    SIDEBAR OVERRIDES
    ======================================== */
 
-/* Sidebar Header - Replace purple gradient */
+/* Sidebar Header - Professional blue gradient */
 .sidebar-header {
-    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-charcoal) 100%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-dark) 100%) !important;
+    border-bottom: 1px solid var(--neutral-border) !important;
+}
+
+.sidebar-header-clean {
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-dark) 100%) !important;
+    border-bottom: 1px solid var(--neutral-border) !important;
 }
 
 /* Active Navigation Items */
@@ -357,13 +363,42 @@ input[type="radio"]:checked + .filter-option-checkmark {
    PRINT STYLES
    ======================================== */
 
+/* ========================================
+   MAIN CONTENT OVERRIDES - Ensure Readability
+   ======================================== */
+
+.main-content {
+    background: var(--neutral-white) !important;
+}
+
+.feature-card, .recent-updates, .ai-highlights {
+    background: var(--neutral-white) !important;
+    border: 1px solid var(--neutral-border) !important;
+}
+
+.feature-title, .section-title {
+    color: var(--neutral-dark) !important;
+}
+
+/* Cards and panels */
+.card, .panel, .stats-card {
+    background: var(--neutral-white) !important;
+    border: 1px solid var(--neutral-border) !important;
+}
+
+.update-card {
+    background: var(--neutral-white) !important;
+    border: 1px solid var(--neutral-border) !important;
+    color: var(--neutral-dark) !important;
+}
+
 @media print {
     body {
         background: white !important;
     }
-    
+
     .card,
     .update-card {
-        border: 1px solid var(--neutral-dark-grey) !important;
+        border: 1px solid var(--neutral-border) !important;
     }
 }

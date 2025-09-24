@@ -36,7 +36,7 @@ async function renderHomePage(req, res) {
             <style>
                 /* Home Page Specific Styles */
                 .hero-section {
-                    background: linear-gradient(135deg, var(--primary-navy, #0A2342) 0%, var(--primary-charcoal, #252A31) 100%);
+                    background: linear-gradient(135deg, var(--primary-navy, #1e40af) 0%, var(--primary-dark, #1e3a8a) 100%);
                     color: white;
                     padding: 60px 20px;
                     text-align: center;
