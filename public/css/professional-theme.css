@@ -402,12 +402,43 @@ input[type="radio"]:checked + .filter-option-checkmark {
     text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
 }
 
+/* Sidebar Navigation Text - Ensure Visibility */
 .nav-text {
     color: rgba(255, 255, 255, 0.9) !important;
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-size: 0.875rem !important;
 }
 
 .nav-link:hover .nav-text {
     color: var(--primary-navy) !important;
+}
+
+/* Force sidebar link display */
+.nav-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 24px !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure sidebar has proper width */
+.sidebar {
+    min-width: 280px !important;
+    width: 280px !important;
+}
+
+/* Navigation list styling */
+.nav-list {
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.nav-item {
+    margin-bottom: 4px !important;
 }
 
 @media print {
