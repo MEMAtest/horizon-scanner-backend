@@ -848,39 +848,40 @@ const enforcementPage = async (req, res) => {
                         const container = document.getElementById('stats-container');
                         const overview = stats.overview;
 
-                        container.innerHTML =
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">⚖️</span>' +
-                                '<div class="stat-value">' + (overview.total_fines || 0) + '</div>' +
-                                '<div class="stat-label">Total Enforcement Actions</div>' +
-                                '<div class="stat-change change-positive">' +
-                                    '📈 ' + (overview.fines_this_year || 0) + ' this year' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">💰</span>' +
-                                '<div class="stat-value">' + this.formatCurrency(overview.total_amount) + '</div>' +
-                                '<div class="stat-label">Total Fines Issued</div>' +
-                                '<div class="stat-change">' +
-                                    '📊 Avg: ' + this.formatCurrency(overview.average_amount) +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">📅</span>' +
-                                '<div class="stat-value">' + (overview.fines_last_30_days || 0) + '</div>' +
-                                '<div class="stat-label">Last 30 Days</div>' +
-                                '<div class="stat-change">' +
-                                    '🔴 Largest: ' + this.formatCurrency(overview.largest_fine) +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">⚠️</span>' +
-                                '<div class="stat-value">' + (overview.systemic_risk_cases || 0) + '</div>' +
-                                '<div class="stat-label">Systemic Risk Cases</div>' +
-                                '<div class="stat-change">' +
-                                    '🎯 Risk Score: ' + Math.round(overview.average_risk_score || 0) + '/100' +
-                                '</div>' +
-                            '</div>';
+                        container.innerHTML = [
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">⚖️</span>',
+                                '<div class="stat-value">' + (overview.total_fines || 0) + '</div>',
+                                '<div class="stat-label">Total Enforcement Actions</div>',
+                                '<div class="stat-change change-positive">',
+                                    '📈 ' + (overview.fines_this_year || 0) + ' this year',
+                                '</div>',
+                            '</div>',
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">💰</span>',
+                                '<div class="stat-value">' + this.formatCurrency(overview.total_amount) + '</div>',
+                                '<div class="stat-label">Total Fines Issued</div>',
+                                '<div class="stat-change">',
+                                    '📊 Avg: ' + this.formatCurrency(overview.average_amount),
+                                '</div>',
+                            '</div>',
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">📅</span>',
+                                '<div class="stat-value">' + (overview.fines_last_30_days || 0) + '</div>',
+                                '<div class="stat-label">Last 30 Days</div>',
+                                '<div class="stat-change">',
+                                    '🔴 Largest: ' + this.formatCurrency(overview.largest_fine),
+                                '</div>',
+                            '</div>',
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">⚠️</span>',
+                                '<div class="stat-value">' + (overview.systemic_risk_cases || 0) + '</div>',
+                                '<div class="stat-label">Systemic Risk Cases</div>',
+                                '<div class="stat-change">',
+                                    '🎯 Risk Score: ' + Math.round(overview.average_risk_score || 0) + '/100',
+                                '</div>',
+                            '</div>'
+                        ].join('');
 
                         // Update last update time
                         document.getElementById('last-update').textContent =
@@ -915,39 +916,40 @@ const enforcementPage = async (req, res) => {
                             return fineDate >= thirtyDaysAgo;
                         }).length;
 
-                        container.innerHTML =
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">⚖️</span>' +
-                                '<div class="stat-value">' + totalFines + '</div>' +
-                                '<div class="stat-label">Filtered Enforcement Actions</div>' +
-                                '<div class="stat-change change-positive">' +
-                                    '📈 ' + thisYearFines + ' this year' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">💰</span>' +
-                                '<div class="stat-value">' + this.formatCurrency(totalAmount) + '</div>' +
-                                '<div class="stat-label">Total Filtered Fines</div>' +
-                                '<div class="stat-change">' +
-                                    '📊 Avg: ' + this.formatCurrency(averageAmount) +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">📅</span>' +
-                                '<div class="stat-value">' + recentFines + '</div>' +
-                                '<div class="stat-label">Last 30 Days (Filtered)</div>' +
-                                '<div class="stat-change">' +
-                                    '🔴 Largest: ' + this.formatCurrency(largestFine) +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="stat-card">' +
-                                '<span class="stat-icon">⚠️</span>' +
-                                '<div class="stat-value">' + systemicRiskCases + '</div>' +
-                                '<div class="stat-label">Systemic Risk Cases (Filtered)</div>' +
-                                '<div class="stat-change">' +
-                                    '🎯 Risk Score: ' + Math.round(averageRiskScore) + '/100' +
-                                '</div>' +
-                            '</div>';
+                        container.innerHTML = [
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">⚖️</span>',
+                                '<div class="stat-value">' + totalFines + '</div>',
+                                '<div class="stat-label">Filtered Enforcement Actions</div>',
+                                '<div class="stat-change change-positive">',
+                                    '📈 ' + thisYearFines + ' this year',
+                                '</div>',
+                            '</div>',
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">💰</span>',
+                                '<div class="stat-value">' + this.formatCurrency(totalAmount) + '</div>',
+                                '<div class="stat-label">Total Filtered Fines</div>',
+                                '<div class="stat-change">',
+                                    '📊 Avg: ' + this.formatCurrency(averageAmount),
+                                '</div>',
+                            '</div>',
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">📅</span>',
+                                '<div class="stat-value">' + recentFines + '</div>',
+                                '<div class="stat-label">Last 30 Days (Filtered)</div>',
+                                '<div class="stat-change">',
+                                    '🔴 Largest: ' + this.formatCurrency(largestFine),
+                                '</div>',
+                            '</div>',
+                            '<div class="stat-card">',
+                                '<span class="stat-icon">⚠️</span>',
+                                '<div class="stat-value">' + systemicRiskCases + '</div>',
+                                '<div class="stat-label">Systemic Risk Cases (Filtered)</div>',
+                                '<div class="stat-change">',
+                                    '🎯 Risk Score: ' + Math.round(averageRiskScore) + '/100',
+                                '</div>',
+                            '</div>'
+                        ].join('');
 
                         // Update last update time
                         document.getElementById('last-update').textContent =
@@ -956,11 +958,12 @@ const enforcementPage = async (req, res) => {
 
                     renderStatsError(error) {
                         const container = document.getElementById('stats-container');
-                        container.innerHTML =
-                            '<div class="error-state">' +
-                                '<strong>Failed to load statistics</strong><br>' +
-                                error +
-                            '</div>';
+                        container.innerHTML = [
+                            '<div class="error-state">',
+                                '<strong>Failed to load statistics</strong><br>',
+                                error,
+                            '</div>'
+                        ].join('');
                     }
 
                     async loadRecentFines() {
@@ -1050,11 +1053,12 @@ const enforcementPage = async (req, res) => {
 
                     renderFinesError(error) {
                         const container = document.getElementById('fines-container');
-                        container.innerHTML =
-                            '<div class="error-state">' +
-                                '<strong>Failed to load enforcement actions</strong><br>' +
-                                error +
-                            '</div>';
+                        container.innerHTML = [
+                            '<div class="error-state">',
+                                '<strong>Failed to load enforcement actions</strong><br>',
+                                error,
+                            '</div>'
+                        ].join('');
                     }
 
                     async loadTrends() {
@@ -1245,11 +1249,12 @@ const enforcementPage = async (req, res) => {
 
                     renderTrendsError(error) {
                         const container = document.getElementById('trends-container');
-                        container.innerHTML =
-                            '<div class="error-state">' +
-                                '<strong>Failed to load trends</strong><br>' +
-                                error +
-                            '</div>';
+                        container.innerHTML = [
+                            '<div class="error-state">',
+                                '<strong>Failed to load trends</strong><br>',
+                                error,
+                            '</div>'
+                        ].join('');
                     }
 
                     async loadTopFirms() {
@@ -1313,11 +1318,12 @@ const enforcementPage = async (req, res) => {
 
                     renderTopFirmsError(error) {
                         const container = document.getElementById('top-firms-container');
-                        container.innerHTML =
-                            '<div class="error-state">' +
-                                '<strong>Failed to load top firms</strong><br>' +
-                                error +
-                            '</div>';
+                        container.innerHTML = [
+                            '<div class="error-state">',
+                                '<strong>Failed to load top firms</strong><br>',
+                                error,
+                            '</div>'
+                        ].join('');
                     }
 
                     renderRiskBadge(riskScore) {
