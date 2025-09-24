@@ -83,53 +83,12 @@ async function getSidebar(currentPage = '') {
                     </li>
                 </ul>
             </nav>
-            
-            <!-- Live Feed Section - Clean & Focused -->
-            <div class="live-feed-clean">
-                <div class="nav-section-title">LIVE FEED</div>
-                <div class="feed-stats">
-                    <div class="feed-stat-item">
-                        <div class="feed-stat-label">Total Updates</div>
-                        <div class="feed-stat-value" id="total-updates">${recentCounts.total}</div>
-                    </div>
-                    <div class="feed-stat-item">
-                        <div class="feed-stat-label">Critical</div>
-                        <div class="feed-stat-value critical" id="high-impact-count">${recentCounts.highImpact}</div>
-                    </div>
-                    <div class="feed-stat-item">
-                        <div class="feed-stat-label">Today</div>
-                        <div class="feed-stat-value today" id="today-count">${recentCounts.today}</div>
-                        ${recentCounts.todayChange > 0 ? `<span class="feed-change positive">↑${recentCounts.todayChange}</span>` : ''}
-                    </div>
-                    <div class="feed-stat-item">
-                        <div class="feed-stat-label">This Week</div>
-                        <div class="feed-stat-value" id="week-count">${recentCounts.thisWeek}</div>
-                    </div>
-                </div>
-                
-                <!-- Refresh Stats Box -->
-                <div class="refresh-stats-box">
-                    <div class="refresh-stats-header">
-                        <span class="refresh-title">Feed Status</span>
-                        <span class="refresh-status-dot online"></span>
-                    </div>
-                    <div class="refresh-stats-content">
-                        <div class="refresh-stat-line">
-                            <span class="refresh-label">Last Update:</span>
-                            <span class="refresh-value" id="last-update-time">2 min ago</span>
-                        </div>
-                        <div class="refresh-stat-line">
-                            <span class="refresh-label">Sources:</span>
-                            <span class="refresh-value" id="active-sources">12/12 active</span>
-                        </div>
-                        <div class="refresh-stat-line">
-                            <span class="refresh-label">Next Sync:</span>
-                            <span class="refresh-value" id="next-sync-time">in 28 min</span>
-                        </div>
-                    </div>
-                    <button onclick="refreshData()" class="refresh-btn-clean" title="Refresh Now">
-                        <span class="refresh-icon">↻</span> Refresh Now
-                    </button>
+
+            <!-- Premium Simplified Sidebar -->
+            <div class="sidebar-footer-section">
+                <div class="footer-status">
+                    <span class="status-indicator online" title="System Online"></span>
+                    <span class="status-text">System Active</span>
                 </div>
             </div>
             

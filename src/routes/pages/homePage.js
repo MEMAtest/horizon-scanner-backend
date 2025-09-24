@@ -34,31 +34,51 @@ async function renderHomePage(req, res) {
             <title>Regulatory Horizon Scanner</title>
             ${getCommonStyles()}
             <style>
-                /* Home Page Specific Styles */
+                /* Premium Enterprise Homepage Styles */
                 .hero-section {
-                    background: linear-gradient(135deg, var(--primary-navy, #1e40af) 0%, var(--primary-dark, #1e3a8a) 100%);
+                    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
                     color: white;
-                    padding: 60px 20px;
+                    padding: 48px 32px;
                     text-align: center;
-                    margin-bottom: 40px;
-                    border-radius: 12px;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                    margin-bottom: 32px;
+                    border-radius: 16px;
+                    box-shadow: 0 20px 40px rgba(30, 64, 175, 0.15);
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .hero-section::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+                    pointer-events: none;
                 }
                 
                 .hero-title {
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    margin-bottom: 20px;
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    font-size: 2.75rem;
+                    font-weight: 600;
+                    margin-bottom: 16px;
+                    letter-spacing: -0.025em;
+                    position: relative;
+                    z-index: 1;
+                    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
                 }
-                
+
                 .hero-subtitle {
-                    font-size: 1.2rem;
-                    opacity: 0.9;
-                    margin-bottom: 30px;
-                    max-width: 600px;
+                    font-size: 1.125rem;
+                    opacity: 0.95;
+                    margin-bottom: 32px;
+                    max-width: 680px;
                     margin-left: auto;
                     margin-right: auto;
+                    line-height: 1.7;
+                    font-weight: 400;
+                    position: relative;
+                    z-index: 1;
                 }
 
                 .hero-actions {
@@ -128,23 +148,42 @@ async function renderHomePage(req, res) {
                 
                 .features-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                    gap: 30px;
-                    margin-bottom: 40px;
+                    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                    gap: 24px;
+                    margin-bottom: 48px;
                 }
-                
+
                 .feature-card {
                     background: white;
-                    padding: 30px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    border: 1px solid #e5e7eb;
-                    transition: transform 0.2s, box-shadow 0.2s;
+                    padding: 32px;
+                    border-radius: 16px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.08);
+                    border: 1px solid rgba(226, 232, 240, 0.8);
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    overflow: hidden;
                 }
-                
+
+                .feature-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 3px;
+                    background: linear-gradient(90deg, #1e40af, #3b82f6);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .feature-card:hover::before {
+                    opacity: 1;
+                }
+
                 .feature-card:hover {
-                    transform: translateY(-5px);
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 12px 32px rgba(0,0,0,0.12);
+                    border-color: rgba(59, 130, 246, 0.2);
                 }
                 
                 .feature-icon {
@@ -154,48 +193,76 @@ async function renderHomePage(req, res) {
                 }
                 
                 .feature-title {
-                    font-size: 1.3rem;
+                    font-size: 1.375rem;
                     font-weight: 600;
-                    margin-bottom: 15px;
-                    color: #1f2937;
+                    margin-bottom: 12px;
+                    color: #0f172a;
+                    letter-spacing: -0.01em;
+                    line-height: 1.3;
                 }
-                
+
                 .feature-description {
-                    color: #6b7280;
-                    line-height: 1.6;
+                    color: #64748b;
+                    line-height: 1.65;
                     margin-bottom: 20px;
+                    font-size: 0.95rem;
                 }
-                
+
                 .feature-link {
-                    color: #4f46e5;
+                    color: #1e40af;
                     text-decoration: none;
-                    font-weight: 500;
-                    font-size: 0.9rem;
+                    font-weight: 600;
+                    font-size: 0.875rem;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    letter-spacing: 0.05em;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 0;
+                    border-bottom: 2px solid transparent;
+                    transition: all 0.2s ease;
                 }
-                
+
                 .feature-link:hover {
-                    color: #3730a3;
+                    color: #1e3a8a;
+                    border-bottom-color: #1e40af;
+                }
+
+                .feature-link::after {
+                    content: '→';
+                    transition: transform 0.2s ease;
+                }
+
+                .feature-link:hover::after {
+                    transform: translateX(2px);
                 }
                 
                 .recent-updates {
                     background: white;
-                    border-radius: 12px;
-                    padding: 30px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    border: 1px solid #e5e7eb;
-                    margin-bottom: 40px;
+                    border-radius: 16px;
+                    padding: 32px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.08);
+                    border: 1px solid rgba(226, 232, 240, 0.8);
+                    margin-bottom: 32px;
                 }
-                
+
                 .section-title {
                     font-size: 1.5rem;
                     font-weight: 600;
-                    margin-bottom: 25px;
-                    color: #1f2937;
+                    margin-bottom: 24px;
+                    color: #0f172a;
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
+                    letter-spacing: -0.01em;
+                }
+
+                .section-title::before {
+                    content: '';
+                    width: 4px;
+                    height: 24px;
+                    background: linear-gradient(135deg, #1e40af, #3b82f6);
+                    border-radius: 2px;
                 }
                 
                 .update-preview {
