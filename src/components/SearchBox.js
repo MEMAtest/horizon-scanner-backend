@@ -1,6 +1,6 @@
 // src/components/SearchBox.js
 function render() {
-    return `
+  return `
     <div class="search-controls">
         <div class="control-group"><label for="searchInput">Search</label><input type="text" id="searchInput" placeholder="Search all fields..."></div>
         <div class="control-group"><label for="startDate">Start Date</label><input type="date" id="startDate"></div>
@@ -9,6 +9,6 @@ function render() {
             <option value="newest">Newest</option><option value="oldest">Oldest</option>
             <option value="impact">High Impact</option><option value="urgency">High Urgency</option>
         </select></div>
-    </div>`;
+    </div>`
 }
-module.exports = { render };
+module.exports = { render }

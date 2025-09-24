@@ -1,20 +1,20 @@
 // Fixed Sidebar Template - Clean Design
 // File: src/routes/templates/sidebar.js
 
-const dbService = require('../../services/dbService');
+const dbService = require('../../services/dbService')
 
 async function getSidebar(currentPage = '') {
-    try {
-        console.log('🔧 Generating clean sidebar...');
-        
-        // Get recent update counts for live counters
-        const recentCounts = await getRecentUpdateCounts();
-        
-        return `
+  try {
+    console.log('🔧 Generating clean sidebar...')
+
+    // Get recent update counts for live counters
+    const recentCounts = await getRecentUpdateCounts()
+
+    return `
         <div class="sidebar" id="sidebar">
             <!-- Clean Header with Light Background -->
             <div class="sidebar-header-clean">
-                <h2>📊 Regulatory Intelligence</h2>
+                <h2>Regulatory Horizon Scanner</h2>
                 <div class="sidebar-status">
                     <span class="status-indicator online" title="System Online"></span>
                     <span class="last-update">Last sync: ${formatRelativeTime(new Date())}</span>
@@ -45,10 +45,10 @@ async function getSidebar(currentPage = '') {
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
-                    <li class="nav-item ${currentPage === 'ai-intelligence' ? 'active' : ''}">
-                        <a href="/ai-intelligence" class="nav-link">
-                            <span class="nav-icon">🤖</span>
-                            <span class="nav-text">AI Intelligence</span>
+                    <li class="nav-item ${currentPage === 'intelligence' ? 'active' : ''}">
+                        <a href="/intelligence" class="nav-link">
+                            <span class="nav-icon">🔍</span>
+                            <span class="nav-text">Intelligence</span>
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
@@ -635,43 +635,42 @@ async function getSidebar(currentPage = '') {
             
             // Auto-refresh counters every 30 seconds
             setInterval(updateLiveCounters, 30000);
-        </script>`;
-        
-    } catch (error) {
-        console.error('❌ Error generating sidebar:', error);
-        return generateFallbackSidebar(currentPage);
-    }
+        </script>`
+  } catch (error) {
+    console.error('❌ Error generating sidebar:', error)
+    return generateFallbackSidebar(currentPage)
+  }
 }
 
 async function getRecentUpdateCounts() {
-    try {
-        const counts = await dbService.getUpdateCounts();
-        return {
-            total: counts.total || 0,
-            highImpact: counts.highImpact || 0,
-            today: counts.today || 0,
-            todayChange: counts.todayChange || 0,
-            thisWeek: counts.thisWeek || 0,
-            unread: counts.unread || 0
-        };
-    } catch (error) {
-        console.error('Error getting update counts:', error);
-        return {
-            total: 0, 
-            highImpact: 0, 
-            today: 0,
-            todayChange: 0,
-            thisWeek: 0, 
-            unread: 0
-        };
+  try {
+    const counts = await dbService.getUpdateCounts()
+    return {
+      total: counts.total || 0,
+      highImpact: counts.highImpact || 0,
+      today: counts.today || 0,
+      todayChange: counts.todayChange || 0,
+      thisWeek: counts.thisWeek || 0,
+      unread: counts.unread || 0
     }
+  } catch (error) {
+    console.error('Error getting update counts:', error)
+    return {
+      total: 0,
+      highImpact: 0,
+      today: 0,
+      todayChange: 0,
+      thisWeek: 0,
+      unread: 0
+    }
+  }
 }
 
 function generateFallbackSidebar(currentPage) {
-    return `
+  return `
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header-clean">
-                <h2>📊 Regulatory Intelligence</h2>
+                <h2>Regulatory Horizon Scanner</h2>
                 <div class="sidebar-status">
                     <span class="status-indicator offline" title="Loading..."></span>
                     <span class="last-update">Loading...</span>
@@ -682,20 +681,20 @@ function generateFallbackSidebar(currentPage) {
                 <div class="spinner"></div>
                 <p>Loading...</p>
             </div>
-        </div>`;
+        </div>`
 }
 
 // Utility functions for time formatting
 function formatRelativeTime(date) {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-    
-    if (diffInSeconds < 60) return 'just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  const now = new Date()
+  const diffInSeconds = Math.floor((now - date) / 1000)
+
+  if (diffInSeconds < 60) return 'just now'
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+  return `${Math.floor(diffInSeconds / 86400)}d ago`
 }
 
 module.exports = {
-    getSidebar
-};
+  getSidebar
+}

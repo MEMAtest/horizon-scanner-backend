@@ -2,7 +2,7 @@
 // Complete client-side JavaScript for dashboard interactivity
 
 function getScript() {
-    return `
+  return `
         <script>
         // ==========================================
         // DASHBOARD CLIENT-SIDE FUNCTIONALITY
@@ -362,7 +362,7 @@ function getScript() {
         window.performSearch = performSearch;
 
         </script>
-    `;
+    `
 }
 
-module.exports = { getScript };
+module.exports = { getScript }

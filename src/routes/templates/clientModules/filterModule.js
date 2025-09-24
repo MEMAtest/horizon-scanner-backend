@@ -1,5 +1,5 @@
 function getFilterModule() {
-    return `
+  return `
     // Filter Module
     const FilterModule = (function() {
         function initializeFilters() {
@@ -239,7 +239,7 @@ function getFilterModule() {
             filterByAuthority,
             renderFilteredUpdates
         };
-    })();`;
+    })();`
 }
 
-module.exports = { getFilterModule };
+module.exports = { getFilterModule }

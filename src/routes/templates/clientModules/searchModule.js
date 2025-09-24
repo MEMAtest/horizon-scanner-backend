@@ -1,5 +1,5 @@
 function getSearchModule() {
-    return `
+  return `
     // Search Module
     const SearchModule = (function() {
         function performSearch(searchTerm) {
@@ -205,7 +205,7 @@ function getSearchModule() {
             loadMoreUpdates,
             loadMoreUpdatesForStream
         };
-    })();`;
+    })();`
 }
 
-module.exports = { getSearchModule };
+module.exports = { getSearchModule }

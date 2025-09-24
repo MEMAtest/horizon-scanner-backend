@@ -1,37 +1,37 @@
 // src/routes/pages/sectorIntelligencePage.js
 // Sector Intelligence Page Renderer
 
-const { getCommonStyles } = require('../templates/commonStyles');
-const { getSidebar } = require('../templates/sidebar');
-const { getClientScripts } = require('../templates/clientScripts');
-const dbService = require('../../services/dbService');
+const { getCommonStyles } = require('../templates/commonStyles')
+const { getSidebar } = require('../templates/sidebar')
+const { getClientScripts } = require('../templates/clientScripts')
+const dbService = require('../../services/dbService')
 
 async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
-    try {
-        console.log(`🏢 Rendering sector intelligence page for: ${sector}`);
+  try {
+    console.log(`🏢 Rendering sector intelligence page for: ${sector}`)
 
-        // Get sector-specific data
-        const allUpdates = await dbService.getEnhancedUpdates({ limit: 200 });
-        const sectorUpdates = allUpdates.filter(update =>
-            update.sector === sector ||
+    // Get sector-specific data
+    const allUpdates = await dbService.getEnhancedUpdates({ limit: 200 })
+    const sectorUpdates = allUpdates.filter(update =>
+      update.sector === sector ||
             (update.primarySectors && update.primarySectors.includes(sector)) ||
             (update.firmTypesAffected && update.firmTypesAffected.includes(sector))
-        );
+    )
 
-        // Calculate sector statistics
-        const stats = calculateSectorStats(sectorUpdates, sector);
+    // Calculate sector statistics
+    const stats = calculateSectorStats(sectorUpdates, sector)
 
-        // Get sidebar
-        const sidebar = await getSidebar('sector-intelligence');
+    // Get sidebar
+    const sidebar = await getSidebar('sector-intelligence')
 
-        const sectors = [
-            'Banking', 'Investment Management', 'Insurance', 'Payment Services',
-            'Fintech', 'Credit Unions', 'Pension Funds', 'Real Estate Finance',
-            'Consumer Credit', 'Capital Markets', 'Private Equity', 'Hedge Funds',
-            'Cryptocurrency', 'RegTech', 'Wealth Management', 'Corporate Finance'
-        ];
+    const sectors = [
+      'Banking', 'Investment Management', 'Insurance', 'Payment Services',
+      'Fintech', 'Credit Unions', 'Pension Funds', 'Real Estate Finance',
+      'Consumer Credit', 'Capital Markets', 'Private Equity', 'Hedge Funds',
+      'Cryptocurrency', 'RegTech', 'Wealth Management', 'Corporate Finance'
+    ]
 
-        const html = `
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -268,12 +268,14 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
                             <h3>Current Pressure Level: <span class="risk-indicator risk-${stats.riskLevel.toLowerCase()}">${stats.riskLevel} Risk</span></h3>
                             <p>Based on analysis of ${stats.totalUpdates} relevant regulatory updates, the ${sector} sector is experiencing <strong>${stats.riskLevel.toLowerCase()} regulatory pressure</strong>.</p>
 
-                            ${stats.keyFindings.length > 0 ? `
+                            ${stats.keyFindings.length > 0
+? `
                                 <h4>Key Findings:</h4>
                                 <ul>
                                     ${stats.keyFindings.map(finding => `<li>${finding}</li>`).join('')}
                                 </ul>
-                            ` : ''}
+                            `
+: ''}
                         </div>
                     </div>
 
@@ -282,7 +284,8 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
                             📊 Recent Regulatory Updates for ${sector}
                         </h2>
 
-                        ${sectorUpdates.length > 0 ? sectorUpdates.slice(0, 10).map(update => `
+                        ${sectorUpdates.length > 0
+? sectorUpdates.slice(0, 10).map(update => `
                             <div class="update-item">
                                 <div class="update-headline">
                                     <a href="${update.url}" target="_blank" style="color: inherit; text-decoration: none;">
@@ -299,7 +302,8 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
                                     ${update.sectorRelevanceScores && update.sectorRelevanceScores[sector] ? `<span>Relevance: ${update.sectorRelevanceScores[sector]}%</span>` : ''}
                                 </div>
                             </div>
-                        `).join('') : `
+                        `).join('')
+: `
                             <div class="empty-state">
                                 <p>No recent updates found specifically for the ${sector} sector</p>
                                 <p><a href="/dashboard" style="color: #10b981;">View all updates</a></p>
@@ -312,7 +316,8 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
                             📋 Compliance Priorities
                         </h2>
 
-                        ${stats.priorities.length > 0 ? `
+                        ${stats.priorities.length > 0
+? `
                             <ol>
                                 ${stats.priorities.map(priority => `
                                     <li style="margin-bottom: 10px;">
@@ -320,7 +325,8 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
                                     </li>
                                 `).join('')}
                             </ol>
-                        ` : `
+                        `
+: `
                             <p>No specific compliance priorities identified for the ${sector} sector at this time.</p>
                         `}
                     </div>
@@ -329,95 +335,94 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
 
             ${getClientScripts()}
         </body>
-        </html>`;
+        </html>`
 
-        res.send(html);
-
-    } catch (error) {
-        console.error('❌ Error rendering sector intelligence page:', error);
-        res.status(500).send(`
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering sector intelligence page:', error)
+    res.status(500).send(`
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>Sector Intelligence Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
                 <a href="/" style="color: #3b82f6; text-decoration: none;">← Back to Home</a>
             </div>
-        `);
-    }
+        `)
+  }
 }
 
 function calculateSectorStats(updates, sector) {
-    const now = new Date();
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const now = new Date()
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const recentUpdates = updates.filter(update =>
-        new Date(update.fetchedDate || update.createdAt) >= thisMonth
-    );
+  const recentUpdates = updates.filter(update =>
+    new Date(update.fetchedDate || update.createdAt) >= thisMonth
+  )
 
-    const highImpactUpdates = updates.filter(update =>
-        update.impactLevel === 'Significant' || update.businessImpactScore >= 7
-    );
+  const highImpactUpdates = updates.filter(update =>
+    update.impactLevel === 'Significant' || update.businessImpactScore >= 7
+  )
 
-    const impactScores = updates
-        .filter(update => update.businessImpactScore && update.businessImpactScore > 0)
-        .map(update => update.businessImpactScore);
+  const impactScores = updates
+    .filter(update => update.businessImpactScore && update.businessImpactScore > 0)
+    .map(update => update.businessImpactScore)
 
-    const avgImpactScore = impactScores.length > 0
-        ? impactScores.reduce((a, b) => a + b, 0) / impactScores.length
-        : 0;
+  const avgImpactScore = impactScores.length > 0
+    ? impactScores.reduce((a, b) => a + b, 0) / impactScores.length
+    : 0
 
-    // Calculate pressure score (0-100)
-    const pressureScore = Math.min(100, Math.round(
-        (updates.length * 2) +
+  // Calculate pressure score (0-100)
+  const pressureScore = Math.min(100, Math.round(
+    (updates.length * 2) +
         (highImpactUpdates.length * 10) +
         (recentUpdates.length * 5) +
         (avgImpactScore * 3)
-    ));
+  ))
 
-    // Determine risk level
-    let riskLevel = 'Low';
-    if (pressureScore > 70) riskLevel = 'High';
-    else if (pressureScore > 40) riskLevel = 'Medium';
+  // Determine risk level
+  let riskLevel = 'Low'
+  if (pressureScore > 70) riskLevel = 'High'
+  else if (pressureScore > 40) riskLevel = 'Medium'
 
-    // Generate key findings
-    const keyFindings = [];
-    if (highImpactUpdates.length > 5) {
-        keyFindings.push(`${highImpactUpdates.length} high-impact regulatory changes affecting the sector`);
-    }
-    if (recentUpdates.length > 10) {
-        keyFindings.push(`Increased regulatory activity with ${recentUpdates.length} updates this month`);
-    }
-    if (avgImpactScore > 6) {
-        keyFindings.push(`Higher than average impact scores (${avgImpactScore.toFixed(1)}/10)`);
-    }
+  // Generate key findings
+  const keyFindings = []
+  if (highImpactUpdates.length > 5) {
+    keyFindings.push(`${highImpactUpdates.length} high-impact regulatory changes affecting the sector`)
+  }
+  if (recentUpdates.length > 10) {
+    keyFindings.push(`Increased regulatory activity with ${recentUpdates.length} updates this month`)
+  }
+  if (avgImpactScore > 6) {
+    keyFindings.push(`Higher than average impact scores (${avgImpactScore.toFixed(1)}/10)`)
+  }
 
-    // Generate compliance priorities
-    const priorities = [];
-    if (highImpactUpdates.length > 0) {
-        priorities.push({
-            title: 'Review High-Impact Changes',
-            description: `Assess ${highImpactUpdates.length} significant regulatory updates for compliance gaps`
-        });
-    }
-    if (recentUpdates.length > 5) {
-        priorities.push({
-            title: 'Monitor Recent Developments',
-            description: `Track ${recentUpdates.length} recent updates for emerging requirements`
-        });
-    }
+  // Generate compliance priorities
+  const priorities = []
+  if (highImpactUpdates.length > 0) {
     priorities.push({
-        title: 'Sector-Specific Training',
-        description: `Ensure teams are updated on ${sector}-specific regulatory requirements`
-    });
+      title: 'Review High-Impact Changes',
+      description: `Assess ${highImpactUpdates.length} significant regulatory updates for compliance gaps`
+    })
+  }
+  if (recentUpdates.length > 5) {
+    priorities.push({
+      title: 'Monitor Recent Developments',
+      description: `Track ${recentUpdates.length} recent updates for emerging requirements`
+    })
+  }
+  priorities.push({
+    title: 'Sector-Specific Training',
+    description: `Ensure teams are updated on ${sector}-specific regulatory requirements`
+  })
 
-    return {
-        totalUpdates: updates.length,
-        highImpact: highImpactUpdates.length,
-        recentActivity: recentUpdates.length,
-        pressureScore,
-        riskLevel,
-        keyFindings: keyFindings.slice(0, 3),
-        priorities: priorities.slice(0, 5)
-    };
+  return {
+    totalUpdates: updates.length,
+    highImpact: highImpactUpdates.length,
+    recentActivity: recentUpdates.length,
+    pressureScore,
+    riskLevel,
+    keyFindings: keyFindings.slice(0, 3),
+    priorities: priorities.slice(0, 5)
+  }
 }
 
-module.exports = renderSectorIntelligencePage;
+module.exports = renderSectorIntelligencePage

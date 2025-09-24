@@ -1,58 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, Zap, Calendar, AlertCircle, Target, Gauge } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts'
+import { TrendingUp, TrendingDown, Activity, Zap, Calendar, AlertCircle, Target, Gauge } from 'lucide-react'
 
 const TrendDashboard = () => {
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('30');
-  const [trendAnalysis, setTrendAnalysis] = useState({});
+  const [updates, setUpdates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedPeriod, setSelectedPeriod] = useState('30')
+  const [trendAnalysis, setTrendAnalysis] = useState({})
 
   useEffect(() => {
-    fetchTrendData();
-  }, [selectedPeriod]);
+    fetchTrendData()
+  }, [selectedPeriod])
 
   const fetchTrendData = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/updates?limit=200&enhanced=true');
-      const data = await response.json();
-      setUpdates(data || []);
-      calculateTrendAnalysis(data || []);
+      const response = await fetch('/api/updates?limit=200&enhanced=true')
+      const data = await response.json()
+      setUpdates(data || [])
+      calculateTrendAnalysis(data || [])
     } catch (error) {
-      console.error('Failed to fetch trend data:', error);
-      setUpdates([]);
+      console.error('Failed to fetch trend data:', error)
+      setUpdates([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const calculateTrendAnalysis = (allUpdates) => {
-    const days = parseInt(selectedPeriod);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    const filteredUpdates = allUpdates.filter(update => 
+    const days = parseInt(selectedPeriod)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+
+    const filteredUpdates = allUpdates.filter(update =>
       new Date(update.fetched_date) >= cutoffDate
-    );
+    )
 
     // Weekly activity trends
-    const weeklyData = generateWeeklyData(filteredUpdates);
-    
+    const weeklyData = generateWeeklyData(filteredUpdates)
+
     // Authority momentum
-    const authorityMomentum = calculateAuthorityMomentum(filteredUpdates);
-    
+    const authorityMomentum = calculateAuthorityMomentum(filteredUpdates)
+
     // Sector trends
-    const sectorTrends = calculateSectorTrends(filteredUpdates);
-    
+    const sectorTrends = calculateSectorTrends(filteredUpdates)
+
     // Urgency patterns
-    const urgencyPatterns = calculateUrgencyPatterns(filteredUpdates);
-    
+    const urgencyPatterns = calculateUrgencyPatterns(filteredUpdates)
+
     // Impact velocity (rate of significant updates)
-    const impactVelocity = calculateImpactVelocity(filteredUpdates);
-    
+    const impactVelocity = calculateImpactVelocity(filteredUpdates)
+
     // Regulatory pressure index
-    const pressureIndex = calculateRegulatoryPressure(filteredUpdates);
+    const pressureIndex = calculateRegulatoryPressure(filteredUpdates)
 
     setTrendAnalysis({
       weeklyData,
@@ -62,19 +62,19 @@ const TrendDashboard = () => {
       impactVelocity,
       pressureIndex,
       totalUpdates: filteredUpdates.length
-    });
-  };
+    })
+  }
 
   const generateWeeklyData = (updates) => {
-    const weeks = {};
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(selectedPeriod));
+    const weeks = {}
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - parseInt(selectedPeriod))
 
     // Initialize weeks
     for (let i = 0; i < Math.ceil(parseInt(selectedPeriod) / 7); i++) {
-      const weekStart = new Date(startDate);
-      weekStart.setDate(startDate.getDate() + (i * 7));
-      const weekKey = weekStart.toISOString().split('T')[0];
+      const weekStart = new Date(startDate)
+      weekStart.setDate(startDate.getDate() + (i * 7))
+      const weekKey = weekStart.toISOString().split('T')[0]
       weeks[weekKey] = {
         week: weekKey,
         total: 0,
@@ -84,79 +84,79 @@ const TrendDashboard = () => {
         significant: 0,
         moderate: 0,
         informational: 0
-      };
+      }
     }
 
     updates.forEach(update => {
-      const updateDate = new Date(update.fetched_date);
-      const weekStart = new Date(updateDate);
-      weekStart.setDate(updateDate.getDate() - updateDate.getDay());
-      const weekKey = weekStart.toISOString().split('T')[0];
+      const updateDate = new Date(update.fetched_date)
+      const weekStart = new Date(updateDate)
+      weekStart.setDate(updateDate.getDate() - updateDate.getDay())
+      const weekKey = weekStart.toISOString().split('T')[0]
 
       if (weeks[weekKey]) {
-        weeks[weekKey].total++;
-        
-        const urgency = update.urgency?.toLowerCase() || 'low';
-        weeks[weekKey][urgency]++;
-        
-        const impact = update.impact_level?.toLowerCase() || 'informational';
-        weeks[weekKey][impact]++;
-      }
-    });
+        weeks[weekKey].total++
 
-    return Object.values(weeks).sort((a, b) => a.week.localeCompare(b.week));
-  };
+        const urgency = update.urgency?.toLowerCase() || 'low'
+        weeks[weekKey][urgency]++
+
+        const impact = update.impact_level?.toLowerCase() || 'informational'
+        weeks[weekKey][impact]++
+      }
+    })
+
+    return Object.values(weeks).sort((a, b) => a.week.localeCompare(b.week))
+  }
 
   const calculateAuthorityMomentum = (updates) => {
-    const authorities = {};
-    const midPoint = Math.floor(updates.length / 2);
-    
+    const authorities = {}
+    const midPoint = Math.floor(updates.length / 2)
+
     updates.forEach((update, index) => {
-      const authority = update.authority || 'Unknown';
+      const authority = update.authority || 'Unknown'
       if (!authorities[authority]) {
-        authorities[authority] = { early: 0, recent: 0, total: 0 };
+        authorities[authority] = { early: 0, recent: 0, total: 0 }
       }
-      
-      authorities[authority].total++;
+
+      authorities[authority].total++
       if (index < midPoint) {
-        authorities[authority].early++;
+        authorities[authority].early++
       } else {
-        authorities[authority].recent++;
+        authorities[authority].recent++
       }
-    });
+    })
 
     return Object.entries(authorities).map(([authority, data]) => {
-      const momentum = data.recent - data.early;
-      const trend = momentum > 0 ? 'increasing' : momentum < 0 ? 'decreasing' : 'stable';
-      
+      const momentum = data.recent - data.early
+      const trend = momentum > 0 ? 'increasing' : momentum < 0 ? 'decreasing' : 'stable'
+
       return {
         authority: authority.replace('Financial Conduct Authority', 'FCA')
-                          .replace('Prudential Regulation Authority', 'PRA')
-                          .replace('Bank of England', 'BoE'),
+          .replace('Prudential Regulation Authority', 'PRA')
+          .replace('Bank of England', 'BoE'),
         momentum: Math.abs(momentum),
         trend,
         total: data.total,
         changeRate: data.early > 0 ? ((data.recent - data.early) / data.early * 100) : 0
-      };
-    }).sort((a, b) => b.total - a.total).slice(0, 6);
-  };
+      }
+    }).sort((a, b) => b.total - a.total).slice(0, 6)
+  }
 
   const calculateSectorTrends = (updates) => {
-    const sectorActivity = {};
-    
+    const sectorActivity = {}
+
     updates.forEach(update => {
       if (update.sector_relevance_scores) {
         Object.entries(update.sector_relevance_scores).forEach(([sector, score]) => {
           if (score > 30) { // Only meaningful relevance
             if (!sectorActivity[sector]) {
-              sectorActivity[sector] = { count: 0, totalScore: 0, trend: 0 };
+              sectorActivity[sector] = { count: 0, totalScore: 0, trend: 0 }
             }
-            sectorActivity[sector].count++;
-            sectorActivity[sector].totalScore += score;
+            sectorActivity[sector].count++
+            sectorActivity[sector].totalScore += score
           }
-        });
+        })
       }
-    });
+    })
 
     return Object.entries(sectorActivity)
       .map(([sector, data]) => ({
@@ -166,51 +166,51 @@ const TrendDashboard = () => {
         intensity: Math.min(100, (data.count * data.totalScore / data.count) / 10)
       }))
       .sort((a, b) => b.intensity - a.intensity)
-      .slice(0, 8);
-  };
+      .slice(0, 8)
+  }
 
   const calculateUrgencyPatterns = (updates) => {
-    const patterns = { High: 0, Medium: 0, Low: 0 };
-    
-    updates.forEach(update => {
-      const urgency = update.urgency || 'Low';
-      patterns[urgency]++;
-    });
+    const patterns = { High: 0, Medium: 0, Low: 0 }
 
-    const total = Object.values(patterns).reduce((sum, count) => sum + count, 0);
-    
+    updates.forEach(update => {
+      const urgency = update.urgency || 'Low'
+      patterns[urgency]++
+    })
+
+    const total = Object.values(patterns).reduce((sum, count) => sum + count, 0)
+
     return Object.entries(patterns).map(([level, count]) => ({
       level,
       count,
       percentage: Math.round((count / total) * 100)
-    }));
-  };
+    }))
+  }
 
   const calculateImpactVelocity = (updates) => {
-    const significantUpdates = updates.filter(u => u.impact_level === 'Significant');
-    const days = parseInt(selectedPeriod);
-    return Math.round((significantUpdates.length / days) * 7); // Per week
-  };
+    const significantUpdates = updates.filter(u => u.impact_level === 'Significant')
+    const days = parseInt(selectedPeriod)
+    return Math.round((significantUpdates.length / days) * 7) // Per week
+  }
 
   const calculateRegulatoryPressure = (updates) => {
-    const weights = { 'Significant': 3, 'Moderate': 2, 'Informational': 1 };
-    const urgencyWeights = { 'High': 3, 'Medium': 2, 'Low': 1 };
-    
-    const totalPressure = updates.reduce((sum, update) => {
-      const impactWeight = weights[update.impact_level] || 1;
-      const urgencyWeight = urgencyWeights[update.urgency] || 1;
-      return sum + (impactWeight * urgencyWeight);
-    }, 0);
+    const weights = { Significant: 3, Moderate: 2, Informational: 1 }
+    const urgencyWeights = { High: 3, Medium: 2, Low: 1 }
 
-    const maxPossiblePressure = updates.length * 9; // max weights
-    return Math.round((totalPressure / maxPossiblePressure) * 100);
-  };
+    const totalPressure = updates.reduce((sum, update) => {
+      const impactWeight = weights[update.impact_level] || 1
+      const urgencyWeight = urgencyWeights[update.urgency] || 1
+      return sum + (impactWeight * urgencyWeight)
+    }, 0)
+
+    const maxPossiblePressure = updates.length * 9 // max weights
+    return Math.round((totalPressure / maxPossiblePressure) * 100)
+  }
 
   const getTrendDirection = (value, threshold = 0) => {
-    if (value > threshold) return { icon: TrendingUp, color: 'text-green-600', text: 'Increasing' };
-    if (value < -threshold) return { icon: TrendingDown, color: 'text-red-600', text: 'Decreasing' };
-    return { icon: Activity, color: 'text-gray-600', text: 'Stable' };
-  };
+    if (value > threshold) return { icon: TrendingUp, color: 'text-green-600', text: 'Increasing' }
+    if (value < -threshold) return { icon: TrendingDown, color: 'text-red-600', text: 'Decreasing' }
+    return { icon: Activity, color: 'text-gray-600', text: 'Stable' }
+  }
 
   if (loading) {
     return (
@@ -218,10 +218,10 @@ const TrendDashboard = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-gray-600">Analyzing regulatory trends...</span>
       </div>
-    );
+    )
   }
 
-  const { weeklyData, authorityMomentum, sectorTrends, urgencyPatterns, impactVelocity, pressureIndex } = trendAnalysis;
+  const { weeklyData, authorityMomentum, sectorTrends, urgencyPatterns, impactVelocity, pressureIndex } = trendAnalysis
 
   return (
     <div className="space-y-6">
@@ -240,8 +240,8 @@ const TrendDashboard = () => {
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex items-center space-x-4">
           <span className="text-sm font-medium text-gray-700">Analysis Period:</span>
-          <select 
-            value={selectedPeriod} 
+          <select
+            value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="border border-gray-300 rounded px-3 py-2 text-sm"
           >
@@ -317,28 +317,28 @@ const TrendDashboard = () => {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="week" 
+                <XAxis
+                  dataKey="week"
                   tickFormatter={(date) => new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                   fontSize={10}
                 />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   labelFormatter={(date) => `Week of ${new Date(date).toLocaleDateString()}`}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke="#3b82f6" 
-                  fill="#3b82f6" 
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#3b82f6"
+                  fill="#3b82f6"
                   fillOpacity={0.3}
                   name="Total Updates"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="significant" 
-                  stroke="#ef4444" 
-                  fill="#ef4444" 
+                <Area
+                  type="monotone"
+                  dataKey="significant"
+                  stroke="#ef4444"
+                  fill="#ef4444"
                   fillOpacity={0.5}
                   name="Significant Impact"
                 />
@@ -352,9 +352,9 @@ const TrendDashboard = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Authority Momentum</h3>
           <div className="space-y-3">
             {authorityMomentum?.slice(0, 6).map((authority, idx) => {
-              const trendInfo = getTrendDirection(authority.changeRate, 10);
-              const TrendIcon = trendInfo.icon;
-              
+              const trendInfo = getTrendDirection(authority.changeRate, 10)
+              const TrendIcon = trendInfo.icon
+
               return (
                 <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                   <div className="flex items-center">
@@ -371,7 +371,7 @@ const TrendDashboard = () => {
                     </span>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         </div>
@@ -388,7 +388,7 @@ const TrendDashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis dataKey="sector" type="category" width={80} fontSize={11} />
-                <Tooltip 
+                <Tooltip
                   formatter={(value, name) => [
                     name === 'intensity' ? `${value}% intensity` : `${value} updates`,
                     name === 'intensity' ? 'Activity Intensity' : 'Update Count'
@@ -406,11 +406,11 @@ const TrendDashboard = () => {
           <div className="space-y-4">
             {urgencyPatterns?.map((pattern, idx) => {
               const colors = {
-                'High': 'bg-red-500',
-                'Medium': 'bg-orange-500', 
-                'Low': 'bg-green-500'
-              };
-              
+                High: 'bg-red-500',
+                Medium: 'bg-orange-500',
+                Low: 'bg-green-500'
+              }
+
               return (
                 <div key={idx}>
                   <div className="flex justify-between items-center mb-2">
@@ -418,16 +418,16 @@ const TrendDashboard = () => {
                     <span className="text-sm text-gray-500">{pattern.count} updates ({pattern.percentage}%)</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${colors[pattern.level]}`}
                       style={{ width: `${pattern.percentage}%` }}
                     ></div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
-          
+
           <div className="mt-6 p-4 bg-gray-50 rounded">
             <h4 className="font-medium text-gray-900 mb-2">Pattern Insights</h4>
             <div className="text-sm text-gray-600 space-y-1">
@@ -459,7 +459,7 @@ const TrendDashboard = () => {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                 <Target className="w-4 h-4 mr-2 text-blue-600" />
@@ -473,7 +473,7 @@ const TrendDashboard = () => {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2 text-orange-600" />
@@ -489,7 +489,7 @@ const TrendDashboard = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TrendDashboard;
+export default TrendDashboard

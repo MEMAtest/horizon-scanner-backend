@@ -1,5 +1,5 @@
 function getContentModule() {
-    return `
+  return `
     // Content Module
     const ContentModule = (function() {
         function parseDate(value) {
@@ -184,7 +184,7 @@ function getContentModule() {
             viewUpdateDetails,
             updateAnalyticsPreview
         };
-    })();`;
+    })();`
 }
 
-module.exports = { getContentModule };
+module.exports = { getContentModule }

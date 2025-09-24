@@ -1,149 +1,149 @@
 // src/routes/pages/testPage.js
 // CLEANED: Removed duplicate functions, kept only test-specific logic
 
-const { getCommonStyles } = require('../templates/commonStyles');
-const { getSidebar } = require('../templates/sidebar');
-const { getCommonClientScripts } = require('../templates/clientScripts');
-const dbService = require('../../services/dbService');
+const { getCommonStyles } = require('../templates/commonStyles')
+const { getSidebar } = require('../templates/sidebar')
+const { getCommonClientScripts } = require('../templates/clientScripts')
+const dbService = require('../../services/dbService')
 
 // Helper functions remain the same for fallback compatibility
 const getAnalyticsService = () => {
-    try {
-        return require('../../services/analyticsService');
-    } catch (error) {
-        console.warn('Analytics service not available, using fallback');
-        return {
-            getAnalyticsDashboard: () => ({ success: false, dashboard: { overview: { totalUpdates: 0, averageRiskScore: 0 }, velocity: {}, hotspots: [], predictions: [] } })
-        };
+  try {
+    return require('../../services/analyticsService')
+  } catch (error) {
+    console.warn('Analytics service not available, using fallback')
+    return {
+      getAnalyticsDashboard: () => ({ success: false, dashboard: { overview: { totalUpdates: 0, averageRiskScore: 0 }, velocity: {}, hotspots: [], predictions: [] } })
     }
-};
+  }
+}
 
 const getRelevanceService = () => {
-    try {
-        return require('../../services/relevanceService');
-    } catch (error) {
-        console.warn('Relevance service not available, using fallback');
-        return {
-            calculateRelevanceScore: () => 0,
-            categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
-        };
+  try {
+    return require('../../services/relevanceService')
+  } catch (error) {
+    console.warn('Relevance service not available, using fallback')
+    return {
+      calculateRelevanceScore: () => 0,
+      categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
     }
-};
+  }
+}
 
 const getWorkspaceService = () => {
-    try {
-        return require('../../services/workspaceService');
-    } catch (error) {
-        console.warn('Workspace service not available, using fallback');
-        return {
-            getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } }),
-            getPinnedItems: () => ({ success: true, items: [] }),
-            addPinnedItem: () => ({ success: true }),
-            removePinnedItem: () => ({ success: true })
-        };
+  try {
+    return require('../../services/workspaceService')
+  } catch (error) {
+    console.warn('Workspace service not available, using fallback')
+    return {
+      getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } }),
+      getPinnedItems: () => ({ success: true, items: [] }),
+      addPinnedItem: () => ({ success: true }),
+      removePinnedItem: () => ({ success: true })
     }
-};
+  }
+}
 
 const testPage = async (req, res) => {
+  try {
+    let dbStatus = 'unknown'
+    let dbConnected = false
+    let updateCount = 0
+    const envVars = {
+      hasGroqKey: !!process.env.GROQ_API_KEY,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      nodeVersion: process.version,
+      platform: process.platform
+    }
+
+    // Test database with enhanced analytics service integration
     try {
-        let dbStatus = 'unknown';
-        let dbConnected = false;
-        let updateCount = 0;
-        let envVars = {
-            hasGroqKey: !!process.env.GROQ_API_KEY,
-            hasDatabaseUrl: !!process.env.DATABASE_URL,
-            nodeVersion: process.version,
-            platform: process.platform
-        };
-        
-        // Test database with enhanced analytics service integration
-        try {
-            await dbService.initialize();
-            updateCount = await dbService.getUpdateCount();
-            dbStatus = 'connected';
-            dbConnected = true;
-        } catch (error) {
-            dbStatus = 'error: ' + error.message;
-        }
-        
-        // Test analytics service integration
-        let analyticsStatus = 'unknown';
-        let analyticsData = null;
-        try {
-            const analyticsService = getAnalyticsService();
-            analyticsData = await analyticsService.getAnalyticsDashboard();
-            analyticsStatus = 'operational';
-        } catch (error) {
-            analyticsStatus = 'error: ' + error.message;
-        }
-        
-        // Test workspace service integration
-        let workspaceStatus = 'unknown';
-        let workspaceData = null;
-        try {
-            const workspaceService = getWorkspaceService();
-            workspaceData = await workspaceService.getWorkspaceStats();
-            workspaceStatus = 'operational';
-        } catch (error) {
-            workspaceStatus = 'error: ' + error.message;
-        }
-        
-        // Test relevance service integration
-        let relevanceStatus = 'unknown';
-        try {
-            const relevanceService = getRelevanceService();
-            // Test with dummy data
-            relevanceService.calculateRelevanceScore({}, {});
-            relevanceStatus = 'operational';
-        } catch (error) {
-            relevanceStatus = 'error: ' + error.message;
-        }
-        
-        let healthScore = 0;
-        if (dbConnected) healthScore += 25;
-        if (envVars.hasGroqKey) healthScore += 20;
-        if (envVars.hasDatabaseUrl) healthScore += 15;
-        if (updateCount > 0) healthScore += 15;
-        if (analyticsStatus === 'operational') healthScore += 10;
-        if (workspaceStatus === 'operational') healthScore += 10;
-        if (relevanceStatus === 'operational') healthScore += 5;
+      await dbService.initialize()
+      updateCount = await dbService.getUpdateCount()
+      dbStatus = 'connected'
+      dbConnected = true
+    } catch (error) {
+      dbStatus = 'error: ' + error.message
+    }
 
-        // Calculate basic counts for sidebar (no enhanced filtering needed for test page)
-        const updates = await dbService.getAllUpdates().catch(() => []);
-        const authorityCount = {};
-        updates.forEach(update => {
-            const auth = update.authority || 'Unknown';
-            authorityCount[auth] = (authorityCount[auth] || 0) + 1;
-        });
-        
-        const counts = {
-            totalUpdates: updates.length,
-            urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
-            moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
-            informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length,
-            fcaCount: authorityCount.FCA || 0,
-            boeCount: authorityCount.BoE || 0,
-            praCount: authorityCount.PRA || 0,
-            tprCount: authorityCount.TPR || 0,
-            sfoCount: authorityCount.SFO || 0,
-            fatfCount: authorityCount.FATF || 0,
-            // Basic counts for test page (no enhanced filtering)
-            consultationCount: 0,
-            guidanceCount: 0,
-            enforcementCount: 0,
-            speechCount: 0,
-            newsCount: 0,
-            policyCount: 0,
-            finalRuleCount: 0,
-            proposalCount: 0,
-            noticeCount: 0,
-            reportCount: 0,
-            rssCount: 0,
-            scrapedCount: 0,
-            directCount: 0
-        };
+    // Test analytics service integration
+    let analyticsStatus = 'unknown'
+    let analyticsData = null
+    try {
+      const analyticsService = getAnalyticsService()
+      analyticsData = await analyticsService.getAnalyticsDashboard()
+      analyticsStatus = 'operational'
+    } catch (error) {
+      analyticsStatus = 'error: ' + error.message
+    }
 
-        const html = `<!DOCTYPE html>
+    // Test workspace service integration
+    let workspaceStatus = 'unknown'
+    let workspaceData = null
+    try {
+      const workspaceService = getWorkspaceService()
+      workspaceData = await workspaceService.getWorkspaceStats()
+      workspaceStatus = 'operational'
+    } catch (error) {
+      workspaceStatus = 'error: ' + error.message
+    }
+
+    // Test relevance service integration
+    let relevanceStatus = 'unknown'
+    try {
+      const relevanceService = getRelevanceService()
+      // Test with dummy data
+      relevanceService.calculateRelevanceScore({}, {})
+      relevanceStatus = 'operational'
+    } catch (error) {
+      relevanceStatus = 'error: ' + error.message
+    }
+
+    let healthScore = 0
+    if (dbConnected) healthScore += 25
+    if (envVars.hasGroqKey) healthScore += 20
+    if (envVars.hasDatabaseUrl) healthScore += 15
+    if (updateCount > 0) healthScore += 15
+    if (analyticsStatus === 'operational') healthScore += 10
+    if (workspaceStatus === 'operational') healthScore += 10
+    if (relevanceStatus === 'operational') healthScore += 5
+
+    // Calculate basic counts for sidebar (no enhanced filtering needed for test page)
+    const updates = await dbService.getAllUpdates().catch(() => [])
+    const authorityCount = {}
+    updates.forEach(update => {
+      const auth = update.authority || 'Unknown'
+      authorityCount[auth] = (authorityCount[auth] || 0) + 1
+    })
+
+    const counts = {
+      totalUpdates: updates.length,
+      urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
+      moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
+      informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length,
+      fcaCount: authorityCount.FCA || 0,
+      boeCount: authorityCount.BoE || 0,
+      praCount: authorityCount.PRA || 0,
+      tprCount: authorityCount.TPR || 0,
+      sfoCount: authorityCount.SFO || 0,
+      fatfCount: authorityCount.FATF || 0,
+      // Basic counts for test page (no enhanced filtering)
+      consultationCount: 0,
+      guidanceCount: 0,
+      enforcementCount: 0,
+      speechCount: 0,
+      newsCount: 0,
+      policyCount: 0,
+      finalRuleCount: 0,
+      proposalCount: 0,
+      noticeCount: 0,
+      reportCount: 0,
+      rssCount: 0,
+      scrapedCount: 0,
+      directCount: 0
+    }
+
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -518,9 +518,11 @@ const testPage = async (req, res) => {
                     </div>
                     <div class="score-label">System Health Score</div>
                     <div class="score-description">
-                        ${healthScore >= 80 ? 'System is operating optimally' : 
-                          healthScore >= 60 ? 'System is functional with some warnings' : 
-                          'System requires attention - critical issues detected'}
+                        ${healthScore >= 80
+? 'System is operating optimally'
+                          : healthScore >= 60
+? 'System is functional with some warnings'
+                          : 'System requires attention - critical issues detected'}
                     </div>
                 </div>
 
@@ -597,9 +599,9 @@ const testPage = async (req, res) => {
                     <div class="explanation-box">
                         <div class="explanation-title">Database Health</div>
                         <div class="explanation-text">
-                            ${dbConnected ? 
-                                'Database connection is operational. Regulatory updates can be stored and retrieved successfully. Data persistence is working correctly.' : 
-                                'Database connection failed. Check DATABASE_URL environment variable and ensure database is accessible. System will fall back to JSON file storage.'}
+                            ${dbConnected
+                                ? 'Database connection is operational. Regulatory updates can be stored and retrieved successfully. Data persistence is working correctly.'
+                                : 'Database connection failed. Check DATABASE_URL environment variable and ensure database is accessible. System will fall back to JSON file storage.'}
                         </div>
                     </div>
                 </div>
@@ -656,9 +658,9 @@ const testPage = async (req, res) => {
                     <div class="explanation-box">
                         <div class="explanation-title">Configuration Status</div>
                         <div class="explanation-text">
-                            ${envVars.hasGroqKey && envVars.hasDatabaseUrl ? 
-                                'All critical environment variables are properly configured. The system has access to AI analysis capabilities and persistent data storage.' : 
-                                'Some environment variables may be missing. AI analysis requires GROQ_API_KEY. Production deployment should include DATABASE_URL.'}
+                            ${envVars.hasGroqKey && envVars.hasDatabaseUrl
+                                ? 'All critical environment variables are properly configured. The system has access to AI analysis capabilities and persistent data storage.'
+                                : 'Some environment variables may be missing. AI analysis requires GROQ_API_KEY. Production deployment should include DATABASE_URL.'}
                         </div>
                     </div>
                 </div>
@@ -721,9 +723,9 @@ const testPage = async (req, res) => {
                     <div class="explanation-box">
                         <div class="explanation-title">Analytics Capabilities</div>
                         <div class="explanation-text">
-                            ${analyticsStatus === 'operational' ? 
-                                'Full analytics pipeline is operational. Velocity analysis, sector hotspots, and predictive modeling are all available and processing regulatory data.' :
-                                'Analytics service encountered errors. Check database connectivity and data availability. Some predictive features may be limited.'}
+                            ${analyticsStatus === 'operational'
+                                ? 'Full analytics pipeline is operational. Velocity analysis, sector hotspots, and predictive modeling are all available and processing regulatory data.'
+                                : 'Analytics service encountered errors. Check database connectivity and data availability. Some predictive features may be limited.'}
                         </div>
                     </div>
                 </div>
@@ -782,9 +784,9 @@ const testPage = async (req, res) => {
                     <div class="explanation-box">
                         <div class="explanation-title">Workspace Health</div>
                         <div class="explanation-text">
-                            ${workspaceStatus === 'operational' ? 
-                                'All workspace features are functioning correctly. Users can pin items, create alerts, save searches, and export data successfully.' :
-                                'Workspace service encountered errors. Pin functionality and alert creation may be limited. Check backend service connectivity.'}
+                            ${workspaceStatus === 'operational'
+                                ? 'All workspace features are functioning correctly. Users can pin items, create alerts, save searches, and export data successfully.'
+                                : 'Workspace service encountered errors. Pin functionality and alert creation may be limited. Check backend service connectivity.'}
                         </div>
                     </div>
                 </div>
@@ -847,9 +849,9 @@ const testPage = async (req, res) => {
                     <div class="explanation-box">
                         <div class="explanation-title">Relevance Engine Health</div>
                         <div class="explanation-text">
-                            ${relevanceStatus === 'operational' ? 
-                                'Relevance engine is fully operational. AI-powered content scoring and firm-specific relevance matching are working correctly.' :
-                                'Relevance engine encountered errors. Content may not be properly categorized by relevance. Check backend service configuration.'}
+                            ${relevanceStatus === 'operational'
+                                ? 'Relevance engine is fully operational. AI-powered content scoring and firm-specific relevance matching are working correctly.'
+                                : 'Relevance engine encountered errors. Content may not be properly categorized by relevance. Check backend service configuration.'}
                         </div>
                     </div>
                 </div>
@@ -1110,20 +1112,19 @@ const testPage = async (req, res) => {
         console.log('🔧 Test Page: Script loaded and ready');
     </script>
 </body>
-</html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('Test page error:', error);
-        res.status(500).send(`
+</html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('Test page error:', error)
+    res.status(500).send(`
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>System Diagnostics Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
                 <a href="/" style="color: #3b82f6; text-decoration: none;">← Back to Home</a>
             </div>
-        `);
-    }
-};
+        `)
+  }
+}
 
-module.exports = testPage;
+module.exports = testPage

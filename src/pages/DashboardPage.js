@@ -4,7 +4,7 @@ const renderHeader = () => `
     <div class="header">
         <h1 class="title">Regulatory Horizon Scanner</h1>
         <p class="subtitle">AI-powered monitoring of UK financial regulatory updates.</p>
-    </div>`;
+    </div>`
 
 const renderAnalytics = () => `
     <div class="analytics-grid">
@@ -20,7 +20,7 @@ const renderAnalytics = () => `
             <h3>Authority Activity</h3>
             <canvas id="authorityActivityChart"></canvas>
         </div>
-    </div>`;
+    </div>`
 
 const renderControls = () => `
     <div class="controls">
@@ -52,7 +52,7 @@ const renderControls = () => `
                 <button id="exportJsonBtn" class="btn btn-secondary">Export JSON</button>
             </div>
         </div>
-    </div>`;
+    </div>`
 
 const renderFilters = () => `
     <div class="filters">
@@ -76,8 +76,8 @@ const renderFilters = () => `
             <div class="checkbox-group"></div>
             <div class="filter-actions"></div>
         </div>
-    </div>`;
-    
+    </div>`
+
 const renderClientScript = () => `
     <script>
         let allUpdates = [];
@@ -285,10 +285,10 @@ const renderClientScript = () => `
             setTimeout(() => { toast.className = 'toast'; }, 3000);
         }
     </script>
-`;
+`
 
 async function renderDashboardPage() {
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <title>Regulatory Horizon Scanner</title>
@@ -309,7 +309,7 @@ async function renderDashboardPage() {
     </div>
     ${renderClientScript()}
 </body>
-</html>`;
+</html>`
 }
 
-module.exports = { renderDashboardPage };
+module.exports = { renderDashboardPage }

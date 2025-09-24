@@ -1,169 +1,169 @@
 // src/routes/pages/analyticsPage.js
 // CLEANED: Removed duplicate functions, kept only analytics-specific logic
 
-const { getCommonStyles } = require('../templates/commonStyles');
-const { getSidebar } = require('../templates/sidebar');
-const { getCommonClientScripts } = require('../templates/clientScripts');
-const dbService = require('../../services/dbService');
+const { getCommonStyles } = require('../templates/commonStyles')
+const { getSidebar } = require('../templates/sidebar')
+const { getCommonClientScripts } = require('../templates/clientScripts')
+const dbService = require('../../services/dbService')
 
 // Helper functions remain the same for fallback compatibility
 const getAnalyticsService = () => {
-    try {
-        return require('../../services/analyticsService');
-    } catch (error) {
-        console.warn('Analytics service not available, using fallback');
-        return {
-            getAnalyticsDashboard: async () => ({
-                success: false,
-                dashboard: {
-                    overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
-                    velocity: {},
-                    hotspots: [],
-                    predictions: []
-                }
-            })
-        };
+  try {
+    return require('../../services/analyticsService')
+  } catch (error) {
+    console.warn('Analytics service not available, using fallback')
+    return {
+      getAnalyticsDashboard: async () => ({
+        success: false,
+        dashboard: {
+          overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
+          velocity: {},
+          hotspots: [],
+          predictions: []
+        }
+      })
     }
-};
+  }
+}
 
 const getRelevanceService = () => {
-    try {
-        return require('../../services/relevanceService');
-    } catch (error) {
-        console.warn('Relevance service not available, using fallback');
-        return {
-            calculateRelevanceScore: () => 0,
-            categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
-        };
+  try {
+    return require('../../services/relevanceService')
+  } catch (error) {
+    console.warn('Relevance service not available, using fallback')
+    return {
+      calculateRelevanceScore: () => 0,
+      categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
     }
-};
+  }
+}
 
 const getWorkspaceService = () => {
-    try {
-        return require('../../services/workspaceService');
-    } catch (error) {
-        console.warn('Workspace service not available, using fallback');
-        return {
-            getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } })
-        };
+  try {
+    return require('../../services/workspaceService')
+  } catch (error) {
+    console.warn('Workspace service not available, using fallback')
+    return {
+      getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } })
     }
-};
+  }
+}
 
 const analyticsPage = async (req, res) => {
-    try {
-        // Don't try to load analytics data on server-side - let client-side handle it
-        let analyticsData = null;
+  try {
+    // Don't try to load analytics data on server-side - let client-side handle it
+    const analyticsData = null
 
-        // Get basic data for sidebar counts
-        const updates = await dbService.getAllUpdates();
-        
-        // Calculate enhanced counts for the new filtering sections
-        let consultationCount = 0, guidanceCount = 0, enforcementCount = 0;
-        let speechCount = 0, newsCount = 0, policyCount = 0;
-        let finalRuleCount = 0, proposalCount = 0, noticeCount = 0, reportCount = 0;
-        let rssCount = 0, scrapedCount = 0, directCount = 0;
-        
-        updates.forEach(update => {
-            const headline = (update.headline || '').toLowerCase();
-            const impact = (update.impact || '').toLowerCase();
-            const content = headline + ' ' + impact;
-            const url = update.url || '';
-            
-            // Category classification
-            if (content.includes('consultation')) consultationCount++;
-            else if (content.includes('guidance')) guidanceCount++;
-            else if (content.includes('enforcement') || content.includes('fine')) enforcementCount++;
-            else if (content.includes('speech')) speechCount++;
-            else if (content.includes('policy')) policyCount++;
-            else newsCount++;
-            
-            // Content type classification
-            if (content.includes('final rule')) finalRuleCount++;
-            else if (content.includes('proposal')) proposalCount++;
-            else if (content.includes('notice')) noticeCount++;
-            else if (content.includes('report')) reportCount++;
-            
-            // Source type classification
-            if (url.includes('rss') || url.includes('feed') || update.sourceType === 'rss') rssCount++;
-            else if (url.includes('gov.uk') || update.sourceType === 'direct') directCount++;
-            else scrapedCount++;
-        });
-        
-        const authorityCount = {};
-        updates.forEach(update => {
-            const auth = update.authority || 'Unknown';
-            authorityCount[auth] = (authorityCount[auth] || 0) + 1;
-        });
-        
-        const counts = {
-            totalUpdates: updates.length,
-            urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
-            moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
-            informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length,
-            fcaCount: authorityCount.FCA || 0,
-            boeCount: authorityCount.BoE || 0,
-            praCount: authorityCount.PRA || 0,
-            tprCount: authorityCount.TPR || 0,
-            sfoCount: authorityCount.SFO || 0,
-            fatfCount: authorityCount.FATF || 0,
-            // Enhanced counts for filtering
-            consultationCount,
-            guidanceCount,
-            enforcementCount,
-            speechCount,
-            newsCount,
-            policyCount,
-            finalRuleCount,
-            proposalCount,
-            noticeCount,
-            reportCount,
-            rssCount,
-            scrapedCount,
-            directCount
-        };
+    // Get basic data for sidebar counts
+    const updates = await dbService.getAllUpdates()
 
-        const sidebarHtml = await getSidebar('analytics');
+    // Calculate enhanced counts for the new filtering sections
+    let consultationCount = 0; let guidanceCount = 0; let enforcementCount = 0
+    let speechCount = 0; let newsCount = 0; let policyCount = 0
+    let finalRuleCount = 0; let proposalCount = 0; let noticeCount = 0; let reportCount = 0
+    let rssCount = 0; let scrapedCount = 0; let directCount = 0
 
-        // Helper functions for safe data rendering
-        const renderMetricValue = (value, fallback = 'Loading...') => {
-            return analyticsData ? (value || 0) : fallback;
-        };
+    updates.forEach(update => {
+      const headline = (update.headline || '').toLowerCase()
+      const impact = (update.impact || '').toLowerCase()
+      const content = headline + ' ' + impact
+      const url = update.url || ''
 
-        const renderVelocityData = () => {
-            if (!analyticsData || !analyticsData.velocity) return '';
-            
-            return Object.entries(analyticsData.velocity).slice(0, 4).map(([auth, data]) => {
-                const weeklyRate = (data.updatesPerWeek || 0).toFixed(1);
-                return `
+      // Category classification
+      if (content.includes('consultation')) consultationCount++
+      else if (content.includes('guidance')) guidanceCount++
+      else if (content.includes('enforcement') || content.includes('fine')) enforcementCount++
+      else if (content.includes('speech')) speechCount++
+      else if (content.includes('policy')) policyCount++
+      else newsCount++
+
+      // Content type classification
+      if (content.includes('final rule')) finalRuleCount++
+      else if (content.includes('proposal')) proposalCount++
+      else if (content.includes('notice')) noticeCount++
+      else if (content.includes('report')) reportCount++
+
+      // Source type classification
+      if (url.includes('rss') || url.includes('feed') || update.sourceType === 'rss') rssCount++
+      else if (url.includes('gov.uk') || update.sourceType === 'direct') directCount++
+      else scrapedCount++
+    })
+
+    const authorityCount = {}
+    updates.forEach(update => {
+      const auth = update.authority || 'Unknown'
+      authorityCount[auth] = (authorityCount[auth] || 0) + 1
+    })
+
+    const counts = {
+      totalUpdates: updates.length,
+      urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
+      moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
+      informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length,
+      fcaCount: authorityCount.FCA || 0,
+      boeCount: authorityCount.BoE || 0,
+      praCount: authorityCount.PRA || 0,
+      tprCount: authorityCount.TPR || 0,
+      sfoCount: authorityCount.SFO || 0,
+      fatfCount: authorityCount.FATF || 0,
+      // Enhanced counts for filtering
+      consultationCount,
+      guidanceCount,
+      enforcementCount,
+      speechCount,
+      newsCount,
+      policyCount,
+      finalRuleCount,
+      proposalCount,
+      noticeCount,
+      reportCount,
+      rssCount,
+      scrapedCount,
+      directCount
+    }
+
+    const sidebarHtml = await getSidebar('analytics')
+
+    // Helper functions for safe data rendering
+    const renderMetricValue = (value, fallback = 'Loading...') => {
+      return analyticsData ? (value || 0) : fallback
+    }
+
+    const renderVelocityData = () => {
+      if (!analyticsData || !analyticsData.velocity) return ''
+
+      return Object.entries(analyticsData.velocity).slice(0, 4).map(([auth, data]) => {
+        const weeklyRate = (data.updatesPerWeek || 0).toFixed(1)
+        return `
                     <div class="chart-stat">
                         <div class="chart-stat-value">${weeklyRate}</div>
                         <div class="chart-stat-label">${auth} per week</div>
                     </div>
-                `;
-            }).join('');
-        };
+                `
+      }).join('')
+    }
 
-        const renderHotspotData = () => {
-            if (!analyticsData || !analyticsData.hotspots) return '';
-            
-            return analyticsData.hotspots.slice(0, 4).map(hotspot => {
-                return `
+    const renderHotspotData = () => {
+      if (!analyticsData || !analyticsData.hotspots) return ''
+
+      return analyticsData.hotspots.slice(0, 4).map(hotspot => {
+        return `
                     <div class="chart-stat">
                         <div class="chart-stat-value">${hotspot.activityScore || 0}</div>
                         <div class="chart-stat-label">${hotspot.sector || 'Unknown'}</div>
                     </div>
-                `;
-            }).join('');
-        };
+                `
+      }).join('')
+    }
 
-        const renderPredictionStats = () => {
-            if (!analyticsData || !analyticsData.predictions) return '';
-            
-            const highConfidence = analyticsData.predictions.filter(p => p.confidence >= 70).length;
-            const highPriority = analyticsData.predictions.filter(p => p.priority === 'high').length;
-            const overallConfidence = Math.round(analyticsData.confidence || 0);
-            
-            return `
+    const renderPredictionStats = () => {
+      if (!analyticsData || !analyticsData.predictions) return ''
+
+      const highConfidence = analyticsData.predictions.filter(p => p.confidence >= 70).length
+      const highPriority = analyticsData.predictions.filter(p => p.priority === 'high').length
+      const overallConfidence = Math.round(analyticsData.confidence || 0)
+
+      return `
                 <div class="chart-stat">
                     <div class="chart-stat-value">${highConfidence}</div>
                     <div class="chart-stat-label">High Confidence</div>
@@ -176,10 +176,10 @@ const analyticsPage = async (req, res) => {
                     <div class="chart-stat-value">${overallConfidence}%</div>
                     <div class="chart-stat-label">Overall Confidence</div>
                 </div>
-            `;
-        };
+            `
+    }
 
-        const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -678,7 +678,8 @@ const analyticsPage = async (req, res) => {
                 <h2 class="chart-title">
                     🚀 Regulatory Velocity Trends
                 </h2>
-                ${analyticsData ? `
+                ${analyticsData
+? `
                     <div class="chart-placeholder">
                         <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Advanced Analytics Engine Active</p>
                         <p>Velocity analysis tracks regulatory activity patterns across ${Object.keys(analyticsData.velocity || {}).length} authorities</p>
@@ -686,7 +687,8 @@ const analyticsPage = async (req, res) => {
                             ${renderVelocityData()}
                         </div>
                     </div>
-                ` : `
+                `
+: `
                     <div class="chart-placeholder">
                         <div class="loading-spinner"></div>
                         <p>Loading velocity analytics...</p>
@@ -698,7 +700,8 @@ const analyticsPage = async (req, res) => {
                 <h2 class="chart-title">
                     🔥 Sector Hotspots Analysis
                 </h2>
-                ${analyticsData ? `
+                ${analyticsData
+? `
                     <div class="chart-placeholder">
                         <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">AI Hotspot Detection</p>
                         <p>Identified ${analyticsData.hotspots?.length || 0} sector activity patterns with ${analyticsData.hotspots?.filter(h => h.riskLevel === 'high').length || 0} high-risk areas</p>
@@ -706,7 +709,8 @@ const analyticsPage = async (req, res) => {
                             ${renderHotspotData()}
                         </div>
                     </div>
-                ` : `
+                `
+: `
                     <div class="chart-placeholder">
                         <div class="loading-spinner"></div>
                         <p>Loading sector analysis...</p>
@@ -718,7 +722,8 @@ const analyticsPage = async (req, res) => {
                 <h2 class="chart-title">
                     📈 Predictive Insights
                 </h2>
-                ${analyticsData ? `
+                ${analyticsData
+? `
                     <div class="chart-placeholder">
                         <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Machine Learning Predictions</p>
                         <p>Generated ${analyticsData.predictions?.length || 0} predictive insights with confidence scoring and trend analysis</p>
@@ -726,7 +731,8 @@ const analyticsPage = async (req, res) => {
                             ${renderPredictionStats()}
                         </div>
                     </div>
-                ` : `
+                `
+: `
                     <div class="chart-placeholder">
                         <div class="loading-spinner"></div>
                         <p>Loading predictive models...</p>
@@ -930,20 +936,19 @@ const analyticsPage = async (req, res) => {
         console.log('📊 Analytics Page: Script loaded and ready');
     </script>
 </body>
-</html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('Analytics page error:', error);
-        res.status(500).send(`
+</html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('Analytics page error:', error)
+    res.status(500).send(`
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>Analytics Dashboard Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
                 <a href="/" style="color: #3b82f6; text-decoration: none;">← Back to Home</a>
             </div>
-        `);
-    }
-};
+        `)
+  }
+}
 
-module.exports = analyticsPage;
+module.exports = analyticsPage

@@ -1,56 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Users, TrendingUp, Activity, Zap, FileText, Clock, Target, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
+import { Users, TrendingUp, Activity, Zap, FileText, Clock, Target, Award } from 'lucide-react'
 
 const AuthoritySpotlight = () => {
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedAuthority, setSelectedAuthority] = useState('all');
-  const [timeframe, setTimeframe] = useState('30');
-  const [authorityAnalysis, setAuthorityAnalysis] = useState({});
+  const [updates, setUpdates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedAuthority, setSelectedAuthority] = useState('all')
+  const [timeframe, setTimeframe] = useState('30')
+  const [authorityAnalysis, setAuthorityAnalysis] = useState({})
 
   const authorityColors = {
     'Financial Conduct Authority': '#3b82f6',
-    'Bank of England': '#ef4444', 
+    'Bank of England': '#ef4444',
     'Prudential Regulation Authority': '#10b981',
     'HM Treasury': '#f59e0b',
     'Competition and Markets Authority': '#8b5cf6',
     'Information Commissioner\'s Office': '#06b6d4'
-  };
+  }
 
   useEffect(() => {
-    fetchAuthorityData();
-  }, [timeframe]);
+    fetchAuthorityData()
+  }, [timeframe])
 
   const fetchAuthorityData = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/updates?limit=200&enhanced=true');
-      const data = await response.json();
-      setUpdates(data || []);
-      analyzeAuthorityActivity(data || []);
+      const response = await fetch('/api/updates?limit=200&enhanced=true')
+      const data = await response.json()
+      setUpdates(data || [])
+      analyzeAuthorityActivity(data || [])
     } catch (error) {
-      console.error('Failed to fetch authority data:', error);
-      setUpdates([]);
+      console.error('Failed to fetch authority data:', error)
+      setUpdates([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const analyzeAuthorityActivity = (allUpdates) => {
-    const days = parseInt(timeframe);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    const filteredUpdates = allUpdates.filter(update => 
+    const days = parseInt(timeframe)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+
+    const filteredUpdates = allUpdates.filter(update =>
       new Date(update.fetched_date) >= cutoffDate
-    );
+    )
 
     // Group updates by authority
-    const authorityData = {};
-    
+    const authorityData = {}
+
     filteredUpdates.forEach(update => {
-      const authority = update.authority || 'Unknown';
+      const authority = update.authority || 'Unknown'
       if (!authorityData[authority]) {
         authorityData[authority] = {
           updates: [],
@@ -63,54 +63,54 @@ const AuthoritySpotlight = () => {
           avgImpactScore: 0,
           consistencyScore: 0,
           innovationScore: 0
-        };
+        }
       }
-      
-      const authData = authorityData[authority];
-      authData.updates.push(update);
-      authData.totalUpdates++;
-      
-      if (update.impact_level === 'Significant') authData.highImpact++;
-      if (update.urgency === 'High') authData.urgentUpdates++;
-      
+
+      const authData = authorityData[authority]
+      authData.updates.push(update)
+      authData.totalUpdates++
+
+      if (update.impact_level === 'Significant') authData.highImpact++
+      if (update.urgency === 'High') authData.urgentUpdates++
+
       // Track sector focus
       if (update.sector_relevance_scores) {
         Object.entries(update.sector_relevance_scores).forEach(([sector, score]) => {
           if (score > 25) {
-            authData.sectorFocus[sector] = (authData.sectorFocus[sector] || 0) + score;
+            authData.sectorFocus[sector] = (authData.sectorFocus[sector] || 0) + score
           }
-        });
+        })
       }
-      
+
       // Extract themes
-      const themes = extractThemesFromUpdate(update);
+      const themes = extractThemesFromUpdate(update)
       themes.forEach(theme => {
-        authData.themes[theme] = (authData.themes[theme] || 0) + 1;
-      });
-      
+        authData.themes[theme] = (authData.themes[theme] || 0) + 1
+      })
+
       // Timeline tracking
-      const week = getWeekKey(update.fetched_date);
-      authData.activityTimeline[week] = (authData.activityTimeline[week] || 0) + 1;
-    });
+      const week = getWeekKey(update.fetched_date)
+      authData.activityTimeline[week] = (authData.activityTimeline[week] || 0) + 1
+    })
 
     // Calculate derived metrics for each authority
     Object.values(authorityData).forEach(authData => {
-      authData.avgImpactScore = calculateAverageImpactScore(authData.updates);
-      authData.consistencyScore = calculateConsistencyScore(authData.activityTimeline);
-      authData.innovationScore = calculateInnovationScore(authData.themes);
-      authData.topSectors = getTopSectors(authData.sectorFocus);
-      authData.topThemes = getTopThemes(authData.themes);
-      authData.activityTrend = calculateActivityTrend(authData.activityTimeline);
-      authData.authorityProfile = generateAuthorityProfile(authData);
-    });
+      authData.avgImpactScore = calculateAverageImpactScore(authData.updates)
+      authData.consistencyScore = calculateConsistencyScore(authData.activityTimeline)
+      authData.innovationScore = calculateInnovationScore(authData.themes)
+      authData.topSectors = getTopSectors(authData.sectorFocus)
+      authData.topThemes = getTopThemes(authData.themes)
+      authData.activityTrend = calculateActivityTrend(authData.activityTimeline)
+      authData.authorityProfile = generateAuthorityProfile(authData)
+    })
 
-    setAuthorityAnalysis(authorityData);
-  };
+    setAuthorityAnalysis(authorityData)
+  }
 
   const extractThemesFromUpdate = (update) => {
-    const text = `${update.headline} ${update.impact}`.toLowerCase();
-    const themes = [];
-    
+    const text = `${update.headline} ${update.impact}`.toLowerCase()
+    const themes = []
+
     const themePatterns = {
       'Digital Innovation': ['digital', 'fintech', 'technology', 'innovation', 'ai', 'blockchain'],
       'Consumer Protection': ['consumer', 'protection', 'fair treatment', 'vulnerable', 'complaints'],
@@ -119,121 +119,121 @@ const AuthoritySpotlight = () => {
       'Capital & Liquidity': ['capital', 'basel', 'liquidity', 'leverage', 'prudential'],
       'Climate & ESG': ['climate', 'esg', 'sustainability', 'green', 'environmental'],
       'Reporting & Data': ['reporting', 'data', 'disclosure', 'transparency', 'submission'],
-      'Enforcement': ['enforcement', 'penalty', 'fine', 'action', 'investigation'],
-      'International': ['international', 'global', 'cross-border', 'eu', 'basel'],
+      Enforcement: ['enforcement', 'penalty', 'fine', 'action', 'investigation'],
+      International: ['international', 'global', 'cross-border', 'eu', 'basel'],
       'Systemic Risk': ['systemic', 'financial stability', 'macroprudential', 'stress']
-    };
+    }
 
     Object.entries(themePatterns).forEach(([theme, keywords]) => {
       if (keywords.some(keyword => text.includes(keyword))) {
-        themes.push(theme);
+        themes.push(theme)
       }
-    });
+    })
 
-    return themes;
-  };
+    return themes
+  }
 
   const getWeekKey = (dateString) => {
-    const date = new Date(dateString);
-    const week = Math.floor((date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));
-    return `${date.getFullYear()}-W${week}`;
-  };
+    const date = new Date(dateString)
+    const week = Math.floor((date - new Date(date.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000))
+    return `${date.getFullYear()}-W${week}`
+  }
 
   const calculateAverageImpactScore = (updates) => {
-    if (updates.length === 0) return 0;
-    
-    const impactWeights = { 'Significant': 3, 'Moderate': 2, 'Informational': 1 };
-    const urgencyWeights = { 'High': 3, 'Medium': 2, 'Low': 1 };
-    
+    if (updates.length === 0) return 0
+
+    const impactWeights = { Significant: 3, Moderate: 2, Informational: 1 }
+    const urgencyWeights = { High: 3, Medium: 2, Low: 1 }
+
     const totalScore = updates.reduce((sum, update) => {
-      const impactWeight = impactWeights[update.impact_level] || 1;
-      const urgencyWeight = urgencyWeights[update.urgency] || 1;
-      return sum + (impactWeight * urgencyWeight);
-    }, 0);
-    
-    return Math.round((totalScore / updates.length) * 10);
-  };
+      const impactWeight = impactWeights[update.impact_level] || 1
+      const urgencyWeight = urgencyWeights[update.urgency] || 1
+      return sum + (impactWeight * urgencyWeight)
+    }, 0)
+
+    return Math.round((totalScore / updates.length) * 10)
+  }
 
   const calculateConsistencyScore = (timeline) => {
-    const weeks = Object.values(timeline);
-    if (weeks.length === 0) return 0;
-    
-    const avg = weeks.reduce((sum, count) => sum + count, 0) / weeks.length;
-    const variance = weeks.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / weeks.length;
-    const stdDev = Math.sqrt(variance);
-    
+    const weeks = Object.values(timeline)
+    if (weeks.length === 0) return 0
+
+    const avg = weeks.reduce((sum, count) => sum + count, 0) / weeks.length
+    const variance = weeks.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / weeks.length
+    const stdDev = Math.sqrt(variance)
+
     // Lower variance = higher consistency (inverse relationship)
-    return Math.max(0, Math.round(100 - (stdDev * 10)));
-  };
+    return Math.max(0, Math.round(100 - (stdDev * 10)))
+  }
 
   const calculateInnovationScore = (themes) => {
-    const innovativeThemes = ['Digital Innovation', 'Climate & ESG', 'International'];
-    const innovationCount = innovativeThemes.reduce((sum, theme) => sum + (themes[theme] || 0), 0);
-    const totalThemes = Object.values(themes).reduce((sum, count) => sum + count, 0);
-    
-    return totalThemes > 0 ? Math.round((innovationCount / totalThemes) * 100) : 0;
-  };
+    const innovativeThemes = ['Digital Innovation', 'Climate & ESG', 'International']
+    const innovationCount = innovativeThemes.reduce((sum, theme) => sum + (themes[theme] || 0), 0)
+    const totalThemes = Object.values(themes).reduce((sum, count) => sum + count, 0)
+
+    return totalThemes > 0 ? Math.round((innovationCount / totalThemes) * 100) : 0
+  }
 
   const getTopSectors = (sectorFocus) => {
     return Object.entries(sectorFocus)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
-      .map(([sector, score]) => ({ sector, score: Math.round(score) }));
-  };
+      .map(([sector, score]) => ({ sector, score: Math.round(score) }))
+  }
 
   const getTopThemes = (themes) => {
     return Object.entries(themes)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
-      .map(([theme, count]) => ({ theme, count }));
-  };
+      .map(([theme, count]) => ({ theme, count }))
+  }
 
   const calculateActivityTrend = (timeline) => {
-    const weeks = Object.keys(timeline).sort();
-    if (weeks.length < 2) return 'stable';
-    
-    const midpoint = Math.floor(weeks.length / 2);
-    const recentActivity = weeks.slice(midpoint).reduce((sum, week) => sum + timeline[week], 0);
-    const earlierActivity = weeks.slice(0, midpoint).reduce((sum, week) => sum + timeline[week], 0);
-    
-    const change = ((recentActivity - earlierActivity) / earlierActivity) * 100;
-    
-    if (change > 20) return 'increasing';
-    if (change < -20) return 'decreasing';
-    return 'stable';
-  };
+    const weeks = Object.keys(timeline).sort()
+    if (weeks.length < 2) return 'stable'
+
+    const midpoint = Math.floor(weeks.length / 2)
+    const recentActivity = weeks.slice(midpoint).reduce((sum, week) => sum + timeline[week], 0)
+    const earlierActivity = weeks.slice(0, midpoint).reduce((sum, week) => sum + timeline[week], 0)
+
+    const change = ((recentActivity - earlierActivity) / earlierActivity) * 100
+
+    if (change > 20) return 'increasing'
+    if (change < -20) return 'decreasing'
+    return 'stable'
+  }
 
   const generateAuthorityProfile = (authData) => {
-    const { totalUpdates, highImpact, avgImpactScore, consistencyScore, innovationScore } = authData;
-    
-    let profile = 'Moderate Activity';
-    let description = 'Standard regulatory activity levels';
-    
+    const { totalUpdates, highImpact, avgImpactScore, consistencyScore, innovationScore } = authData
+
+    let profile = 'Moderate Activity'
+    let description = 'Standard regulatory activity levels'
+
     if (totalUpdates > 30 && avgImpactScore > 60) {
-      profile = 'High Impact Leader';
-      description = 'Frequent high-impact regulatory activity';
+      profile = 'High Impact Leader'
+      description = 'Frequent high-impact regulatory activity'
     } else if (innovationScore > 50) {
-      profile = 'Innovation Focused';
-      description = 'Strong focus on emerging regulatory themes';
+      profile = 'Innovation Focused'
+      description = 'Strong focus on emerging regulatory themes'
     } else if (consistencyScore > 80) {
-      profile = 'Steady Regulator';
-      description = 'Consistent and predictable regulatory output';
+      profile = 'Steady Regulator'
+      description = 'Consistent and predictable regulatory output'
     } else if (highImpact > 10) {
-      profile = 'Significant Impact';
-      description = 'Regular significant regulatory interventions';
+      profile = 'Significant Impact'
+      description = 'Regular significant regulatory interventions'
     }
-    
-    return { profile, description };
-  };
+
+    return { profile, description }
+  }
 
   const getActivityData = () => {
     return Object.entries(authorityAnalysis)
       .map(([authority, data]) => ({
         authority: authority.replace('Financial Conduct Authority', 'FCA')
-                          .replace('Prudential Regulation Authority', 'PRA')
-                          .replace('Bank of England', 'BoE')
-                          .replace('Competition and Markets Authority', 'CMA')
-                          .replace('Information Commissioner\'s Office', 'ICO'),
+          .replace('Prudential Regulation Authority', 'PRA')
+          .replace('Bank of England', 'BoE')
+          .replace('Competition and Markets Authority', 'CMA')
+          .replace('Information Commissioner\'s Office', 'ICO'),
         fullName: authority,
         updates: data.totalUpdates,
         highImpact: data.highImpact,
@@ -242,17 +242,17 @@ const AuthoritySpotlight = () => {
         innovation: data.innovationScore
       }))
       .sort((a, b) => b.updates - a.updates)
-      .slice(0, 8);
-  };
+      .slice(0, 8)
+  }
 
   const getSelectedAuthorityData = () => {
-    if (selectedAuthority === 'all') return null;
-    return authorityAnalysis[selectedAuthority];
-  };
+    if (selectedAuthority === 'all') return null
+    return authorityAnalysis[selectedAuthority]
+  }
 
   const getAuthorityOptions = () => {
-    return Object.keys(authorityAnalysis).sort();
-  };
+    return Object.keys(authorityAnalysis).sort()
+  }
 
   if (loading) {
     return (
@@ -260,13 +260,13 @@ const AuthoritySpotlight = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-gray-600">Analyzing authority activity...</span>
       </div>
-    );
+    )
   }
 
-  const activityData = getActivityData();
-  const selectedData = getSelectedAuthorityData();
-  const totalAuthorities = Object.keys(authorityAnalysis).length;
-  const totalUpdates = Object.values(authorityAnalysis).reduce((sum, auth) => sum + auth.totalUpdates, 0);
+  const activityData = getActivityData()
+  const selectedData = getSelectedAuthorityData()
+  const totalAuthorities = Object.keys(authorityAnalysis).length
+  const totalUpdates = Object.values(authorityAnalysis).reduce((sum, auth) => sum + auth.totalUpdates, 0)
 
   return (
     <div className="space-y-6">
@@ -286,8 +286,8 @@ const AuthoritySpotlight = () => {
         <div className="flex flex-wrap gap-4 items-center">
           <div>
             <label className="text-sm text-gray-600 mr-2">Timeframe:</label>
-            <select 
-              value={timeframe} 
+            <select
+              value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
               className="border border-gray-300 rounded px-3 py-2 text-sm"
             >
@@ -297,11 +297,11 @@ const AuthoritySpotlight = () => {
               <option value="90">Last 90 days</option>
             </select>
           </div>
-          
+
           <div>
             <label className="text-sm text-gray-600 mr-2">Focus Authority:</label>
-            <select 
-              value={selectedAuthority} 
+            <select
+              value={selectedAuthority}
               onChange={(e) => setSelectedAuthority(e.target.value)}
               className="border border-gray-300 rounded px-3 py-2 text-sm"
             >
@@ -370,15 +370,15 @@ const AuthoritySpotlight = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={activityData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="authority" 
+                <XAxis
+                  dataKey="authority"
                   angle={-45}
                   textAnchor="end"
                   height={80}
                   fontSize={11}
                 />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   formatter={(value, name) => [value, name === 'updates' ? 'Total Updates' : 'High Impact']}
                 />
                 <Bar dataKey="updates" fill="#3b82f6" name="updates" />
@@ -435,7 +435,7 @@ const AuthoritySpotlight = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="p-6 space-y-6">
             {/* Profile Summary */}
             <div className="bg-gray-50 rounded-lg p-4">
@@ -467,8 +467,8 @@ const AuthoritySpotlight = () => {
                       <span className="text-sm text-gray-600">{item.sector}</span>
                       <div className="flex items-center">
                         <div className="w-20 bg-gray-200 rounded-full h-2 mr-2">
-                          <div 
-                            className="bg-blue-500 h-2 rounded-full" 
+                          <div
+                            className="bg-blue-500 h-2 rounded-full"
                             style={{ width: `${Math.min(100, (item.score / 1000) * 100)}%` }}
                           ></div>
                         </div>
@@ -510,8 +510,9 @@ const AuthoritySpotlight = () => {
                 </div>
                 <div>
                   <div className={`text-2xl font-bold capitalize ${
-                    selectedData.activityTrend === 'increasing' ? 'text-green-600' :
-                    selectedData.activityTrend === 'decreasing' ? 'text-red-600' : 'text-gray-600'
+                    selectedData.activityTrend === 'increasing'
+? 'text-green-600'
+                    : selectedData.activityTrend === 'decreasing' ? 'text-red-600' : 'text-gray-600'
                   }`}>
                     {selectedData.activityTrend}
                   </div>
@@ -541,7 +542,7 @@ const AuthoritySpotlight = () => {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-3">Highest Impact</h4>
               <div className="space-y-2">
@@ -553,7 +554,7 @@ const AuthoritySpotlight = () => {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-3">Most Innovative</h4>
               <div className="space-y-2">
@@ -569,7 +570,7 @@ const AuthoritySpotlight = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AuthoritySpotlight;
+export default AuthoritySpotlight

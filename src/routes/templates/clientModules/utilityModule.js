@@ -1,5 +1,5 @@
 function getUtilityModule() {
-    return `
+  return `
     // Utility Module
     const UtilityModule = (function() {
         function showMessage(message, type = 'info') {
@@ -51,7 +51,7 @@ function getUtilityModule() {
     
     // Expose globally for use by all modules
     window.showMessage = UtilityModule.showMessage;
-    window.clearMessages = UtilityModule.clearMessages;`;
+    window.clearMessages = UtilityModule.clearMessages;`
 }
 
-module.exports = { getUtilityModule };
+module.exports = { getUtilityModule }

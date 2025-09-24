@@ -2,7 +2,7 @@
 // COMPLETE FIX: All sidebar functions now work with backend integration
 
 function getCommonClientScripts() {
-    return `
+  return `
     <script>
         // =================
         // GLOBAL VARIABLES
@@ -954,7 +954,7 @@ function getCommonClientScripts() {
         console.log('🚀 All sidebar functions now globally available!');
         console.log('✅ Functions loaded:', Object.keys(window).filter(key => key.startsWith('filter') || key.startsWith('show') || key.startsWith('clear')));
     </script>
-    `;
+    `
 }
 
-module.exports = { getCommonClientScripts };
+module.exports = { getCommonClientScripts }

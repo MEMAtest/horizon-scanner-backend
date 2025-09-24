@@ -3,26 +3,26 @@
 // Phase 3: AI Intelligence Engine
 
 class AIPromptTemplates {
-    constructor() {
-        this.industrySeekutors = [
-            'Banking', 'Investment Management', 'Insurance', 'Fintech', 
-            'Payment Services', 'Digital Assets', 'Lending', 'Pensions',
-            'Capital Markets', 'Wealth Management', 'Compliance Tech', 'RegTech'
-        ];
-        
-        this.regulatoryAuthorities = [
-            'FCA', 'PRA', 'Bank of England', 'HM Treasury', 'FRC', 'PSR',
-            'FATF', 'European Banking Authority', 'Basel Committee', 'IOSCO'
-        ];
-        
-        this.impactLevels = ['Critical', 'Significant', 'Moderate', 'Informational'];
-        this.urgencyLevels = ['Urgent', 'High', 'Medium', 'Low'];
-        this.riskLevels = ['High', 'Medium', 'Low'];
-    }
+  constructor() {
+    this.industrySeekutors = [
+      'Banking', 'Investment Management', 'Insurance', 'Fintech',
+      'Payment Services', 'Digital Assets', 'Lending', 'Pensions',
+      'Capital Markets', 'Wealth Management', 'Compliance Tech', 'RegTech'
+    ]
 
-    // ENHANCED CONTENT ANALYSIS PROMPT
-    createContentAnalysisPrompt(content, url, authority = null) {
-        return `You are an expert regulatory intelligence analyst with 15+ years experience in UK and international financial services regulation.
+    this.regulatoryAuthorities = [
+      'FCA', 'PRA', 'Bank of England', 'HM Treasury', 'FRC', 'PSR',
+      'FATF', 'European Banking Authority', 'Basel Committee', 'IOSCO'
+    ]
+
+    this.impactLevels = ['Critical', 'Significant', 'Moderate', 'Informational']
+    this.urgencyLevels = ['Urgent', 'High', 'Medium', 'Low']
+    this.riskLevels = ['High', 'Medium', 'Low']
+  }
+
+  // ENHANCED CONTENT ANALYSIS PROMPT
+  createContentAnalysisPrompt(content, url, authority = null) {
+    return `You are an expert regulatory intelligence analyst with 15+ years experience in UK and international financial services regulation.
 
 CONTENT TO ANALYZE:
 ${content.substring(0, 4000)}
@@ -64,12 +64,12 @@ CRITICAL: Respond ONLY with valid JSON in this exact format:
   "implementationDate": "If applicable, when changes take effect"
 }
 
-Focus on actionable intelligence and business relevance.`;
-    }
+Focus on actionable intelligence and business relevance.`
+  }
 
-    // PATTERN RECOGNITION PROMPT
-    createPatternRecognitionPrompt(recentUpdates, historicalData) {
-        return `You are a regulatory pattern recognition expert. Analyze the following data to identify emerging patterns, themes, and trends.
+  // PATTERN RECOGNITION PROMPT
+  createPatternRecognitionPrompt(recentUpdates, historicalData) {
+    return `You are a regulatory pattern recognition expert. Analyze the following data to identify emerging patterns, themes, and trends.
 
 RECENT REGULATORY UPDATES:
 ${JSON.stringify(recentUpdates, null, 2)}
@@ -123,12 +123,12 @@ Respond with ONLY valid JSON:
       "Fintech": "Medium"
     }
   }
-}`;
-    }
+}`
+  }
 
-    // IMPACT PREDICTION PROMPT
-    createImpactPredictionPrompt(update, firmProfiles, historicalImpacts) {
-        return `You are a regulatory impact prediction specialist. Analyze this update and predict business impact for different firm types.
+  // IMPACT PREDICTION PROMPT
+  createImpactPredictionPrompt(update, firmProfiles, historicalImpacts) {
+    return `You are a regulatory impact prediction specialist. Analyze this update and predict business impact for different firm types.
 
 REGULATORY UPDATE:
 ${JSON.stringify(update, null, 2)}
@@ -178,18 +178,18 @@ Respond with ONLY valid JSON:
   },
   "competitiveImplications": "How this change affects competitive landscape",
   "secondaryEffects": "Indirect impacts and ripple effects"
-}`;
+}`
+  }
+
+  // SMART SUMMARY PROMPT
+  createSmartSummaryPrompt(updates, summaryType, audience) {
+    const audienceContext = {
+      executive: 'senior leadership focused on strategic implications',
+      technical: 'compliance professionals needing implementation details',
+      weekly: 'regular monitoring and trend awareness'
     }
 
-    // SMART SUMMARY PROMPT
-    createSmartSummaryPrompt(updates, summaryType, audience) {
-        const audienceContext = {
-            'executive': 'senior leadership focused on strategic implications',
-            'technical': 'compliance professionals needing implementation details',
-            'weekly': 'regular monitoring and trend awareness'
-        };
-
-        return `You are a regulatory communications expert creating ${summaryType} summaries for ${audienceContext[audience] || audience}.
+    return `You are a regulatory communications expert creating ${summaryType} summaries for ${audienceContext[audience] || audience}.
 
 UPDATES TO SUMMARIZE:
 ${JSON.stringify(updates, null, 2)}
@@ -200,29 +200,35 @@ SUMMARY REQUIREMENTS:
 - Highlight priority items and key trends
 - Include specific next steps where applicable
 
-${summaryType === 'executive' ? `
+${summaryType === 'executive'
+? `
 EXECUTIVE SUMMARY FORMAT:
 - Strategic overview (2-3 sentences)
 - Priority regulatory developments (top 3-5)
 - Business impact assessment
 - Recommended leadership actions
-` : ''}
+`
+: ''}
 
-${summaryType === 'technical' ? `
+${summaryType === 'technical'
+? `
 TECHNICAL SUMMARY FORMAT:
 - Detailed regulatory changes
 - Implementation requirements
 - Compliance deadlines and actions
 - Technical impact analysis
-` : ''}
+`
+: ''}
 
-${summaryType === 'weekly' ? `
+${summaryType === 'weekly'
+? `
 WEEKLY ROUNDUP FORMAT:
 - Week's regulatory highlights
 - Authority activity summary
 - Emerging trends and patterns
 - Upcoming deadlines and consultations
-` : ''}
+`
+: ''}
 
 Respond with ONLY valid JSON:
 {
@@ -250,12 +256,12 @@ Respond with ONLY valid JSON:
     "sectorsAffected": ["Banking", "Fintech"],
     "urgentItems": 3
   }
-}`;
-    }
+}`
+  }
 
-    // FIRM MATCHING PROMPT
-    createFirmMatchingPrompt(update, firmProfile) {
-        return `You are a regulatory relevance scoring expert. Analyze how this regulatory update affects the specific firm profile.
+  // FIRM MATCHING PROMPT
+  createFirmMatchingPrompt(update, firmProfile) {
+    return `You are a regulatory relevance scoring expert. Analyze how this regulatory update affects the specific firm profile.
 
 REGULATORY UPDATE:
 ${JSON.stringify(update, null, 2)}
@@ -306,12 +312,12 @@ Respond with ONLY valid JSON:
     }
   ],
   "riskAssessment": "Risk if not addressed"
-}`;
-    }
+}`
+  }
 
-    // DEADLINE INTELLIGENCE PROMPT
-    createDeadlineIntelligencePrompt(content, existingDeadlines) {
-        return `You are a regulatory deadline extraction and prediction expert. Analyze content to identify deadlines and predict upcoming regulatory activity.
+  // DEADLINE INTELLIGENCE PROMPT
+  createDeadlineIntelligencePrompt(content, existingDeadlines) {
+    return `You are a regulatory deadline extraction and prediction expert. Analyze content to identify deadlines and predict upcoming regulatory activity.
 
 CONTENT TO ANALYZE:
 ${content}
@@ -364,38 +370,38 @@ Respond with ONLY valid JSON:
       "impact": "Expected impact"
     }
   ]
-}`;
-    }
+}`
+  }
 
-    // CONFIDENCE SCORING CONTEXT
-    getConfidenceFactors() {
-        return {
-            highConfidenceIndicators: [
-                'Official regulatory publication',
-                'Specific dates mentioned',
-                'Clear authority attribution',
-                'Detailed implementation guidance',
-                'Historical pattern match'
-            ],
-            lowConfidenceIndicators: [
-                'Speculative language',
-                'Unofficial sources',
-                'Vague timeframes',
-                'Conflicting information',
-                'Novel regulatory area'
-            ],
-            confidenceModifiers: {
-                authoritySource: +20,
-                officialDocument: +15,
-                specificDates: +10,
-                historicalPattern: +10,
-                multipleConfirmation: +15,
-                speculativeLanguage: -15,
-                unofficialSource: -10,
-                contradictoryInfo: -20
-            }
-        };
+  // CONFIDENCE SCORING CONTEXT
+  getConfidenceFactors() {
+    return {
+      highConfidenceIndicators: [
+        'Official regulatory publication',
+        'Specific dates mentioned',
+        'Clear authority attribution',
+        'Detailed implementation guidance',
+        'Historical pattern match'
+      ],
+      lowConfidenceIndicators: [
+        'Speculative language',
+        'Unofficial sources',
+        'Vague timeframes',
+        'Conflicting information',
+        'Novel regulatory area'
+      ],
+      confidenceModifiers: {
+        authoritySource: +20,
+        officialDocument: +15,
+        specificDates: +10,
+        historicalPattern: +10,
+        multipleConfirmation: +15,
+        speculativeLanguage: -15,
+        unofficialSource: -10,
+        contradictoryInfo: -20
+      }
     }
+  }
 }
 
-module.exports = AIPromptTemplates;
+module.exports = AIPromptTemplates

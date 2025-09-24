@@ -1,42 +1,42 @@
 // Fixed Home Page - Phase 1
 // File: src/routes/pages/homePage.js
 
-const { getSidebar } = require('../templates/sidebar');
-const { getClientScripts } = require('../templates/clientScripts');
-const { getCommonStyles } = require('../templates/commonStyles');
-const dbService = require('../../services/dbService');
-const aiAnalyzer = require('../../services/aiAnalyzer');
+const { getSidebar } = require('../templates/sidebar')
+const { getClientScripts } = require('../templates/clientScripts')
+const { getCommonStyles } = require('../templates/commonStyles')
+const dbService = require('../../services/dbService')
+const aiAnalyzer = require('../../services/aiAnalyzer')
 
 async function renderHomePage(req, res) {
-    try {
-        console.log('🏠 Rendering enhanced home page...');
-        
-        // Get recent updates for home page preview
-        const recentUpdates = await dbService.getRecentUpdates(6);
-        
-        // Get AI insights for home page highlights
-        const aiInsights = (dbService.getRecentAIInsights && typeof dbService.getRecentAIInsights === 'function') 
-    ? await dbService.getRecentAIInsights(5) 
-    : [];
-        
-        // Get system statistics
-        const systemStats = await getSystemStatistics();
-        
-        // Generate sidebar
-        const sidebar = await getSidebar('home');
-        
-        const html = `
+  try {
+    console.log('🏠 Rendering enhanced home page...')
+
+    // Get recent updates for home page preview
+    const recentUpdates = await dbService.getRecentUpdates(6)
+
+    // Get AI insights for home page highlights
+    const aiInsights = (dbService.getRecentAIInsights && typeof dbService.getRecentAIInsights === 'function')
+      ? await dbService.getRecentAIInsights(5)
+      : []
+
+    // Get system statistics
+    const systemStats = await getSystemStatistics()
+
+    // Generate sidebar
+    const sidebar = await getSidebar('home')
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>AI Regulatory Intelligence Platform</title>
+            <title>Regulatory Horizon Scanner</title>
             ${getCommonStyles()}
             <style>
                 /* Home Page Specific Styles */
                 .hero-section {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: linear-gradient(135deg, var(--primary-navy, #0A2342) 0%, var(--primary-charcoal, #252A31) 100%);
                     color: white;
                     padding: 60px 20px;
                     text-align: center;
@@ -680,10 +680,10 @@ async function renderHomePage(req, res) {
                 <main class="main-content">
                     <!-- Hero Section -->
                     <section class="hero-section">
-                        <h1 class="hero-title">🤖 AI Regulatory Intelligence Platform</h1>
+                        <h1 class="hero-title">Regulatory Horizon Scanner</h1>
                         <p class="hero-subtitle">
-                            Transform regulatory compliance with AI-powered insights, proactive intelligence,
-                            and automated business impact analysis for UK financial services
+                            UK Financial Regulatory Updates - Professional regulatory intelligence
+                            and compliance monitoring for financial services
                         </p>
 
                         <div class="hero-actions">
@@ -831,7 +831,7 @@ async function renderHomePage(req, res) {
                     
                     <!-- Footer -->
                     <footer class="footer-section">
-                        <p>AI Regulatory Intelligence Platform - Powered by advanced language models and regulatory expertise</p>
+                        <p>Regulatory Horizon Scanner - Professional regulatory intelligence for UK financial services</p>
                         <div class="footer-links">
                             <a href="/test" class="footer-link">System Health</a>
                             <a href="/api/health" class="footer-link">API Status</a>
@@ -847,13 +847,12 @@ async function renderHomePage(req, res) {
             
             ${getClientScripts()}
         </body>
-        </html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('❌ Error rendering home page:', error);
-        res.status(500).send(`
+        </html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering home page:', error)
+    res.status(500).send(`
             <html>
                 <head><title>Error - AI Regulatory Intelligence</title></head>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
@@ -863,33 +862,33 @@ async function renderHomePage(req, res) {
                     <small>Error: ${error.message}</small>
                 </body>
             </html>
-        `);
-    }
+        `)
+  }
 }
 
 async function getSystemStatistics() {
-    try {
-        const stats = await dbService.getSystemStatistics();
-        return {
-            totalUpdates: stats.totalUpdates || 0,
-            activeAuthorities: stats.activeAuthorities || 0,
-            aiAnalyzed: stats.aiAnalyzed || 0,
-            highImpact: stats.highImpact || 0
-        };
-    } catch (error) {
-        console.error('Error getting system statistics:', error);
-        return {
-            totalUpdates: 0,
-            activeAuthorities: 0,
-            aiAnalyzed: 0,
-            highImpact: 0
-        };
+  try {
+    const stats = await dbService.getSystemStatistics()
+    return {
+      totalUpdates: stats.totalUpdates || 0,
+      activeAuthorities: stats.activeAuthorities || 0,
+      aiAnalyzed: stats.aiAnalyzed || 0,
+      highImpact: stats.highImpact || 0
     }
+  } catch (error) {
+    console.error('Error getting system statistics:', error)
+    return {
+      totalUpdates: 0,
+      activeAuthorities: 0,
+      aiAnalyzed: 0,
+      highImpact: 0
+    }
+  }
 }
 
 function generateAIHighlightsSection(aiInsights) {
-    if (!aiInsights || aiInsights.length === 0) {
-        return `
+  if (!aiInsights || aiInsights.length === 0) {
+    return `
             <div class="ai-insight-card">
                 <div class="insight-header">
                     <span class="insight-type">System Ready</span>
@@ -905,10 +904,10 @@ function generateAIHighlightsSection(aiInsights) {
                     <span>AI Confidence: 95%</span>
                 </div>
             </div>
-        `;
-    }
-    
-    return aiInsights.map(insight => `
+        `
+  }
+
+  return aiInsights.map(insight => `
         <div class="ai-insight-card">
             <div class="insight-header">
                 <span class="insight-type">${insight.insight_type.replace('_', ' ')}</span>
@@ -922,20 +921,20 @@ function generateAIHighlightsSection(aiInsights) {
                 <span>Generated: ${formatRelativeDate(insight.created_at)}</span>
             </div>
         </div>
-    `).join('');
+    `).join('')
 }
 
 function generateRecentUpdatesPreview(updates) {
-    if (!updates || updates.length === 0) {
-        return `
+  if (!updates || updates.length === 0) {
+    return `
             <div style="text-align: center; padding: 40px; color: #6b7280;">
                 <p>📭 No recent updates available</p>
                 <p><a href="/dashboard" style="color: #4f46e5;">Check the dashboard</a> for all regulatory content</p>
             </div>
-        `;
-    }
-    
-    return updates.map(update => `
+        `
+  }
+
+  return updates.map(update => `
         <div class="update-preview">
             <span class="update-authority">${update.authority}</span>
             <div class="update-content">
@@ -954,26 +953,26 @@ function generateRecentUpdatesPreview(updates) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `).join('')
 }
 
 function formatRelativeDate(dateString) {
-    if (!dateString) return 'Unknown';
-    
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays - 1} days ago`;
-    if (diffDays <= 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    
-    return date.toLocaleDateString('en-UK', { 
-        day: 'numeric', 
-        month: 'short' 
-    });
+  if (!dateString) return 'Unknown'
+
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now - date)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 1) return 'Today'
+  if (diffDays === 2) return 'Yesterday'
+  if (diffDays <= 7) return `${diffDays - 1} days ago`
+  if (diffDays <= 30) return `${Math.ceil(diffDays / 7)} weeks ago`
+
+  return date.toLocaleDateString('en-UK', {
+    day: 'numeric',
+    month: 'short'
+  })
 }
 
-module.exports = renderHomePage;
+module.exports = renderHomePage

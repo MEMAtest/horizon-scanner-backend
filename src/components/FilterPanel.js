@@ -2,11 +2,11 @@
 // ==========================================
 
 function render() {
-    const authorities = ['FCA', 'BoE', 'PRA', 'TPR', 'SFO', 'FATF'];
-    const impactLevels = ['Significant', 'Moderate', 'Informational'];
-    const urgencyLevels = ['High', 'Medium', 'Low'];
-    
-    return `
+  const authorities = ['FCA', 'BoE', 'PRA', 'TPR', 'SFO', 'FATF']
+  const impactLevels = ['Significant', 'Moderate', 'Informational']
+  const urgencyLevels = ['High', 'Medium', 'Low']
+
+  return `
         <div class="filter-panel">
             <div class="filter-header">
                 <h2 class="filter-title">🎛️ Multi-Select Filters</h2>
@@ -82,7 +82,7 @@ function render() {
                 <span class="status-text">No filters applied - showing all updates</span>
             </div>
         </div>
-    `;
+    `
 }
 
-module.exports = { render };
+module.exports = { render }

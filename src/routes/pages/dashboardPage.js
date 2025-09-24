@@ -1,76 +1,76 @@
 // Fixed Dashboard Page - Phase 1
 // File: src/routes/pages/dashboardPage.js
 
-const { getSidebar } = require('../templates/sidebar');
-const { getClientScripts } = require('../templates/clientScripts');
-const { getCommonStyles } = require('../templates/commonStyles');
-const dbService = require('../../services/dbService');
+const { getSidebar } = require('../templates/sidebar')
+const { getClientScripts } = require('../templates/clientScripts')
+const { getCommonStyles } = require('../templates/commonStyles')
+const dbService = require('../../services/dbService')
 
 async function renderDashboardPage(req, res) {
-    try {
-        console.log('📊 Rendering enhanced dashboard page...');
-        
-        // Get query parameters for filtering
-        const {
-            category = 'all',
-            authority = null,
-            sector = null,
-            impact = null,
-            range = null,
-            search = null
-        } = req.query;
-        
-        // Get enhanced updates with AI analysis
-        const updates = await dbService.getEnhancedUpdates({
-            category,
-            authority,
-            sector,
-            impact,
-            range,
-            search,
-            limit: 50
-        });
+  try {
+    console.log('📊 Rendering enhanced dashboard page...')
 
-        // Clean up any existing AI summaries with "undefined" suffix
-        let cleanedCount = 0;
-        updates.forEach(update => {
-            if (update.ai_summary && update.ai_summary.includes('undefined')) {
-                const original = update.ai_summary;
-                update.ai_summary = update.ai_summary
-                    .replace(/\. undefined/g, '')
-                    .replace(/\.\. undefined/g, '')
-                    .replace(/ undefined/g, '')
-                    .replace(/undefined/g, '')
-                    .trim();
-                if (original !== update.ai_summary) {
-                    cleanedCount++;
-                }
-            }
-        });
+    // Get query parameters for filtering
+    const {
+      category = 'all',
+      authority = null,
+      sector = null,
+      impact = null,
+      range = null,
+      search = null
+    } = req.query
 
-        if (cleanedCount > 0) {
-            console.log(`🧹 Cleaned ${cleanedCount} AI summaries with "undefined" suffix`);
+    // Get enhanced updates with AI analysis
+    const updates = await dbService.getEnhancedUpdates({
+      category,
+      authority,
+      sector,
+      impact,
+      range,
+      search,
+      limit: 50
+    })
+
+    // Clean up any existing AI summaries with "undefined" suffix
+    let cleanedCount = 0
+    updates.forEach(update => {
+      if (update.ai_summary && update.ai_summary.includes('undefined')) {
+        const original = update.ai_summary
+        update.ai_summary = update.ai_summary
+          .replace(/\. undefined/g, '')
+          .replace(/\.\. undefined/g, '')
+          .replace(/ undefined/g, '')
+          .replace(/undefined/g, '')
+          .trim()
+        if (original !== update.ai_summary) {
+          cleanedCount++
         }
+      }
+    })
 
-        // Debug: Check if ai_summary exists in first few updates
-        if (updates.length > 0) {
-            console.log('🔍 DEBUG - Sample update fields:', {
-                ai_summary: updates[0].ai_summary,
-                summary: updates[0].summary ? updates[0].summary.substring(0, 100) + '...' : null,
-                headline: updates[0].headline
-            });
-        }
-        
-        // Get dashboard statistics
-        const dashboardStats = await getDashboardStatistics();
-        
-        // Get filter options
-        const filterOptions = await getFilterOptions();
-        
-        // Generate sidebar
-        const sidebar = await getSidebar('dashboard');
-        
-        const html = `
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned ${cleanedCount} AI summaries with "undefined" suffix`)
+    }
+
+    // Debug: Check if ai_summary exists in first few updates
+    if (updates.length > 0) {
+      console.log('🔍 DEBUG - Sample update fields:', {
+        ai_summary: updates[0].ai_summary,
+        summary: updates[0].summary ? updates[0].summary.substring(0, 100) + '...' : null,
+        headline: updates[0].headline
+      })
+    }
+
+    // Get dashboard statistics
+    const dashboardStats = await getDashboardStatistics()
+
+    // Get filter options
+    const filterOptions = await getFilterOptions()
+
+    // Generate sidebar
+    const sidebar = await getSidebar('dashboard')
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -1022,13 +1022,12 @@ async function renderDashboardPage(req, res) {
                 }
             </script>
         </body>
-        </html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('❌ Error rendering dashboard page:', error);
-        res.status(500).send(`
+        </html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering dashboard page:', error)
+    res.status(500).send(`
             <html>
                 <head><title>Error - Dashboard</title></head>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
@@ -1038,103 +1037,103 @@ async function renderDashboardPage(req, res) {
                     <small>Error: ${error.message}</small>
                 </body>
             </html>
-        `);
-    }
+        `)
+  }
 }
 
 async function getDashboardStatistics() {
-    try {
-        const stats = await dbService.getDashboardStatistics();
-        return {
-            totalUpdates: stats.totalUpdates || 0,
-            highImpact: stats.highImpact || 0,
-            aiAnalyzed: stats.aiAnalyzed || 0,
-            activeAuthorities: stats.activeAuthorities || 0,
-            newToday: stats.newToday || 0,
-            newAuthorities: stats.newAuthorities || 0,
-            impactTrend: stats.impactTrend || 'stable',
-            impactChange: stats.impactChange || 0
-        };
-    } catch (error) {
-        console.error('Error getting dashboard statistics:', error);
-        return {
-            totalUpdates: 0,
-            highImpact: 0,
-            aiAnalyzed: 0,
-            activeAuthorities: 0,
-            newToday: 0,
-            newAuthorities: 0,
-            impactTrend: 'stable',
-            impactChange: 0
-        };
+  try {
+    const stats = await dbService.getDashboardStatistics()
+    return {
+      totalUpdates: stats.totalUpdates || 0,
+      highImpact: stats.highImpact || 0,
+      aiAnalyzed: stats.aiAnalyzed || 0,
+      activeAuthorities: stats.activeAuthorities || 0,
+      newToday: stats.newToday || 0,
+      newAuthorities: stats.newAuthorities || 0,
+      impactTrend: stats.impactTrend || 'stable',
+      impactChange: stats.impactChange || 0
     }
+  } catch (error) {
+    console.error('Error getting dashboard statistics:', error)
+    return {
+      totalUpdates: 0,
+      highImpact: 0,
+      aiAnalyzed: 0,
+      activeAuthorities: 0,
+      newToday: 0,
+      newAuthorities: 0,
+      impactTrend: 'stable',
+      impactChange: 0
+    }
+  }
 }
 
 async function getFilterOptions() {
-    try {
-        const options = await dbService.getFilterOptions();
-        return {
-            authorities: options.authorities || [],
-            sectors: options.sectors || []
-        };
-    } catch (error) {
-        console.error('Error getting filter options:', error);
-        return {
-            authorities: [],
-            sectors: []
-        };
+  try {
+    const options = await dbService.getFilterOptions()
+    return {
+      authorities: options.authorities || [],
+      sectors: options.sectors || []
     }
+  } catch (error) {
+    console.error('Error getting filter options:', error)
+    return {
+      authorities: [],
+      sectors: []
+    }
+  }
 }
 
 function generateAuthorityOptions(authorities, selectedAuthority) {
-    return authorities.map(auth => 
+  return authorities.map(auth =>
         `<option value="${auth.name}" ${auth.name === selectedAuthority ? 'selected' : ''}>
             ${auth.name} (${auth.count})
         </option>`
-    ).join('');
+  ).join('')
 }
 
 function generateSectorOptions(sectors, selectedSector) {
-    return sectors.map(sector => 
+  return sectors.map(sector =>
         `<option value="${sector.name}" ${sector.name === selectedSector ? 'selected' : ''}>
             ${sector.name} (${sector.count})
         </option>`
-    ).join('');
+  ).join('')
 }
 
 function generateUpdatesHTML(updates) {
-    if (!updates || updates.length === 0) {
-        return `
+  if (!updates || updates.length === 0) {
+    return `
             <div class="no-updates">
                 <div class="no-updates-icon">📭</div>
                 <h3>No updates found</h3>
                 <p>Try adjusting your filters or search criteria.</p>
                 <button onclick="clearAllFilters()" class="btn btn-secondary">Clear All Filters</button>
             </div>
-        `;
-    }
-    
-    return updates.map(update => generateUpdateCard(update)).join('');
+        `
+  }
+
+  return updates.map(update => generateUpdateCard(update)).join('')
 }
 
 function generateUpdateCard(update) {
-    const impactLevel = update.impactLevel || update.impact_level || 'Informational';
-    const urgency = update.urgency || 'Low';
-    const publishedAt = getDateValue(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
-    const publishedDate = formatDate(publishedAt || new Date());
-    const isoDate = publishedAt ? publishedAt.toISOString() : '';
-    const impactBadge = getImpactBadge(update);
-    const contentTypeBadge = getContentTypeBadge(update);
-    const sectorTags = getSectorTags(update);
-    const aiFeatures = getAIFeatures(update);
+  const impactLevel = update.impactLevel || update.impact_level || 'Informational'
+  const urgency = update.urgency || 'Low'
+  const publishedAt = getDateValue(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
+  const publishedDate = formatDate(publishedAt || new Date())
+  const isoDate = publishedAt ? publishedAt.toISOString() : ''
+  const impactBadge = getImpactBadge(update)
+  const contentTypeBadge = getContentTypeBadge(update)
+  const sectorTags = getSectorTags(update)
+  const aiFeatures = getAIFeatures(update)
 
-    const aiSummary = update.ai_summary ? update.ai_summary.trim() : '';
-    const useFallbackSummary = isFallbackSummary(aiSummary);
-    const summaryText = !useFallbackSummary && aiSummary
-        ? aiSummary
-        : (update.summary && update.summary.trim() ? update.summary.trim() : '');
+  const aiSummary = update.ai_summary ? update.ai_summary.trim() : ''
+  const useFallbackSummary = isFallbackSummary(aiSummary)
+  const summaryText = !useFallbackSummary && aiSummary
+    ? aiSummary
+    : (update.summary && update.summary.trim() ? update.summary.trim() : '')
 
-    return `
+  return `
         <div 
             class="update-card" 
             data-id="${update.id || ''}"
@@ -1172,40 +1171,50 @@ function generateUpdateCard(update) {
                     <div class="detail-value">${update.area || 'General'}</div>
                 </div>
                 
-                ${update.business_impact_score ? `
+                ${update.business_impact_score
+? `
                 <div class="detail-item">
                     <div class="detail-label">Impact Score</div>
                     <div class="detail-value">${update.business_impact_score}/10</div>
                 </div>
-                ` : ''}
+                `
+: ''}
                 
-                ${update.urgency ? `
+                ${update.urgency
+? `
                 <div class="detail-item">
                     <div class="detail-label">Urgency</div>
                     <div class="detail-value">${update.urgency}</div>
                 </div>
-                ` : ''}
+                `
+: ''}
                 
-                ${update.keyDates ? `
+                ${update.keyDates
+? `
                 <div class="detail-item">
                     <div class="detail-label">Key Dates</div>
                     <div class="detail-value">${update.keyDates}</div>
                 </div>
-                ` : ''}
+                `
+: ''}
                 
-                ${update.compliance_deadline ? `
+                ${update.compliance_deadline
+? `
                 <div class="detail-item">
                     <div class="detail-label">Compliance Deadline</div>
                     <div class="detail-value">${formatDate(update.compliance_deadline || update.complianceDeadline)}</div>
                 </div>
-                ` : ''}
+                `
+: ''}
                 
-                ${update.complianceActions ? `
+                ${update.complianceActions
+? `
                 <div class="detail-item">
                     <div class="detail-label">Required Actions</div>
                     <div class="detail-value">${update.complianceActions}</div>
                 </div>
-                ` : ''}
+                `
+: ''}
             </div>
             
             <div class="update-footer">
@@ -1217,120 +1226,120 @@ function generateUpdateCard(update) {
                 </div>
             </div>
         </div>
-    `;
+    `
 }
 
 function getContentTypeBadge(update) {
-    const contentType = update.content_type || 'OTHER';
-    const badgeClass = contentType.toLowerCase();
-    const badgeText = contentType === 'OTHER' ? 'INFO' : contentType;
+  const contentType = update.content_type || 'OTHER'
+  const badgeClass = contentType.toLowerCase()
+  const badgeText = contentType === 'OTHER' ? 'INFO' : contentType
 
-    return `<span class="content-type-badge ${badgeClass}">${badgeText}</span>`;
+  return `<span class="content-type-badge ${badgeClass}">${badgeText}</span>`
 }
 
 function getImpactBadge(update) {
-    const level = update.impactLevel || 'Informational';
-    const score = update.business_impact_score;
+  const level = update.impactLevel || 'Informational'
+  const score = update.business_impact_score
 
-    let badgeClass = level.toLowerCase();
-    let badgeText = level;
+  let badgeClass = level.toLowerCase()
+  let badgeText = level
 
-    if (score && score >= 8) {
-        badgeClass = 'significant critical';
-        badgeText = `${level} (${score}/10)`;
-    } else if (score) {
-        badgeText = `${level} (${score}/10)`;
-    }
+  if (score && score >= 8) {
+    badgeClass = 'significant critical'
+    badgeText = `${level} (${score}/10)`
+  } else if (score) {
+    badgeText = `${level} (${score}/10)`
+  }
 
-    return `<span class="impact-badge ${badgeClass}">${badgeText}</span>`;
+  return `<span class="impact-badge ${badgeClass}">${badgeText}</span>`
 }
 
 function getSectorTags(update) {
-    const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : []);
-    
-    return sectors.slice(0, 3).map(sector => 
+  const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : [])
+
+  return sectors.slice(0, 3).map(sector =>
         `<span class="sector-tag" onclick="filterBySector('${sector}')">${sector}</span>`
-    ).join('');
+  ).join('')
 }
 
 function getAIFeatures(update) {
-    const features = [];
-    
-    if (update.business_impact_score && update.business_impact_score >= 7) {
-        features.push(`<span class="ai-feature high-impact">🔥 High Impact (${update.business_impact_score}/10)</span>`);
+  const features = []
+
+  if (update.business_impact_score && update.business_impact_score >= 7) {
+    features.push(`<span class="ai-feature high-impact">🔥 High Impact (${update.business_impact_score}/10)</span>`)
+  }
+
+  const complianceDeadline = getDateValue(update.compliance_deadline || update.complianceDeadline)
+  if (complianceDeadline) {
+    const deadline = complianceDeadline
+    const daysUntil = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24))
+    if (daysUntil <= 30 && daysUntil > 0) {
+      features.push(`<span class="ai-feature deadline">⏰ Deadline in ${daysUntil} days</span>`)
     }
-    
-    const complianceDeadline = getDateValue(update.compliance_deadline || update.complianceDeadline);
-    if (complianceDeadline) {
-        const deadline = complianceDeadline;
-        const daysUntil = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
-        if (daysUntil <= 30 && daysUntil > 0) {
-            features.push(`<span class="ai-feature deadline">⏰ Deadline in ${daysUntil} days</span>`);
-        }
-    }
-    
-    if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
-        features.push(`<span class="ai-feature enforcement">🚨 Enforcement Action</span>`);
-    }
-    
-    if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
-        features.push(`<span class="ai-feature high-confidence">🤖 High Confidence (${Math.round(update.ai_confidence_score * 100)}%)</span>`);
-    }
-    
-    if (update.urgency === 'High') {
-        features.push(`<span class="ai-feature urgent">🚨 Urgent</span>`);
-    }
-    
-    return features.join('');
+  }
+
+  if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
+    features.push('<span class="ai-feature enforcement">🚨 Enforcement Action</span>')
+  }
+
+  if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
+    features.push(`<span class="ai-feature high-confidence">🤖 High Confidence (${Math.round(update.ai_confidence_score * 100)}%)</span>`)
+  }
+
+  if (update.urgency === 'High') {
+    features.push('<span class="ai-feature urgent">🚨 Urgent</span>')
+  }
+
+  return features.join('')
 }
 
 function getDateValue(rawValue) {
-    if (!rawValue) return null;
-    if (rawValue instanceof Date) {
-        return isNaN(rawValue) ? null : rawValue;
-    }
-    const parsed = new Date(rawValue);
-    return isNaN(parsed) ? null : parsed;
+  if (!rawValue) return null
+  if (rawValue instanceof Date) {
+    return isNaN(rawValue) ? null : rawValue
+  }
+  const parsed = new Date(rawValue)
+  return isNaN(parsed) ? null : parsed
 }
 
 function truncateText(text, maxLength = 200) {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return `${text.substring(0, maxLength).trim()}...`;
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return `${text.substring(0, maxLength).trim()}...`
 }
 
 function isFallbackSummary(summary) {
-    if (!summary) return true;
-    const normalized = summary.toLowerCase();
-    return normalized.startsWith('informational regulatory update:') ||
+  if (!summary) return true
+  const normalized = summary.toLowerCase()
+  return normalized.startsWith('informational regulatory update:') ||
         normalized.startsWith('significant regulatory development') ||
         normalized.startsWith('regulatory update:') ||
-        normalized.startsWith('regulatory impact overview:');
+        normalized.startsWith('regulatory impact overview:')
 }
 
 function formatDate(dateValue) {
-    const date = getDateValue(dateValue);
-    if (!date) return 'Unknown';
+  const date = getDateValue(dateValue)
+  if (!date) return 'Unknown'
 
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const now = new Date()
+  const diffTime = Math.abs(now - date)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays - 1} days ago`;
-    
-    return date.toLocaleDateString('en-UK', { 
-        day: 'numeric', 
-        month: 'short', 
-        year: 'numeric' 
-    });
+  if (diffDays === 1) return 'Today'
+  if (diffDays === 2) return 'Yesterday'
+  if (diffDays <= 7) return `${diffDays - 1} days ago`
+
+  return date.toLocaleDateString('en-UK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  })
 }
 
 module.exports = {
-    renderDashboardPage,
-    formatDate,
-    getDateValue,
-    truncateText,
-    isFallbackSummary
-};
+  renderDashboardPage,
+  formatDate,
+  getDateValue,
+  truncateText,
+  isFallbackSummary
+}

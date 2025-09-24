@@ -2,7 +2,7 @@
 // Complete workspace module with Phase 1.3 API integration
 
 function getWorkspaceModule() {
-    return `
+  return `
     // Workspace Module - Phase 1.3 Complete Implementation
     const WorkspaceModule = (function() {
         // State management
@@ -665,10 +665,10 @@ function getWorkspaceModule() {
             closeModal,
             exportData
         };
-    })();`;  // <-- This line already exists (around line 619)
-    
-    // ADD THIS NEW LINE RIGHT HERE:
-    + '\n    window.WorkspaceModule = WorkspaceModule;\n';
+    })();`; // <-- This line already exists (around line 619)
+
+  // ADD THIS NEW LINE RIGHT HERE:
+  +'\n    window.WorkspaceModule = WorkspaceModule;\n'
 }
 
-module.exports = { getWorkspaceModule };
+module.exports = { getWorkspaceModule }

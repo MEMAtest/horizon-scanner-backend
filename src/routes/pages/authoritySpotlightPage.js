@@ -1,28 +1,28 @@
 // src/routes/pages/authoritySpotlightPage.js
 // Authority Spotlight Page Renderer
 
-const { getCommonStyles } = require('../templates/commonStyles');
-const { getSidebar } = require('../templates/sidebar');
-const { getClientScripts } = require('../templates/clientScripts');
-const dbService = require('../../services/dbService');
+const { getCommonStyles } = require('../templates/commonStyles')
+const { getSidebar } = require('../templates/sidebar')
+const { getClientScripts } = require('../templates/clientScripts')
+const dbService = require('../../services/dbService')
 
 async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
-    try {
-        console.log(`🏛️ Rendering authority spotlight page for: ${authority}`);
+  try {
+    console.log(`🏛️ Rendering authority spotlight page for: ${authority}`)
 
-        // Get authority-specific data
-        const authorityUpdates = await dbService.getEnhancedUpdates({
-            authority: authority,
-            limit: 50
-        });
+    // Get authority-specific data
+    const authorityUpdates = await dbService.getEnhancedUpdates({
+      authority,
+      limit: 50
+    })
 
-        // Calculate authority statistics
-        const stats = calculateAuthorityStats(authorityUpdates, authority);
+    // Calculate authority statistics
+    const stats = calculateAuthorityStats(authorityUpdates, authority)
 
-        // Get sidebar
-        const sidebar = await getSidebar('authority-spotlight');
+    // Get sidebar
+    const sidebar = await getSidebar('authority-spotlight')
 
-        const html = `
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -223,7 +223,8 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
                             📊 Recent Updates from ${authority}
                         </h2>
 
-                        ${authorityUpdates.length > 0 ? authorityUpdates.slice(0, 10).map(update => `
+                        ${authorityUpdates.length > 0
+? authorityUpdates.slice(0, 10).map(update => `
                             <div class="update-item">
                                 <div class="update-headline">
                                     <a href="${update.url}" target="_blank" style="color: inherit; text-decoration: none;">
@@ -239,7 +240,8 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
                                     ${update.sector || update.primarySectors?.[0] ? `<span>Sector: ${update.sector || update.primarySectors[0]}</span>` : ''}
                                 </div>
                             </div>
-                        `).join('') : `
+                        `).join('')
+: `
                             <div class="empty-state">
                                 <p>No recent updates found for ${authority}</p>
                                 <p><a href="/dashboard" style="color: #4f46e5;">View all updates</a></p>
@@ -259,48 +261,47 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
 
             ${getClientScripts()}
         </body>
-        </html>`;
+        </html>`
 
-        res.send(html);
-
-    } catch (error) {
-        console.error('❌ Error rendering authority spotlight page:', error);
-        res.status(500).send(`
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering authority spotlight page:', error)
+    res.status(500).send(`
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>Authority Spotlight Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
                 <a href="/" style="color: #3b82f6; text-decoration: none;">← Back to Home</a>
             </div>
-        `);
-    }
+        `)
+  }
 }
 
 function calculateAuthorityStats(updates, authority) {
-    const now = new Date();
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const now = new Date()
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const recentUpdates = updates.filter(update =>
-        new Date(update.fetchedDate || update.createdAt) >= thisMonth
-    );
+  const recentUpdates = updates.filter(update =>
+    new Date(update.fetchedDate || update.createdAt) >= thisMonth
+  )
 
-    const highImpactUpdates = updates.filter(update =>
-        update.impactLevel === 'Significant' || update.businessImpactScore >= 7
-    );
+  const highImpactUpdates = updates.filter(update =>
+    update.impactLevel === 'Significant' || update.businessImpactScore >= 7
+  )
 
-    const impactScores = updates
-        .filter(update => update.businessImpactScore && update.businessImpactScore > 0)
-        .map(update => update.businessImpactScore);
+  const impactScores = updates
+    .filter(update => update.businessImpactScore && update.businessImpactScore > 0)
+    .map(update => update.businessImpactScore)
 
-    const avgImpactScore = impactScores.length > 0
-        ? Math.round(impactScores.reduce((a, b) => a + b, 0) / impactScores.length * 10) / 10
-        : 0;
+  const avgImpactScore = impactScores.length > 0
+    ? Math.round(impactScores.reduce((a, b) => a + b, 0) / impactScores.length * 10) / 10
+    : 0
 
-    return {
-        totalUpdates: updates.length,
-        highImpact: highImpactUpdates.length,
-        recentActivity: recentUpdates.length,
-        avgImpactScore
-    };
+  return {
+    totalUpdates: updates.length,
+    highImpact: highImpactUpdates.length,
+    recentActivity: recentUpdates.length,
+    avgImpactScore
+  }
 }
 
-module.exports = renderAuthoritySpotlightPage;
+module.exports = renderAuthoritySpotlightPage

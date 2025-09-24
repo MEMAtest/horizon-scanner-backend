@@ -1,94 +1,97 @@
 // Updated Page Routes - Phase 1 + Phase 1.3 + Weekly Roundup
 // File: src/routes/pageRoutes.js
 
-const express = require('express');
-const router = express.Router();
+const express = require('express')
+const router = express.Router()
 
 // Import page handlers
-const renderHomePage = require('./pages/homePage');  // No destructuring
-const { renderDashboardPage } = require('./pages/dashboardPage');  // Keep destructuring
+const renderHomePage = require('./pages/homePage') // No destructuring
+const { renderDashboardPage } = require('./pages/dashboardPage') // Keep destructuring
 
 // Import services for test page and AI intelligence page
-const dbService = require('../services/dbService');
-const aiAnalyzer = require('../services/aiAnalyzer');
-const rssFetcher = require('../services/rssFetcher');
-const relevanceService = require('../services/relevanceService');
-const weeklyRoundupService = require('../services/weeklyRoundupService');
+const dbService = require('../services/dbService')
+const aiAnalyzer = require('../services/aiAnalyzer')
+const rssFetcher = require('../services/rssFetcher')
+const relevanceService = require('../services/relevanceService')
+const weeklyRoundupService = require('../services/weeklyRoundupService')
 
 function normalizeDate(value) {
-    if (!value) return null;
-    if (value instanceof Date) {
-        return isNaN(value) ? null : value;
-    }
-    const parsed = new Date(value);
-    return isNaN(parsed) ? null : parsed;
+  if (!value) return null
+  if (value instanceof Date) {
+    return isNaN(value) ? null : value
+  }
+  const parsed = new Date(value)
+  return isNaN(parsed) ? null : parsed
 }
 
 function formatDateDisplay(value, options = { day: 'numeric', month: 'short', year: 'numeric' }) {
-    const date = normalizeDate(value);
-    if (!date) return 'Unknown';
-    return date.toLocaleDateString('en-GB', options);
+  const date = normalizeDate(value)
+  if (!date) return 'Unknown'
+  return date.toLocaleDateString('en-GB', options)
 }
 
 function formatDateISO(value) {
-    const date = normalizeDate(value);
-    if (!date) return 'Unknown';
-    return date.toISOString().split('T')[0];
+  const date = normalizeDate(value)
+  if (!date) return 'Unknown'
+  return date.toISOString().split('T')[0]
 }
 
 function formatDateTime(value) {
-    const date = normalizeDate(value);
-    if (!date) return 'Unknown';
-    return date.toLocaleString('en-GB', {
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
+  const date = normalizeDate(value)
+  if (!date) return 'Unknown'
+  return date.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 // HOME PAGE
-router.get('/', renderHomePage);
+router.get('/', renderHomePage)
 
 // DASHBOARD PAGE
-router.get('/dashboard', renderDashboardPage);
+router.get('/dashboard', renderDashboardPage)
 
 // ANALYTICS PAGE
-const renderAnalyticsPage = require('./pages/analyticsPage');
-router.get('/analytics', renderAnalyticsPage);
+const renderAnalyticsPage = require('./pages/analyticsPage')
+router.get('/analytics', renderAnalyticsPage)
 
 // ENFORCEMENT PAGE
-const renderEnforcementPage = require('./pages/enforcementPage');
-router.get('/enforcement', renderEnforcementPage);
+const renderEnforcementPage = require('./pages/enforcementPage')
+router.get('/enforcement', renderEnforcementPage)
 
 // UPDATE DETAIL PAGE
 router.get('/update/:id', async (req, res) => {
-    try {
-        const updateId = req.params.id;
-        const update = await dbService.getUpdateById(updateId);
+  try {
+    const updateId = req.params.id
+    const update = await dbService.getUpdateById(updateId)
 
-        if (!update) {
-            return res.status(404).send(`
+    if (!update) {
+      return res.status(404).send(`
                 <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                     <h1>Update Not Found</h1>
                     <p style="color: #6b7280; margin: 1rem 0;">The requested update could not be found.</p>
                     <a href="/dashboard" style="color: #3b82f6; text-decoration: none;">← Back to Dashboard</a>
                 </div>
-            `);
-        }
+            `)
+    }
 
-        const { getSidebar } = require('./templates/sidebar');
-        const { getCommonStyles } = require('./templates/commonStyles');
-        const { getCommonClientScripts } = require('./templates/clientScripts');
+    const { getSidebar } = require('./templates/sidebar')
+    const { getCommonStyles } = require('./templates/commonStyles')
+    const { getCommonClientScripts } = require('./templates/clientScripts')
 
-        // Get basic counts for sidebar
-        const updates = await dbService.getAllUpdates();
-        const counts = {
-            totalUpdates: updates.length,
-            urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
-            moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
-            informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length
-        };
+    // Get basic counts for sidebar
+    const updates = await dbService.getAllUpdates()
+    const counts = {
+      totalUpdates: updates.length,
+      urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
+      moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
+      informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length
+    }
 
-        const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -134,41 +137,51 @@ router.get('/update/:id', async (req, res) => {
             </div>
 
             <div class="detail-content">
-                ${update.impact ? `
+                ${update.impact
+? `
                     <div class="detail-section">
                         <h3>📋 Summary</h3>
                         <p>${update.impact}</p>
                     </div>
-                ` : ''}
+                `
+: ''}
 
-                ${update.business_impact_score ? `
+                ${update.business_impact_score
+? `
                     <div class="detail-section">
                         <h3>📊 Business Impact</h3>
                         <p>Impact Score: <strong>${update.business_impact_score}/10</strong></p>
                         ${update.business_impact_analysis ? `<p>${update.business_impact_analysis}</p>` : ''}
                     </div>
-                ` : ''}
+                `
+: ''}
 
-                ${update.compliance_deadline || update.complianceDeadline ? `
+                ${update.compliance_deadline || update.complianceDeadline
+? `
                     <div class="detail-section">
                         <h3>⏰ Compliance Deadline</h3>
                         <p><strong>${formatDateDisplay(update.compliance_deadline || update.complianceDeadline)}</strong></p>
                     </div>
-                ` : ''}
+                `
+: ''}
 
-                ${update.primarySectors?.length ? `
+                ${update.primarySectors?.length
+? `
                     <div class="detail-section">
                         <h3>🏢 Affected Sectors</h3>
                         <p>${update.primarySectors.join(', ')}</p>
                     </div>
-                ` : ''}
+                `
+: ''}
 
-                ${update.ai_tags?.length ? `
+                ${update.ai_tags?.length
+? `
                     <div class="detail-section">
                         <h3>🤖 AI Analysis Tags</h3>
                         <p>${update.ai_tags.join(', ')}</p>
                     </div>
-                ` : ''}
+                `
+: ''}
 
                 <div class="detail-actions">
                     ${update.url ? `<a href="${update.url}" target="_blank" class="btn btn-primary">🔗 View Original Source</a>` : ''}
@@ -180,38 +193,37 @@ router.get('/update/:id', async (req, res) => {
 
     ${getCommonClientScripts()}
 </body>
-</html>`;
+</html>`
 
-        res.send(html);
-
-    } catch (error) {
-        console.error('Detail page error:', error);
-        res.status(500).send(`
+    res.send(html)
+  } catch (error) {
+    console.error('Detail page error:', error)
+    res.status(500).send(`
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
                 <a href="/dashboard" style="color: #3b82f6; text-decoration: none;">← Back to Dashboard</a>
             </div>
-        `);
-    }
-});
+        `)
+  }
+})
 
 // WEEKLY ROUNDUP PAGE - NEW
 router.get('/weekly-roundup', async (req, res) => {
-    try {
-        console.log('📊 Weekly roundup page requested');
-        
-        const { getSidebar } = require('./templates/sidebar');
-        const { getCommonStyles } = require('./templates/commonStyles');
-        const { getClientScripts } = require('./templates/clientScripts');
-        
-        const sidebar = await getSidebar('weekly-roundup');
-        
-        // Get the roundup data
-        const roundupData = await weeklyRoundupService.generateWeeklyRoundup();
-        const roundup = roundupData.roundup;
-        
-        const html = `
+  try {
+    console.log('📊 Weekly roundup page requested')
+
+    const { getSidebar } = require('./templates/sidebar')
+    const { getCommonStyles } = require('./templates/commonStyles')
+    const { getClientScripts } = require('./templates/clientScripts')
+
+    const sidebar = await getSidebar('weekly-roundup')
+
+    // Get the roundup data
+    const roundupData = await weeklyRoundupService.generateWeeklyRoundup()
+    const roundup = roundupData.roundup
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -505,20 +517,23 @@ router.get('/weekly-roundup', async (req, res) => {
                         </div>
                     </header>
                     
-                    ${roundup.keyThemes.length > 0 ? `
+                    ${roundup.keyThemes.length > 0
+? `
                         <div class="section-card">
                             <h2 class="section-title">
                                 <span>🎯</span> Key Themes This Week
                             </h2>
                             <div>
-                                ${roundup.keyThemes.map(theme => 
+                                ${roundup.keyThemes.map(theme =>
                                     `<span class="theme-badge">${theme}</span>`
                                 ).join('')}
                             </div>
                         </div>
-                    ` : ''}
+                    `
+: ''}
                     
-                    ${roundup.weeklyPriorities.length > 0 ? `
+                    ${roundup.weeklyPriorities.length > 0
+? `
                         <div class="section-card">
                             <h2 class="section-title">
                                 <span>📋</span> Weekly Priorities
@@ -530,9 +545,11 @@ router.get('/weekly-roundup', async (req, res) => {
                                 </div>
                             `).join('')}
                         </div>
-                    ` : ''}
+                    `
+: ''}
                     
-                    ${roundup.highImpactUpdates.length > 0 ? `
+                    ${roundup.highImpactUpdates.length > 0
+? `
                         <div class="section-card">
                             <h2 class="section-title">
                                 <span>⚠️</span> High Impact Updates
@@ -542,20 +559,25 @@ router.get('/weekly-roundup', async (req, res) => {
                                     <div class="impact-update-authority">${update.authority}</div>
                                     <div class="impact-update-title">${update.title}</div>
                                     <div class="impact-update-summary">${update.summary || 'No summary available'}</div>
-                                    ${update.businessImpactScore ? `
+                                    ${update.businessImpactScore
+? `
                                         <div style="margin-top: 10px;">
                                             <strong>Impact Score:</strong> ${update.businessImpactScore}/10
                                         </div>
-                                    ` : ''}
-                                    ${update.complianceDeadline ? `
+                                    `
+: ''}
+                                    ${update.complianceDeadline
+? `
                                         <div style="margin-top: 5px; color: #dc2626;">
                                             <strong>Deadline:</strong> ${formatDateDisplay(update.complianceDeadline)}
                                         </div>
-                                    ` : ''}
+                                    `
+: ''}
                                 </div>
                             `).join('')}
                         </div>
-                    ` : ''}
+                    `
+: ''}
                     
                     <div class="section-card">
                         <h2 class="section-title">
@@ -572,7 +594,8 @@ router.get('/weekly-roundup', async (req, res) => {
                         `).join('')}
                     </div>
                     
-                    ${roundup.upcomingDeadlines.length > 0 ? `
+                    ${roundup.upcomingDeadlines.length > 0
+? `
                         <div class="section-card">
                             <h2 class="section-title">
                                 <span>📅</span> Upcoming Deadlines
@@ -589,7 +612,8 @@ router.get('/weekly-roundup', async (req, res) => {
                                 </div>
                             `).join('')}
                         </div>
-                    ` : ''}
+                    `
+: ''}
                     
                     <div class="section-card">
                         <h2 class="section-title">
@@ -611,7 +635,8 @@ router.get('/weekly-roundup', async (req, res) => {
                         </div>
                     </div>
                     
-                    ${Object.keys(roundup.sectorInsights).length > 0 ? `
+                    ${Object.keys(roundup.sectorInsights).length > 0
+? `
                         <div class="section-card">
                             <h2 class="section-title">
                                 <span>🏢</span> Sector Insights
@@ -623,7 +648,8 @@ router.get('/weekly-roundup', async (req, res) => {
                                 </div>
                             `).join('')}
                         </div>
-                    ` : ''}
+                    `
+: ''}
                     
                     <div class="section-card">
                         <h2 class="section-title">
@@ -676,13 +702,12 @@ router.get('/weekly-roundup', async (req, res) => {
                 });
             </script>
         </body>
-        </html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('❌ Error rendering weekly roundup page:', error);
-        res.status(500).send(`
+        </html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering weekly roundup page:', error)
+    res.status(500).send(`
             <html>
                 <head>
                     <title>Error - Weekly Roundup</title>
@@ -728,32 +753,32 @@ router.get('/weekly-roundup', async (req, res) => {
                     </div>
                 </body>
             </html>
-        `);
-    }
-});
+        `)
+  }
+})
 
 // AI INTELLIGENCE PAGE (Phase 1.3 - WORKING VERSION)
 router.get('/ai-intelligence', async (req, res) => {
-    try {
-        const { getSidebar } = require('./templates/sidebar');
-        const { getClientScripts } = require('./templates/clientScripts');
-        const { getCommonStyles } = require('./templates/commonStyles');
-        
-        const sidebar = await getSidebar('ai-intelligence');
-        
-        // Get firm profile
-        const firmProfile = await dbService.getFirmProfile();
-        
-        // Get relevance-scored updates
-        const allUpdates = await dbService.getEnhancedUpdates({ limit: 100 });
-        const categorized = relevanceService.categorizeByRelevance(allUpdates, firmProfile);
-        
-        // Get workspace stats
-        const pinnedItems = await dbService.getPinnedItems();
-        const savedSearches = await dbService.getSavedSearches();
-        const customAlerts = await dbService.getCustomAlerts();
-        
-        const html = `
+  try {
+    const { getSidebar } = require('./templates/sidebar')
+    const { getClientScripts } = require('./templates/clientScripts')
+    const { getCommonStyles } = require('./templates/commonStyles')
+
+    const sidebar = await getSidebar('ai-intelligence')
+
+    // Get firm profile
+    const firmProfile = await dbService.getFirmProfile()
+
+    // Get relevance-scored updates
+    const allUpdates = await dbService.getEnhancedUpdates({ limit: 100 })
+    const categorized = relevanceService.categorizeByRelevance(allUpdates, firmProfile)
+
+    // Get workspace stats
+    const pinnedItems = await dbService.getPinnedItems()
+    const savedSearches = await dbService.getSavedSearches()
+    const customAlerts = await dbService.getCustomAlerts()
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -1019,7 +1044,8 @@ router.get('/ai-intelligence', async (req, res) => {
                         <h1>🤖 AI Intelligence Center</h1>
                         <p>Personalized regulatory intelligence powered by artificial intelligence</p>
                         
-                        ${firmProfile ? `
+                        ${firmProfile
+? `
                             <div class="firm-profile-section">
                                 <div class="firm-info">
                                     <div class="firm-name">${firmProfile.firmName || firmProfile.firm_name || 'Unnamed Firm'}</div>
@@ -1033,7 +1059,8 @@ router.get('/ai-intelligence', async (req, res) => {
                                     Edit Profile
                                 </button>
                             </div>
-                        ` : `
+                        `
+: `
                             <div class="no-profile-alert">
                                 <strong>No firm profile configured.</strong> 
                                 Set up your firm profile to enable personalized relevance scoring.
@@ -1074,7 +1101,8 @@ router.get('/ai-intelligence', async (req, res) => {
                     
                     <div class="relevance-streams">
                         <!-- High Relevance Stream -->
-                        ${categorized.high.length > 0 ? `
+                        ${categorized.high.length > 0
+? `
                             <div class="stream-container">
                                 <div class="stream-header">
                                     <div class="stream-title">
@@ -1105,10 +1133,12 @@ router.get('/ai-intelligence', async (req, res) => {
                                     `).join('')}
                                 </div>
                             </div>
-                        ` : ''}
+                        `
+: ''}
                         
                         <!-- Medium Relevance Stream -->
-                        ${categorized.medium.length > 0 ? `
+                        ${categorized.medium.length > 0
+? `
                             <div class="stream-container">
                                 <div class="stream-header">
                                     <div class="stream-title">
@@ -1139,10 +1169,12 @@ router.get('/ai-intelligence', async (req, res) => {
                                     `).join('')}
                                 </div>
                             </div>
-                        ` : ''}
+                        `
+: ''}
                         
                         <!-- Low Relevance Stream -->
-                        ${categorized.low.length > 0 ? `
+                        ${categorized.low.length > 0
+? `
                             <div class="stream-container">
                                 <div class="stream-header">
                                     <div class="stream-title">
@@ -1173,15 +1205,18 @@ router.get('/ai-intelligence', async (req, res) => {
                                     `).join('')}
                                 </div>
                             </div>
-                        ` : ''}
+                        `
+: ''}
                         
-                        ${allUpdates.length === 0 ? `
+                        ${allUpdates.length === 0
+? `
                             <div class="stream-container">
                                 <p style="text-align: center; color: #6b7280; padding: 40px;">
                                     No updates available. Click "Refresh Data" to fetch the latest regulatory updates.
                                 </p>
                             </div>
-                        ` : ''}
+                        `
+: ''}
                     </div>
                 </main>
             </div>
@@ -1243,49 +1278,48 @@ router.get('/ai-intelligence', async (req, res) => {
             
             ${getClientScripts()}
         </body>
-        </html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('❌ Error rendering AI Intelligence page:', error);
-        res.status(500).send('Error loading AI Intelligence page');
-    }
-});
+        </html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering AI Intelligence page:', error)
+    res.status(500).send('Error loading AI Intelligence page')
+  }
+})
 
 // AUTHORITY SPOTLIGHT PAGE
 router.get('/authority-spotlight/:authority?', async (req, res) => {
-    try {
-        const authority = req.params.authority || 'FCA';
-        const renderAuthoritySpotlightPage = require('./pages/authoritySpotlightPage');
-        await renderAuthoritySpotlightPage(req, res, authority);
-    } catch (error) {
-        console.error('❌ Error rendering authority spotlight page:', error);
-        res.status(500).send('Error loading authority spotlight page');
-    }
-});
+  try {
+    const authority = req.params.authority || 'FCA'
+    const renderAuthoritySpotlightPage = require('./pages/authoritySpotlightPage')
+    await renderAuthoritySpotlightPage(req, res, authority)
+  } catch (error) {
+    console.error('❌ Error rendering authority spotlight page:', error)
+    res.status(500).send('Error loading authority spotlight page')
+  }
+})
 
 // SECTOR INTELLIGENCE PAGE
 router.get('/sector-intelligence/:sector?', async (req, res) => {
-    try {
-        const sector = req.params.sector || 'Banking';
-        const renderSectorIntelligencePage = require('./pages/sectorIntelligencePage');
-        await renderSectorIntelligencePage(req, res, sector);
-    } catch (error) {
-        console.error('❌ Error rendering sector intelligence page:', error);
-        res.status(500).send('Error loading sector intelligence page');
-    }
-});
+  try {
+    const sector = req.params.sector || 'Banking'
+    const renderSectorIntelligencePage = require('./pages/sectorIntelligencePage')
+    await renderSectorIntelligencePage(req, res, sector)
+  } catch (error) {
+    console.error('❌ Error rendering sector intelligence page:', error)
+    res.status(500).send('Error loading sector intelligence page')
+  }
+})
 
 // ABOUT PAGE
 router.get('/about', async (req, res) => {
-    try {
-        const { getSidebar } = require('./templates/sidebar');
-        const { getCommonStyles } = require('./templates/commonStyles');
-        
-        const sidebar = await getSidebar('about');
-        
-        const html = `
+  try {
+    const { getSidebar } = require('./templates/sidebar')
+    const { getCommonStyles } = require('./templates/commonStyles')
+
+    const sidebar = await getSidebar('about')
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -1396,25 +1430,24 @@ router.get('/about', async (req, res) => {
                 </main>
             </div>
         </body>
-        </html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('❌ Error rendering about page:', error);
-        res.status(500).send('Error loading about page');
-    }
-});
+        </html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering about page:', error)
+    res.status(500).send('Error loading about page')
+  }
+})
 
 // COMPREHENSIVE TEST PAGE
 router.get('/test', async (req, res) => {
-    try {
-        console.log('🧪 Test page requested');
-        
-        // Run system tests
-        const testResults = await runSystemTests();
-        
-        const html = `
+  try {
+    console.log('🧪 Test page requested')
+
+    // Run system tests
+    const testResults = await runSystemTests()
+
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -1551,13 +1584,12 @@ router.get('/test', async (req, res) => {
                 </div>
             </div>
         </body>
-        </html>`;
-        
-        res.send(html);
-        
-    } catch (error) {
-        console.error('❌ Error generating test page:', error);
-        res.status(500).send(`
+        </html>`
+
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error generating test page:', error)
+    res.status(500).send(`
             <html>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
                     <h1>❌ Test Page Error</h1>
@@ -1565,100 +1597,99 @@ router.get('/test', async (req, res) => {
                     <a href="/">← Back to Home</a>
                 </body>
             </html>
-        `);
-    }
-});
+        `)
+  }
+})
 
 // HELPER FUNCTIONS FOR TEST PAGE
 async function runSystemTests() {
-    const results = {
-        timestamp: new Date().toISOString(),
-        overall: 'pass',
-        tests: {}
-    };
+  const results = {
+    timestamp: new Date().toISOString(),
+    overall: 'pass',
+    tests: {}
+  }
 
-    try {
-        // Database Service Test
-        console.log('🧪 Testing database service...');
-        const dbHealth = await dbService.healthCheck();
-        results.tests.database = {
-            status: dbHealth.status === 'healthy' ? 'pass' : 'fail',
-            message: dbHealth.status === 'healthy' ? 'Database operational' : `Database error: ${dbHealth.error}`,
-            details: dbHealth
-        };
-
-        // AI Analyzer Test
-        console.log('🧪 Testing AI analyzer...');
-        const aiHealth = await aiAnalyzer.healthCheck();
-        results.tests.aiAnalyzer = {
-            status: aiHealth.status === 'healthy' ? 'pass' : 'warn',
-            message: aiHealth.status === 'healthy' ? 'AI analyzer operational' : 'AI analyzer in fallback mode',
-            details: aiHealth
-        };
-
-        // RSS Fetcher Test
-        console.log('🧪 Testing RSS fetcher...');
-        const rssHealth = await rssFetcher.healthCheck();
-        results.tests.rssFetcher = {
-            status: rssHealth.status === 'healthy' ? 'pass' : 'fail',
-            message: `RSS fetcher: ${rssHealth.activeSources} sources active`,
-            details: rssHealth
-        };
-
-        // Workspace Features Test
-        console.log('🧪 Testing workspace features...');
-        const firmProfile = await dbService.getFirmProfile();
-        const pinnedItems = await dbService.getPinnedItems();
-        const savedSearches = await dbService.getSavedSearches();
-        const customAlerts = await dbService.getCustomAlerts();
-        
-        results.tests.workspace = {
-            status: 'pass',
-            message: `Workspace operational - ${pinnedItems.length} pins, ${savedSearches.length} searches, ${customAlerts.length} alerts`,
-            details: {
-                firmProfile: !!firmProfile,
-                pinnedItems: pinnedItems.length,
-                savedSearches: savedSearches.length,
-                customAlerts: customAlerts.length
-            }
-        };
-
-        // Relevance Service Test
-        console.log('🧪 Testing relevance service...');
-        const testUpdate = { headline: 'Test update', authority: 'FCA' };
-        const relevanceScore = relevanceService.calculateRelevanceScore(testUpdate, firmProfile);
-        
-        results.tests.relevance = {
-            status: 'pass',
-            message: `Relevance scoring operational (test score: ${relevanceScore})`,
-            details: { testScore: relevanceScore, firmProfile: !!firmProfile }
-        };
-
-        // Check overall status
-        const hasFailures = Object.values(results.tests).some(test => test.status === 'fail');
-        results.overall = hasFailures ? 'fail' : 'pass';
-
-    } catch (error) {
-        console.error('❌ System test error:', error);
-        results.overall = 'fail';
-        results.tests.systemError = {
-            status: 'fail',
-            message: `System test failed: ${error.message}`,
-            details: { error: error.message }
-        };
+  try {
+    // Database Service Test
+    console.log('🧪 Testing database service...')
+    const dbHealth = await dbService.healthCheck()
+    results.tests.database = {
+      status: dbHealth.status === 'healthy' ? 'pass' : 'fail',
+      message: dbHealth.status === 'healthy' ? 'Database operational' : `Database error: ${dbHealth.error}`,
+      details: dbHealth
     }
 
-    return results;
+    // AI Analyzer Test
+    console.log('🧪 Testing AI analyzer...')
+    const aiHealth = await aiAnalyzer.healthCheck()
+    results.tests.aiAnalyzer = {
+      status: aiHealth.status === 'healthy' ? 'pass' : 'warn',
+      message: aiHealth.status === 'healthy' ? 'AI analyzer operational' : 'AI analyzer in fallback mode',
+      details: aiHealth
+    }
+
+    // RSS Fetcher Test
+    console.log('🧪 Testing RSS fetcher...')
+    const rssHealth = await rssFetcher.healthCheck()
+    results.tests.rssFetcher = {
+      status: rssHealth.status === 'healthy' ? 'pass' : 'fail',
+      message: `RSS fetcher: ${rssHealth.activeSources} sources active`,
+      details: rssHealth
+    }
+
+    // Workspace Features Test
+    console.log('🧪 Testing workspace features...')
+    const firmProfile = await dbService.getFirmProfile()
+    const pinnedItems = await dbService.getPinnedItems()
+    const savedSearches = await dbService.getSavedSearches()
+    const customAlerts = await dbService.getCustomAlerts()
+
+    results.tests.workspace = {
+      status: 'pass',
+      message: `Workspace operational - ${pinnedItems.length} pins, ${savedSearches.length} searches, ${customAlerts.length} alerts`,
+      details: {
+        firmProfile: !!firmProfile,
+        pinnedItems: pinnedItems.length,
+        savedSearches: savedSearches.length,
+        customAlerts: customAlerts.length
+      }
+    }
+
+    // Relevance Service Test
+    console.log('🧪 Testing relevance service...')
+    const testUpdate = { headline: 'Test update', authority: 'FCA' }
+    const relevanceScore = relevanceService.calculateRelevanceScore(testUpdate, firmProfile)
+
+    results.tests.relevance = {
+      status: 'pass',
+      message: `Relevance scoring operational (test score: ${relevanceScore})`,
+      details: { testScore: relevanceScore, firmProfile: !!firmProfile }
+    }
+
+    // Check overall status
+    const hasFailures = Object.values(results.tests).some(test => test.status === 'fail')
+    results.overall = hasFailures ? 'fail' : 'pass'
+  } catch (error) {
+    console.error('❌ System test error:', error)
+    results.overall = 'fail'
+    results.tests.systemError = {
+      status: 'fail',
+      message: `System test failed: ${error.message}`,
+      details: { error: error.message }
+    }
+  }
+
+  return results
 }
 
 function generateTestResultsHTML(results) {
-    let html = '';
-    
-    for (const [testName, testResult] of Object.entries(results.tests)) {
-        const statusClass = testResult.status;
-        const statusText = testResult.status.toUpperCase();
-        
-        html += `
+  let html = ''
+
+  for (const [testName, testResult] of Object.entries(results.tests)) {
+    const statusClass = testResult.status
+    const statusText = testResult.status.toUpperCase()
+
+    html += `
             <div class="test-section">
                 <h3>${getTestIcon(testName)} ${formatTestName(testName)}
                     <span class="test-status ${statusClass}">${statusText}</span>
@@ -1669,59 +1700,59 @@ function generateTestResultsHTML(results) {
                     <pre>${JSON.stringify(testResult.details, null, 2)}</pre>
                 </div>
             </div>
-        `;
-    }
-    
-    return html;
+        `
+  }
+
+  return html
 }
 
 function generatePhase13ChecklistHTML(results) {
-    const checklist = [
-        { item: 'Firm Profile Management', status: results.tests.workspace?.details?.firmProfile },
-        { item: 'Pinned Items Workspace', status: true },
-        { item: 'Saved Searches', status: true },
-        { item: 'Custom Alerts', status: true },
-        { item: 'Relevance-Based Scoring', status: results.tests.relevance?.status === 'pass' },
-        { item: 'Content-Based Priority Detection', status: true },
-        { item: 'Deadline Awareness for Consultations', status: true },
-        { item: 'Industry Sector Filtering', status: true },
-        { item: 'Workspace API Endpoints', status: true },
-        { item: 'AI Intelligence Page', status: true },
-        { item: 'Weekly Roundup Page', status: true }  // Added this
-    ];
-    
-    let html = '';
-    for (const item of checklist) {
-        const icon = item.status ? '✅' : '⚠️';
-        const status = item.status ? 'COMPLETE' : 'PENDING';
-        html += `<div>${icon} ${item.item} <em>(${status})</em></div>`;
-    }
-    
-    return html;
+  const checklist = [
+    { item: 'Firm Profile Management', status: results.tests.workspace?.details?.firmProfile },
+    { item: 'Pinned Items Workspace', status: true },
+    { item: 'Saved Searches', status: true },
+    { item: 'Custom Alerts', status: true },
+    { item: 'Relevance-Based Scoring', status: results.tests.relevance?.status === 'pass' },
+    { item: 'Content-Based Priority Detection', status: true },
+    { item: 'Deadline Awareness for Consultations', status: true },
+    { item: 'Industry Sector Filtering', status: true },
+    { item: 'Workspace API Endpoints', status: true },
+    { item: 'AI Intelligence Page', status: true },
+    { item: 'Weekly Roundup Page', status: true } // Added this
+  ]
+
+  let html = ''
+  for (const item of checklist) {
+    const icon = item.status ? '✅' : '⚠️'
+    const status = item.status ? 'COMPLETE' : 'PENDING'
+    html += `<div>${icon} ${item.item} <em>(${status})</em></div>`
+  }
+
+  return html
 }
 
 function getTestIcon(testName) {
-    const icons = {
-        database: '💾',
-        aiAnalyzer: '🤖',
-        rssFetcher: '📡',
-        workspace: '🗂️',
-        relevance: '🎯',
-        systemError: '❌'
-    };
-    return icons[testName] || '🧪';
+  const icons = {
+    database: '💾',
+    aiAnalyzer: '🤖',
+    rssFetcher: '📡',
+    workspace: '🗂️',
+    relevance: '🎯',
+    systemError: '❌'
+  }
+  return icons[testName] || '🧪'
 }
 
 function formatTestName(testName) {
-    const names = {
-        database: 'Database Service',
-        aiAnalyzer: 'AI Analyzer Service',
-        rssFetcher: 'RSS Fetcher Service',
-        workspace: 'Workspace Features',
-        relevance: 'Relevance Service',
-        systemError: 'System Error'
-    };
-    return names[testName] || testName;
+  const names = {
+    database: 'Database Service',
+    aiAnalyzer: 'AI Analyzer Service',
+    rssFetcher: 'RSS Fetcher Service',
+    workspace: 'Workspace Features',
+    relevance: 'Relevance Service',
+    systemError: 'System Error'
+  }
+  return names[testName] || testName
 }
 
-module.exports = router;
+module.exports = router

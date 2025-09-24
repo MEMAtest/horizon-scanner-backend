@@ -3,29 +3,32 @@
 /// ==========================================
 
 function render(options = {}) {
-    const {
-        title = 'Regulatory Horizon Scanner',
-        subtitle = 'UK Financial Regulatory Updates',
-        showStats = false,
-        showStatus = false,
-        totalUpdates = 0,
-        sectors = 0
-    } = options;
-    
-    return `
+  const {
+    title = 'Regulatory Horizon Scanner',
+    subtitle = 'UK Financial Regulatory Updates',
+    showStats = false,
+    showStatus = false,
+    totalUpdates = 0,
+    sectors = 0
+  } = options
+
+  return `
         <div class="header">
             <div class="header-content">
                 <h1 class="title">${title}</h1>
                 <p class="subtitle">${subtitle}</p>
 
-                ${showStatus ? `
+                ${showStatus
+? `
                 <div class="system-status">
                     <div class="status-indicator" id="systemIndicator"></div>
                     <span class="status-text">System Operational</span>
                 </div>
-                ` : ''}
+                `
+: ''}
 
-                ${showStats ? `
+                ${showStats
+? `
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number">${totalUpdates}</div>
@@ -40,7 +43,8 @@ function render(options = {}) {
                         <div class="stat-label">Recent (24h)</div>
                     </div>
                 </div>
-                ` : ''}
+                `
+: ''}
 
                 <div class="header-actions">
                     <a href="/" class="button button-secondary">🏠 Home</a>
@@ -50,7 +54,7 @@ function render(options = {}) {
                 </div>
             </div>
         </div>
-    `;
+    `
 }
 
-module.exports = { render };
+module.exports = { render }

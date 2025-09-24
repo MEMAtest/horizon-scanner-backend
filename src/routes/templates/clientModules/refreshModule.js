@@ -1,5 +1,5 @@
 function getRefreshModule() {
-    return `
+  return `
     // Refresh Module
     const RefreshModule = (function() {
         let isRefreshing = false;
@@ -115,7 +115,7 @@ function getRefreshModule() {
             loadAnalyticsPreview,
             checkLiveSubscriptions
         };
-    })();`;
+    })();`
 }
 
-module.exports = { getRefreshModule };
+module.exports = { getRefreshModule }

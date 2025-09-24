@@ -5,4 +5,4 @@
 // This server-side file is a placeholder to represent the component
 // in the new architecture. No server-side rendering logic is needed for it.
 
-module.exports = {};
+module.exports = {}

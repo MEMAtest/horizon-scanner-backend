@@ -1,113 +1,113 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, TrendingUp, Clock, Target, Bell, Filter, RotateCcw, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { AlertTriangle, TrendingUp, Clock, Target, Bell, Filter, RotateCcw, Eye } from 'lucide-react'
 
 const ProactiveIntelligence = () => {
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedSector, setSelectedSector] = useState('all');
-  const [urgencyFilter, setUrgencyFilter] = useState('all');
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [updates, setUpdates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedSector, setSelectedSector] = useState('all')
+  const [urgencyFilter, setUrgencyFilter] = useState('all')
+  const [lastRefresh, setLastRefresh] = useState(new Date())
 
   const sectors = [
     'Banking', 'Investment Management', 'Insurance', 'Consumer Credit',
     'Payments', 'Pensions', 'Capital Markets', 'Fintech'
-  ];
+  ]
 
-  const urgencyLevels = ['High', 'Medium', 'Low'];
+  const urgencyLevels = ['High', 'Medium', 'Low']
 
   useEffect(() => {
-    fetchIntelligenceData();
-  }, []);
+    fetchIntelligenceData()
+  }, [])
 
   const fetchIntelligenceData = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch('/api/updates?limit=50&enhanced=true');
-      const data = await response.json();
-      setUpdates(data || []);
-      setLastRefresh(new Date());
+      const response = await fetch('/api/updates?limit=50&enhanced=true')
+      const data = await response.json()
+      setUpdates(data || [])
+      setLastRefresh(new Date())
     } catch (error) {
-      console.error('Failed to fetch intelligence data:', error);
-      setUpdates([]);
+      console.error('Failed to fetch intelligence data:', error)
+      setUpdates([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const getFilteredUpdates = () => {
     return updates.filter(update => {
-      const sectorMatch = selectedSector === 'all' || 
+      const sectorMatch = selectedSector === 'all' ||
         (update.primary_sectors && update.primary_sectors.includes(selectedSector)) ||
-        (update.sector && update.sector.toLowerCase().includes(selectedSector.toLowerCase()));
-      
-      const urgencyMatch = urgencyFilter === 'all' || 
-        (update.urgency && update.urgency.toLowerCase() === urgencyFilter.toLowerCase());
-      
-      return sectorMatch && urgencyMatch;
-    });
-  };
+        (update.sector && update.sector.toLowerCase().includes(selectedSector.toLowerCase()))
+
+      const urgencyMatch = urgencyFilter === 'all' ||
+        (update.urgency && update.urgency.toLowerCase() === urgencyFilter.toLowerCase())
+
+      return sectorMatch && urgencyMatch
+    })
+  }
 
   const getUrgencyColor = (urgency) => {
     switch (urgency?.toLowerCase()) {
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'low': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'high': return 'text-red-600 bg-red-50 border-red-200'
+      case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200'
+      case 'low': return 'text-green-600 bg-green-50 border-green-200'
+      default: return 'text-gray-600 bg-gray-50 border-gray-200'
     }
-  };
+  }
 
   const getImpactLevelColor = (impactLevel) => {
     switch (impactLevel?.toLowerCase()) {
-      case 'significant': return 'text-purple-700 bg-purple-100';
-      case 'moderate': return 'text-blue-700 bg-blue-100';
-      case 'informational': return 'text-gray-700 bg-gray-100';
-      default: return 'text-gray-700 bg-gray-100';
+      case 'significant': return 'text-purple-700 bg-purple-100'
+      case 'moderate': return 'text-blue-700 bg-blue-100'
+      case 'informational': return 'text-gray-700 bg-gray-100'
+      default: return 'text-gray-700 bg-gray-100'
     }
-  };
+  }
 
   const getTopSectorByRelevance = (update) => {
-    if (!update.sector_relevance_scores) return update.sector || 'General';
-    
-    const scores = update.sector_relevance_scores;
-    const topSector = Object.entries(scores).reduce((max, [sector, score]) => 
-      score > max.score ? { sector, score } : max, { sector: 'General', score: 0 });
-    
-    return topSector.sector;
-  };
+    if (!update.sector_relevance_scores) return update.sector || 'General'
+
+    const scores = update.sector_relevance_scores
+    const topSector = Object.entries(scores).reduce((max, [sector, score]) =>
+      score > max.score ? { sector, score } : max, { sector: 'General', score: 0 })
+
+    return topSector.sector
+  }
 
   const getPriorityUpdates = () => {
     return getFilteredUpdates()
       .filter(update => update.urgency?.toLowerCase() === 'high' || update.impact_level?.toLowerCase() === 'significant')
-      .slice(0, 3);
-  };
+      .slice(0, 3)
+  }
 
   const getRecentTrends = () => {
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
-    
-    const recentUpdates = updates.filter(update => 
-      new Date(update.fetched_date) > last7Days
-    );
+    const last7Days = new Date()
+    last7Days.setDate(last7Days.getDate() - 7)
 
-    const authorityCount = {};
-    const sectorCount = {};
-    
+    const recentUpdates = updates.filter(update =>
+      new Date(update.fetched_date) > last7Days
+    )
+
+    const authorityCount = {}
+    const sectorCount = {}
+
     recentUpdates.forEach(update => {
-      authorityCount[update.authority] = (authorityCount[update.authority] || 0) + 1;
-      const sector = getTopSectorByRelevance(update);
-      sectorCount[sector] = (sectorCount[sector] || 0) + 1;
-    });
+      authorityCount[update.authority] = (authorityCount[update.authority] || 0) + 1
+      const sector = getTopSectorByRelevance(update)
+      sectorCount[sector] = (sectorCount[sector] || 0) + 1
+    })
 
     return {
       totalUpdates: recentUpdates.length,
-      topAuthority: Object.entries(authorityCount).sort(([,a], [,b]) => b - a)[0],
-      topSector: Object.entries(sectorCount).sort(([,a], [,b]) => b - a)[0]
-    };
-  };
+      topAuthority: Object.entries(authorityCount).sort(([, a], [, b]) => b - a)[0],
+      topSector: Object.entries(sectorCount).sort(([, a], [, b]) => b - a)[0]
+    }
+  }
 
-  const filteredUpdates = getFilteredUpdates();
-  const priorityUpdates = getPriorityUpdates();
-  const trends = getRecentTrends();
+  const filteredUpdates = getFilteredUpdates()
+  const priorityUpdates = getPriorityUpdates()
+  const trends = getRecentTrends()
 
   if (loading) {
     return (
@@ -115,7 +115,7 @@ const ProactiveIntelligence = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-gray-600">Loading intelligence data...</span>
       </div>
-    );
+    )
   }
 
   return (
@@ -133,7 +133,7 @@ const ProactiveIntelligence = () => {
             </p>
           </div>
           <div className="text-right">
-            <button 
+            <button
               onClick={fetchIntelligenceData}
               className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded flex items-center transition-all"
             >
@@ -201,11 +201,11 @@ const ProactiveIntelligence = () => {
             <Filter className="w-4 h-4 text-gray-500 mr-2" />
             <span className="text-sm font-medium text-gray-700">Filters:</span>
           </div>
-          
+
           <div>
             <label className="text-sm text-gray-600 mr-2">Sector:</label>
-            <select 
-              value={selectedSector} 
+            <select
+              value={selectedSector}
               onChange={(e) => setSelectedSector(e.target.value)}
               className="border border-gray-300 rounded px-3 py-1 text-sm"
             >
@@ -218,8 +218,8 @@ const ProactiveIntelligence = () => {
 
           <div>
             <label className="text-sm text-gray-600 mr-2">Urgency:</label>
-            <select 
-              value={urgencyFilter} 
+            <select
+              value={urgencyFilter}
               onChange={(e) => setUrgencyFilter(e.target.value)}
               className="border border-gray-300 rounded px-3 py-1 text-sm"
             >
@@ -301,7 +301,7 @@ const ProactiveIntelligence = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProactiveIntelligence;
+export default ProactiveIntelligence

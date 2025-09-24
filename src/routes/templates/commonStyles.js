@@ -2,11 +2,14 @@
 // File: src/routes/templates/commonStyles.js
 
 function getCommonStyles() {
-    return `
+  return `
     <!-- Executive Inter Font Import -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Professional Navy/Charcoal Theme Override -->
+    <link rel="stylesheet" href="/css/professional-theme.css">
 
     <style>
         /* Executive-Class Design System - CSS Reset and Base Styles */
@@ -1641,9 +1644,9 @@ function getCommonStyles() {
     
     <!-- Professional Theme Override -->
     <link rel="stylesheet" href="/css/professional-theme.css">
-    `;  // <-- This backtick closes the template string
+    ` // <-- This backtick closes the template string
 }
 
 module.exports = {
-    getCommonStyles
-};
+  getCommonStyles
+}

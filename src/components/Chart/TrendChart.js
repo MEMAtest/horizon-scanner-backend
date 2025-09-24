@@ -1,10 +1,10 @@
 // src/components/Chart/TrendChart.js
 function render({ chartId, title }) {
-    return `
+  return `
     <div class="chart-card">
         <h3>${title}</h3>
         <canvas id="${chartId}"></canvas>
-    </div>`;
+    </div>`
 }
 
-module.exports = { render };
+module.exports = { render }

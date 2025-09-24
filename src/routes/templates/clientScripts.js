@@ -1,13 +1,13 @@
 // src/routes/templates/clientScripts.js
 // Complete solution with WorkspaceModule included
 
-const { getWorkspaceModule } = require('./clientModules/workspaceModule');
+const { getWorkspaceModule } = require('./clientModules/workspaceModule')
 
 function getClientScripts() {
-    // Get the workspace module code
-    const workspaceModuleCode = getWorkspaceModule();
-    
-    return `
+  // Get the workspace module code
+  const workspaceModuleCode = getWorkspaceModule()
+
+  return `
     <!-- Include Workspace Module First -->
     <script>
         ${workspaceModuleCode}
@@ -15,11 +15,11 @@ function getClientScripts() {
     
     <!-- Then include the rest of the client scripts -->
     ${getClientScriptsContent()}
-    `;
+    `
 }
 
 function getClientScriptsContent() {
-    return `
+  return `
     <script>
         // =================
         // IMMEDIATE DEFINITIONS - Prevent HTML onclick errors
@@ -1124,14 +1124,14 @@ function getClientScriptsContent() {
         
         console.log('✅ Client scripts loaded');
     </script>
-    `;
+    `
 }
 
 // Export all variations for compatibility
-module.exports = { 
-    getClientScriptsContent,
-    getCommonClientScripts: getClientScripts,
-    getClientScripts: getClientScripts,
-    getSharedClientScripts: getClientScripts,
-    getCommonScripts: getClientScripts
-};
+module.exports = {
+  getClientScriptsContent,
+  getCommonClientScripts: getClientScripts,
+  getClientScripts,
+  getSharedClientScripts: getClientScripts,
+  getCommonScripts: getClientScripts
+}

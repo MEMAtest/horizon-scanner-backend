@@ -1,5 +1,5 @@
 function getCounterModule() {
-    return `
+  return `
     // Counter Module
     const CounterModule = (function() {
         function updateLiveCounters() {
@@ -79,7 +79,7 @@ function getCounterModule() {
             updateAuthorityCounts,
             updateRelevanceCounts
         };
-    })();`;
+    })();`
 }
 
-module.exports = { getCounterModule };
+module.exports = { getCounterModule }

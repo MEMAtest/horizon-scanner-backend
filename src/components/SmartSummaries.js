@@ -1,88 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, TrendingUp, Zap, ChevronRight, Clock, Building, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { FileText, Calendar, TrendingUp, Zap, ChevronRight, Clock, Building, Users } from 'lucide-react'
 
 const SmartSummaries = () => {
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [summaries, setSummaries] = useState({});
-  const [selectedSummaryType, setSelectedSummaryType] = useState('weekly');
-  const [selectedPeriod, setSelectedPeriod] = useState('7');
+  const [updates, setUpdates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [summaries, setSummaries] = useState({})
+  const [selectedSummaryType, setSelectedSummaryType] = useState('weekly')
+  const [selectedPeriod, setSelectedPeriod] = useState('7')
 
   const summaryTypes = [
     { id: 'weekly', name: 'Weekly Roundup', icon: Calendar },
     { id: 'sector', name: 'Sector Analysis', icon: Building },
     { id: 'authority', name: 'Authority Spotlight', icon: Users },
     { id: 'trends', name: 'Trend Analysis', icon: TrendingUp }
-  ];
+  ]
 
   useEffect(() => {
-    fetchSummaryData();
-  }, [selectedPeriod]);
+    fetchSummaryData()
+  }, [selectedPeriod])
 
   const fetchSummaryData = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch(`/api/updates?limit=150&enhanced=true`);
-      const data = await response.json();
-      setUpdates(data || []);
-      generateSmartSummaries(data || []);
+      const response = await fetch('/api/updates?limit=150&enhanced=true')
+      const data = await response.json()
+      setUpdates(data || [])
+      generateSmartSummaries(data || [])
     } catch (error) {
-      console.error('Failed to fetch summary data:', error);
-      setUpdates([]);
+      console.error('Failed to fetch summary data:', error)
+      setUpdates([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const generateSmartSummaries = (allUpdates) => {
-    const days = parseInt(selectedPeriod);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    const filteredUpdates = allUpdates.filter(update => 
+    const days = parseInt(selectedPeriod)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+
+    const filteredUpdates = allUpdates.filter(update =>
       new Date(update.fetched_date) >= cutoffDate
-    );
+    )
 
     const summaryData = {
       weekly: generateWeeklyRoundup(filteredUpdates),
       sector: generateSectorAnalysis(filteredUpdates),
       authority: generateAuthoritySpotlight(filteredUpdates),
       trends: generateTrendAnalysis(filteredUpdates, allUpdates)
-    };
+    }
 
-    setSummaries(summaryData);
-  };
+    setSummaries(summaryData)
+  }
 
   const generateWeeklyRoundup = (updates) => {
-    const totalUpdates = updates.length;
-    const highImpact = updates.filter(u => u.impact_level === 'Significant').length;
-    const urgentUpdates = updates.filter(u => u.urgency === 'High').length;
-    
+    const totalUpdates = updates.length
+    const highImpact = updates.filter(u => u.impact_level === 'Significant').length
+    const urgentUpdates = updates.filter(u => u.urgency === 'High').length
+
     // Group by authority
-    const authorityActivity = {};
+    const authorityActivity = {}
     updates.forEach(update => {
-      const authority = update.authority || 'Unknown';
-      authorityActivity[authority] = (authorityActivity[authority] || 0) + 1;
-    });
+      const authority = update.authority || 'Unknown'
+      authorityActivity[authority] = (authorityActivity[authority] || 0) + 1
+    })
 
     const topAuthority = Object.entries(authorityActivity)
-      .sort(([,a], [,b]) => b - a)[0];
+      .sort(([, a], [, b]) => b - a)[0]
 
     // Key themes
-    const themes = extractKeyThemes(updates);
-    
+    const themes = extractKeyThemes(updates)
+
     // Top updates by significance
     const topUpdates = updates
       .filter(u => u.impact_level === 'Significant' || u.urgency === 'High')
       .sort((a, b) => {
-        const aScore = (a.impact_level === 'Significant' ? 3 : 1) + (a.urgency === 'High' ? 2 : 0);
-        const bScore = (b.impact_level === 'Significant' ? 3 : 1) + (b.urgency === 'High' ? 2 : 0);
-        return bScore - aScore;
+        const aScore = (a.impact_level === 'Significant' ? 3 : 1) + (a.urgency === 'High' ? 2 : 0)
+        const bScore = (b.impact_level === 'Significant' ? 3 : 1) + (b.urgency === 'High' ? 2 : 0)
+        return bScore - aScore
       })
-      .slice(0, 5);
+      .slice(0, 5)
 
     return {
-      title: `Weekly Regulatory Roundup`,
+      title: 'Weekly Regulatory Roundup',
       period: `Last ${selectedPeriod} days`,
       summary: `${totalUpdates} regulatory updates published with ${highImpact} significant impact items and ${urgentUpdates} urgent matters requiring attention.`,
       keyStats: {
@@ -99,34 +99,34 @@ const SmartSummaries = () => {
         `${Math.round((highImpact / totalUpdates) * 100)}% of updates had significant business impact`,
         `${themes.length} major regulatory themes identified`
       ]
-    };
-  };
+    }
+  }
 
   const generateSectorAnalysis = (updates) => {
-    const sectorData = {};
-    
+    const sectorData = {}
+
     updates.forEach(update => {
       if (update.sector_relevance_scores) {
         Object.entries(update.sector_relevance_scores).forEach(([sector, score]) => {
           if (score > 25) {
             if (!sectorData[sector]) {
-              sectorData[sector] = { 
-                updates: [], 
-                totalScore: 0, 
-                avgScore: 0, 
+              sectorData[sector] = {
+                updates: [],
+                totalScore: 0,
+                avgScore: 0,
                 highImpact: 0,
                 trends: []
-              };
+              }
             }
-            sectorData[sector].updates.push(update);
-            sectorData[sector].totalScore += score;
+            sectorData[sector].updates.push(update)
+            sectorData[sector].totalScore += score
             if (update.impact_level === 'Significant') {
-              sectorData[sector].highImpact++;
+              sectorData[sector].highImpact++
             }
           }
-        });
+        })
       }
-    });
+    })
 
     // Calculate averages and sort
     const analysisResults = Object.entries(sectorData)
@@ -136,111 +136,111 @@ const SmartSummaries = () => {
         avgRelevance: Math.round(data.totalScore / data.updates.length),
         highImpactCount: data.highImpact,
         impactRatio: Math.round((data.highImpact / data.updates.length) * 100),
-        topUpdate: data.updates.sort((a, b) => 
+        topUpdate: data.updates.sort((a, b) =>
           (b.sector_relevance_scores?.[sector] || 0) - (a.sector_relevance_scores?.[sector] || 0)
         )[0],
         keyTopics: extractSectorTopics(data.updates)
       }))
       .sort((a, b) => b.avgRelevance - a.avgRelevance)
-      .slice(0, 6);
+      .slice(0, 6)
 
     return {
       title: 'Sector Impact Analysis',
       period: `Last ${selectedPeriod} days`,
       summary: `Analysis of regulatory impact across ${analysisResults.length} key financial services sectors.`,
       sectors: analysisResults,
-      insights: analysisResults.slice(0, 3).map(sector => 
+      insights: analysisResults.slice(0, 3).map(sector =>
         `${sector.sector}: ${sector.updateCount} updates, ${sector.impactRatio}% high impact`
       )
-    };
-  };
+    }
+  }
 
   const generateAuthoritySpotlight = (updates) => {
-    const authorityData = {};
-    
+    const authorityData = {}
+
     updates.forEach(update => {
-      const authority = update.authority || 'Unknown';
+      const authority = update.authority || 'Unknown'
       if (!authorityData[authority]) {
         authorityData[authority] = {
           updates: [],
           highImpact: 0,
           urgent: 0,
           themes: {}
-        };
+        }
       }
-      
-      authorityData[authority].updates.push(update);
-      
+
+      authorityData[authority].updates.push(update)
+
       if (update.impact_level === 'Significant') {
-        authorityData[authority].highImpact++;
+        authorityData[authority].highImpact++
       }
-      
+
       if (update.urgency === 'High') {
-        authorityData[authority].urgent++;
+        authorityData[authority].urgent++
       }
 
       // Extract themes from this authority
-      const themes = extractKeyThemes([update]);
+      const themes = extractKeyThemes([update])
       themes.forEach(theme => {
-        authorityData[authority].themes[theme] = (authorityData[authority].themes[theme] || 0) + 1;
-      });
-    });
+        authorityData[authority].themes[theme] = (authorityData[authority].themes[theme] || 0) + 1
+      })
+    })
 
     const authorityAnalysis = Object.entries(authorityData)
       .map(([authority, data]) => ({
         authority: authority.replace('Financial Conduct Authority', 'FCA')
-                          .replace('Prudential Regulation Authority', 'PRA')
-                          .replace('Bank of England', 'BoE'),
+          .replace('Prudential Regulation Authority', 'PRA')
+          .replace('Bank of England', 'BoE'),
         fullName: authority,
         updateCount: data.updates.length,
         highImpactCount: data.highImpact,
         urgentCount: data.urgent,
         activityScore: data.updates.length + (data.highImpact * 2) + (data.urgent * 3),
         topThemes: Object.entries(data.themes)
-          .sort(([,a], [,b]) => b - a)
+          .sort(([, a], [, b]) => b - a)
           .slice(0, 3)
           .map(([theme]) => theme),
-        recentUpdate: data.updates.sort((a, b) => 
+        recentUpdate: data.updates.sort((a, b) =>
           new Date(b.fetched_date) - new Date(a.fetched_date)
         )[0],
         focusAreas: getMostRelevantSectors(data.updates)
       }))
       .sort((a, b) => b.activityScore - a.activityScore)
-      .slice(0, 5);
+      .slice(0, 5)
 
     return {
       title: 'Authority Activity Spotlight',
       period: `Last ${selectedPeriod} days`,
       summary: `Activity analysis across ${authorityAnalysis.length} key regulatory authorities.`,
       authorities: authorityAnalysis,
-      insights: authorityAnalysis.slice(0, 3).map(auth => 
+      insights: authorityAnalysis.slice(0, 3).map(auth =>
         `${auth.authority}: ${auth.updateCount} updates, focus on ${auth.topThemes[0] || 'compliance'}`
       )
-    };
-  };
+    }
+  }
 
   const generateTrendAnalysis = (recentUpdates, allUpdates) => {
     // Compare recent vs historical patterns
-    const prevPeriod = allUpdates.slice(recentUpdates.length, recentUpdates.length * 2);
-    
-    const recentThemes = extractKeyThemes(recentUpdates);
-    const prevThemes = extractKeyThemes(prevPeriod);
-    
+    const prevPeriod = allUpdates.slice(recentUpdates.length, recentUpdates.length * 2)
+
+    const recentThemes = extractKeyThemes(recentUpdates)
+    const prevThemes = extractKeyThemes(prevPeriod)
+
     // Identify emerging themes
-    const emergingThemes = recentThemes.filter(theme => 
-      !prevThemes.includes(theme) || 
+    const emergingThemes = recentThemes.filter(theme =>
+      !prevThemes.includes(theme) ||
       recentThemes.indexOf(theme) < prevThemes.indexOf(theme)
-    );
+    )
 
     // Calculate trend momentum
-    const currentVolume = recentUpdates.length;
-    const prevVolume = prevPeriod.length;
-    const volumeChange = prevVolume > 0 ? ((currentVolume - prevVolume) / prevVolume) * 100 : 0;
+    const currentVolume = recentUpdates.length
+    const prevVolume = prevPeriod.length
+    const volumeChange = prevVolume > 0 ? ((currentVolume - prevVolume) / prevVolume) * 100 : 0
 
     // Urgency trends
-    const currentUrgent = recentUpdates.filter(u => u.urgency === 'High').length;
-    const prevUrgent = prevPeriod.filter(u => u.urgency === 'High').length;
-    const urgencyChange = prevUrgent > 0 ? ((currentUrgent - prevUrgent) / prevUrgent) * 100 : 0;
+    const currentUrgent = recentUpdates.filter(u => u.urgency === 'High').length
+    const prevUrgent = prevPeriod.filter(u => u.urgency === 'High').length
+    const urgencyChange = prevUrgent > 0 ? ((currentUrgent - prevUrgent) / prevUrgent) * 100 : 0
 
     return {
       title: 'Regulatory Trend Analysis',
@@ -259,16 +259,16 @@ const SmartSummaries = () => {
         `${emergingThemes.length} new themes emerged`,
         `Urgency levels ${urgencyChange >= 0 ? 'increased' : 'decreased'} by ${Math.abs(Math.round(urgencyChange))}%`
       ]
-    };
-  };
+    }
+  }
 
   const extractKeyThemes = (updates) => {
-    const keywords = {};
-    const themes = [];
-    
+    const keywords = {}
+    const themes = []
+
     updates.forEach(update => {
-      const text = `${update.headline} ${update.impact}`.toLowerCase();
-      
+      const text = `${update.headline} ${update.impact}`.toLowerCase()
+
       // Define theme patterns
       const themePatterns = {
         'Digital Assets': ['crypto', 'digital asset', 'blockchain', 'bitcoin', 'token'],
@@ -281,57 +281,57 @@ const SmartSummaries = () => {
         'Anti-Money Laundering': ['aml', 'money laundering', 'financial crime', 'sanctions'],
         'Data & Privacy': ['data protection', 'gdpr', 'privacy', 'information security'],
         'Reporting & Disclosure': ['reporting', 'disclosure', 'transparency', 'mifid']
-      };
+      }
 
       Object.entries(themePatterns).forEach(([theme, patterns]) => {
         if (patterns.some(pattern => text.includes(pattern))) {
-          keywords[theme] = (keywords[theme] || 0) + 1;
+          keywords[theme] = (keywords[theme] || 0) + 1
         }
-      });
-    });
+      })
+    })
 
     return Object.entries(keywords)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 8)
-      .map(([theme]) => theme);
-  };
+      .map(([theme]) => theme)
+  }
 
   const extractSectorTopics = (updates) => {
-    const topics = {};
-    
+    const topics = {}
+
     updates.forEach(update => {
-      const text = `${update.headline} ${update.impact}`.toLowerCase();
-      const words = text.split(' ').filter(word => word.length > 4);
-      
+      const text = `${update.headline} ${update.impact}`.toLowerCase()
+      const words = text.split(' ').filter(word => word.length > 4)
+
       words.forEach(word => {
         if (!['regulatory', 'update', 'guidance', 'authority'].includes(word)) {
-          topics[word] = (topics[word] || 0) + 1;
+          topics[word] = (topics[word] || 0) + 1
         }
-      });
-    });
+      })
+    })
 
     return Object.entries(topics)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
-      .map(([topic]) => topic);
-  };
+      .map(([topic]) => topic)
+  }
 
   const getMostRelevantSectors = (updates) => {
-    const sectorScores = {};
-    
+    const sectorScores = {}
+
     updates.forEach(update => {
       if (update.sector_relevance_scores) {
         Object.entries(update.sector_relevance_scores).forEach(([sector, score]) => {
-          sectorScores[sector] = Math.max(sectorScores[sector] || 0, score);
-        });
+          sectorScores[sector] = Math.max(sectorScores[sector] || 0, score)
+        })
       }
-    });
+    })
 
     return Object.entries(sectorScores)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
-      .map(([sector]) => sector);
-  };
+      .map(([sector]) => sector)
+  }
 
   if (loading) {
     return (
@@ -339,10 +339,10 @@ const SmartSummaries = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-gray-600">Generating smart summaries...</span>
       </div>
-    );
+    )
   }
 
-  const currentSummary = summaries[selectedSummaryType];
+  const currentSummary = summaries[selectedSummaryType]
 
   return (
     <div className="space-y-6">
@@ -362,8 +362,8 @@ const SmartSummaries = () => {
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-gray-700">Period:</span>
-            <select 
-              value={selectedPeriod} 
+            <select
+              value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="border border-gray-300 rounded px-3 py-2 text-sm"
             >
@@ -381,7 +381,7 @@ const SmartSummaries = () => {
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6">
             {summaryTypes.map((type) => {
-              const Icon = type.icon;
+              const Icon = type.icon
               return (
                 <button
                   key={type.id}
@@ -395,7 +395,7 @@ const SmartSummaries = () => {
                   <Icon className="w-4 h-4 mr-2" />
                   {type.name}
                 </button>
-              );
+              )
             })}
           </nav>
         </div>
@@ -458,9 +458,11 @@ const SmartSummaries = () => {
                           <p className="text-sm text-gray-600 mb-2">{update.impact}</p>
                           <div className="flex items-center space-x-2">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              update.impact_level === 'Significant' ? 'bg-red-100 text-red-700' :
-                              update.impact_level === 'Moderate' ? 'bg-orange-100 text-orange-700' :
-                              'bg-green-100 text-green-700'
+                              update.impact_level === 'Significant'
+? 'bg-red-100 text-red-700'
+                              : update.impact_level === 'Moderate'
+? 'bg-orange-100 text-orange-700'
+                              : 'bg-green-100 text-green-700'
                             }`}>
                               {update.impact_level}
                             </span>
@@ -495,9 +497,11 @@ const SmartSummaries = () => {
                           ))}
                         </div>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          sector.impactRatio > 50 ? 'bg-red-100 text-red-700' :
-                          sector.impactRatio > 25 ? 'bg-orange-100 text-orange-700' :
-                          'bg-green-100 text-green-700'
+                          sector.impactRatio > 50
+? 'bg-red-100 text-red-700'
+                          : sector.impactRatio > 25
+? 'bg-orange-100 text-orange-700'
+                          : 'bg-green-100 text-green-700'
                         }`}>
                           {sector.impactRatio}% high impact
                         </span>
@@ -635,7 +639,7 @@ const SmartSummaries = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SmartSummaries;
+export default SmartSummaries

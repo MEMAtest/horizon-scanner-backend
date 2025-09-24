@@ -1,101 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { BarChart3, DollarSign, Clock, AlertCircle, TrendingUp, Calendar, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
+import { BarChart3, DollarSign, Clock, AlertCircle, TrendingUp, Calendar, Zap } from 'lucide-react'
 
 const ImpactVisualizer = () => {
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('30');
-  const [impactMetrics, setImpactMetrics] = useState({});
+  const [updates, setUpdates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedTimeframe, setSelectedTimeframe] = useState('30')
+  const [impactMetrics, setImpactMetrics] = useState({})
 
   const impactColors = {
-    'Significant': '#dc2626',
-    'Moderate': '#f59e0b', 
-    'Informational': '#10b981'
-  };
+    Significant: '#dc2626',
+    Moderate: '#f59e0b',
+    Informational: '#10b981'
+  }
 
   const sectorColors = [
-    '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', 
+    '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b',
     '#ef4444', '#06b6d4', '#8b5f2b', '#ec4899'
-  ];
+  ]
 
   useEffect(() => {
-    fetchImpactData();
-  }, [selectedTimeframe]);
+    fetchImpactData()
+  }, [selectedTimeframe])
 
   const fetchImpactData = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await fetch(`/api/updates?limit=100&enhanced=true`);
-      const data = await response.json();
-      setUpdates(data || []);
-      calculateImpactMetrics(data || []);
+      const response = await fetch('/api/updates?limit=100&enhanced=true')
+      const data = await response.json()
+      setUpdates(data || [])
+      calculateImpactMetrics(data || [])
     } catch (error) {
-      console.error('Failed to fetch impact data:', error);
-      setUpdates([]);
+      console.error('Failed to fetch impact data:', error)
+      setUpdates([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const calculateImpactMetrics = (allUpdates) => {
-    const days = parseInt(selectedTimeframe);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    const filteredUpdates = allUpdates.filter(update => 
+    const days = parseInt(selectedTimeframe)
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+
+    const filteredUpdates = allUpdates.filter(update =>
       new Date(update.fetched_date) >= cutoffDate
-    );
+    )
 
     // Impact Level Distribution
     const impactDistribution = {
-      'Significant': 0,
-      'Moderate': 0, 
-      'Informational': 0
-    };
+      Significant: 0,
+      Moderate: 0,
+      Informational: 0
+    }
 
     // Sector Impact Analysis
-    const sectorImpact = {};
-    
+    const sectorImpact = {}
+
     // Authority Activity
-    const authorityActivity = {};
-    
+    const authorityActivity = {}
+
     // Timeline Analysis
-    const timelineData = {};
+    const timelineData = {}
 
     filteredUpdates.forEach(update => {
       // Impact level count
-      const impact = update.impact_level || 'Informational';
-      impactDistribution[impact] = (impactDistribution[impact] || 0) + 1;
+      const impact = update.impact_level || 'Informational'
+      impactDistribution[impact] = (impactDistribution[impact] || 0) + 1
 
       // Sector impact scoring
       if (update.sector_relevance_scores) {
         Object.entries(update.sector_relevance_scores).forEach(([sector, score]) => {
           if (score > 20) { // Only count meaningful relevance
             if (!sectorImpact[sector]) {
-              sectorImpact[sector] = { count: 0, totalScore: 0, avgScore: 0 };
+              sectorImpact[sector] = { count: 0, totalScore: 0, avgScore: 0 }
             }
-            sectorImpact[sector].count++;
-            sectorImpact[sector].totalScore += score;
-            sectorImpact[sector].avgScore = sectorImpact[sector].totalScore / sectorImpact[sector].count;
+            sectorImpact[sector].count++
+            sectorImpact[sector].totalScore += score
+            sectorImpact[sector].avgScore = sectorImpact[sector].totalScore / sectorImpact[sector].count
           }
-        });
+        })
       }
 
       // Authority activity
-      const authority = update.authority || 'Unknown';
-      authorityActivity[authority] = (authorityActivity[authority] || 0) + 1;
+      const authority = update.authority || 'Unknown'
+      authorityActivity[authority] = (authorityActivity[authority] || 0) + 1
 
       // Timeline data (last 14 days)
-      const dateKey = new Date(update.fetched_date).toISOString().split('T')[0];
+      const dateKey = new Date(update.fetched_date).toISOString().split('T')[0]
       if (!timelineData[dateKey]) {
-        timelineData[dateKey] = { date: dateKey, count: 0, highImpact: 0 };
+        timelineData[dateKey] = { date: dateKey, count: 0, highImpact: 0 }
       }
-      timelineData[dateKey].count++;
+      timelineData[dateKey].count++
       if (impact === 'Significant') {
-        timelineData[dateKey].highImpact++;
+        timelineData[dateKey].highImpact++
       }
-    });
+    })
 
     setImpactMetrics({
       impactDistribution,
@@ -103,54 +103,54 @@ const ImpactVisualizer = () => {
       authorityActivity,
       timelineData: Object.values(timelineData).sort((a, b) => a.date.localeCompare(b.date)),
       totalUpdates: filteredUpdates.length,
-      highImpactCount: impactDistribution['Significant'] || 0
-    });
-  };
+      highImpactCount: impactDistribution.Significant || 0
+    })
+  }
 
   const getImpactDistributionData = () => {
     return Object.entries(impactMetrics.impactDistribution || {}).map(([level, count]) => ({
       name: level,
       value: count,
       color: impactColors[level]
-    }));
-  };
+    }))
+  }
 
   const getSectorImpactData = () => {
     return Object.entries(impactMetrics.sectorImpact || {})
-      .sort(([,a], [,b]) => b.avgScore - a.avgScore)
+      .sort(([, a], [, b]) => b.avgScore - a.avgScore)
       .slice(0, 8)
       .map(([sector, data]) => ({
         sector: sector.replace(' Management', '').replace(' Markets', ''),
         score: Math.round(data.avgScore),
         count: data.count
-      }));
-  };
+      }))
+  }
 
   const getAuthorityActivityData = () => {
     return Object.entries(impactMetrics.authorityActivity || {})
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 6)
       .map(([authority, count]) => ({
         authority: authority.replace('Financial Conduct Authority', 'FCA')
-                          .replace('Prudential Regulation Authority', 'PRA')
-                          .replace('Bank of England', 'BoE'),
+          .replace('Prudential Regulation Authority', 'PRA')
+          .replace('Bank of England', 'BoE'),
         count
-      }));
-  };
+      }))
+  }
 
   const getBusinessImpactScore = () => {
-    const { highImpactCount, totalUpdates } = impactMetrics;
-    if (!totalUpdates) return 0;
-    
-    const impactRatio = (highImpactCount / totalUpdates) * 100;
-    return Math.min(100, Math.round(impactRatio * 2)); // Scale to make it more meaningful
-  };
+    const { highImpactCount, totalUpdates } = impactMetrics
+    if (!totalUpdates) return 0
+
+    const impactRatio = (highImpactCount / totalUpdates) * 100
+    return Math.min(100, Math.round(impactRatio * 2)) // Scale to make it more meaningful
+  }
 
   const getComplianceBurden = () => {
-    const sectorData = getSectorImpactData();
-    const avgScore = sectorData.reduce((sum, item) => sum + item.score, 0) / sectorData.length;
-    return Math.round(avgScore || 0);
-  };
+    const sectorData = getSectorImpactData()
+    const avgScore = sectorData.reduce((sum, item) => sum + item.score, 0) / sectorData.length
+    return Math.round(avgScore || 0)
+  }
 
   if (loading) {
     return (
@@ -158,14 +158,14 @@ const ImpactVisualizer = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-gray-600">Calculating impact analysis...</span>
       </div>
-    );
+    )
   }
 
-  const impactDistributionData = getImpactDistributionData();
-  const sectorImpactData = getSectorImpactData();
-  const authorityActivityData = getAuthorityActivityData();
-  const businessImpactScore = getBusinessImpactScore();
-  const complianceBurden = getComplianceBurden();
+  const impactDistributionData = getImpactDistributionData()
+  const sectorImpactData = getSectorImpactData()
+  const authorityActivityData = getAuthorityActivityData()
+  const businessImpactScore = getBusinessImpactScore()
+  const complianceBurden = getComplianceBurden()
 
   return (
     <div className="space-y-6">
@@ -184,8 +184,8 @@ const ImpactVisualizer = () => {
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <div className="flex items-center space-x-4">
           <span className="text-sm font-medium text-gray-700">Analysis Period:</span>
-          <select 
-            value={selectedTimeframe} 
+          <select
+            value={selectedTimeframe}
             onChange={(e) => setSelectedTimeframe(e.target.value)}
             className="border border-gray-300 rounded px-3 py-2 text-sm"
           >
@@ -270,7 +270,7 @@ const ImpactVisualizer = () => {
                   cy="50%"
                   outerRadius={80}
                   dataKey="value"
-                  label={({name, value}) => `${name}: ${value}`}
+                  label={({ name, value }) => `${name}: ${value}`}
                 >
                   {impactDistributionData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -289,8 +289,8 @@ const ImpactVisualizer = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={authorityActivityData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="authority" 
+                <XAxis
+                  dataKey="authority"
                   angle={-45}
                   textAnchor="end"
                   height={60}
@@ -316,7 +316,7 @@ const ImpactVisualizer = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis dataKey="sector" type="category" width={80} fontSize={11} />
-                <Tooltip 
+                <Tooltip
                   formatter={(value, name) => [`${value}%`, name === 'score' ? 'Relevance Score' : 'Update Count']}
                 />
                 <Bar dataKey="score" fill="#8b5cf6" />
@@ -332,26 +332,26 @@ const ImpactVisualizer = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={impactMetrics.timelineData?.slice(-14) || []}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   tickFormatter={(date) => new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                   fontSize={10}
                 />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   labelFormatter={(date) => new Date(date).toLocaleDateString()}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="#3b82f6" 
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#3b82f6"
                   strokeWidth={2}
                   name="Total Updates"
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="highImpact" 
-                  stroke="#ef4444" 
+                <Line
+                  type="monotone"
+                  dataKey="highImpact"
+                  stroke="#ef4444"
                   strokeWidth={2}
                   name="High Impact"
                 />
@@ -373,44 +373,44 @@ const ImpactVisualizer = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Low</span>
-                  <span>{Math.round((impactMetrics.impactDistribution?.['Informational'] || 0) / (impactMetrics.totalUpdates || 1) * 100)}%</span>
+                  <span>{Math.round((impactMetrics.impactDistribution?.Informational || 0) / (impactMetrics.totalUpdates || 1) * 100)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full" 
-                    style={{width: `${(impactMetrics.impactDistribution?.['Informational'] || 0) / (impactMetrics.totalUpdates || 1) * 100}%`}}
+                  <div
+                    className="bg-green-500 h-2 rounded-full"
+                    style={{ width: `${(impactMetrics.impactDistribution?.Informational || 0) / (impactMetrics.totalUpdates || 1) * 100}%` }}
                   ></div>
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Resource Requirements</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Medium</span>
-                  <span>{Math.round((impactMetrics.impactDistribution?.['Moderate'] || 0) / (impactMetrics.totalUpdates || 1) * 100)}%</span>
+                  <span>{Math.round((impactMetrics.impactDistribution?.Moderate || 0) / (impactMetrics.totalUpdates || 1) * 100)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-orange-500 h-2 rounded-full" 
-                    style={{width: `${(impactMetrics.impactDistribution?.['Moderate'] || 0) / (impactMetrics.totalUpdates || 1) * 100}%`}}
+                  <div
+                    className="bg-orange-500 h-2 rounded-full"
+                    style={{ width: `${(impactMetrics.impactDistribution?.Moderate || 0) / (impactMetrics.totalUpdates || 1) * 100}%` }}
                   ></div>
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Strategic Priority</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>High</span>
-                  <span>{Math.round((impactMetrics.impactDistribution?.['Significant'] || 0) / (impactMetrics.totalUpdates || 1) * 100)}%</span>
+                  <span>{Math.round((impactMetrics.impactDistribution?.Significant || 0) / (impactMetrics.totalUpdates || 1) * 100)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-red-500 h-2 rounded-full" 
-                    style={{width: `${(impactMetrics.impactDistribution?.['Significant'] || 0) / (impactMetrics.totalUpdates || 1) * 100}%`}}
+                  <div
+                    className="bg-red-500 h-2 rounded-full"
+                    style={{ width: `${(impactMetrics.impactDistribution?.Significant || 0) / (impactMetrics.totalUpdates || 1) * 100}%` }}
                   ></div>
                 </div>
               </div>
@@ -419,7 +419,7 @@ const ImpactVisualizer = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ImpactVisualizer;
+export default ImpactVisualizer

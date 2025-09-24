@@ -1,5 +1,5 @@
 function getInitModule() {
-    return `
+  return `
     // Initialization Module
     const InitModule = (function() {
         async function initialize() {
@@ -50,7 +50,7 @@ function getInitModule() {
             initialize,
             checkSystemStatus
         };
-    })();`;
+    })();`
 }
 
-module.exports = { getInitModule };
+module.exports = { getInitModule }
