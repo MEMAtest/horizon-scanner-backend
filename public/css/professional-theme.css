@@ -56,10 +56,14 @@ body {
 }
 
 /* Active Navigation Items */
-.nav-item.active .nav-link,
-.nav-link:hover {
-    background: var(--accent-teal) !important;
+.nav-item.active .nav-link {
+    background: var(--accent-blue) !important;
     color: white !important;
+}
+
+.nav-link:hover {
+    background: rgba(59, 130, 246, 0.1) !important;
+    color: var(--primary-navy) !important;
 }
 
 .nav-badge {
@@ -390,6 +394,20 @@ input[type="radio"]:checked + .filter-option-checkmark {
     background: var(--neutral-white) !important;
     border: 1px solid var(--neutral-border) !important;
     color: var(--neutral-dark) !important;
+}
+
+/* Text Contrast Fixes */
+.hero-subtitle, .subtitle {
+    color: rgba(255, 255, 255, 0.95) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.nav-text {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.nav-link:hover .nav-text {
+    color: var(--primary-navy) !important;
 }
 
 @media print {

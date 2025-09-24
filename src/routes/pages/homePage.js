@@ -70,7 +70,7 @@ async function renderHomePage(req, res) {
 
                 .hero-subtitle {
                     font-size: 1.125rem;
-                    opacity: 0.95;
+                    opacity: 1;
                     margin-bottom: 32px;
                     max-width: 680px;
                     margin-left: auto;
@@ -79,6 +79,7 @@ async function renderHomePage(req, res) {
                     font-weight: 400;
                     position: relative;
                     z-index: 1;
+                    color: rgba(255, 255, 255, 0.95);
                 }
 
                 .hero-actions {
