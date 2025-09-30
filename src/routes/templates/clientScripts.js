@@ -119,7 +119,7 @@ function getClientScriptsContent() {
 
                 // Update active filter button
                 filterBtns.forEach(btn => btn.classList.remove('active'));
-                const activeBtn = document.querySelector(`[data-filter="${category}"]`);
+                const activeBtn = document.querySelector('[data-filter="' + category + '"]');
                 if (activeBtn) activeBtn.classList.add('active');
 
                 // Apply filter
@@ -138,7 +138,7 @@ function getClientScriptsContent() {
                 }
                 window.history.replaceState({}, '', url);
 
-                showMessage(`Filtered to ${category} updates`, 'info');
+                showMessage('Filtered to ' + category + ' updates', 'info');
             } catch (error) {
                 console.error('Filter error:', error);
                 showMessage('Filter failed', 'error');
@@ -154,7 +154,7 @@ function getClientScriptsContent() {
                     const shouldShow = !authority || cardAuthority === authority;
                     card.style.display = shouldShow ? 'block' : 'none';
                 });
-                showMessage(authority ? `Showing ${authority} updates` : 'Showing all authorities', 'info');
+                showMessage(authority ? 'Showing ' + authority + ' updates' : 'Showing all authorities', 'info');
             } catch (error) {
                 console.error('Authority filter error:', error);
             }
@@ -170,7 +170,7 @@ function getClientScriptsContent() {
                     const shouldShow = !sector || cardSectors.includes(sector);
                     card.style.display = shouldShow ? 'block' : 'none';
                 });
-                showMessage(sector ? `Showing ${sector} updates` : 'Showing all sectors', 'info');
+                showMessage(sector ? 'Showing ' + sector + ' updates' : 'Showing all sectors', 'info');
             } catch (error) {
                 console.error('Sector filter error:', error);
             }
@@ -185,7 +185,7 @@ function getClientScriptsContent() {
                     const shouldShow = !impact || impactLevel === impact;
                     card.style.display = shouldShow ? 'block' : 'none';
                 });
-                showMessage(impact ? `Showing ${impact} impact updates` : 'Showing all impact levels', 'info');
+                showMessage(impact ? 'Showing ' + impact + ' impact updates' : 'Showing all impact levels', 'info');
             } catch (error) {
                 console.error('Impact filter error:', error);
             }
@@ -223,7 +223,7 @@ function getClientScriptsContent() {
                     card.style.display = shouldShow ? 'block' : 'none';
                 });
 
-                showMessage(range ? `Showing ${range} updates` : 'Showing all time periods', 'info');
+                showMessage(range ? 'Showing ' + range + ' updates' : 'Showing all time periods', 'info');
             } catch (error) {
                 console.error('Date filter error:', error);
             }
