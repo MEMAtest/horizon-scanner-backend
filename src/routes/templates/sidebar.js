@@ -45,8 +45,8 @@ async function getSidebar(currentPage = '') {
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
-                    <li class="nav-item ${currentPage === 'intelligence' ? 'active' : ''}">
-                        <a href="/intelligence" class="nav-link">
+                    <li class="nav-item ${currentPage === 'ai-intelligence' ? 'active' : ''}">
+                        <a href="/ai-intelligence" class="nav-link">
                             <span class="nav-icon">🔍</span>
                             <span class="nav-text">Intelligence</span>
                             <span class="nav-badge new">NEW</span>
@@ -83,6 +83,14 @@ async function getSidebar(currentPage = '') {
                     </li>
                 </ul>
             </nav>
+
+            <!-- Manual Refresh Section -->
+            <div class="refresh-section">
+                <button onclick="triggerManualRefresh()" class="manual-refresh-btn" id="manualRefreshBtn">
+                    <span class="refresh-icon">🔄</span>
+                    <span class="refresh-text">Refresh Data</span>
+                </button>
+            </div>
 
             <!-- Premium Simplified Sidebar -->
             <div class="sidebar-footer-section">
@@ -237,7 +245,59 @@ async function getSidebar(currentPage = '') {
             .nav-badge.new {
                 background: #10b981;
             }
-            
+
+            /* Manual Refresh Button Styles */
+            .refresh-section {
+                margin: 1rem 1.5rem;
+                border-top: 1px solid #f3f4f6;
+                padding-top: 1rem;
+            }
+
+            .manual-refresh-btn {
+                width: 100%;
+                padding: 0.75rem 1rem;
+                background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+                border: none;
+                border-radius: 8px;
+                color: white;
+                font-size: 0.875rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+            }
+
+            .manual-refresh-btn:hover {
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+            }
+
+            .manual-refresh-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+            }
+
+            .manual-refresh-btn:disabled {
+                background: #9ca3af;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .manual-refresh-btn .refresh-icon {
+                font-size: 1rem;
+                transition: transform 0.5s ease;
+            }
+
+            .manual-refresh-btn.refreshing .refresh-icon {
+                animation: spin 1s linear infinite;
+            }
+
             /* Live Feed Styles */
             .live-feed-clean {
                 flex: 1;
@@ -569,7 +629,7 @@ async function getSidebar(currentPage = '') {
                         btn.disabled = true;
                         btn.querySelector('.refresh-icon').style.animation = 'spin 1s linear infinite';
                     }
-                    
+
                     // Call updateLiveCounters
                     updateLiveCounters().then(() => {
                         // Remove spinning animation after update
@@ -580,6 +640,64 @@ async function getSidebar(currentPage = '') {
                             }
                         }, 500);
                     });
+                };
+            }
+
+            if (typeof triggerManualRefresh === 'undefined') {
+                window.triggerManualRefresh = async function() {
+                    const btn = document.getElementById('manualRefreshBtn');
+                    if (!btn) return;
+
+                    // Disable button and show loading state
+                    btn.disabled = true;
+                    btn.classList.add('refreshing');
+
+                    try {
+                        // Call the manual refresh endpoint
+                        const response = await fetch('/manual-refresh', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log('Manual refresh completed:', result);
+
+                            // Update live counters after successful refresh
+                            await updateLiveCounters();
+
+                            // Show success feedback
+                            btn.querySelector('.refresh-text').textContent = 'Refreshed!';
+                            setTimeout(() => {
+                                btn.querySelector('.refresh-text').textContent = 'Refresh Data';
+                            }, 2000);
+
+                            // Reload page if we're on dashboard to show new data
+                            if (window.location.pathname.includes('dashboard') || window.location.pathname === '/') {
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1000);
+                            }
+                        } else {
+                            throw new Error('Refresh failed');
+                        }
+                    } catch (error) {
+                        console.error('Manual refresh error:', error);
+
+                        // Show error state
+                        btn.querySelector('.refresh-text').textContent = 'Failed - Retry';
+                        setTimeout(() => {
+                            btn.querySelector('.refresh-text').textContent = 'Refresh Data';
+                        }, 3000);
+                    } finally {
+                        // Re-enable button and remove loading state
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            btn.classList.remove('refreshing');
+                        }, 500);
+                    }
                 };
             }
             

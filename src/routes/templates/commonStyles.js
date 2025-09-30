@@ -55,7 +55,7 @@ function getCommonStyles() {
         /* Executive Sidebar Design */
         .sidebar {
             width: 280px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            background: #ffffff;
             border-right: 1px solid #e1e5e9;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
             height: 100vh;
@@ -386,6 +386,12 @@ function getCommonStyles() {
 
         .nav-text {
             flex: 1;
+            color: #4b5563 !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
 
         .nav-badge {
