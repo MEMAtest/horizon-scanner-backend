@@ -126,7 +126,7 @@ class WeeklyRoundupService {
     try {
       const fs = require('fs').promises
       const path = require('path')
-      const dataPath = path.join(process.cwd(), 'data', 'regulatory_updates.json')
+      const dataPath = path.join(process.cwd(), 'data', 'updates.json')
 
       const data = await fs.readFile(dataPath, 'utf8')
       const allUpdates = JSON.parse(data)

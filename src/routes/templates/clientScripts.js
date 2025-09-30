@@ -110,6 +110,125 @@ function getClientScriptsContent() {
             }
         };
 
+        // Filter Functions for Dashboard
+        window.filterByCategory = function(category) {
+            console.log('Filtering by category:', category);
+            try {
+                const updates = document.querySelectorAll('.update-card');
+                const filterBtns = document.querySelectorAll('.quick-filter-btn');
+
+                // Update active filter button
+                filterBtns.forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.querySelector(`[data-filter="${category}"]`);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Apply filter
+                updates.forEach(card => {
+                    const shouldShow = category === 'all' || card.dataset.category === category ||
+                                     card.classList.contains(category) || card.dataset.filter === category;
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+
+                // Update URL and store filter state
+                const url = new URL(window.location);
+                if (category !== 'all') {
+                    url.searchParams.set('category', category);
+                } else {
+                    url.searchParams.delete('category');
+                }
+                window.history.replaceState({}, '', url);
+
+                showMessage(`Filtered to ${category} updates`, 'info');
+            } catch (error) {
+                console.error('Filter error:', error);
+                showMessage('Filter failed', 'error');
+            }
+        };
+
+        window.filterByAuthority = function(authority) {
+            console.log('Filtering by authority:', authority);
+            try {
+                const updates = document.querySelectorAll('.update-card');
+                updates.forEach(card => {
+                    const cardAuthority = card.dataset.authority || card.querySelector('.authority-tag')?.textContent;
+                    const shouldShow = !authority || cardAuthority === authority;
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+                showMessage(authority ? `Showing ${authority} updates` : 'Showing all authorities', 'info');
+            } catch (error) {
+                console.error('Authority filter error:', error);
+            }
+        };
+
+        window.filterBySector = function(sector) {
+            console.log('Filtering by sector:', sector);
+            try {
+                const updates = document.querySelectorAll('.update-card');
+                updates.forEach(card => {
+                    const sectorTags = card.querySelectorAll('.sector-tag');
+                    const cardSectors = Array.from(sectorTags).map(tag => tag.textContent.trim());
+                    const shouldShow = !sector || cardSectors.includes(sector);
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+                showMessage(sector ? `Showing ${sector} updates` : 'Showing all sectors', 'info');
+            } catch (error) {
+                console.error('Sector filter error:', error);
+            }
+        };
+
+        window.filterByImpactLevel = function(impact) {
+            console.log('Filtering by impact level:', impact);
+            try {
+                const updates = document.querySelectorAll('.update-card');
+                updates.forEach(card => {
+                    const impactLevel = card.dataset.impact || card.querySelector('.impact-level')?.textContent;
+                    const shouldShow = !impact || impactLevel === impact;
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+                showMessage(impact ? `Showing ${impact} impact updates` : 'Showing all impact levels', 'info');
+            } catch (error) {
+                console.error('Impact filter error:', error);
+            }
+        };
+
+        window.filterByDateRange = function(range) {
+            console.log('Filtering by date range:', range);
+            try {
+                const updates = document.querySelectorAll('.update-card');
+                const now = new Date();
+
+                updates.forEach(card => {
+                    const publishedDate = new Date(card.dataset.publishedDate || card.querySelector('.date')?.textContent);
+                    let shouldShow = true;
+
+                    if (range && !isNaN(publishedDate)) {
+                        const daysDiff = Math.floor((now - publishedDate) / (1000 * 60 * 60 * 24));
+
+                        switch (range) {
+                            case 'today':
+                                shouldShow = daysDiff === 0;
+                                break;
+                            case 'week':
+                                shouldShow = daysDiff <= 7;
+                                break;
+                            case 'month':
+                                shouldShow = daysDiff <= 30;
+                                break;
+                            case 'quarter':
+                                shouldShow = daysDiff <= 90;
+                                break;
+                        }
+                    }
+
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+
+                showMessage(range ? `Showing ${range} updates` : 'Showing all time periods', 'info');
+            } catch (error) {
+                console.error('Date filter error:', error);
+            }
+        };
+
         // Analytics refresh function
         window.refreshAnalytics = async function() {
             console.log('📊 Refreshing analytics...');
@@ -316,7 +435,7 @@ function getClientScriptsContent() {
         function generateStream(id, title, updates, isExpanded = false) {
             const cards = updates.slice(0, 5).map(u => generateUpdateCard(u)).join('');
             const loadMore = updates.length > 5
-                ? '<button class="load-more-btn" id="loadMoreBtn-' + id + '" onclick="SearchModule.loadMoreUpdatesForStream(\'' + id + '\', ' + updates.length + ')">Load More (' + (updates.length - 5) + ' remaining)</button>'
+                ? '<button class="load-more-btn" id="loadMoreBtn-' + id + '" onclick="SearchModule.loadMoreUpdatesForStream(&quot;' + id + '&quot;, ' + updates.length + ')">Load More (' + (updates.length - 5) + ' remaining)</button>'
                 : '';
 
             return (
