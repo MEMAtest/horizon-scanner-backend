@@ -6,6 +6,15 @@ const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
 
+function serializeForScript(data) {
+  // Use a safer approach - wrap in template literal instead of fixing JSON
+  const jsonString = JSON.stringify(data, null, 0);
+
+  // For script safety, use a different approach
+  // Instead of modifying JSON, we'll use a safe assignment method
+  return `JSON.parse(${JSON.stringify(jsonString)})`;
+}
+
 async function renderDashboardPage(req, res) {
   try {
     console.log('📊 Rendering enhanced dashboard page...')
@@ -69,6 +78,18 @@ async function renderDashboardPage(req, res) {
 
     // Generate sidebar
     const sidebar = await getSidebar('dashboard')
+
+    const serializedInitialUpdates = serializeForScript(updates)
+    const serializedDashboardStats = serializeForScript(dashboardStats)
+    const serializedFilterOptions = serializeForScript(filterOptions)
+    const serializedCurrentFilters = serializeForScript({
+      category,
+      authority: authority || null,
+      sector: sector || null,
+      impact: impact || null,
+      range: range || null,
+      search: search || null
+    })
 
     const html = `
         <!DOCTYPE html>
@@ -969,17 +990,10 @@ async function renderDashboardPage(req, res) {
             <!-- Initialize with data -->
             <script>
                 // Pass server-side data to client
-                window.initialUpdates = ${JSON.stringify(updates)};
-                window.dashboardStats = ${JSON.stringify(dashboardStats)};
-                window.filterOptions = ${JSON.stringify(filterOptions)};
-                window.currentFilters = {
-                    category: '${category}',
-                    authority: '${authority || ''}',
-                    sector: '${sector || ''}',
-                    impact: '${impact || ''}',
-                    range: '${range || ''}',
-                    search: '${search || ''}'
-                };
+                window.initialUpdates = ${serializedInitialUpdates};
+                window.dashboardStats = ${serializedDashboardStats};
+                window.filterOptions = ${serializedFilterOptions};
+                window.currentFilters = ${serializedCurrentFilters};
 
                 // Simple FilterModule for WorkspaceModule integration
                 window.FilterModule = {
@@ -1238,20 +1252,18 @@ function getContentTypeBadge(update) {
 }
 
 function getImpactBadge(update) {
-  const level = update.impactLevel || 'Informational'
-  const score = update.business_impact_score
+  const level = update.impactLevel || update.impact_level || 'Informational'
 
-  let badgeClass = level.toLowerCase()
-  let badgeText = level
-
-  if (score && score >= 8) {
-    badgeClass = 'significant critical'
-    badgeText = `${level} (${score}/10)`
-  } else if (score) {
-    badgeText = `${level} (${score}/10)`
+  // Map impact levels to proper CSS classes
+  let badgeClass = 'low'  // default
+  if (level === 'Significant') {
+    badgeClass = 'urgent'
+  } else if (level === 'Moderate') {
+    badgeClass = 'moderate'
   }
 
-  return `<span class="impact-badge ${badgeClass}">${badgeText}</span>`
+  // Just show the impact level, not the score
+  return `<span class="impact-badge ${badgeClass}">${level}</span>`
 }
 
 function getSectorTags(update) {
@@ -1341,5 +1353,6 @@ module.exports = {
   formatDate,
   getDateValue,
   truncateText,
-  isFallbackSummary
+  isFallbackSummary,
+  serializeForScript
 }
