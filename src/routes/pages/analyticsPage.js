@@ -187,27 +187,30 @@ const analyticsPage = async (req, res) => {
     <title>Predictive Analytics Dashboard - Horizon Scanner</title>
     ${getCommonStyles()}
     <style>
-        /* Analytics-specific styles */
-        .analytics-container { 
-            display: grid; 
-            grid-template-columns: 280px 1fr; 
-            min-height: 100vh; 
+        /* Analytics-specific styles - Match dashboard layout */
+        body {
+            display: flex;
+            min-height: 100vh;
+            background: #fafbfc;
         }
-        
-        .analytics-main { 
-            padding: 2rem; 
-            overflow-y: auto;
+
+        .analytics-main {
+            flex: 1;
+            padding: 32px;
+            margin-left: 280px;
+            max-width: calc(100vw - 280px);
+            overflow-x: hidden;
             background: #fafbfc;
         }
         
-        .analytics-header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            padding: 2rem; 
-            border-radius: 12px; 
+        .analytics-header {
+            background: var(--neutral-white, #ffffff);
+            color: var(--neutral-dark, #334155);
+            padding: 2rem;
+            border-radius: 8px;
             margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
+            border: 1px solid var(--neutral-border, #e2e8f0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .analytics-header::before {
@@ -226,27 +229,29 @@ const analyticsPage = async (req, res) => {
             z-index: 2;
         }
         
-        .analytics-title { 
-            font-size: 2rem; 
-            font-weight: 700; 
+        .analytics-title {
+            font-size: 1.75rem;
+            font-weight: 600;
             margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            color: var(--neutral-dark, #334155);
         }
 
         .analytics-title a {
-            color: white;
+            color: var(--primary-navy, #1e40af);
             text-decoration: none;
-            transition: opacity 0.15s ease;
+            transition: color 0.15s ease;
         }
 
         .analytics-title a:hover {
-            opacity: 0.8;
+            color: var(--accent-blue-hover, #2563eb);
         }
-        
-        .analytics-subtitle { 
-            font-size: 1.125rem; 
+
+        .analytics-subtitle {
+            font-size: 1rem;
+            color: var(--neutral-grey, #64748b); 
             opacity: 0.9;
         }
         
@@ -574,13 +579,77 @@ const analyticsPage = async (req, res) => {
                 flex-direction: column;
             }
         }
+
+        /* CRITICAL: Force analytics content visibility with highest specificity */
+        html body {
+            display: flex !important;
+            min-height: 100vh !important;
+            background: #fafbfc !important;
+        }
+
+        html body .analytics-main {
+            flex: 1 !important;
+            padding: 32px !important;
+            margin-left: 280px !important;
+            max-width: calc(100vw - 280px) !important;
+            overflow-x: hidden !important;
+            background: #fafbfc !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1001 !important;
+        }
+
+        html body .analytics-header {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 1002 !important;
+        }
+
+        html body .metrics-grid {
+            display: grid !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 1.5rem !important;
+            margin-bottom: 2rem !important;
+            position: relative !important;
+            z-index: 1003 !important;
+        }
+
+        html body .metric-card {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background: white !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            padding: 1.5rem !important;
+            position: relative !important;
+            z-index: 1004 !important;
+        }
+
+        /* Force text content to be visible */
+        html body .analytics-main * {
+            color: #374151 !important;
+            visibility: visible !important;
+        }
+
+        html body .analytics-title a {
+            color: var(--primary-navy, #1e40af) !important;
+        }
+
+        html body .analytics-subtitle {
+            color: var(--neutral-grey, #64748b) !important;
+        }
     </style>
 </head>
 <body>
-    <div class="analytics-container">
-        ${sidebarHtml}
-        
-        <div class="analytics-main">
+    ${sidebarHtml}
+
+    <main class="analytics-main">
             <div class="analytics-header">
                 <a href="/" class="back-link">← Back to Home</a>
                 <h1 class="analytics-title">
@@ -777,7 +846,7 @@ const analyticsPage = async (req, res) => {
                 </a>
             </div>
         </div>
-    </div>
+    </main>
     
     ${getCommonClientScripts()}
     
@@ -806,39 +875,19 @@ const analyticsPage = async (req, res) => {
         async function loadAnalyticsDashboard() {
             try {
                 console.log('📊 Loading analytics dashboard...');
-                const response = await fetch('/api/analytics/dashboard');
+                const response = await fetch('/api/analytics');
                 console.log('📊 Response status:', response.status);
 
                 const data = await response.json();
                 console.log('📊 Response data:', data);
+                console.log('📊 data.success:', data.success, typeof data.success);
+                console.log('📊 data.dashboard:', data.dashboard, typeof data.dashboard);
+                console.log('📊 Condition check:', !!(data.success && data.dashboard));
 
-                if (data.success && data.statistics) {
-                    // Transform the API response to match expected format
-                    analyticsData = {
-                        overview: {
-                            totalUpdates: data.statistics.totalUpdates || 0,
-                            averageRiskScore: 65, // Default risk score
-                            activePredictions: 12,
-                            hotspotCount: 3
-                        },
-                        velocity: {
-                            FCA: { updatesPerWeek: data.statistics.fcaCount / 4 || 0 },
-                            BoE: { updatesPerWeek: data.statistics.boeCount / 4 || 0 },
-                            PRA: { updatesPerWeek: data.statistics.praCount / 4 || 0 },
-                            TPR: { updatesPerWeek: data.statistics.tprCount / 4 || 0 }
-                        },
-                        hotspots: [
-                            { sector: 'Banking', activityScore: 85, riskLevel: 'high' },
-                            { sector: 'Insurance', activityScore: 72, riskLevel: 'medium' },
-                            { sector: 'Fintech', activityScore: 68, riskLevel: 'medium' }
-                        ],
-                        predictions: [
-                            { confidence: 85, priority: 'high' },
-                            { confidence: 72, priority: 'medium' },
-                            { confidence: 91, priority: 'high' }
-                        ]
-                    };
-                    console.log('📊 Analytics data transformed:', analyticsData);
+                if (data.success && data.dashboard) {
+                    // Use the new dashboard API response format
+                    analyticsData = data.dashboard;
+                    console.log('📊 Analytics data loaded:', analyticsData);
                     updateMetrics();
                     console.log('✅ Analytics dashboard loaded and metrics updated');
                 } else {
@@ -932,9 +981,65 @@ const analyticsPage = async (req, res) => {
         // Make analytics-specific functions globally available
         window.loadAnalyticsDashboard = loadAnalyticsDashboard;
         window.updateMetrics = updateMetrics;
-        
+
         console.log('📊 Analytics Page: Script loaded and ready');
     </script>
+
+    <!-- ULTIMATE CSS FIX: Applied at the very end to override everything -->
+    <style>
+        html body {
+            display: flex !important;
+            min-height: 100vh !important;
+            background: #fafbfc !important;
+        }
+
+        html body .analytics-main {
+            flex: 1 !important;
+            padding: 32px !important;
+            margin-left: 280px !important;
+            max-width: calc(100vw - 280px) !important;
+            overflow-x: hidden !important;
+            background: #fafbfc !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 99999 !important;
+        }
+
+        html body .analytics-header,
+        html body .metrics-grid,
+        html body .metric-card,
+        html body .analytics-main *,
+        html body .analytics-main .metric-value,
+        html body .analytics-main .metric-label {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            color: #374151 !important;
+            z-index: 99999 !important;
+        }
+
+        html body .analytics-title a {
+            color: var(--primary-navy, #1e40af) !important;
+        }
+
+        html body .analytics-subtitle {
+            color: var(--neutral-grey, #64748b) !important;
+        }
+
+        html body .metrics-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 1.5rem !important;
+        }
+
+        html body .metric-card {
+            background: white !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            padding: 1.5rem !important;
+        }
+    </style>
 </body>
 </html>`
 

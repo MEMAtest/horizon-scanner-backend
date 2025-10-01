@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UK Financial Regulatory Horizon Scanning Tool - Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .tab-active { font-weight: 700; box-shadow: inset 0 -2px 0 0 currentColor; }
+        .tab-inactive:hover { color: #4b5563; box-shadow: inset 0 -2px 0 0 #d1d5db; }
+        .card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .filter-sidebar { transition: transform 0.3s ease-in-out; }
+        .filter-sidebar-closed { transform: translateX(-100%); }
+        @media (min-width: 1024px) { .filter-sidebar-closed { transform: translateX(0); } }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .payments-active { color: #3b82f6; } .investments-active { color: #6366f1; } .consumercredit-active { color: #10b981; } .corporatefinance-active { color: #8b5cf6; } .banking-active { color: #f59e0b; } .pensionsretirementincome-active { color: #ec4899; } .cryptoassets-active { color: #06b6d4; } .amlfinancialcrime-active { color: #ef4444; }
+        .status-live { color: #22c55e; } .status-offline { color: #ef4444; }
+        .impact-Significant { background-color: #ef4444; color: white; } .impact-Moderate { background-color: #f97316; color: white; } .impact-Informational { background-color: #3b82f6; color: white; }
+        .urgency-High { background-color: #dc2626; color: white; } .urgency-Medium { background-color: #ea580c; color: white; } .urgency-Low { background-color: #2563eb; color: white; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="flex flex-col lg:flex-row min-h-screen">
+        <aside id="filterSidebar" class="filter-sidebar fixed inset-y-0 left-0 z-30 w-64 lg:w-72 bg-white shadow-xl p-6 space-y-6 overflow-y-auto transform lg:translate-x-0 filter-sidebar-closed lg:static lg:shadow-none">
+            <h2 class="text-xl font-semibold text-gray-700">Filters</h2>
+            <div>
+                <label for="filterAuthority" class="block text-sm font-medium text-gray-700 mb-1">Regulatory Authority</label>
+                <select id="filterAuthority" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="">All Authorities</option>
+                </select>
+            </div>
+            <div>
+                <label for="filterImpactLevel" class="block text-sm font-medium text-gray-700 mb-1">Impact Level</label>
+                <select id="filterImpactLevel" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="">All Impacts</option>
+                    <option value="Significant">Significant</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Informational">Informational</option>
+                </select>
+            </div>
+            <div>
+                <label for="filterUrgency" class="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
+                <select id="filterUrgency" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="">All Urgencies</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+            <button id="applyFilters" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out">Apply Filters</button>
+            <button id="resetFilters" class="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out">Reset Filters</button>
+        </aside>
+
+        <div class="flex-1 flex flex-col">
+            <header class="bg-white shadow-md p-4 sticky top-0 z-20">
+                <div class="container mx-auto flex flex-col sm:flex-row justify-between items-center">
+                    <div class="text-center sm:text-left mb-4 sm:mb-0">
+                        <h1 class="text-2xl sm:text-3xl font-bold text-blue-600">UK Financial Regulatory Horizon Scanner</h1>
+                        <p id="periodText" class="text-sm text-gray-500">Fetching live data...</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button id="openFilterSidebar" class="lg:hidden p-2 text-gray-600 hover:text-blue-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
+                        <button id="refreshData" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md text-sm transition duration-150 ease-in-out flex items-center">
+                            <svg id="refreshIcon" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m-15.357-2a8.001 8.001 0 0015.357 2M15 15H9"></path></svg>
+                            <span id="refreshText">Refresh Data</span>
+                        </button>
+                    </div>
+                </div>
+                 <div id="dataSourceStatus" class="mt-3 text-xs text-gray-500 flex flex-wrap justify-center gap-x-4 gap-y-1">
+                    <span>Backend API: <span id="apiStatus" class="status-offline font-semibold">Offline</span></span>
+                </div>
+            </header>
+            
+            <div class="container mx-auto p-4 sm:p-6 lg:p-8 flex-1 overflow-y-auto">
+                <div class="mb-6 bg-white rounded-lg shadow p-2">
+                    <nav id="tabNav" class="flex flex-wrap justify-center -mb-px" aria-label="Tabs"></nav>
+                </div>
+                <div id="loadingSpinner" class="my-10">
+                    <div class="loader"></div>
+                    <p class="text-center text-gray-500 mt-2">Fetching live data from backend...</p>
+                </div>
+                <div id="notificationArea" class="hidden my-4 p-3 rounded-md text-sm"></div>
+                <main id="tabContentContainer"></main>
+            </div>
+
+            <footer class="bg-white border-t border-gray-200 p-4 text-center text-xs text-gray-500">
+                <p>Disclaimer: This tool provides a summary of regulatory updates generated by an AI model. Users should always refer to the original source documents for complete and authoritative information.</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE ---
+        let dashboardData = {}; 
+        let activeTabKey = '';
+        let currentFilters = {};
+        // *** FIX: Use relative paths since the backend now serves this file ***
+        const API_URL = '/api/updates';
+        const REFRESH_URL = '/api/refresh';
+
+        // --- DOM ELEMENTS ---
+        const tabNav = document.getElementById('tabNav');
+        const tabContentContainer = document.getElementById('tabContentContainer');
+        const filterSidebar = document.getElementById('filterSidebar');
+        const openFilterSidebarButton = document.getElementById('openFilterSidebar');
+        const closeFilterSidebarButton = document.getElementById('closeFilterSidebar');
+        const filterAuthoritySelect = document.getElementById('filterAuthority');
+        const filterImpactLevelSelect = document.getElementById('filterImpactLevel');
+        const filterUrgencySelect = document.getElementById('filterUrgency');
+        const applyFiltersButton = document.getElementById('applyFilters');
+        const resetFiltersButton = document.getElementById('resetFilters');
+        const refreshDataButton = document.getElementById('refreshData');
+        const refreshIcon = document.getElementById('refreshIcon');
+        const refreshText = document.getElementById('refreshText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const notificationArea = document.getElementById('notificationArea');
+        const apiStatus = document.getElementById('apiStatus');
+        const periodText = document.getElementById('periodText');
+
+        // --- SECTOR COLORS ---
+        const sectorColors = {
+            "Payments": "text-blue-500", "Investments": "text-indigo-500", "ConsumerCredit": "text-green-500",
+            "CorporateFinance": "text-purple-500", "Banking": "text-amber-500", "PensionsRetirementIncome": "text-pink-500",
+            "Cryptoassets": "text-cyan-500", "AMLFinancialCrime": "text-red-500"
+        };
+        
+        // --- HELPER FUNCTIONS ---
+        function formatTabName(key) {
+            if (key === "AMLFinancialCrime") return "AML & FinCrime";
+            if (key === "ConsumerCredit") return "Consumer Credit";
+            if (key === "CorporateFinance") return "Corporate Finance";
+            if (key === "PensionsRetirementIncome") return "Pensions & Retirement";
+            return key.replace(/([A-Z])/g, ' $1').trim();
+        }
+        
+        function showNotification(message, type = 'info') {
+            notificationArea.textContent = message;
+            notificationArea.className = `my-4 p-3 rounded-md text-sm ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
+            notificationArea.classList.remove('hidden');
+            setTimeout(() => notificationArea.classList.add('hidden'), 3000);
+        }
+
+        // --- DATA FETCHING ---
+        async function fetchData() {
+            loadingSpinner.classList.remove('hidden');
+            tabContentContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`API call failed with status ${response.status}`);
+                dashboardData = await response.json();
+                apiStatus.textContent = 'Live';
+                apiStatus.className = 'status-live font-semibold';
+                
+                const dates = Object.values(dashboardData).flat().map(item => new Date(item.fetchedDate));
+                if (dates.length > 0 && dates.every(d => !isNaN(d))) {
+                    const minDate = new Date(Math.min.apply(null, dates));
+                    const maxDate = new Date(Math.max.apply(null, dates));
+                    periodText.textContent = `Data from ${minDate.toLocaleDateString()} to ${maxDate.toLocaleDateString()}`;
+                } else {
+                    periodText.textContent = "No recent data available.";
+                }
+                initializeDashboard();
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                showNotification('Failed to fetch data. Is the backend server running?', 'error');
+                apiStatus.textContent = 'Offline';
+                apiStatus.className = 'status-offline font-semibold';
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        // --- RENDERING FUNCTIONS ---
+        function createUpdateCard(item) {
+            return `
+                <div class="card bg-white rounded-xl shadow-lg p-6 mb-6 hover:shadow-xl">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg md:text-xl font-semibold ${sectorColors[item.sector] || 'text-blue-700'}">${item.headline || 'N/A'}</h3>
+                        <div class="flex space-x-2 ml-2 flex-shrink-0">
+                            <span class="impact-${(item.impactLevel || 'Informational').replace(/\s+/g, '')} text-xs font-semibold px-2 py-0.5 rounded-full">${item.impactLevel || 'Info'}</span>
+                            <span class="urgency-${item.urgency || 'Low'} text-xs font-semibold px-2 py-0.5 rounded-full">${item.urgency || 'Low'}</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 mb-4 text-xs sm:text-sm">
+                        <div><p class="text-gray-500 font-medium">Focus Area:</p><p class="text-gray-700">${item.area || 'N/A'}</p></div>
+                        <div><p class="text-gray-500 font-medium">Authority:</p><p class="text-gray-700">${item.authority || 'N/A'}</p></div>
+                        <div><p class="text-gray-500 font-medium">Key Dates:</p><p class="text-gray-700">${item.keyDates || 'N/A'}</p></div>
+                    </div>
+                    <div class="mb-4"><p class="text-gray-600 font-semibold text-sm mb-1">Direct Business Impact:</p><p class="text-gray-700 leading-relaxed text-sm">${item.impact || 'No impact analysis available.'}</p></div>
+                    <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm transition duration-150 ease-in-out">
+                       <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                       View Source
+                    </a>
+                </div>
+            `;
+        }
+
+        function renderContent() {
+            loadingSpinner.classList.add('hidden');
+            tabContentContainer.innerHTML = '';
+            
+            const items = dashboardData[activeTabKey] || [];
+            let filteredItems = items.filter(item => {
+                return (!currentFilters.authority || (item.authority && item.authority.split(', ').includes(currentFilters.authority))) &&
+                        (!currentFilters.impactLevel || item.impactLevel === currentFilters.impactLevel) &&
+                        (!currentFilters.urgency || item.urgency === currentFilters.urgency);
+            });
+            if (filteredItems.length === 0) {
+                tabContentContainer.innerHTML = `<div class="text-center py-10"><p class="text-gray-500 text-lg">No updates found for ${formatTabName(activeTabKey)} matching your current filters.</p></div>`;
+            } else {
+                tabContentContainer.innerHTML = `<div id="${activeTabKey}-content" class="tab-pane space-y-6">${filteredItems.map(createUpdateCard).join('')}</div>`;
+            }
+        }
+
+        function populateFilterOptions() {
+            const authorities = new Set();
+            Object.values(dashboardData).flat().forEach(item => {
+                if(item.authority) item.authority.split(', ').forEach(auth => authorities.add(auth.trim()));
+            });
+            while (filterAuthoritySelect.options.length > 1) filterAuthoritySelect.remove(1);
+            authorities.forEach(auth => {
+                const option = document.createElement('option');
+                option.value = auth; option.textContent = auth;
+                filterAuthoritySelect.appendChild(option);
+            });
+        }
+        
+        function initializeDashboard() {
+            tabNav.innerHTML = '';
+            const dataKeys = Object.keys(dashboardData);
+            if (dataKeys.length === 0) {
+                 tabContentContainer.innerHTML = `<div class="text-center py-10"><p class="text-gray-500 text-lg">No data found. Try clicking "Refresh Data".</p></div>`;
+                 return;
+            }
+            activeTabKey = dataKeys[0];
+            dataKeys.forEach(tabKey => {
+                const tabButton = document.createElement('button');
+                tabButton.textContent = formatTabName(tabKey);
+                const colorClass = sectorColors[tabKey] || 'text-gray-500';
+                tabButton.className = `px-3 sm:px-4 py-3 font-medium text-sm sm:text-base rounded-t-md focus:outline-none transition-colors duration-150 ease-in-out ${tabKey === activeTabKey ? `tab-active ${colorClass}` : `tab-inactive text-gray-500 hover:text-gray-700`}`;
+                tabButton.onclick = () => {
+                    activeTabKey = tabKey;
+                    Array.from(tabNav.children).forEach(btn => {
+                        btn.className = btn.className.replace('tab-active', 'tab-inactive');
+                        Object.values(sectorColors).forEach(c => btn.className = btn.className.replace(c, 'text-gray-500 hover:text-gray-700'));
+                    });
+                    tabButton.className = tabButton.className.replace('tab-inactive', 'tab-active').replace('text-gray-500 hover:text-gray-700', colorClass);
+                    renderContent();
+                };
+                tabNav.appendChild(tabButton);
+            });
+            populateFilterOptions();
+            renderContent();
+        }
+
+        // --- EVENT LISTENERS ---
+        if (openFilterSidebarButton) {
+            openFilterSidebarButton.addEventListener('click', () => filterSidebar.classList.remove('filter-sidebar-closed'));
+        }
+        
+        applyFiltersButton.addEventListener('click', () => {
+            currentFilters.authority = filterAuthoritySelect.value;
+            currentFilters.impactLevel = filterImpactLevelSelect.value;
+            currentFilters.urgency = filterUrgencySelect.value;
+            renderContent();
+            if (window.innerWidth < 1024) filterSidebar.classList.add('filter-sidebar-closed');
+            showNotification('Filters applied.', 'info');
+        });
+
+        resetFiltersButton.addEventListener('click', () => {
+            filterAuthoritySelect.value = ""; filterImpactLevelSelect.value = ""; filterUrgencySelect.value = "";
+            currentFilters = {};
+            renderContent();
+            if (window.innerWidth < 1024) filterSidebar.classList.add('filter-sidebar-closed');
+            showNotification('Filters reset.', 'info');
+        });
+        
+        refreshDataButton.addEventListener('click', async () => {
+             showNotification('Triggering backend refresh... This may take a moment.', 'info');
+             refreshText.textContent = 'Refreshing...';
+             refreshIcon.classList.add('animate-spin');
+             refreshDataButton.disabled = true;
+
+             try {
+                const response = await fetch(REFRESH_URL, { method: 'POST' });
+                if(!response.ok) throw new Error("Backend refresh failed");
+                showNotification('Backend refresh complete. Fetching new data.', 'info');
+                await fetchData();
+             } catch(error) {
+                showNotification('Error triggering backend refresh.', 'error');
+                console.error("Refresh error:", error);
+             } finally {
+                refreshText.textContent = 'Refresh Data';
+                refreshIcon.classList.remove('animate-spin');
+                refreshDataButton.disabled = false;
+             }
+        });
+
+        // --- INITIAL LOAD ---
+        document.addEventListener('DOMContentLoaded', fetchData);
+    </script>
+
+</body>
+</html>

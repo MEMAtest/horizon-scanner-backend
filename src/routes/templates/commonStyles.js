@@ -55,7 +55,7 @@ function getCommonStyles() {
         /* Executive Sidebar Design */
         .sidebar {
             width: 280px;
-            background: #ffffff;
+            background: #ffffff !important;
             border-right: 1px solid #e1e5e9;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
             height: 100vh;
@@ -67,9 +67,28 @@ function getCommonStyles() {
             padding: 0;
         }
 
+        /* Override professional theme sidebar conflicts - FORCE VISIBILITY */
+        .sidebar, .sidebar * {
+            background: #ffffff !important;
+            color: #1f2937 !important;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%) !important;
+            color: white !important;
+        }
+
+        .sidebar-header *, .sidebar-header h2, .sidebar-header .status-indicator {
+            color: white !important;
+        }
+
+        .nav-text, .nav-link, .counter-label {
+            color: #1f2937 !important;
+        }
+
         .sidebar-header {
             padding: 24px 20px;
-            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%) !important;
             color: white;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }

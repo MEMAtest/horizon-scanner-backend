@@ -14,6 +14,53 @@ const enforcementRoutes = require('./api/enforcement')
 router.use('/', weeklyRoundupRoutes)
 router.use('/enforcement', enforcementRoutes)
 
+// ANALYTICS ENDPOINT
+router.get('/analytics', async (req, res) => {
+  try {
+    console.log('📊 API: Getting analytics dashboard...')
+
+    // Get or import analytics service
+    let analyticsService
+    try {
+      analyticsService = require('../services/analyticsService')
+    } catch (error) {
+      console.warn('📊 Analytics service not available, using fallback')
+      return res.json({
+        success: false,
+        error: 'Analytics service not available',
+        dashboard: {
+          overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
+          velocity: {},
+          hotspots: [],
+          predictions: []
+        }
+      })
+    }
+
+    // Get analytics dashboard
+    const dashboard = await analyticsService.getAnalyticsDashboard()
+
+    res.json({
+      success: true,
+      dashboard: dashboard,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('❌ Analytics API error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      dashboard: {
+        overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
+        velocity: {},
+        hotspots: [],
+        predictions: []
+      }
+    })
+  }
+})
+
 // ENHANCED UPDATES ENDPOINTS
 router.get('/updates', async (req, res) => {
   try {
