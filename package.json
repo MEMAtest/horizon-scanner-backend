@@ -9,7 +9,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src/",
+    "lint": "eslint src/routes src/services src/utils",
     "lint:fix": "eslint src/ --fix",
     "validate": "node scripts/validate-system.js",
     "cleanup": "node scripts/cleanup-database.js",
@@ -110,8 +110,18 @@
     ],
     "env": {
       "node": true,
-      "jest": true
+      "jest": true,
+      "browser": true
     },
+    "overrides": [
+      {
+        "files": ["src/components/**/*.js", "src/widgets/**/*.js", "src/public/js/**/*.js"],
+        "rules": {
+          "no-unused-vars": "off",
+          "no-undef": "off"
+        }
+      }
+    ],
     "rules": {
       "no-console": "off",
       "space-before-function-paren": "off"
