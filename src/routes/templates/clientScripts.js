@@ -489,16 +489,16 @@ function getClientScriptsContent() {
                             impactBadge +
                         '</div>' +
                         '<div class="update-actions">' +
-                            '<button onclick="bookmarkUpdate(\'' + (update.id || '') + '\')" class="action-btn" title="Bookmark">⭐</button>' +
-                            '<button onclick="shareUpdate(\'' + (update.id || '') + '\')" class="action-btn" title="Share">🔗</button>' +
-                            '<button onclick="viewDetails(\'' + (update.id || '') + '\')" class="action-btn" title="Details">👁️</button>' +
+                            '<button onclick="bookmarkUpdate(\\"' + (update.id || '') + '\\")" class="action-btn" title="Bookmark">⭐</button>' +
+                            '<button onclick="shareUpdate(\\"' + (update.id || '') + '\\")" class="action-btn" title="Share">🔗</button>' +
+                            '<button onclick="viewDetails(\\"' + (update.id || '') + '\\")" class="action-btn" title="Details">👁️</button>' +
                         '</div>' +
                     '</div>' +
                     '<h3 class="update-headline">' +
                         '<a href="' + (update.url || '#') + '" target="_blank" rel="noopener">' + (update.headline || 'No headline') + '</a>' +
                     '</h3>' +
                     '<div class="update-summary">' +
-                        (summaryText ? truncateText(summaryText, 200) : 'No summary available') +
+                        (summaryText || 'No summary available') +
                     '</div>' +
                     '<div class="update-details">' +
                         '<div class="detail-item">' +
@@ -562,7 +562,7 @@ function getClientScriptsContent() {
             }
 
             return sectors.slice(0, 3).map(sector =>
-                '<span class="sector-tag" onclick="filterBySector(\'' + sector + '\')">' + sector + '</span>'
+                '<span class="sector-tag" onclick="filterBySector(\\'' + sector + '\\')">' + sector + '</span>'
             ).join('');
         }
 
