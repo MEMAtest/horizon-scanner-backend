@@ -823,7 +823,7 @@ async function renderDashboardPage(req, res) {
                     <!-- Dashboard Header -->
                     <header class="dashboard-header">
                         <h1 class="dashboard-title">
-                            📊 AI Regulatory Intelligence Dashboard
+                            📊 Regulatory Intelligence Dashboard
                         </h1>
                         <p class="dashboard-subtitle">
                             Real-time regulatory monitoring with AI-powered analysis and business impact intelligence

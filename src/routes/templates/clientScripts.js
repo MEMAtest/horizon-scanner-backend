@@ -454,38 +454,162 @@ function getClientScriptsContent() {
         }
         
         function generateUpdateCard(update) {
-            const isPinned = pinnedUrls.has(update.url);
-            const aiSummary = update.ai_summary || update.impact || '';
-            const useFallback = isFallbackSummary(aiSummary);
-            const baseSummary = !useFallback && aiSummary.trim().length > 0
-                ? aiSummary.trim()
-                : (update.summary || update.description || '').trim();
-            const shortSummary = truncateText(baseSummary, 180);
-            const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
+            const impactLevel = update.impactLevel || update.impact_level || 'Informational'
+            const urgency = update.urgency || 'Low'
+            const publishedAt = parseDate(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
+            const publishedDate = formatDateDisplay(publishedAt || new Date())
+            const isoDate = publishedAt ? publishedAt.toISOString() : ''
+            const impactBadge = getImpactBadge(update)
+            const contentTypeBadge = getContentTypeBadge(update)
+            const sectorTags = getSectorTags(update)
+            const aiFeatures = getAIFeatures(update)
 
-            const readMore = baseSummary && baseSummary.length > 180
-                ? '<button class="read-more-btn" onclick="ContentModule.toggleSummaryExpansion(' + (update.id || '0') + ', ' + JSON.stringify(baseSummary) + ')">Read More</button>'
-                : '';
+            const aiSummary = update.ai_summary ? update.ai_summary.trim() : ''
+            const useFallbackSummary = isFallbackSummary(aiSummary)
+            const summaryText = !useFallbackSummary && aiSummary
+                ? aiSummary
+                : (update.summary && update.summary.trim() ? update.summary.trim() : '')
 
             const idArg = JSON.stringify(update.id || '');
             const urlArg = JSON.stringify(update.url || '');
 
             return (
-                '<div class="update-card" data-authority="' + (update.authority || '') + '" data-url="' + (update.url || '') + '">' +
+                '<div class="update-card" ' +
+                    'data-id="' + (update.id || '') + '" ' +
+                    'data-url="' + (update.url || '') + '" ' +
+                    'data-authority="' + (update.authority || '') + '" ' +
+                    'data-impact="' + impactLevel + '" ' +
+                    'data-urgency="' + urgency + '" ' +
+                    'data-date="' + isoDate + '">' +
                     '<div class="update-header">' +
-                        '<h4>' + (update.headline || 'No headline') + '</h4>' +
-                        '<span class="authority-badge">' + (update.authority || 'Unknown') + '</span>' +
+                        '<div class="update-meta-primary">' +
+                            '<span class="authority-badge">' + (update.authority || 'Unknown') + '</span>' +
+                            '<span class="date-badge">' + publishedDate + '</span>' +
+                            contentTypeBadge +
+                            impactBadge +
+                        '</div>' +
+                        '<div class="update-actions">' +
+                            '<button onclick="bookmarkUpdate(\'' + (update.id || '') + '\')" class="action-btn" title="Bookmark">⭐</button>' +
+                            '<button onclick="shareUpdate(\'' + (update.id || '') + '\')" class="action-btn" title="Share">🔗</button>' +
+                            '<button onclick="viewDetails(\'' + (update.id || '') + '\')" class="action-btn" title="Details">👁️</button>' +
+                        '</div>' +
                     '</div>' +
-                    '<div class="update-content">' +
-                        '<p>' + (shortSummary || 'No summary available') + '</p>' +
-                        readMore +
+                    '<h3 class="update-headline">' +
+                        '<a href="' + (update.url || '#') + '" target="_blank" rel="noopener">' + (update.headline || 'No headline') + '</a>' +
+                    '</h3>' +
+                    '<div class="update-summary">' +
+                        (summaryText ? truncateText(summaryText, 200) : 'No summary available') +
+                    '</div>' +
+                    '<div class="update-details">' +
+                        '<div class="detail-item">' +
+                            '<div class="detail-label">Regulatory Area</div>' +
+                            '<div class="detail-value">' + (update.area || 'General') + '</div>' +
+                        '</div>' +
+                        (update.business_impact_score ?
+                            '<div class="detail-item">' +
+                                '<div class="detail-label">Impact Score</div>' +
+                                '<div class="detail-value">' + update.business_impact_score + '/10</div>' +
+                            '</div>' : '') +
+                        (update.urgency ?
+                            '<div class="detail-item">' +
+                                '<div class="detail-label">Urgency</div>' +
+                                '<div class="detail-value">' + update.urgency + '</div>' +
+                            '</div>' : '') +
+                        (update.compliance_deadline ?
+                            '<div class="detail-item">' +
+                                '<div class="detail-label">Compliance Deadline</div>' +
+                                '<div class="detail-value">' + formatDateDisplay(update.compliance_deadline || update.complianceDeadline) + '</div>' +
+                            '</div>' : '') +
                     '</div>' +
                     '<div class="update-footer">' +
-                        '<span>' + displayDate + '</span>' +
-                        '<button onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View Details</button>' +
+                        '<div class="sector-tags">' + sectorTags + '</div>' +
+                        '<div class="ai-features">' + aiFeatures + '</div>' +
                     '</div>' +
                 '</div>'
             );
+        }
+
+        // Client-side helper functions for Cards view
+        function getImpactBadge(update) {
+            const level = update.impactLevel || update.impact_level || 'Informational';
+            let badgeClass = 'low';
+            if (level === 'Significant') {
+                badgeClass = 'urgent';
+            } else if (level === 'Moderate') {
+                badgeClass = 'moderate';
+            }
+            return '<span class="impact-badge ' + badgeClass + '">' + level + '</span>';
+        }
+
+        function getContentTypeBadge(update) {
+            const contentType = update.content_type || 'OTHER';
+            const badgeClass = contentType.toLowerCase();
+            const badgeText = contentType === 'OTHER' ? 'INFO' : contentType;
+            return '<span class="content-type-badge ' + badgeClass + '">' + badgeText + '</span>';
+        }
+
+        function getSectorTags(update) {
+            // Try various sector field names first
+            let sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : []);
+
+            // If no sector data, use authority as fallback sector tag
+            if (!sectors || sectors.length === 0) {
+                if (update.authority) {
+                    sectors = [update.authority];
+                } else {
+                    sectors = [];
+                }
+            }
+
+            return sectors.slice(0, 3).map(sector =>
+                '<span class="sector-tag" onclick="filterBySector(\'' + sector + '\')">' + sector + '</span>'
+            ).join('');
+        }
+
+        function getAIFeatures(update) {
+            const features = [];
+
+            // Primary AI features (if available)
+            if (update.business_impact_score && update.business_impact_score >= 7) {
+                features.push('<span class="ai-feature high-impact">🔥 High Impact (' + update.business_impact_score + '/10)</span>');
+            }
+
+            if (update.urgency === 'High') {
+                features.push('<span class="ai-feature urgent">🚨 Urgent</span>');
+            }
+
+            if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
+                features.push('<span class="ai-feature enforcement">🚨 Enforcement Action</span>');
+            }
+
+            if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
+                features.push('<span class="ai-feature high-confidence">🤖 High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
+            }
+
+            // Fallback features based on available data
+            if (features.length === 0) {
+                // Check if headline/summary contains enforcement keywords
+                const text = (update.headline + ' ' + (update.summary || update.ai_summary || '')).toLowerCase();
+
+                if (text.includes('fine') || text.includes('penalty') || text.includes('enforcement') || text.includes('breach')) {
+                    features.push('<span class="ai-feature enforcement">⚖️ Enforcement</span>');
+                }
+
+                if (text.includes('consultation') || text.includes('draft') || text.includes('guidance')) {
+                    features.push('<span class="ai-feature guidance">📋 Guidance</span>');
+                }
+
+                if (text.includes('deadline') || text.includes('compliance') || text.includes('must')) {
+                    features.push('<span class="ai-feature deadline">📅 Action Required</span>');
+                }
+
+                // Show authority as a feature if no other features found
+                if (features.length === 0 && update.authority) {
+                    features.push('<span class="ai-feature authority">🏛️ ' + update.authority + '</span>');
+                }
+            }
+
+            return features.join('');
         }
 
         
