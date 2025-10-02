@@ -1248,9 +1248,9 @@ function generateUpdateCard(update) {
                     ${impactBadge}
                 </div>
                 <div class="update-actions">
-                    <button onclick="bookmarkUpdate(\"${update.id || ''}\")" class="action-btn" title="Bookmark">⭐</button>
-                    <button onclick="shareUpdate(\"${update.id || ''}\")" class="action-btn" title="Share">🔗</button>
-                    <button onclick="viewDetails(\"${update.id || ''}\")" class="action-btn" title="Details">👁️</button>
+                    <button onclick="bookmarkUpdate('${update.id || ''}')" class="action-btn" title="Bookmark">⭐</button>
+                    <button onclick="shareUpdate('${update.id || ''}')" class="action-btn" title="Share">🔗</button>
+                    <button onclick="viewDetails('${update.id || ''}')" class="action-btn" title="Details">👁️</button>
                 </div>
             </div>
             
