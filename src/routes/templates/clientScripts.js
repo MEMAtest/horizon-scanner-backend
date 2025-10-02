@@ -433,14 +433,15 @@ function getClientScriptsContent() {
         }
         
         function generateStream(id, title, updates, isExpanded = false) {
+            const safeId = String(id).replace(/"/g, '&quot;');
             const cards = updates.slice(0, 5).map(u => generateUpdateCard(u)).join('');
             const loadMore = updates.length > 5
-                ? '<button class="load-more-btn" id="loadMoreBtn-' + id + '" onclick="SearchModule.loadMoreUpdatesForStream(&quot;' + id + '&quot;, ' + updates.length + ')">Load More (' + (updates.length - 5) + ' remaining)</button>'
+                ? '<button class="load-more-btn" id="loadMoreBtn-' + safeId + '" onclick="SearchModule.loadMoreUpdatesForStream(&#39;' + safeId + '&#39;, ' + updates.length + ')">Load More (' + (updates.length - 5) + ' remaining)</button>'
                 : '';
 
             return (
-                '<div class="intelligence-stream ' + (isExpanded ? 'expanded' : '') + '" id="' + id + '">' +
-                    '<div class="stream-header" onclick="toggleStreamExpansion(\'' + id + '\')">' +
+                '<div class="intelligence-stream ' + (isExpanded ? 'expanded' : '') + '" id="' + safeId + '">' +
+                    '<div class="stream-header" onclick="toggleStreamExpansion(&#39;' + safeId + '&#39;)">' +
                         '<h3>' + title + '</h3>' +
                         '<span class="update-count">' + updates.length + ' updates</span>' +
                     '</div>' +
@@ -817,6 +818,7 @@ function getClientScriptsContent() {
                 updateLiveCounters();
                 setInterval(updateLiveCounters, 30000);
 
+                applyCurrentFilters();
                 console.log('✅ System initialized');
             } catch (error) {
                 console.error('❌ Initialization failed:', error);
@@ -827,112 +829,340 @@ function getClientScriptsContent() {
         // FILTER AND SORT FUNCTIONS
         // =================
         
+        let currentView = typeof window.currentView === 'string' ? window.currentView : 'cards';
+        window.currentView = currentView;
+
+        const originalUpdates = Array.isArray(window.initialUpdates)
+            ? window.initialUpdates.map(update => ({ ...update }))
+            : [];
+        let filteredUpdates = [...originalUpdates];
+
+        window.originalUpdates = originalUpdates;
+        window.filteredUpdates = filteredUpdates;
+        window.currentFilters = Object.assign({ category: 'all', sort: 'newest' }, window.currentFilters || {});
+
+        function getUpdateDate(update) {
+            const raw = update?.publishedDate || update?.published_date || update?.fetchedDate || update?.createdAt;
+            if (!raw) return null;
+            const parsed = new Date(raw);
+            return isNaN(parsed) ? null : parsed;
+        }
+
+        function isWithinLastDays(update, days) {
+            const date = getUpdateDate(update);
+            if (!date) return false;
+
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+            if (days === 0) {
+                return date >= startOfToday && date < new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+            }
+
+            const threshold = new Date(today.getTime() - (days * 24 * 60 * 60 * 1000));
+            return date >= threshold;
+        }
+
+        function hasDeadline(update) {
+            if (!update) return false;
+            if (update.compliance_deadline || update.complianceDeadline) return true;
+            if (typeof update.keyDates === 'string' && /[0-9]{4}/.test(update.keyDates)) return true;
+            return false;
+        }
+
+        function matchesCategory(update, category) {
+            const normalized = (category || '').toLowerCase();
+            if (!normalized || normalized === 'all') return true;
+
+            const contentType = (update.content_type || update.contentType || '').toLowerCase();
+            const updateCategory = (update.category || '').toLowerCase();
+            const summary = (update.summary || '').toLowerCase();
+            const headline = (update.headline || '').toLowerCase();
+            const aiTags = Array.isArray(update.ai_tags) ? update.ai_tags.map(tag => tag.toLowerCase()) : [];
+
+            switch (normalized) {
+                case 'high-impact':
+                    return (update.impactLevel === 'Significant' || update.impact_level === 'Significant' ||
+                        (update.business_impact_score || 0) >= 7 ||
+                        (update.urgency || '').toLowerCase() === 'high');
+                case 'today':
+                    return isWithinLastDays(update, 0);
+                case 'this-week':
+                case 'thisweek':
+                    return isWithinLastDays(update, 7);
+                case 'consultations':
+                    return contentType.includes('consultation') ||
+                        updateCategory.includes('consultation') ||
+                        headline.includes('consultation') ||
+                        summary.includes('consultation') ||
+                        aiTags.includes('type:consultation');
+                case 'enforcement':
+                    return updateCategory.includes('enforcement') ||
+                        contentType.includes('enforcement') ||
+                        aiTags.includes('has:penalty') ||
+                        headline.includes('fine') ||
+                        summary.includes('fine') ||
+                        summary.includes('penalty');
+                case 'deadlines':
+                    return hasDeadline(update);
+                default:
+                    return updateCategory === normalized || contentType === normalized;
+            }
+        }
+
+        function matchesSector(update, sector) {
+            if (!sector) return true;
+            const target = sector.toLowerCase();
+            const sectors = [].concat(
+                update.firm_types_affected || [],
+                update.primarySectors || [],
+                update.primary_sectors || [],
+                update.sector ? [update.sector] : []
+            ).map(value => (value || '').toLowerCase());
+            return sectors.includes(target);
+        }
+
+        function matchesSearch(update, term) {
+            if (!term) return true;
+            const needle = term.toLowerCase();
+            const haystack = [
+                update.headline,
+                update.summary,
+                update.ai_summary,
+                update.authority,
+                update.area,
+                update.category,
+                update.content_type,
+                update.contentType
+            ].concat(update.ai_tags || [], update.primarySectors || [], update.firm_types_affected || [])
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            return haystack.includes(needle);
+        }
+
+        function filterUpdatesByRange(updates, range) {
+            if (!range) return updates;
+            const normalized = range.toLowerCase();
+            switch (normalized) {
+                case 'today':
+                    return updates.filter(update => isWithinLastDays(update, 0));
+                case 'week':
+                    return updates.filter(update => isWithinLastDays(update, 7));
+                case 'month':
+                    return updates.filter(update => isWithinLastDays(update, 30));
+                case 'quarter':
+                    return updates.filter(update => isWithinLastDays(update, 90));
+                default:
+                    return updates;
+            }
+        }
+
+        function applySort(updates, sortBy) {
+            const sortKey = sortBy || 'newest';
+            const impactOrder = { significant: 3, moderate: 2, informational: 1 };
+            const sorted = [...updates];
+
+            sorted.sort((a, b) => {
+                switch (sortKey) {
+                    case 'oldest':
+                        return (getUpdateDate(a) || 0) - (getUpdateDate(b) || 0);
+                    case 'impact': {
+                        const impactA = (a.impactLevel || a.impact_level || 'Informational').toLowerCase();
+                        const impactB = (b.impactLevel || b.impact_level || 'Informational').toLowerCase();
+                        return (impactOrder[impactB] || 0) - (impactOrder[impactA] || 0);
+                    }
+                    case 'authority': {
+                        const authA = (a.authority || '').toLowerCase();
+                        const authB = (b.authority || '').toLowerCase();
+                        return authA.localeCompare(authB);
+                    }
+                    case 'sector': {
+                        const sectorA = ((a.primarySectors && a.primarySectors[0]) || a.sector || '').toLowerCase();
+                        const sectorB = ((b.primarySectors && b.primarySectors[0]) || b.sector || '').toLowerCase();
+                        return sectorA.localeCompare(sectorB);
+                    }
+                    case 'newest':
+                    default:
+                        return (getUpdateDate(b) || 0) - (getUpdateDate(a) || 0);
+                }
+            });
+
+            return sorted;
+        }
+
+        function setActiveCategoryButton(category) {
+            document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+                const value = btn.getAttribute('data-filter') || 'all';
+                btn.classList.toggle('active', value === category);
+            });
+        }
+
+        function updateResultsSummary(updates) {
+            const resultsCount = document.getElementById('results-count');
+            if (resultsCount) {
+                resultsCount.textContent = updates.length;
+            }
+
+            const searchInfo = document.getElementById('search-results');
+            if (searchInfo) {
+                if (window.currentFilters.search) {
+                    searchInfo.style.display = 'block';
+                    searchInfo.textContent = 'Showing results for "' + window.currentFilters.search + '"';
+                } else {
+                    searchInfo.style.display = 'none';
+                    searchInfo.textContent = '';
+                }
+            }
+        }
+
+        function syncUrlWithFilters(filters) {
+            const url = new URL(window.location.href);
+            const params = url.searchParams;
+            const keys = ['category', 'authority', 'sector', 'impact', 'range', 'search'];
+
+            keys.forEach(key => {
+                const value = filters[key];
+                if (value) {
+                    params.set(key, value);
+                } else {
+                    params.delete(key);
+                }
+            });
+
+            const query = params.toString();
+            window.history.replaceState({}, '', url.pathname + (query ? ('?' + query) : ''));
+        }
+
+        function renderUpdatesList(updates) {
+            filteredUpdates = updates;
+            window.filteredUpdates = updates;
+            renderUpdatesInView(currentView, updates);
+            updateResultsSummary(updates);
+            syncUrlWithFilters(window.currentFilters);
+            document.dispatchEvent(new CustomEvent('dashboard:updates-filtered', { detail: { updates } }));
+        }
+
+        function applyCurrentFilters() {
+            const filters = window.currentFilters = Object.assign({ category: 'all', sort: 'newest' }, window.currentFilters || {});
+
+            let updates = originalUpdates.slice();
+
+            if (filters.category && filters.category !== 'all') {
+                updates = updates.filter(update => matchesCategory(update, filters.category));
+            }
+
+            if (filters.authority) {
+                const authorityMatch = filters.authority.toLowerCase();
+                updates = updates.filter(update => (update.authority || '').toLowerCase() === authorityMatch);
+            }
+
+            if (filters.sector) {
+                updates = updates.filter(update => matchesSector(update, filters.sector));
+            }
+
+            if (filters.impact) {
+                updates = updates.filter(update => {
+                    const impactLevel = update.impactLevel || update.impact_level || '';
+                    return impactLevel === filters.impact;
+                });
+            }
+
+            if (filters.range) {
+                updates = filterUpdatesByRange(updates, filters.range);
+            }
+
+            if (filters.search) {
+                updates = updates.filter(update => matchesSearch(update, filters.search));
+            }
+
+            updates = applySort(updates, filters.sort);
+
+            setActiveCategoryButton(filters.category || 'all');
+
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === filters.sort);
+            });
+
+            renderUpdatesList(updates);
+        }
+
         function filterByCategory(category) {
             console.log('Filtering by category:', category);
-            window.currentFilters = window.currentFilters || {};
-            window.currentFilters.category = category;
-            window.location.href = '/dashboard?category=' + category;
+            window.currentFilters.category = category || 'all';
+            applyCurrentFilters();
+            showMessage('Filtered by ' + (category || 'all') + ' updates', 'info');
         }
-        
+
         function filterByAuthority(authority) {
             console.log('Filtering by authority:', authority);
             if (!authority) {
-                window.location.href = '/dashboard';
+                delete window.currentFilters.authority;
             } else {
-                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.authority = authority;
-                window.location.href = '/dashboard?authority=' + encodeURIComponent(authority);
             }
+            applyCurrentFilters();
         }
-        
+
         function filterBySector(sector) {
             console.log('Filtering by sector:', sector);
             if (!sector) {
-                window.location.href = '/dashboard';
+                delete window.currentFilters.sector;
             } else {
-                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.sector = sector;
-                window.location.href = '/dashboard?sector=' + encodeURIComponent(sector);
             }
+            applyCurrentFilters();
         }
-        
+
         function filterByImpactLevel(level) {
             console.log('Filtering by impact level:', level);
             if (!level) {
-                window.location.href = '/dashboard';
+                delete window.currentFilters.impact;
             } else {
-                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.impact = level;
-                window.location.href = '/dashboard?impact=' + encodeURIComponent(level);
             }
+            applyCurrentFilters();
         }
-        
+
         function filterByDateRange(range) {
             console.log('Filtering by date range:', range);
             if (!range) {
-                window.location.href = '/dashboard';
+                delete window.currentFilters.range;
             } else {
-                window.currentFilters = window.currentFilters || {};
                 window.currentFilters.range = range;
-                window.location.href = '/dashboard?range=' + range;
             }
+            applyCurrentFilters();
         }
-        
+
         function sortUpdates(sortBy) {
             console.log('Sorting by:', sortBy);
-            
-            // Get all update cards
-            const container = document.getElementById('updates-container');
-            if (!container) return;
-            
-            const cards = Array.from(container.querySelectorAll('.update-card'));
-            if (cards.length === 0) return;
-            
-            // Define sort functions
-            const urgencyMap = { 'High': 3, 'Medium': 2, 'Low': 1 };
-            const impactMap = { 'Significant': 3, 'Moderate': 2, 'Informational': 1 };
-            
-            cards.sort((a, b) => {
-                switch(sortBy) {
-                    case 'newest':
-                        const dateA = new Date(a.dataset.date || '2000-01-01');
-                        const dateB = new Date(b.dataset.date || '2000-01-01');
-                        return dateB - dateA;
-                    case 'oldest':
-                        const dateC = new Date(a.dataset.date || '2000-01-01');
-                        const dateD = new Date(b.dataset.date || '2000-01-01');
-                        return dateC - dateD;
-                    case 'impact':
-                        const impactA = a.querySelector('.impact-badge')?.textContent || '';
-                        const impactB = b.querySelector('.impact-badge')?.textContent || '';
-                        return (impactMap[impactB.split(' ')[0]] || 0) - (impactMap[impactA.split(' ')[0]] || 0);
-                    case 'authority':
-                        const authA = a.querySelector('.authority-badge')?.textContent || '';
-                        const authB = b.querySelector('.authority-badge')?.textContent || '';
-                        return authA.localeCompare(authB);
-                    case 'sector':
-                        const sectorA = a.querySelector('.sector-tag')?.textContent || '';
-                        const sectorB = b.querySelector('.sector-tag')?.textContent || '';
-                        return sectorA.localeCompare(sectorB);
-                    default:
-                        return 0;
-                }
-            });
-            
-            // Re-append sorted cards
-            cards.forEach(card => container.appendChild(card));
-            
-            // Update active button state
-            document.querySelectorAll('.sort-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.sort === sortBy);
-            });
+            window.currentFilters.sort = sortBy || 'newest';
+            applyCurrentFilters();
         }
-        
+
         function clearAllFilters() {
             console.log('Clearing all filters');
-            window.location.href = '/dashboard';
+            window.currentFilters = { category: 'all', sort: 'newest' };
+
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+
+            const authoritySelect = document.querySelector('select[onchange*="filterByAuthority"]');
+            if (authoritySelect) authoritySelect.value = '';
+
+            const sectorSelect = document.querySelector('select[onchange*="filterBySector"]');
+            if (sectorSelect) sectorSelect.value = '';
+
+            const impactSelect = document.querySelector('select[onchange*="filterByImpactLevel"]');
+            if (impactSelect) impactSelect.value = '';
+
+            const rangeSelect = document.querySelector('select[onchange*="filterByDateRange"]');
+            if (rangeSelect) rangeSelect.value = '';
+
+            applyCurrentFilters();
+            showMessage('All filters cleared', 'info');
         }
-        
+
         function clearFilters() {
             clearAllFilters();
         }
@@ -996,25 +1226,24 @@ function getClientScriptsContent() {
         function performSearch() {
             const searchInput = document.getElementById('search-input');
             if (!searchInput) return;
-            
+
             const searchTerm = searchInput.value.trim();
             if (!searchTerm) {
-                window.location.href = '/dashboard';
+                delete window.currentFilters.search;
             } else {
-                window.location.href = '/dashboard?search=' + encodeURIComponent(searchTerm);
+                window.currentFilters.search = searchTerm;
             }
+
+            applyCurrentFilters();
         }
 
         // =================
         // VIEW SWITCHING FUNCTIONALITY
         // =================
 
-        let currentView = 'cards';
-
         function initializeViewSwitching() {
             console.log('🔄 Initializing view switching...');
 
-            // Add event listeners to view buttons
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const newView = e.target.getAttribute('data-view');
@@ -1024,95 +1253,102 @@ function getClientScriptsContent() {
                 });
             });
 
-            // Set initial view
-            currentView = 'cards';
-            renderUpdatesInView(currentView);
+            currentView = typeof window.currentView === 'string' ? window.currentView : currentView;
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-view') === currentView);
+            });
+
+            renderUpdatesInView(currentView, window.filteredUpdates);
         }
 
         function switchView(viewType) {
             console.log('🔄 Switching view to: ' + viewType);
 
-            // Update active button
             document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.getAttribute('data-view') === viewType) {
-                    btn.classList.add('active');
-                }
+                btn.classList.toggle('active', btn.getAttribute('data-view') === viewType);
             });
 
             currentView = viewType;
-            renderUpdatesInView(viewType);
+            window.currentView = viewType;
+            renderUpdatesInView(viewType, window.filteredUpdates);
         }
 
-        function renderUpdatesInView(viewType) {
+        function renderUpdatesInView(viewType, updates) {
             const container = document.getElementById('updates-container') ||
-                            document.querySelector('.updates-container') ||
-                            document.querySelector('#intelligenceStreams');
+                            document.querySelector('.updates-container');
 
             if (!container) {
                 console.warn('Updates container not found');
                 return;
             }
 
-            // Get current updates data
-            const updateCards = container.querySelectorAll('.update-card');
-            const updates = Array.from(updateCards).map(card => {
-                return {
-                    headline: card.querySelector('.update-headline')?.textContent || '',
-                    summary: card.querySelector('.update-summary')?.textContent || '',
-                    authority: card.querySelector('.authority-badge')?.textContent || '',
-                    urgency: card.getAttribute('data-urgency') || 'Low',
-                    impactLevel: card.getAttribute('data-impact') || 'Informational',
-                    url: card.getAttribute('data-url') || '',
-                    fetchedDate: card.querySelector('.update-date')?.textContent || new Date().toLocaleDateString()
-                };
-            });
+            const dataset = updates || window.filteredUpdates || window.originalUpdates || [];
 
-            // Render based on view type
             switch (viewType) {
-                case 'cards':
-                    renderCardsView(container, updates);
-                    break;
                 case 'table':
-                    renderTableView(container, updates);
+                    renderTableView(container, dataset);
                     break;
                 case 'timeline':
-                    renderTimelineView(container, updates);
+                    renderTimelineView(container, dataset);
                     break;
+                case 'cards':
                 default:
-                    renderCardsView(container, updates);
+                    renderCardsView(container, dataset);
+                    break;
             }
         }
 
+        function buildEmptyStateHtml() {
+            return (
+                '<div class="no-updates">' +
+                    '<div class="no-updates-icon">📭</div>' +
+                    '<h3>No updates found</h3>' +
+                    '<p>Try adjusting your filters or search criteria.</p>' +
+                    '<button onclick="clearAllFilters()" class="btn btn-secondary">Clear All Filters</button>' +
+                '</div>'
+            );
+        }
+
         function renderCardsView(container, updates) {
-            // Restore original cards view - just show all update cards
             container.className = 'updates-container cards-view';
-            const html = updates.map(update => generateUpdateCard(update)).join('');
-            container.innerHTML = html;
+            if (!updates || updates.length === 0) {
+                container.innerHTML = buildEmptyStateHtml();
+                return;
+            }
+            container.innerHTML = updates.map(update => generateUpdateCard(update)).join('');
         }
 
         function renderTableView(container, updates) {
             container.className = 'updates-container table-view';
+            if (!updates || updates.length === 0) {
+                container.innerHTML = buildEmptyStateHtml();
+                return;
+            }
 
             const rows = updates.map(update => {
                 const idArg = JSON.stringify(update.id || '');
                 const urlArg = JSON.stringify(update.url || '');
+                const formattedDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
+                const summary = truncateText(update.summary || update.ai_summary || '', 120);
+                const impactLevel = (update.impactLevel || update.impact_level || 'Informational');
+                const urgency = update.urgency || 'Low';
+
                 return (
                     '<tr>' +
-                        '<td>' + update.fetchedDate + '</td>' +
-                        '<td><span class="authority-badge">' + update.authority + '</span></td>' +
+                        '<td>' + formattedDate + '</td>' +
+                        '<td><span class="authority-badge">' + (update.authority || 'Unknown') + '</span></td>' +
                         '<td class="headline-cell">' +
-                            '<div class="headline">' + update.headline + '</div>' +
-                            '<div class="summary">' + (update.summary || '').substring(0, 100) + '...</div>' +
+                            '<div class="headline">' + (update.headline || 'No headline') + '</div>' +
+                            '<div class="summary">' + summary + '</div>' +
                         '</td>' +
-                        '<td><span class="impact-badge ' + update.impactLevel.toLowerCase() + '">' + update.impactLevel + '</span></td>' +
-                        '<td><span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span></td>' +
+                        '<td><span class="impact-badge ' + impactLevel.toLowerCase() + '">' + impactLevel + '</span></td>' +
+                        '<td><span class="urgency-badge ' + urgency.toLowerCase() + '">' + urgency + '</span></td>' +
                         '<td><button class="table-btn" onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View</button></td>' +
                     '</tr>'
                 );
             }).join('');
 
-            const tableHTML =
+            container.innerHTML =
                 '<div class="table-wrapper">' +
                     '<table class="updates-table">' +
                         '<thead>' +
@@ -1128,26 +1364,30 @@ function getClientScriptsContent() {
                         '<tbody>' + rows + '</tbody>' +
                     '</table>' +
                 '</div>';
-
-            container.innerHTML = tableHTML;
         }
 
         function renderTimelineView(container, updates) {
             container.className = 'updates-container timeline-view';
+            if (!updates || updates.length === 0) {
+                container.innerHTML = buildEmptyStateHtml();
+                return;
+            }
 
-            // Group updates by date
-            const groupedUpdates = {};
-            updates.forEach(update => {
-                const date = update.fetchedDate;
-                if (!groupedUpdates[date]) {
-                    groupedUpdates[date] = [];
-                }
-                groupedUpdates[date].push(update);
-            });
+            const groupedUpdates = updates.reduce((acc, update) => {
+                const dateLabel = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
+                if (!acc[dateLabel]) acc[dateLabel] = [];
+                acc[dateLabel].push(update);
+                return acc;
+            }, {});
 
-            const timelineHTML =
-                '<div class="timeline-wrapper">' +
-                    Object.entries(groupedUpdates).map(([date, dateUpdates]) => (
+            const timelineHTML = '<div class="timeline-wrapper">' +
+                Object.entries(groupedUpdates)
+                    .sort((a, b) => {
+                        const dateA = new Date(a[0]);
+                        const dateB = new Date(b[0]);
+                        return dateB - dateA;
+                    })
+                    .map(([date, dateUpdates]) => (
                         '<div class="timeline-date-group">' +
                             '<div class="timeline-date-header">' +
                                 '<h3>' + date + '</h3>' +
@@ -1157,16 +1397,19 @@ function getClientScriptsContent() {
                                 dateUpdates.map(update => {
                                     const idArg = JSON.stringify(update.id || '');
                                     const urlArg = JSON.stringify(update.url || '');
+                                    const urgency = update.urgency || 'Low';
+                                    const summary = truncateText(update.summary || update.ai_summary || '', 150);
+
                                     return (
                                         '<div class="timeline-item">' +
                                             '<div class="timeline-marker"></div>' +
                                             '<div class="timeline-content">' +
                                                 '<div class="timeline-header">' +
-                                                    '<span class="authority-badge">' + update.authority + '</span>' +
-                                                    '<span class="urgency-badge ' + update.urgency.toLowerCase() + '">' + update.urgency + '</span>' +
+                                                    '<span class="authority-badge">' + (update.authority || 'Unknown') + '</span>' +
+                                                    '<span class="urgency-badge ' + urgency.toLowerCase() + '">' + urgency + '</span>' +
                                                 '</div>' +
-                                                '<h4 class="timeline-headline">' + update.headline + '</h4>' +
-                                                '<p class="timeline-summary">' + (update.summary || '').substring(0, 150) + '...</p>' +
+                                                '<h4 class="timeline-headline">' + (update.headline || 'No headline') + '</h4>' +
+                                                '<p class="timeline-summary">' + summary + '</p>' +
                                                 '<button class="timeline-btn" onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View Details</button>' +
                                             '</div>' +
                                         '</div>'
@@ -1176,6 +1419,7 @@ function getClientScriptsContent() {
                         '</div>'
                     )).join('') +
                 '</div>';
+
             container.innerHTML = timelineHTML;
         }
 

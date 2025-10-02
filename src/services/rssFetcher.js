@@ -743,8 +743,8 @@ class EnhancedRSSFetcher {
             false
           )
 
-          let node
-          while (node = walker.nextNode()) {
+          let node = walker.nextNode()
+          while (node) {
             const text = node.textContent.trim()
             const dateMatch = text.match(/^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})$/i)
 
@@ -771,6 +771,8 @@ class EnhancedRSSFetcher {
                 }
               }
             }
+
+            node = walker.nextNode()
           }
         }
 

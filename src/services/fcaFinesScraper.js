@@ -254,9 +254,9 @@ class FCAFinesScraper {
 
                   // Detect dates (various date patterns)
                   if (!dateText && (
-                    cellText.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/) ||
+                    cellText.match(/\d{1,2}[/-]\d{1,2}[/-]\d{4}/) ||
                                         cellText.match(/\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i) ||
-                                        cellText.match(/\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/)
+                                        cellText.match(/\d{4}[/-]\d{1,2}[/-]\d{1,2}/)
                   )) {
                     dateText = cellText
                   }
@@ -312,7 +312,7 @@ class FCAFinesScraper {
                         text.includes('£') && text.length > 20) {
             const firmMatch = text.match(/([A-Z][a-zA-Z\s&.,-]+?)(?:\s+(?:fined|penalised|penalty))/i)
             const amountMatch = text.match(/£([\d,]+(?:\.\d{2})?(?:\s*million)?)/i)
-            const dateMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{1,2}\s+\w+\s+\d{4})/)
+            const dateMatch = text.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{1,2}\s+\w+\s+\d{4})/)
 
             if (firmMatch && amountMatch) {
               const linkEl = item.querySelector('a')
@@ -372,16 +372,23 @@ class FCAFinesScraper {
         }
       }
 
-      await browser.close()
-      browser = null
+      if (browser) {
+        await browser.close()
+        browser = null
+      }
 
-      return { fines }
+      if (fines.length === 0) {
+        console.log(`   ⚠️ Structured page returned no fines for ${year}, trying news story tables...`)
+        return this.scrapeNewsStoryFinesPage(year, useHeadless)
+      }
+
+      return fines
     } catch (error) {
       console.error(`   ❌ Error scraping structured page for ${year}:`, error.message)
       if (browser) {
         await browser.close()
       }
-      return { fines: [] }
+      return this.scrapeNewsStoryFinesPage(year, useHeadless)
     }
   }
 
@@ -669,7 +676,7 @@ class FCAFinesScraper {
   }
 
   // NEW METHOD: Scrape structured FCA fines pages (e.g., /news/news-stories/2023-fines)
-  async scrapeStructuredFinesPage(year, useHeadless = true) {
+  async scrapeNewsStoryFinesPage(year, useHeadless = true) {
     const url = `https://www.fca.org.uk/news/news-stories/${year}-fines`
     console.log(`   📊 Accessing structured fines page: ${url}`)
 
@@ -973,13 +980,13 @@ class FCAFinesScraper {
     // Try different date formats
     const formats = [
       // DD/MM/YYYY or DD-MM-YYYY
-      /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,
+      /(\d{1,2})[/-](\d{1,2})[/-](\d{4})/,
       // DD Month YYYY
       /(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i,
       // Month DD, YYYY
       /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/i,
       // YYYY-MM-DD
-      /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/
+      /(\d{4})[/-](\d{1,2})[/-](\d{1,2})/
     ]
 
     for (const format of formats) {

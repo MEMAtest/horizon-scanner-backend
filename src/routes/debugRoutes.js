@@ -6,10 +6,7 @@ const {
   renderDbDebugPage,
   renderGroqTestPage,
   renderCleanupPage,
-  renderComprehensiveFixPage,
-  renderTestFcaArticlePage,
-  renderRssDebugPage,
-  renderRefreshDebugPage
+  renderComprehensiveFixPage
 } = require('../pages/DebugPages') // Functions to generate the debug HTML
 
 router.get('/health', (req, res) => res.json({ status: 'healthy' }))

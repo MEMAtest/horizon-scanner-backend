@@ -2,9 +2,7 @@
 // File: src/services/weeklyRoundupService.js
 
 const dbService = require('./dbService')
-const aiAnalyzer = require('./aiAnalyzer')
 const axios = require('axios')
-const moment = require('moment')
 
 class WeeklyRoundupService {
   constructor() {
@@ -471,7 +469,6 @@ class WeeklyRoundupService {
      */
   async generateWeekSummary(updates, authorityBreakdown) {
     const totalUpdates = updates.length
-    const topAuthority = Object.keys(authorityBreakdown)[0]
     const authorityCount = Object.keys(authorityBreakdown).length
 
     if (totalUpdates === 0) {

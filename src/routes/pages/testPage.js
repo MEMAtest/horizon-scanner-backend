@@ -559,6 +559,11 @@ const testPage = async (req, res) => {
                             ${dbConnected ? '✓ Connected' : '✗ Failed'}
                         </span>
                     </div>
+
+                    <div class="metric-row">
+                        <span class="metric-label">Status Detail</span>
+                        <span class="metric-value">${dbStatus}</span>
+                    </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Stored Updates</span>

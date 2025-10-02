@@ -3,7 +3,6 @@
 // Phase 2: Shared functions for rate limiting, retry logic, content extraction
 
 const axios = require('axios')
-const cheerio = require('cheerio')
 const { URL } = require('url')
 
 class ScrapingUtils {
@@ -46,8 +45,8 @@ class ScrapingUtils {
 
       // Date extraction patterns
       datePatterns: [
-        /(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/g,
-        /(\d{4}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{1,2})/g,
+        /(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/g,
+        /(\d{4}[\s/.-]\d{1,2}[\s/.-]\d{1,2})/g,
         /(\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{2,4})/gi,
         /((January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(st|nd|rd|th)?,?\s+\d{2,4})/gi
       ],
@@ -55,7 +54,7 @@ class ScrapingUtils {
       // Reference number patterns
       referencePatterns: [
         /[A-Z]{2,4}\d+\/\d+/g, // CP21/24, PS22/15, etc.
-        /[A-Z]{2,4}[-\s]\d+[-\/]\d+/g, // Alternative formats
+        /[A-Z]{2,4}[\s-]\d+[-/]\d+/g, // Alternative formats
         /\b\d{4}\/\d+\b/g, // Year/number format
         /REF[-\s]?\d+/gi, // REF numbers
         /NO[-\s]?\d+/gi // Notice numbers
@@ -63,11 +62,11 @@ class ScrapingUtils {
 
       // Deadline extraction patterns
       deadlinePatterns: [
-        /deadline[:\s]+(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-        /responses?\s+by[:\s]+(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-        /consultation\s+ends?[:\s]+(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-        /submissions?\s+due[:\s]+(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-        /closes?\s+on[:\s]+(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi
+        /deadline[:\s]+(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+        /responses?\s+by[:\s]+(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+        /consultation\s+ends?[:\s]+(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+        /submissions?\s+due[:\s]+(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+        /closes?\s+on[:\s]+(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi
       ]
     }
 
@@ -495,7 +494,11 @@ class ScrapingUtils {
       validation.score -= 30
     } else {
       try {
-        new URL(url)
+        const parsedUrl = new URL(url)
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          validation.issues.push('Unsupported URL protocol')
+          validation.score -= 20
+        }
       } catch (error) {
         validation.issues.push('Invalid URL format')
         validation.score -= 20
@@ -534,7 +537,7 @@ class ScrapingUtils {
       const matches = text.match(pattern)
       if (matches) {
         for (const match of matches) {
-          const dateMatch = match.match(/\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4}/)
+          const dateMatch = match.match(/\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4}/)
           if (dateMatch) {
             const date = this.parseFlexibleDate(dateMatch[0])
             if (date) {

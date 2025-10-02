@@ -12,10 +12,7 @@ const aiAnalyzer = require('./aiAnalyzer')
 const contentProcessor = require('./contentProcessor')
 const dataQualityService = require('./dataQualityService')
 const {
-  getAllSources,
   getSourcesByPriority,
-  CONTENT_VALIDATION_RULES,
-  DATA_QUALITY_RULES,
   INTERNATIONAL_SOURCES
 } = require('../sources/enhancedSources')
 
@@ -697,9 +694,9 @@ class WebScraperService {
         )
 
         let currentDate = null
-        let node
+        let node = walker.nextNode()
 
-        while (node = walker.nextNode()) {
+        while (node) {
           if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent?.trim() || ''
             const dateMatch = text.match(/^(\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})$/)
@@ -728,6 +725,8 @@ class WebScraperService {
               })
             }
           }
+
+          node = walker.nextNode()
         }
 
         return items
@@ -927,7 +926,6 @@ class WebScraperService {
       allResults.push(...internationalResults)
 
       // 5. Process other configured sources with RSS/deep scraping
-      const sources = getAllSources()
       const priorities = ['HIGH', 'MEDIUM', 'LOW']
 
       for (const priority of priorities) {

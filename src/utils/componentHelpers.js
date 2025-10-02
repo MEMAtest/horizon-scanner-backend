@@ -337,7 +337,7 @@ class ComponentHelpers {
 
       // Urgency counts
       const urgency = item.urgency || 'low'
-      if (stats.urgency.hasOwnProperty(urgency)) {
+      if (Object.prototype.hasOwnProperty.call(stats.urgency, urgency)) {
         stats.urgency[urgency]++
       }
 

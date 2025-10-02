@@ -374,6 +374,13 @@ Guidelines:
     if (fine.breach_type) keywords.push(fine.breach_type.toLowerCase().replace(/\s+/g, '-'))
     if (fine.firm_category) keywords.push(fine.firm_category.toLowerCase().replace(/\s+/g, '-'))
 
+    // Extract additional descriptive keywords from summary text
+    const textTokens = (text.match(/\b[a-z]{4,}\b/g) || [])
+      .filter(token => !keywords.includes(token))
+      .slice(0, 5)
+
+    keywords.push(...textTokens)
+
     return keywords.slice(0, 10)
   }
 

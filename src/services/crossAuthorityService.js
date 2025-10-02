@@ -260,8 +260,6 @@ class CrossAuthorityService extends EventEmitter {
   detectSequentialCoordination(updateData, relatedUpdates) {
     // Look for updates that follow in sequence from related authorities
     const updateDate = new Date(updateData.pubDate)
-    const sequentialUpdates = []
-
     // Check for updates that came before (within 90 days) that might have triggered this one
     const precedingUpdates = relatedUpdates.filter(update => {
       const otherDate = new Date(update.pubDate)

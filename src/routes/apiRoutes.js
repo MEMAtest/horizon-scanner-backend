@@ -42,10 +42,9 @@ router.get('/analytics', async (req, res) => {
 
     res.json({
       success: true,
-      dashboard: dashboard,
+      dashboard,
       timestamp: new Date().toISOString()
     })
-
   } catch (error) {
     console.error('❌ Analytics API error:', error)
     res.status(500).json({
@@ -196,7 +195,7 @@ router.get('/updates/:id', async (req, res) => {
     res.json({
       success: true,
       update,
-      relatedUpdates: relatedUpdates.filter(u => u.id != updateId),
+      relatedUpdates: relatedUpdates.filter(u => u.id !== updateId),
       timestamp: new Date().toISOString()
     })
   } catch (error) {
@@ -1682,7 +1681,8 @@ router.post('/alerts', async (req, res) => {
     res.json({
       success: true,
       message: 'Alert created successfully',
-      alertId: Date.now().toString()
+      alertId: Date.now().toString(),
+      alert: alertData
     })
   } catch (error) {
     console.error('Alert creation error:', error)

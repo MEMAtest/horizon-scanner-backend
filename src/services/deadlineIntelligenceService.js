@@ -559,12 +559,14 @@ class DeadlineIntelligenceService extends EventEmitter {
             `)
 
       const calendar = []
-      const endDate = new Date(Date.now() + (months * 30 * 24 * 60 * 60 * 1000))
+      const calendarCutoff = new Date(Date.now() + (months * 30 * 24 * 60 * 60 * 1000))
 
       for (const result of consultations) {
         for (const consultation of result.consultation_periods) {
-          const endDate = new Date(consultation.endDate)
-          if (endDate > new Date() && endDate <= endDate) {
+          if (!consultation.endDate) continue
+
+          const consultationEndDate = new Date(consultation.endDate)
+          if (consultationEndDate > new Date() && consultationEndDate <= calendarCutoff) {
             calendar.push(consultation)
           }
         }
@@ -582,7 +584,7 @@ class DeadlineIntelligenceService extends EventEmitter {
     return [
       {
         name: 'explicit_date',
-        regex: /(?:by|before|until|deadline)\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+        regex: /(?:by|before|until|deadline)\s+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/gi,
         type: 'explicit'
       },
       {
@@ -597,7 +599,7 @@ class DeadlineIntelligenceService extends EventEmitter {
       },
       {
         name: 'consultation_period',
-        regex: /consultation\s+(?:period|closes?|ends?)\s+(?:on\s+)?(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/gi,
+        regex: /consultation\s+(?:period|closes?|ends?)\s+(?:on\s+)?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/gi,
         type: 'consultation'
       }
     ]

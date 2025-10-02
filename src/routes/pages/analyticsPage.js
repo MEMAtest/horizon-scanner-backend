@@ -4,7 +4,6 @@
 const { getCommonStyles } = require('../templates/commonStyles')
 const { getSidebar } = require('../templates/sidebar')
 const { getCommonClientScripts } = require('../templates/clientScripts')
-const dbService = require('../../services/dbService')
 
 // Helper functions remain the same for fallback compatibility
 const getAnalyticsService = () => {
@@ -26,100 +25,18 @@ const getAnalyticsService = () => {
   }
 }
 
-const getRelevanceService = () => {
-  try {
-    return require('../../services/relevanceService')
-  } catch (error) {
-    console.warn('Relevance service not available, using fallback')
-    return {
-      calculateRelevanceScore: () => 0,
-      categorizeByRelevance: (updates) => ({ high: [], medium: [], low: updates || [] })
-    }
-  }
-}
-
-const getWorkspaceService = () => {
-  try {
-    return require('../../services/workspaceService')
-  } catch (error) {
-    console.warn('Workspace service not available, using fallback')
-    return {
-      getWorkspaceStats: () => ({ success: true, stats: { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 } })
-    }
-  }
-}
-
 const analyticsPage = async (req, res) => {
   try {
-    // Don't try to load analytics data on server-side - let client-side handle it
-    const analyticsData = null
+    const analyticsService = getAnalyticsService()
+    let analyticsData = null
 
-    // Get basic data for sidebar counts
-    const updates = await dbService.getAllUpdates()
-
-    // Calculate enhanced counts for the new filtering sections
-    let consultationCount = 0; let guidanceCount = 0; let enforcementCount = 0
-    let speechCount = 0; let newsCount = 0; let policyCount = 0
-    let finalRuleCount = 0; let proposalCount = 0; let noticeCount = 0; let reportCount = 0
-    let rssCount = 0; let scrapedCount = 0; let directCount = 0
-
-    updates.forEach(update => {
-      const headline = (update.headline || '').toLowerCase()
-      const impact = (update.impact || '').toLowerCase()
-      const content = headline + ' ' + impact
-      const url = update.url || ''
-
-      // Category classification
-      if (content.includes('consultation')) consultationCount++
-      else if (content.includes('guidance')) guidanceCount++
-      else if (content.includes('enforcement') || content.includes('fine')) enforcementCount++
-      else if (content.includes('speech')) speechCount++
-      else if (content.includes('policy')) policyCount++
-      else newsCount++
-
-      // Content type classification
-      if (content.includes('final rule')) finalRuleCount++
-      else if (content.includes('proposal')) proposalCount++
-      else if (content.includes('notice')) noticeCount++
-      else if (content.includes('report')) reportCount++
-
-      // Source type classification
-      if (url.includes('rss') || url.includes('feed') || update.sourceType === 'rss') rssCount++
-      else if (url.includes('gov.uk') || update.sourceType === 'direct') directCount++
-      else scrapedCount++
-    })
-
-    const authorityCount = {}
-    updates.forEach(update => {
-      const auth = update.authority || 'Unknown'
-      authorityCount[auth] = (authorityCount[auth] || 0) + 1
-    })
-
-    const counts = {
-      totalUpdates: updates.length,
-      urgentCount: updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant').length,
-      moderateCount: updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate').length,
-      informationalCount: updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational').length,
-      fcaCount: authorityCount.FCA || 0,
-      boeCount: authorityCount.BoE || 0,
-      praCount: authorityCount.PRA || 0,
-      tprCount: authorityCount.TPR || 0,
-      sfoCount: authorityCount.SFO || 0,
-      fatfCount: authorityCount.FATF || 0,
-      // Enhanced counts for filtering
-      consultationCount,
-      guidanceCount,
-      enforcementCount,
-      speechCount,
-      newsCount,
-      policyCount,
-      finalRuleCount,
-      proposalCount,
-      noticeCount,
-      reportCount,
-      rssCount,
-      scrapedCount,
-      directCount
+    try {
+      const analyticsResponse = await analyticsService.getAnalyticsDashboard()
+      if (analyticsResponse?.success) {
+        analyticsData = analyticsResponse.dashboard
+      }
+    } catch (error) {
+      console.warn('Analytics dashboard unavailable:', error.message)
     }
 
     const sidebarHtml = await getSidebar('analytics')

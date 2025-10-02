@@ -263,7 +263,6 @@ class FileDbService {
       await this.initialize()
 
       // Verify we can read and write
-      const testData = { ...this.data }
       await this.saveData()
 
       return {

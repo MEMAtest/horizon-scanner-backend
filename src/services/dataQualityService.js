@@ -135,7 +135,11 @@ class DataQualityService {
       validation.score -= 40
     } else {
       try {
-        new URL(item.url)
+        const parsedUrl = new URL(item.url)
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          validation.issues.push('Unsupported URL protocol')
+          validation.score -= 20
+        }
       } catch (error) {
         validation.issues.push('Invalid URL format')
         validation.score -= 20
@@ -326,7 +330,7 @@ class DataQualityService {
   findSimilarTitle(title) {
     const normalizedTitle = this.normalizeTitle(title)
 
-    for (const [existingTitle, data] of this.seenTitles) {
+    for (const [, data] of this.seenTitles) {
       const similarity = this.calculateSimilarity(normalizedTitle, data.normalizedTitle)
 
       if (similarity >= this.similarityThreshold) {

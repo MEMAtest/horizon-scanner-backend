@@ -31,14 +31,14 @@ function getContentModule() {
 
         function generateRelevanceBasedStreams(updates) {
             if (!updates || !Array.isArray(updates)) return;
-            
+
             const streamContainer = document.getElementById('intelligenceStreams');
             if (!streamContainer) return;
-            
-            const urgent = updates.filter(u => u.urgency === 'High' || u.impactLevel === 'Significant');
-            const moderate = updates.filter(u => u.urgency === 'Medium' || u.impactLevel === 'Moderate');  
-            const background = updates.filter(u => u.urgency === 'Low' || u.impactLevel === 'Informational');
-            
+
+            const urgent = updates.filter(u => u.impactLevel === 'Significant' || u.impact_level === 'Significant');
+            const moderate = updates.filter(u => u.impactLevel === 'Moderate' || u.impact_level === 'Moderate');
+            const background = updates.filter(u => u.impactLevel === 'Informational' || u.impact_level === 'Informational');
+
             streamContainer.innerHTML = \`
                 \${generateStream('urgent', '🔴 Critical Impact', urgent, true)}
                 \${generateStream('moderate', '🟡 Active Monitoring', moderate, false)}
@@ -73,8 +73,13 @@ function getContentModule() {
         }
         
         function generateUpdateCard(update) {
-            const impactColor = update.urgency === 'High' ? 'urgent' : update.urgency === 'Medium' ? 'moderate' : 'low';
-            const aiSummary = update.ai_summary || update.impact || '';
+            // Use the actual impactLevel from the data
+            const impactLevel = update.impactLevel || update.impact_level || 'Informational';
+            const impactColor = impactLevel === 'Significant' ? 'urgent' :
+                               impactLevel === 'Moderate' ? 'moderate' : 'low';
+
+            // Get AI summary - prioritize ai_summary, then aiSummary
+            const aiSummary = update.ai_summary || update.aiSummary || update.impact || '';
             const useFallback = isFallbackSummary(aiSummary);
             const baseSummary = !useFallback && aiSummary.trim().length > 0
                 ? aiSummary.trim()
@@ -82,14 +87,21 @@ function getContentModule() {
             const shortSummary = truncateText(baseSummary);
             const isPinned = pinnedUrls.has(update.url);
             const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
-            
+
+            // Get sector and category info for filtering - use the actual available fields
+            const sector = update.sector || '';
+            const area = update.area || '';
+            const category = area || sector || '';  // Use area as primary category, fallback to sector
+
             return \`
-                <div class="update-card" data-authority="\${update.authority}" data-impact="\${update.impactLevel}" data-urgency="\${update.urgency}" data-url="\${update.url}">
+                <div class="update-card" data-authority="\${update.authority}" data-impact="\${impactLevel}" data-urgency="\${impactLevel}" data-sector="\${sector}" data-category="\${category}" data-url="\${update.url}" data-date="\${update.publishedDate || update.published_date}">
                     <div class="update-header">
                         <h4 class="update-headline">\${update.headline || 'No headline'}</h4>
                         <div class="update-badges">
                             <span class="authority-badge">\${update.authority || 'Unknown'}</span>
-                            <span class="impact-badge \${impactColor}">\${update.urgency || 'Low'}</span>
+                            <span class="impact-badge \${impactColor}">\${impactLevel}</span>
+                            \${sector ? \`<span class="sector-badge">\${sector}</span>\` : ''}
+                            \${area ? \`<span class="category-badge">\${area}</span>\` : ''}
                             <button class="pin-btn \${isPinned ? 'pinned' : ''}" onclick="WorkspaceModule.togglePin('\${update.url}')">\${isPinned ? '📌' : '📍'}</button>
                         </div>
                     </div>

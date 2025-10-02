@@ -1293,7 +1293,7 @@ class EnhancedDBService {
     try {
       const data = await fs.readFile(this.workspaceFile, 'utf8')
       const workspace = JSON.parse(data)
-      return (workspace.savedSearches || []).find(search => search.id == searchId) || null
+      return (workspace.savedSearches || []).find(search => String(search.id) === String(searchId)) || null
     } catch (error) {
       return null
     }
@@ -1390,7 +1390,7 @@ class EnhancedDBService {
       const workspace = JSON.parse(data)
 
       const initialLength = (workspace.savedSearches || []).length
-      workspace.savedSearches = (workspace.savedSearches || []).filter(search => search.id != searchId)
+      workspace.savedSearches = (workspace.savedSearches || []).filter(search => String(search.id) !== String(searchId))
 
       await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2))
       return workspace.savedSearches.length < initialLength
@@ -1511,7 +1511,7 @@ class EnhancedDBService {
       const data = await fs.readFile(this.workspaceFile, 'utf8')
       const workspace = JSON.parse(data)
 
-      const alert = (workspace.customAlerts || []).find(alert => alert.id == alertId)
+      const alert = (workspace.customAlerts || []).find(alert => String(alert.id) === String(alertId))
       if (alert) {
         alert.isActive = isActive
         await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2))
@@ -1549,7 +1549,7 @@ class EnhancedDBService {
       const workspace = JSON.parse(data)
 
       const initialLength = (workspace.customAlerts || []).length
-      workspace.customAlerts = (workspace.customAlerts || []).filter(alert => alert.id != alertId)
+      workspace.customAlerts = (workspace.customAlerts || []).filter(alert => String(alert.id) !== String(alertId))
 
       await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2))
       return workspace.customAlerts.length < initialLength

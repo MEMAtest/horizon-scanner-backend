@@ -37,8 +37,6 @@ class AnalyticsService {
 
       updates.forEach(update => {
         const authority = update.authority || 'Unknown'
-        const category = this.determineCategory(update)
-
         authorityCounts[authority] = (authorityCounts[authority] || 0) + 1
       })
 
@@ -320,14 +318,14 @@ class AnalyticsService {
       // Calculate trends for each source type
       const sourceTrends = {}
       Object.entries(sourceTimeline).forEach(([sourceType, timeline]) => {
-        const trend = this.calculateSourceTrend(timeline)
-        const momentum = this.calculateMomentum(timeline)
+        const trendDetails = this.calculateSourceTrend(timeline)
+        const momentumScore = this.calculateMomentum(timeline)
 
         sourceTrends[sourceType] = {
           timeline,
-          trend: trend.direction,
-          trendStrength: trend.strength,
-          momentum,
+          trend: trendDetails.direction,
+          trendStrength: trendDetails.strength,
+          momentum: momentumScore,
           currentWeekAverage: this.getCurrentWeekAverage(timeline),
           peakActivity: Math.max(...timeline),
           consistency: this.calculateConsistency(timeline),
@@ -438,7 +436,6 @@ class AnalyticsService {
 
   determineContentType(update) {
     const headline = (update.headline || '').toLowerCase()
-    const authority = update.authority || ''
 
     if (headline.includes('cp') || headline.includes('consultation')) return 'Consultation Paper'
     if (headline.includes('fg') || headline.includes('guidance')) return 'Final Guidance'
@@ -746,7 +743,7 @@ class AnalyticsService {
     const increasing = Object.entries(velocity).filter(([, data]) => data.trend === 'increasing')
     const total = Object.values(velocity).reduce((sum, data) => sum + data.updatesPerWeek, 0)
 
-    const topCategory = Object.entries(categoryVelocity)
+    const topCategoryEntry = Object.entries(categoryVelocity)
       .sort(([, a], [, b]) => b - a)[0]
 
     return {
@@ -756,7 +753,7 @@ class AnalyticsService {
         data.updatesPerWeek > max.rate ? { authority: auth, rate: data.updatesPerWeek } : max,
       { authority: 'None', rate: 0 }
       ),
-      topCategory: topCategory ? { category: topCategory[0], count: topCategory[1] } : null,
+      topCategory: topCategoryEntry ? { category: topCategoryEntry[0], count: topCategoryEntry[1] } : null,
       categoryCount: Object.keys(categoryVelocity).length
     }
   }
@@ -1243,17 +1240,17 @@ class AnalyticsService {
   generateKeywordPredictions(keywordTrends, firmProfile) {
     const predictions = []
 
-    keywordTrends.slice(0, 3).forEach(([keyword, frequency]) => {
-      if (frequency >= 5) {
+    keywordTrends.slice(0, 3).forEach(([keyword, trendFrequency]) => {
+      if (trendFrequency >= 5) {
         predictions.push({
           type: 'keyword_trend',
           prediction: `Increased focus on "${keyword}" regulations expected within 30-60 days`,
-          confidence: Math.min(85, 40 + frequency * 5),
+          confidence: Math.min(85, 40 + trendFrequency * 5),
           basedOn: ['keyword frequency analysis', 'recent regulatory patterns'],
           keyword,
           timeframe: '30-60 days',
           affectedSectors: this.guessAffectedSectors(keyword),
-          priority: frequency >= 8 ? 'high' : 'medium'
+          priority: trendFrequency >= 8 ? 'high' : 'medium'
         })
       }
     })

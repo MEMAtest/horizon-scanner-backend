@@ -1,51 +1,17 @@
 // FCA Enforcement Dashboard Page
 // Enhanced Horizon Scanner - Enforcement Intelligence
 
-const { getCommonStyles } = require('../templates/commonStyles');
-const { getSidebar } = require('../templates/sidebar');
-const { getCommonClientScripts } = require('../templates/clientScripts');
-
-function formatCurrency(amount) {
-    if (!amount) return 'N/A';
-    return new Intl.NumberFormat('en-GB', {
-        style: 'currency',
-        currency: 'GBP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-    });
-}
-
-function formatRelativeTime(dateString) {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) return '1 day ago';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
-    return `${Math.ceil(diffDays / 365)} years ago`;
-}
+const { getCommonStyles } = require('../templates/commonStyles')
+const { getSidebar } = require('../templates/sidebar')
+const { getCommonClientScripts } = require('../templates/clientScripts')
 
 const enforcementPage = async (req, res) => {
-    try {
-        console.log('⚖️ Enforcement dashboard page requested');
+  try {
+    console.log('⚖️ Enforcement dashboard page requested')
 
-        const sidebar = await getSidebar('enforcement');
+    const sidebar = await getSidebar('enforcement')
 
-        const html = `
+    const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -1516,13 +1482,12 @@ const enforcementPage = async (req, res) => {
 
             ${getCommonClientScripts()}
         </body>
-        </html>`;
+        </html>`
 
-        res.send(html);
-
-    } catch (error) {
-        console.error('❌ Error rendering enforcement page:', error);
-        res.status(500).send(`
+    res.send(html)
+  } catch (error) {
+    console.error('❌ Error rendering enforcement page:', error)
+    res.status(500).send(`
             <html>
                 <head>
                     <title>Error - Enforcement Dashboard</title>
@@ -1568,8 +1533,8 @@ const enforcementPage = async (req, res) => {
                     </div>
                 </body>
             </html>
-        `);
-    }
-};
+        `)
+  }
+}
 
-module.exports = enforcementPage;
+module.exports = enforcementPage

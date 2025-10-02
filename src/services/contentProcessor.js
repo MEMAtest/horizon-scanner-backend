@@ -18,7 +18,7 @@ class ContentProcessor {
     // Common date patterns for deadline extraction
     this.datePatterns = [
       // Standard formats
-      /(\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/g,
+      /(\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/g,
       /(\d{1,2}(st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{2,4})/gi,
       /((January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(st|nd|rd|th)?,?\s+\d{2,4})/gi,
 
@@ -28,10 +28,10 @@ class ContentProcessor {
       /(by\s+the\s+end\s+of\s+(January|February|March|April|May|June|July|August|September|October|November|December))/gi,
 
       // Specific deadline contexts
-      /(deadline[:\s]+\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-      /(responses?\s+by[:\s]+\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-      /(consultation\s+ends?[:\s]+\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi,
-      /(submissions?\s+due[:\s]+\d{1,2}[\s\/\-\.]\d{1,2}[\s\/\-\.]\d{2,4})/gi
+      /(deadline[:\s]+\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+      /(responses?\s+by[:\s]+\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+      /(consultation\s+ends?[:\s]+\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi,
+      /(submissions?\s+due[:\s]+\d{1,2}[\s/.-]\d{1,2}[\s/.-]\d{2,4})/gi
     ]
 
     // Document type patterns
@@ -455,7 +455,7 @@ class ContentProcessor {
   extractReferenceNumbers(text) {
     const patterns = [
       /[A-Z]{2,4}\d+\/\d+/g, // CP21/24, PS22/15, etc.
-      /[A-Z]{2,4}[-\s]\d+[-\/]\d+/g, // Alternative formats
+      /[A-Z]{2,4}[\s-]\d+[-/]\d+/g, // Alternative formats
       /\b\d{4}\/\d+\b/g // Year/number format
     ]
 

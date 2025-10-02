@@ -3,7 +3,6 @@
 // UPGRADE: Automatic priority assignment based on content type + deadline awareness
 
 const dbService = require('./dbService')
-const { INDUSTRY_SECTORS } = require('./aiAnalyzer')
 
 class RelevanceService {
   constructor() {
@@ -52,7 +51,6 @@ class RelevanceService {
     const headline = (update.headline || '').toLowerCase()
     const impact = (update.impact || '').toLowerCase()
     const content = headline + ' ' + impact
-    const authority = update.authority || ''
 
     // FINES/ENFORCEMENT → Auto-assign High Priority
     if (this.isEnforcementContent(content)) {
@@ -775,7 +773,7 @@ class RelevanceService {
     const distribution = { Significant: 0, Moderate: 0, Informational: 0 }
     updates.forEach(update => {
       const impact = update.impactLevel || 'Informational'
-      if (distribution.hasOwnProperty(impact)) {
+      if (Object.prototype.hasOwnProperty.call(distribution, impact)) {
         distribution[impact]++
       }
     })

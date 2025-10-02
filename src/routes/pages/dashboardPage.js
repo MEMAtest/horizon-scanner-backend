@@ -1034,6 +1034,54 @@ async function renderDashboardPage(req, res) {
                         console.log('updateLiveCounters stub - waiting for real function...');
                     };
                 }
+
+                // Client-side helper functions for Cards view
+                function getImpactBadge(update) {
+                    const level = update.impactLevel || update.impact_level || 'Informational';
+                    let badgeClass = 'low';
+                    if (level === 'Significant') {
+                        badgeClass = 'urgent';
+                    } else if (level === 'Moderate') {
+                        badgeClass = 'moderate';
+                    }
+                    return '<span class="impact-badge ' + badgeClass + '">' + level + '</span>';
+                }
+
+                function getContentTypeBadge(update) {
+                    const contentType = update.content_type || 'OTHER';
+                    const badgeClass = contentType.toLowerCase();
+                    const badgeText = contentType === 'OTHER' ? 'INFO' : contentType;
+                    return '<span class="content-type-badge ' + badgeClass + '">' + badgeText + '</span>';
+                }
+
+                function getSectorTags(update) {
+                    const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : []);
+                    return sectors.slice(0, 3).map(sector =>
+                        '<span class="sector-tag" onclick="filterBySector(\\'' + sector + '\\)">' + sector + '</span>'
+                    ).join('');
+                }
+
+                function getAIFeatures(update) {
+                    const features = [];
+
+                    if (update.business_impact_score && update.business_impact_score >= 7) {
+                        features.push('<span class="ai-feature high-impact">🔥 High Impact (' + update.business_impact_score + '/10)</span>');
+                    }
+
+                    if (update.urgency === 'High') {
+                        features.push('<span class="ai-feature urgent">🚨 Urgent</span>');
+                    }
+
+                    if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
+                        features.push('<span class="ai-feature enforcement">🚨 Enforcement Action</span>');
+                    }
+
+                    if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
+                        features.push('<span class="ai-feature high-confidence">🤖 High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
+                    }
+
+                    return features.join('');
+                }
             </script>
         </body>
         </html>`

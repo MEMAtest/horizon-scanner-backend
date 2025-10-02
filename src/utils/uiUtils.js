@@ -318,7 +318,9 @@ class UIUtils {
       if (!inThrottle) {
         func.apply(context, args)
         inThrottle = true
-        setTimeout(() => inThrottle = false, limit)
+        setTimeout(() => {
+          inThrottle = false
+        }, limit)
       }
     }
   }

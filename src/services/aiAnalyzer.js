@@ -21,19 +21,6 @@ const INDUSTRY_SECTORS = [
   'Cryptocurrency', 'RegTech', 'Wealth Management', 'Corporate Finance'
 ]
 
-const AUTHORITY_WEIGHTS = {
-  FCA: 5,
-  PRA: 5,
-  'Bank of England': 4,
-  'HM Treasury': 4,
-  'Competition and Markets Authority': 3,
-  ICO: 2,
-  FRC: 2,
-  HMRC: 3,
-  TPR: 3,
-  'European Banking Authority': 3
-}
-
 class EnhancedAIAnalyzer {
   constructor() {
     this.apiKey = process.env.GROQ_API_KEY
@@ -478,6 +465,16 @@ Ensure accuracy, professionalism, and focus on actionable business intelligence.
       effort: 'Medium'
     })
 
+    if (hasDeadline) {
+      phases.push({
+        phase: 'Deadline Preparation',
+        duration: isHighImpact ? '2-3 weeks' : '1-2 weeks',
+        description: 'Coordinate tasks to meet regulatory deadlines and submission dates',
+        priority: 'High',
+        effort: isHighImpact ? 'High' : 'Medium'
+      })
+    }
+
     // Monitoring phase
     phases.push({
       phase: 'Monitoring & Review',
@@ -622,7 +619,7 @@ Ensure accuracy, professionalism, and focus on actionable business intelligence.
   extractComplianceDeadline(keyDates) {
     if (!keyDates) return null
 
-    const dateRegex = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi
+    const dateRegex = /(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}[/.-]\d{1,2}[/.-]\d{1,2}|\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi
     const matches = keyDates.match(dateRegex)
 
     if (matches && matches.length > 0) {
@@ -786,7 +783,7 @@ Ensure accuracy, professionalism, and focus on actionable business intelligence.
   }
 
   extractFallbackDates(content) {
-    const dateRegex = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi
+    const dateRegex = /(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}[/.-]\d{1,2}[/.-]\d{1,2}|\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi
     const matches = content.match(dateRegex) || []
 
     if (matches.length > 0) {

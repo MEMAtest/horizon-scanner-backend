@@ -741,11 +741,27 @@ async function scrapeFATF() {
       description: item.summary
     }))
 
-    console.log(`   ✅ FATF: Found ${results.length} items via Puppeteer`)
-    return results
+    if (results.length > 0) {
+      console.log(`   ✅ FATF: Found ${results.length} items via Puppeteer`)
+      return results
+    }
+
+    console.log('   ⚠️ FATF Puppeteer returned no items, falling back to JSON endpoint...')
+    const jsonResults = await fatfJson()
+    if (jsonResults.length > 0) {
+      return jsonResults
+    }
+
+    console.log('   ⚠️ FATF JSON endpoint returned no items, trying HTML parser fallback...')
+    return fatfHtml()
   } catch (error) {
     console.error('FATF Puppeteer scraping failed:', error.message)
-    return []
+    const jsonResults = await fatfJson()
+    if (jsonResults.length > 0) {
+      return jsonResults
+    }
+
+    return fatfHtml()
   } finally {
     if (browser) {
       await browser.close()

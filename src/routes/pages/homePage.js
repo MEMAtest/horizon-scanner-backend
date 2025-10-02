@@ -5,7 +5,6 @@ const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
-const aiAnalyzer = require('../../services/aiAnalyzer')
 
 async function renderHomePage(req, res) {
   try {
