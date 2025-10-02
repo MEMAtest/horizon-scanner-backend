@@ -1055,7 +1055,18 @@ async function renderDashboardPage(req, res) {
                 }
 
                 function getSectorTags(update) {
-                    const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : []);
+                    // Try various sector field names first
+                    let sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : []);
+
+                    // If no sector data, use authority as fallback sector tag
+                    if (!sectors || sectors.length === 0) {
+                        if (update.authority) {
+                            sectors = [update.authority];
+                        } else {
+                            sectors = [];
+                        }
+                    }
+
                     return sectors.slice(0, 3).map(sector =>
                         '<span class="sector-tag" onclick="filterBySector(\\'' + sector + '\\)">' + sector + '</span>'
                     ).join('');
@@ -1064,6 +1075,7 @@ async function renderDashboardPage(req, res) {
                 function getAIFeatures(update) {
                     const features = [];
 
+                    // Primary AI features (if available)
                     if (update.business_impact_score && update.business_impact_score >= 7) {
                         features.push('<span class="ai-feature high-impact">🔥 High Impact (' + update.business_impact_score + '/10)</span>');
                     }
@@ -1078,6 +1090,29 @@ async function renderDashboardPage(req, res) {
 
                     if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
                         features.push('<span class="ai-feature high-confidence">🤖 High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
+                    }
+
+                    // Fallback features based on available data
+                    if (features.length === 0) {
+                        // Check if headline/summary contains enforcement keywords
+                        const text = (update.headline + ' ' + (update.summary || update.ai_summary || '')).toLowerCase();
+
+                        if (text.includes('fine') || text.includes('penalty') || text.includes('enforcement') || text.includes('breach')) {
+                            features.push('<span class="ai-feature enforcement">⚖️ Enforcement</span>');
+                        }
+
+                        if (text.includes('consultation') || text.includes('draft') || text.includes('guidance')) {
+                            features.push('<span class="ai-feature guidance">📋 Guidance</span>');
+                        }
+
+                        if (text.includes('deadline') || text.includes('compliance') || text.includes('must')) {
+                            features.push('<span class="ai-feature deadline">📅 Action Required</span>');
+                        }
+
+                        // Show authority as a feature if no other features found
+                        if (features.length === 0 && update.authority) {
+                            features.push('<span class="ai-feature authority">🏛️ ' + update.authority + '</span>');
+                        }
                     }
 
                     return features.join('');
