@@ -44,6 +44,15 @@ function getClientScriptsContent() {
             return trimmed.substring(0, maxLength).trim() + '...';
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function isFallbackSummary(summary = '') {
             const normalized = summary.trim().toLowerCase();
             return normalized.startsWith('informational regulatory update') ||
@@ -652,9 +661,13 @@ function getClientScriptsContent() {
                 }
             }
 
-            return sectors.slice(0, 3).map(sector =>
-                '<span class="sector-tag" onclick="filterBySector(\\'' + sector + '\\')">' + sector + '</span>'
-            ).join('');
+            return sectors.slice(0, 3).map(sector => {
+                const value = String(sector ?? '').trim();
+                if (!value) return '';
+                const label = escapeHtml(value);
+                const arg = JSON.stringify(value);
+                return '<span class="sector-tag" onclick="filterBySector(' + arg + ')">' + label + '</span>';
+            }).join('');
         }
 
         function getAIFeatures(update) {
