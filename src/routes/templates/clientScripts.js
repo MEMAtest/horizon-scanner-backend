@@ -110,35 +110,61 @@ function getClientScriptsContent() {
             }
         };
 
+        function ensureFilterState() {
+            if (!window.currentFilters || typeof window.currentFilters !== 'object') {
+                window.currentFilters = { category: 'all', sort: 'newest' };
+            }
+            if (!window.currentFilters.category) {
+                window.currentFilters.category = 'all';
+            }
+            if (!window.currentFilters.sort) {
+                window.currentFilters.sort = 'newest';
+            }
+            return window.currentFilters;
+        }
+
+        function applyFiltersOrFallback(fallbackFn) {
+            if (typeof window.applyCurrentFilters === 'function') {
+                window.applyCurrentFilters();
+            } else if (typeof fallbackFn === 'function') {
+                fallbackFn();
+            }
+        }
+
         // Filter Functions for Dashboard
         window.filterByCategory = function(category) {
             console.log('Filtering by category:', category);
             try {
-                const updates = document.querySelectorAll('.update-card');
-                const filterBtns = document.querySelectorAll('.quick-filter-btn');
+                const filters = ensureFilterState();
+                filters.category = category || 'all';
 
-                // Update active filter button
-                filterBtns.forEach(btn => btn.classList.remove('active'));
-                const activeBtn = document.querySelector('[data-filter="' + category + '"]');
-                if (activeBtn) activeBtn.classList.add('active');
+                applyFiltersOrFallback(() => {
+                    const updates = document.querySelectorAll('.update-card');
+                    const filterBtns = document.querySelectorAll('.quick-filter-btn');
 
-                // Apply filter
-                updates.forEach(card => {
-                    const shouldShow = category === 'all' || card.dataset.category === category ||
-                                     card.classList.contains(category) || card.dataset.filter === category;
-                    card.style.display = shouldShow ? 'block' : 'none';
+                    filterBtns.forEach(btn => btn.classList.remove('active'));
+                    const activeBtn = document.querySelector('[data-filter="' + category + '"]');
+                    if (activeBtn) activeBtn.classList.add('active');
+
+                    updates.forEach(card => {
+                        const shouldShow = !category || category === 'all' || card.dataset.category === category ||
+                                         card.classList.contains(category) || card.dataset.filter === category;
+                        card.style.display = shouldShow ? 'block' : 'none';
+                    });
+
+                    const url = new URL(window.location);
+                    if (category && category !== 'all') {
+                        url.searchParams.set('category', category);
+                    } else {
+                        url.searchParams.delete('category');
+                    }
+                    window.history.replaceState({}, '', url);
                 });
 
-                // Update URL and store filter state
-                const url = new URL(window.location);
-                if (category !== 'all') {
-                    url.searchParams.set('category', category);
-                } else {
-                    url.searchParams.delete('category');
-                }
-                window.history.replaceState({}, '', url);
-
-                showMessage('Filtered to ' + category + ' updates', 'info');
+                const message = !category || category === 'all'
+                    ? 'Showing all updates'
+                    : 'Filtered to ' + category + ' updates';
+                showMessage(message, 'info');
             } catch (error) {
                 console.error('Filter error:', error);
                 showMessage('Filter failed', 'error');
@@ -148,12 +174,22 @@ function getClientScriptsContent() {
         window.filterByAuthority = function(authority) {
             console.log('Filtering by authority:', authority);
             try {
-                const updates = document.querySelectorAll('.update-card');
-                updates.forEach(card => {
-                    const cardAuthority = card.dataset.authority || card.querySelector('.authority-tag')?.textContent;
-                    const shouldShow = !authority || cardAuthority === authority;
-                    card.style.display = shouldShow ? 'block' : 'none';
+                const filters = ensureFilterState();
+                if (authority) {
+                    filters.authority = authority;
+                } else {
+                    delete filters.authority;
+                }
+
+                applyFiltersOrFallback(() => {
+                    const updates = document.querySelectorAll('.update-card');
+                    updates.forEach(card => {
+                        const cardAuthority = card.dataset.authority || card.querySelector('.authority-tag')?.textContent;
+                        const shouldShow = !authority || cardAuthority === authority;
+                        card.style.display = shouldShow ? 'block' : 'none';
+                    });
                 });
+
                 showMessage(authority ? 'Showing ' + authority + ' updates' : 'Showing all authorities', 'info');
             } catch (error) {
                 console.error('Authority filter error:', error);
@@ -163,13 +199,23 @@ function getClientScriptsContent() {
         window.filterBySector = function(sector) {
             console.log('Filtering by sector:', sector);
             try {
-                const updates = document.querySelectorAll('.update-card');
-                updates.forEach(card => {
-                    const sectorTags = card.querySelectorAll('.sector-tag');
-                    const cardSectors = Array.from(sectorTags).map(tag => tag.textContent.trim());
-                    const shouldShow = !sector || cardSectors.includes(sector);
-                    card.style.display = shouldShow ? 'block' : 'none';
+                const filters = ensureFilterState();
+                if (sector) {
+                    filters.sector = sector;
+                } else {
+                    delete filters.sector;
+                }
+
+                applyFiltersOrFallback(() => {
+                    const updates = document.querySelectorAll('.update-card');
+                    updates.forEach(card => {
+                        const sectorTags = card.querySelectorAll('.sector-tag');
+                        const cardSectors = Array.from(sectorTags).map(tag => tag.textContent.trim());
+                        const shouldShow = !sector || cardSectors.includes(sector);
+                        card.style.display = shouldShow ? 'block' : 'none';
+                    });
                 });
+
                 showMessage(sector ? 'Showing ' + sector + ' updates' : 'Showing all sectors', 'info');
             } catch (error) {
                 console.error('Sector filter error:', error);
@@ -179,12 +225,22 @@ function getClientScriptsContent() {
         window.filterByImpactLevel = function(impact) {
             console.log('Filtering by impact level:', impact);
             try {
-                const updates = document.querySelectorAll('.update-card');
-                updates.forEach(card => {
-                    const impactLevel = card.dataset.impact || card.querySelector('.impact-level')?.textContent;
-                    const shouldShow = !impact || impactLevel === impact;
-                    card.style.display = shouldShow ? 'block' : 'none';
+                const filters = ensureFilterState();
+                if (impact) {
+                    filters.impact = impact;
+                } else {
+                    delete filters.impact;
+                }
+
+                applyFiltersOrFallback(() => {
+                    const updates = document.querySelectorAll('.update-card');
+                    updates.forEach(card => {
+                        const impactLevel = card.dataset.impact || card.querySelector('.impact-level')?.textContent;
+                        const shouldShow = !impact || impactLevel === impact;
+                        card.style.display = shouldShow ? 'block' : 'none';
+                    });
                 });
+
                 showMessage(impact ? 'Showing ' + impact + ' impact updates' : 'Showing all impact levels', 'info');
             } catch (error) {
                 console.error('Impact filter error:', error);
@@ -194,33 +250,42 @@ function getClientScriptsContent() {
         window.filterByDateRange = function(range) {
             console.log('Filtering by date range:', range);
             try {
-                const updates = document.querySelectorAll('.update-card');
-                const now = new Date();
+                const filters = ensureFilterState();
+                if (range) {
+                    filters.range = range;
+                } else {
+                    delete filters.range;
+                }
 
-                updates.forEach(card => {
-                    const publishedDate = new Date(card.dataset.publishedDate || card.querySelector('.date')?.textContent);
-                    let shouldShow = true;
+                applyFiltersOrFallback(() => {
+                    const updates = document.querySelectorAll('.update-card');
+                    const now = new Date();
 
-                    if (range && !isNaN(publishedDate)) {
-                        const daysDiff = Math.floor((now - publishedDate) / (1000 * 60 * 60 * 24));
+                    updates.forEach(card => {
+                        const publishedDate = new Date(card.dataset.publishedDate || card.querySelector('.date')?.textContent);
+                        let shouldShow = true;
 
-                        switch (range) {
-                            case 'today':
-                                shouldShow = daysDiff === 0;
-                                break;
-                            case 'week':
-                                shouldShow = daysDiff <= 7;
-                                break;
-                            case 'month':
-                                shouldShow = daysDiff <= 30;
-                                break;
-                            case 'quarter':
-                                shouldShow = daysDiff <= 90;
-                                break;
+                        if (range && !isNaN(publishedDate)) {
+                            const daysDiff = Math.floor((now - publishedDate) / (1000 * 60 * 60 * 24));
+
+                            switch (range) {
+                                case 'today':
+                                    shouldShow = daysDiff === 0;
+                                    break;
+                                case 'week':
+                                    shouldShow = daysDiff <= 7;
+                                    break;
+                                case 'month':
+                                    shouldShow = daysDiff <= 30;
+                                    break;
+                                case 'quarter':
+                                    shouldShow = daysDiff <= 90;
+                                    break;
+                            }
                         }
-                    }
 
-                    card.style.display = shouldShow ? 'block' : 'none';
+                        card.style.display = shouldShow ? 'block' : 'none';
+                    });
                 });
 
                 showMessage(range ? 'Showing ' + range + ' updates' : 'Showing all time periods', 'info');
@@ -233,12 +298,22 @@ function getClientScriptsContent() {
         window.filterByUrgency = function(urgency) {
             console.log('Filtering by urgency:', urgency);
             try {
-                const updates = document.querySelectorAll('.update-card');
-                updates.forEach(card => {
-                    const cardUrgency = card.dataset.urgency || card.querySelector('.urgency-tag')?.textContent;
-                    const shouldShow = !urgency || cardUrgency === urgency;
-                    card.style.display = shouldShow ? 'block' : 'none';
+                const filters = ensureFilterState();
+                if (urgency) {
+                    filters.urgency = urgency;
+                } else {
+                    delete filters.urgency;
+                }
+
+                applyFiltersOrFallback(() => {
+                    const updates = document.querySelectorAll('.update-card');
+                    updates.forEach(card => {
+                        const cardUrgency = card.dataset.urgency || card.querySelector('.urgency-tag')?.textContent;
+                        const shouldShow = !urgency || cardUrgency === urgency;
+                        card.style.display = shouldShow ? 'block' : 'none';
+                    });
                 });
+
                 showMessage(urgency ? 'Showing ' + urgency + ' urgency updates' : 'Showing all urgency levels', 'info');
             } catch (error) {
                 console.error('Urgency filter error:', error);
@@ -1159,7 +1234,7 @@ function getClientScriptsContent() {
         function syncUrlWithFilters(filters) {
             const url = new URL(window.location.href);
             const params = url.searchParams;
-            const keys = ['category', 'authority', 'sector', 'impact', 'range', 'search'];
+            const keys = ['category', 'authority', 'sector', 'impact', 'urgency', 'range', 'search'];
 
             keys.forEach(key => {
                 const value = filters[key];
@@ -1208,6 +1283,18 @@ function getClientScriptsContent() {
                 });
             }
 
+            if (filters.urgency) {
+                const allowedUrgencies = new Set(String(filters.urgency)
+                    .split(',')
+                    .map(value => value.trim())
+                    .filter(Boolean));
+
+                updates = updates.filter(update => {
+                    const currentUrgency = (update.urgency || '').trim();
+                    return allowedUrgencies.size === 0 || allowedUrgencies.has(currentUrgency);
+                });
+            }
+
             if (filters.range) {
                 updates = filterUpdatesByRange(updates, filters.range);
             }
@@ -1225,6 +1312,14 @@ function getClientScriptsContent() {
             });
 
             renderUpdatesList(updates);
+        }
+
+
+        function sortUpdates(sortBy) {
+            const filters = ensureFilterState();
+            filters.sort = sortBy || 'newest';
+            applyCurrentFilters();
+            showMessage('Sorted by ' + (filters.sort || 'newest'), 'info');
         }
 
 
