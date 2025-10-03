@@ -674,8 +674,8 @@ function getClientScriptsContent() {
                 const value = String(sector ?? '').trim();
                 if (!value) return '';
                 const label = escapeHtml(value);
-                const handler = escapeAttribute('filterBySector(' + JSON.stringify(value) + ')');
-                return '<span class="sector-tag" onclick="' + handler + '">' + label + '</span>';
+                const escapedValue = value.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                return '<span class="sector-tag" onclick="filterBySector(\'' + escapedValue + '\')">' + label + '</span>';
             }).join('');
         }
 

@@ -1120,9 +1120,11 @@ async function renderDashboardPage(req, res) {
                         }
                     }
 
-                    return sectors.slice(0, 3).map(sector =>
-                        '<span class="sector-tag" onclick="filterBySector(\'' + sector + '\')">' + sector + '</span>'
-                    ).join('');
+                    return sectors.slice(0, 3).map(sector => {
+                        const escapedValue = sector.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                        const label = sector.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        return '<span class="sector-tag" onclick="filterBySector(\'' + escapedValue + '\')">' + label + '</span>';
+                    }).join('');
                 }
 
                 function getAIFeatures(update) {
@@ -1339,9 +1341,9 @@ function generateUpdateCard(update) {
                     ${impactBadge}
                 </div>
                 <div class="update-actions">
-                    <button onclick="bookmarkUpdate('${update.id || ''}')" class="action-btn" title="Bookmark">⭐</button>
-                    <button onclick="shareUpdate('${update.id || ''}')" class="action-btn" title="Share">🔗</button>
-                    <button onclick="viewDetails('${update.id || ''}')" class="action-btn" title="Details">👁️</button>
+                    <button onclick="bookmarkUpdate('${String(update.id || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="action-btn" title="Bookmark">⭐</button>
+                    <button onclick="shareUpdate('${String(update.id || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="action-btn" title="Share">🔗</button>
+                    <button onclick="viewDetails('${String(update.id || '').replace(/'/g, "\\'").replace(/"/g, '\\"')}')" class="action-btn" title="Details">👁️</button>
                 </div>
             </div>
             
@@ -1443,9 +1445,11 @@ function getImpactBadge(update) {
 function getSectorTags(update) {
   const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : [])
 
-  return sectors.slice(0, 3).map(sector =>
-        `<span class="sector-tag" onclick="filterBySector('${sector}')">${sector}</span>`
-  ).join('')
+  return sectors.slice(0, 3).map(sector => {
+    const escapedValue = sector.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    const label = sector.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<span class="sector-tag" onclick="filterBySector('${escapedValue}')">${label}</span>`;
+  }).join('')
 }
 
 function getAIFeatures(update) {
