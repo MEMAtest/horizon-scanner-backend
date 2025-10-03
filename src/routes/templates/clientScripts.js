@@ -1211,14 +1211,16 @@ function getClientScriptsContent() {
             renderUpdatesList(updates);
         }
 
-        function filterByCategory(category) {
+        // Note: Filter functions are already defined earlier in the script (lines 114-230)
+        // These are the enhanced versions that work with the new filtering system
+        window.filterByCategory = function(category) {
             console.log('Filtering by category:', category);
             window.currentFilters.category = category || 'all';
             applyCurrentFilters();
             showMessage('Filtered by ' + (category || 'all') + ' updates', 'info');
-        }
+        };
 
-        function filterByAuthority(authority) {
+        window.filterByAuthority = function(authority) {
             console.log('Filtering by authority:', authority);
             if (!authority) {
                 delete window.currentFilters.authority;
@@ -1226,9 +1228,9 @@ function getClientScriptsContent() {
                 window.currentFilters.authority = authority;
             }
             applyCurrentFilters();
-        }
+        };
 
-        function filterBySector(sector) {
+        window.filterBySector = function(sector) {
             console.log('Filtering by sector:', sector);
             if (!sector) {
                 delete window.currentFilters.sector;
@@ -1236,9 +1238,9 @@ function getClientScriptsContent() {
                 window.currentFilters.sector = sector;
             }
             applyCurrentFilters();
-        }
+        };
 
-        function filterByImpactLevel(level) {
+        window.filterByImpactLevel = function(level) {
             console.log('Filtering by impact level:', level);
             if (!level) {
                 delete window.currentFilters.impact;
@@ -1246,9 +1248,9 @@ function getClientScriptsContent() {
                 window.currentFilters.impact = level;
             }
             applyCurrentFilters();
-        }
+        };
 
-        function filterByDateRange(range) {
+        window.filterByDateRange = function(range) {
             console.log('Filtering by date range:', range);
             if (!range) {
                 delete window.currentFilters.range;
@@ -1256,13 +1258,13 @@ function getClientScriptsContent() {
                 window.currentFilters.range = range;
             }
             applyCurrentFilters();
-        }
+        };
 
-        function sortUpdates(sortBy) {
+        window.sortUpdates = function(sortBy) {
             console.log('Sorting by:', sortBy);
             window.currentFilters.sort = sortBy || 'newest';
             applyCurrentFilters();
-        }
+        };
 
         function clearAllFilters() {
             console.log('Clearing all filters');
