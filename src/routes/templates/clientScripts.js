@@ -53,6 +53,15 @@ function getClientScriptsContent() {
                 .replace(/'/g, '&#39;');
         }
 
+        function escapeAttribute(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function isFallbackSummary(summary = '') {
             const normalized = summary.trim().toLowerCase();
             return normalized.startsWith('informational regulatory update') ||
@@ -665,8 +674,8 @@ function getClientScriptsContent() {
                 const value = String(sector ?? '').trim();
                 if (!value) return '';
                 const label = escapeHtml(value);
-                const arg = JSON.stringify(value);
-                return '<span class="sector-tag" onclick="filterBySector(' + arg + ')">' + label + '</span>';
+                const handler = escapeAttribute('filterBySector(' + JSON.stringify(value) + ')');
+                return '<span class="sector-tag" onclick="' + handler + '">' + label + '</span>';
             }).join('');
         }
 
