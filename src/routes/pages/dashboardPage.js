@@ -1010,31 +1010,81 @@ async function renderDashboardPage(req, res) {
                 };
             </script>
             
-            ${getClientScripts()}
-            
-            <!-- Initialize after scripts load -->
+            <!-- Define filter function stubs before loading scripts -->
             <script>
-                // Wait for all scripts to be loaded before calling functions
-                document.addEventListener('DOMContentLoaded', function() {
-                    console.log('DOM loaded, initializing...');
-                    
-                    // Check if functions exist before calling
-                    if (typeof initializeSystem === 'function') {
-                        initializeSystem();
-                    } else if (typeof updateLiveCounters === 'function') {
-                        // Fallback if initializeSystem doesn't exist
-                        updateLiveCounters();
-                        setInterval(updateLiveCounters, 30000);
+                // Define filter function stubs to prevent errors before full script load
+                window.filterByCategory = function(category) {
+                    console.log('Filtering by category:', category);
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByCategory === 'function') {
+                        window.FilterModule.filterByCategory(category);
+                    } else {
+                        console.warn('FilterModule.filterByCategory not available yet');
                     }
-                });
+                };
                 
-                // Also add a safety check for immediate calls
-                if (typeof updateLiveCounters === 'undefined') {
-                    window.updateLiveCounters = function() {
-                        console.log('updateLiveCounters stub - waiting for real function...');
-                    };
-                }
-
+                window.filterByAuthority = function(authority) {
+                    console.log('Filtering by authority:', authority);
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByAuthority === 'function') {
+                        window.FilterModule.filterByAuthority(authority);
+                    } else {
+                        console.warn('FilterModule.filterByAuthority not available yet');
+                    }
+                };
+                
+                window.filterBySector = function(sector) {
+                    console.log('Filtering by sector:', sector);
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterBySector === 'function') {
+                        window.FilterModule.filterBySector(sector);
+                    } else {
+                        console.warn('FilterModule.filterBySector not available yet');
+                    }
+                };
+                
+                window.filterByImpactLevel = function(level) {
+                    console.log('Filtering by impact level:', level);
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByImpactLevel === 'function') {
+                        window.FilterModule.filterByImpactLevel(level);
+                    } else {
+                        console.warn('FilterModule.filterByImpactLevel not available yet');
+                    }
+                };
+                
+                window.filterByDateRange = function(range) {
+                    console.log('Filtering by date range:', range);
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByDateRange === 'function') {
+                        window.FilterModule.filterByDateRange(range);
+                    } else {
+                        console.warn('FilterModule.filterByDateRange not available yet');
+                    }
+                };
+                
+                window.sortUpdates = function(sortBy) {
+                    console.log('Sorting by:', sortBy);
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.sortUpdates === 'function') {
+                        window.FilterModule.sortUpdates(sortBy);
+                    } else {
+                        console.warn('FilterModule.sortUpdates not available yet');
+                    }
+                };
+                
+                window.loadMoreUpdates = function() {
+                    console.log('Loading more updates...');
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.loadMoreUpdates === 'function') {
+                        window.FilterModule.loadMoreUpdates();
+                    } else {
+                        console.warn('FilterModule.loadMoreUpdates not available yet');
+                    }
+                };
+                
+                window.clearAllFilters = function() {
+                    console.log('Clearing all filters...');
+                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.clearAllFilters === 'function') {
+                        window.FilterModule.clearAllFilters();
+                    } else {
+                        console.warn('FilterModule.clearAllFilters not available yet');
+                    }
+                };
+                
                 // Client-side helper functions for Cards view
                 function getImpactBadge(update) {
                     const level = update.impactLevel || update.impact_level || 'Informational';
@@ -1116,6 +1166,44 @@ async function renderDashboardPage(req, res) {
                     }
 
                     return features.join('');
+                }
+            </script>
+            
+            ${getClientScripts()}
+            
+            <!-- Initialize after scripts load -->
+            <script>
+                // Wait for all scripts to be loaded before calling functions
+                document.addEventListener('DOMContentLoaded', function() {
+                    console.log('DOM loaded, initializing...');
+                    
+                    // Check if functions exist before calling
+                    if (typeof initializeSystem === 'function') {
+                        initializeSystem();
+                    } else if (typeof updateLiveCounters === 'function') {
+                        // Fallback if initializeSystem doesn't exist
+                        updateLiveCounters();
+                        setInterval(updateLiveCounters, 30000);
+                    }
+                    
+                    // Ensure filter functions are properly assigned
+                    if (typeof window.FilterModule !== 'undefined') {
+                        window.filterByCategory = window.FilterModule.filterByCategory || window.filterByCategory;
+                        window.filterByAuthority = window.FilterModule.filterByAuthority || window.filterByAuthority;
+                        window.filterBySector = window.FilterModule.filterBySector || window.filterBySector;
+                        window.filterByImpactLevel = window.FilterModule.filterByImpactLevel || window.filterByImpactLevel;
+                        window.filterByDateRange = window.FilterModule.filterByDateRange || window.filterByDateRange;
+                        window.sortUpdates = window.FilterModule.sortUpdates || window.sortUpdates;
+                        window.loadMoreUpdates = window.FilterModule.loadMoreUpdates || window.loadMoreUpdates;
+                        window.clearAllFilters = window.FilterModule.clearAllFilters || window.clearAllFilters;
+                    }
+                });
+                
+                // Also add a safety check for immediate calls
+                if (typeof updateLiveCounters === 'undefined') {
+                    window.updateLiveCounters = function() {
+                        console.log('updateLiveCounters stub - waiting for real function...');
+                    };
                 }
             </script>
         </body>

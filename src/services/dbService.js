@@ -398,13 +398,19 @@ class EnhancedDBService {
 
       if (filters.sector) {
         if (Array.isArray(filters.sector)) {
-          query += ` AND (sector = ANY($${++paramCount}) OR firm_types_affected && $${++paramCount})`
+          paramCount++
+          const sectorParam = paramCount
+          paramCount++
+          const firmTypesParam = paramCount
+          query += ` AND (sector = ANY($${sectorParam}) OR firm_types_affected && $${firmTypesParam})`
           params.push(filters.sector, JSON.stringify(filters.sector))
-          paramCount++
         } else {
-          query += ` AND (sector = $${++paramCount} OR firm_types_affected @> $${++paramCount})`
-          params.push(filters.sector, JSON.stringify([filters.sector]))
           paramCount++
+          const sectorParam = paramCount
+          paramCount++
+          const firmTypesParam = paramCount
+          query += ` AND (sector = $${sectorParam} OR firm_types_affected @> $${firmTypesParam})`
+          params.push(filters.sector, JSON.stringify([filters.sector]))
         }
       }
 

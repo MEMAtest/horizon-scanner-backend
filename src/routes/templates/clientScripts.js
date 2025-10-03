@@ -229,6 +229,22 @@ function getClientScriptsContent() {
             }
         };
 
+        // Filter by urgency function
+        window.filterByUrgency = function(urgency) {
+            console.log('Filtering by urgency:', urgency);
+            try {
+                const updates = document.querySelectorAll('.update-card');
+                updates.forEach(card => {
+                    const cardUrgency = card.dataset.urgency || card.querySelector('.urgency-tag')?.textContent;
+                    const shouldShow = !urgency || cardUrgency === urgency;
+                    card.style.display = shouldShow ? 'block' : 'none';
+                });
+                showMessage(urgency ? 'Showing ' + urgency + ' urgency updates' : 'Showing all urgency levels', 'info');
+            } catch (error) {
+                console.error('Urgency filter error:', error);
+            }
+        };
+        
         // Analytics refresh function
         window.refreshAnalytics = async function() {
             console.log('📊 Refreshing analytics...');
@@ -1550,6 +1566,51 @@ function getClientScriptsContent() {
         }
 
         // =================
+        // CREATE FILTER MODULE
+        // =================
+        
+        // Create FilterModule object to expose all filter functions
+        window.FilterModule = {
+            filterByCategory: filterByCategory,
+            filterByAuthority: filterByAuthority,
+            filterBySector: filterBySector,
+            filterByImpactLevel: filterByImpactLevel,
+            filterByDateRange: filterByDateRange,
+            filterByUrgency: filterByUrgency || function(urgency) {
+                console.log('Filtering by urgency:', urgency);
+                // This is a placeholder - implement if needed
+            },
+            sortUpdates: sortUpdates,
+            loadMoreUpdates: loadMoreUpdates,
+            clearAllFilters: clearAllFilters,
+            clearFilters: clearFilters,
+            applyActiveFilters: applyActiveFilters,
+            getCurrentFilters: function() {
+                return window.currentFilters || {
+                    category: 'all',
+                    authority: null,
+                    sector: null,
+                    impact: null,
+                    range: null,
+                    search: null,
+                    sort: 'newest'
+                };
+            }
+        };
+        
+        // Also expose functions globally for backward compatibility
+        window.filterByCategory = filterByCategory;
+        window.filterByAuthority = filterByAuthority;
+        window.filterBySector = filterBySector;
+        window.filterByImpactLevel = filterByImpactLevel;
+        window.filterByDateRange = filterByDateRange;
+        window.filterByUrgency = window.FilterModule.filterByUrgency;
+        window.sortUpdates = sortUpdates;
+        window.loadMoreUpdates = loadMoreUpdates;
+        window.clearAllFilters = clearAllFilters;
+        window.clearFilters = clearFilters;
+        
+        // =================
         // EXPOSE ALL FUNCTIONS TO WINDOW
         // =================
         
@@ -1571,16 +1632,6 @@ function getClientScriptsContent() {
         window.checkSystemStatus = checkSystemStatus;
         window.initializeSystem = initializeSystem;
         
-        // Filter functions
-        window.filterByCategory = filterByCategory;
-        window.filterByAuthority = filterByAuthority;
-        window.filterBySector = filterBySector;
-        window.filterByImpactLevel = filterByImpactLevel;
-        window.filterByDateRange = filterByDateRange;
-        window.sortUpdates = sortUpdates;
-        window.clearAllFilters = clearAllFilters;
-        window.clearFilters = clearFilters;
-        
         // Update action functions
         window.viewDetails = viewDetails;
         window.bookmarkUpdate = bookmarkUpdate;
@@ -1588,7 +1639,7 @@ function getClientScriptsContent() {
         window.loadMoreUpdates = loadMoreUpdates;
         window.performSearch = performSearch;
         window.setupSearchBox = setupSearchBox;
-
+        
         // View switching functions
         window.initializeViewSwitching = initializeViewSwitching;
         window.switchView = switchView;
@@ -1596,11 +1647,11 @@ function getClientScriptsContent() {
         window.renderCardsView = renderCardsView;
         window.renderTableView = renderTableView;
         window.renderTimelineView = renderTimelineView;
-
+        
         // =================
         // START INITIALIZATION
         // =================
-
+        
         document.addEventListener('DOMContentLoaded', function() {
             initializeSystem();
             initializeViewSwitching();

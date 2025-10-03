@@ -185,6 +185,106 @@ function getFilterModule() {
             }
         }
         
+        async function filterBySector(sector) {
+            try {
+                console.log('🏢 Filtering by sector:', sector);
+                showMessage(\`Filtering by sector: \${sector}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates?sector=\${encodeURIComponent(sector)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Sector: \${sector}\`);
+                    showMessage(\`Showing \${data.total} \${sector} updates\`, 'success');
+                    currentFilter = { type: 'sector', value: sector };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Sector filter error:', error);
+                showMessage('Sector filter failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function filterByImpactLevel(level) {
+            try {
+                console.log('📊 Filtering by impact level:', level);
+                showMessage(\`Filtering by impact level: \${level}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates?impact=\${encodeURIComponent(level)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Impact Level: \${level}\`);
+                    showMessage(\`Showing \${data.total} \${level} updates\`, 'success');
+                    currentFilter = { type: 'impact', value: level };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Impact level filter error:', error);
+                showMessage('Impact level filter failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function filterByDateRange(range) {
+            try {
+                console.log('📅 Filtering by date range:', range);
+                showMessage(\`Filtering by date range: \${range}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates?range=\${encodeURIComponent(range)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Date Range: \${range}\`);
+                    showMessage(\`Showing \${data.total} \${range} updates\`, 'success');
+                    currentFilter = { type: 'range', value: range };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Date range filter error:', error);
+                showMessage('Date range filter failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function filterByUrgency(urgency) {
+            try {
+                console.log('⚠️ Filtering by urgency:', urgency);
+                showMessage(\`Filtering by urgency: \${urgency}...\`, 'info');
+                
+                const response = await fetch(\`/api/updates?urgency=\${encodeURIComponent(urgency)}\`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, \`Urgency: \${urgency}\`);
+                    showMessage(\`Showing \${data.total} \${urgency} updates\`, 'success');
+                    currentFilter = { type: 'urgency', value: urgency };
+                } else {
+                    throw new Error(data.error || 'Filter failed');
+                }
+                
+            } catch (error) {
+                console.error('Urgency filter error:', error);
+                showMessage('Urgency filter failed: ' + error.message, 'error');
+            }
+        }
+        
+        function sortUpdates(sortBy) {
+            console.log('🔄 Sorting by:', sortBy);
+            // This function is just a placeholder for now
+            showMessage(\`Sorting by \${sortBy}\`, 'info');
+        }
+        
+        function loadMoreUpdates() {
+            console.log('➕ Loading more updates...');
+            // This function is just a placeholder for now
+            showMessage('Loading more updates...', 'info');
+        }
+        
         function renderFilteredUpdates(updates, filterLabel) {
             console.log(\`📋 Rendering \${updates.length} filtered updates for: \${filterLabel}\`);
             
@@ -225,6 +325,12 @@ function getFilterModule() {
             clearAllFilters,
             filterByCategory,
             filterByAuthority,
+            filterBySector,
+            filterByImpactLevel,
+            filterByDateRange,
+            filterByUrgency,
+            sortUpdates,
+            loadMoreUpdates,
             renderFilteredUpdates
         };
     })();`
