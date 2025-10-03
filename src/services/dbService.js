@@ -385,21 +385,47 @@ class EnhancedDBService {
       const params = []
       let paramCount = 0
 
-      // Apply filters
+      // Apply filters with array support
       if (filters.authority) {
-        query += ` AND authority = $${++paramCount}`
-        params.push(filters.authority)
+        if (Array.isArray(filters.authority)) {
+          query += ` AND authority = ANY($${++paramCount})`
+          params.push(filters.authority)
+        } else {
+          query += ` AND authority = $${++paramCount}`
+          params.push(filters.authority)
+        }
       }
 
       if (filters.sector) {
-        query += ` AND (sector = $${++paramCount} OR firm_types_affected @> $${++paramCount})`
-        params.push(filters.sector, JSON.stringify([filters.sector]))
-        paramCount++
+        if (Array.isArray(filters.sector)) {
+          query += ` AND (sector = ANY($${++paramCount}) OR firm_types_affected && $${++paramCount})`
+          params.push(filters.sector, JSON.stringify(filters.sector))
+          paramCount++
+        } else {
+          query += ` AND (sector = $${++paramCount} OR firm_types_affected @> $${++paramCount})`
+          params.push(filters.sector, JSON.stringify([filters.sector]))
+          paramCount++
+        }
       }
 
       if (filters.impact) {
-        query += ` AND impact_level = $${++paramCount}`
-        params.push(filters.impact)
+        if (Array.isArray(filters.impact)) {
+          query += ` AND impact_level = ANY($${++paramCount})`
+          params.push(filters.impact)
+        } else {
+          query += ` AND impact_level = $${++paramCount}`
+          params.push(filters.impact)
+        }
+      }
+
+      if (filters.urgency) {
+        if (Array.isArray(filters.urgency)) {
+          query += ` AND urgency = ANY($${++paramCount})`
+          params.push(filters.urgency)
+        } else {
+          query += ` AND urgency = $${++paramCount}`
+          params.push(filters.urgency)
+        }
       }
 
       if (filters.search) {
@@ -457,21 +483,48 @@ class EnhancedDBService {
     const updates = await this.loadJSONData(this.updatesFile)
     let filtered = [...updates]
 
-    // Apply filters
+    // Apply filters with array support
     if (filters.authority) {
-      filtered = filtered.filter(u => u.authority === filters.authority)
+      if (Array.isArray(filters.authority)) {
+        filtered = filtered.filter(u => filters.authority.includes(u.authority))
+      } else {
+        filtered = filtered.filter(u => u.authority === filters.authority)
+      }
     }
 
     if (filters.sector) {
-      filtered = filtered.filter(u =>
-        u.sector === filters.sector ||
-                (u.firm_types_affected && u.firm_types_affected.includes(filters.sector)) ||
-                (u.primarySectors && u.primarySectors.includes(filters.sector))
-      )
+      if (Array.isArray(filters.sector)) {
+        filtered = filtered.filter(u =>
+          filters.sector.includes(u.sector) ||
+          (u.firm_types_affected && u.firm_types_affected.some(s => filters.sector.includes(s))) ||
+          (u.primarySectors && u.primarySectors.some(s => filters.sector.includes(s)))
+        )
+      } else {
+        filtered = filtered.filter(u =>
+          u.sector === filters.sector ||
+          (u.firm_types_affected && u.firm_types_affected.includes(filters.sector)) ||
+          (u.primarySectors && u.primarySectors.includes(filters.sector))
+        )
+      }
     }
 
     if (filters.impact) {
-      filtered = filtered.filter(u => u.impactLevel === filters.impact || u.impact_level === filters.impact)
+      if (Array.isArray(filters.impact)) {
+        filtered = filtered.filter(u =>
+          filters.impact.includes(u.impactLevel) ||
+          filters.impact.includes(u.impact_level)
+        )
+      } else {
+        filtered = filtered.filter(u => u.impactLevel === filters.impact || u.impact_level === filters.impact)
+      }
+    }
+
+    if (filters.urgency) {
+      if (Array.isArray(filters.urgency)) {
+        filtered = filtered.filter(u => filters.urgency.includes(u.urgency))
+      } else {
+        filtered = filtered.filter(u => u.urgency === filters.urgency)
+      }
     }
 
     if (filters.search) {
@@ -1927,6 +1980,89 @@ class EnhancedDBService {
       }
     } catch (error) {
       return { status: 'unhealthy', error: error.message }
+    }
+  }
+
+  // AI ANALYSIS PROGRESS TRACKING METHODS
+  async getTotalUpdatesCount() {
+    try {
+      if (this.fallbackMode) {
+        const updates = await this.loadJSONData(this.updatesFile)
+        return updates.length
+      } else {
+        const client = await this.pool.connect()
+        try {
+          const result = await client.query('SELECT COUNT(*) as count FROM regulatory_updates')
+          return parseInt(result.rows[0].count)
+        } finally {
+          client.release()
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error getting total updates count:', error)
+      return 0
+    }
+  }
+
+  async getAnalyzedUpdatesCount() {
+    try {
+      if (this.fallbackMode) {
+        const updates = await this.loadJSONData(this.updatesFile)
+        return updates.filter(u =>
+          u.ai_summary ||
+          u.businessImpactScore ||
+          u.business_impact_score ||
+          u.aiTags?.length > 0 ||
+          u.ai_tags?.length > 0
+        ).length
+      } else {
+        const client = await this.pool.connect()
+        try {
+          const result = await client.query(`
+            SELECT COUNT(*) as count
+            FROM regulatory_updates
+            WHERE ai_summary IS NOT NULL
+               OR business_impact_score > 0
+               OR jsonb_array_length(ai_tags) > 0
+          `)
+          return parseInt(result.rows[0].count)
+        } finally {
+          client.release()
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error getting analyzed updates count:', error)
+      return 0
+    }
+  }
+
+  async getUnanalyzedUpdates(limit = 50) {
+    try {
+      if (this.fallbackMode) {
+        const updates = await this.loadJSONData(this.updatesFile)
+        return updates.filter(u =>
+          !u.ai_summary &&
+          !u.businessImpactScore &&
+          !u.business_impact_score
+        ).slice(0, limit)
+      } else {
+        const client = await this.pool.connect()
+        try {
+          const result = await client.query(`
+            SELECT * FROM regulatory_updates
+            WHERE ai_summary IS NULL
+              AND (business_impact_score IS NULL OR business_impact_score = 0)
+            ORDER BY published_date DESC
+            LIMIT $1
+          `, [limit])
+          return result.rows
+        } finally {
+          client.release()
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error getting unanalyzed updates:', error)
+      return []
     }
   }
 }

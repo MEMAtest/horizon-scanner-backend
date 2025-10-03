@@ -67,51 +67,39 @@ function getFilterModule() {
             }
         }
         
-        function applyActiveFilters() {
-            console.log('🎯 Applying active filters...');
+        async function applyActiveFilters() {
+            console.log('🎯 Applying server-side filters...');
             
             try {
                 const activeFilters = {
-                    authorities: Array.from(selectedAuthorities),
-                    impacts: Array.from(selectedImpactLevels),
-                    urgencies: Array.from(selectedUrgencies)
+                    authority: Array.from(selectedAuthorities),
+                    impact: Array.from(selectedImpactLevels),
+                    urgency: Array.from(selectedUrgencies),
+                    search: document.getElementById('searchBox')?.value || ''
                 };
-                
-                document.querySelectorAll('.update-card').forEach(card => {
-                    let shouldShow = true;
-                    
-                    if (activeFilters.authorities.length > 0) {
-                        const cardAuthority = card.getAttribute('data-authority');
-                        if (!activeFilters.authorities.includes(cardAuthority)) {
-                            shouldShow = false;
-                        }
-                    }
-                    
-                    if (activeFilters.impacts.length > 0) {
-                        const cardImpact = card.getAttribute('data-impact');
-                        if (!activeFilters.impacts.includes(cardImpact)) {
-                            shouldShow = false;
-                        }
-                    }
-                    
-                    if (activeFilters.urgencies.length > 0) {
-                        const cardUrgency = card.getAttribute('data-urgency');
-                        if (!activeFilters.urgencies.includes(cardUrgency)) {
-                            shouldShow = false;
-                        }
-                    }
-                    
-                    card.style.display = shouldShow ? 'block' : 'none';
-                });
-                
-                const visibleCards = document.querySelectorAll('.update-card[style*="block"], .update-card:not([style*="none"])').length;
-                const countElement = document.getElementById('resultCount');
-                if (countElement) {
-                    countElement.textContent = \`\${visibleCards} updates shown\`;
+
+                const query = new URLSearchParams();
+                if (activeFilters.authority.length > 0) query.set('authority', activeFilters.authority.join(','));
+                if (activeFilters.impact.length > 0) query.set('impact', activeFilters.impact.join(','));
+                // Note: The backend endpoint seems to use 'impact' for impact level.
+                // Urgency is not currently a filter in the /api/updates endpoint, but we'll send it anyway for future implementation.
+                if (activeFilters.urgency.length > 0) query.set('urgency', activeFilters.urgency.join(','));
+                if (activeFilters.search) query.set('search', activeFilters.search);
+
+                showMessage('Fetching filtered updates...', 'info');
+                const response = await fetch(\`/api/updates?\${query.toString()}\`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderFilteredUpdates(data.updates, 'Active Filters');
+                    showMessage(\`Showing \${data.count} updates\`, 'success');
+                } else {
+                    throw new Error(data.error || 'Failed to fetch filtered updates');
                 }
                 
             } catch (error) {
                 console.error('❌ Error applying filters:', error);
+                showMessage('Error applying filters: ' + error.message, 'error');
             }
         }
         

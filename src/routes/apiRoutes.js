@@ -67,9 +67,10 @@ router.get('/updates', async (req, res) => {
 
     const filters = {
       category: req.query.category || 'all',
-      authority: req.query.authority || null,
+      authority: req.query.authority ? req.query.authority.split(',') : null,
       sector: req.query.sector || null,
-      impact: req.query.impact || null,
+      impact: req.query.impact ? req.query.impact.split(',') : null,
+      urgency: req.query.urgency ? req.query.urgency.split(',') : null,
       range: req.query.range || null,
       search: req.query.search || null,
       limit: parseInt(req.query.limit) || 50
@@ -719,6 +720,34 @@ router.get('/workspace/stats', async (req, res) => {
 })
 
 // AI INTELLIGENCE ENDPOINTS (existing code continues below...)
+router.get('/ai/analysis-progress', async (req, res) => {
+  try {
+    console.log('📊 API: Getting AI analysis progress');
+
+    const totalUpdates = await dbService.getTotalUpdatesCount();
+    const analyzedUpdates = await dbService.getAnalyzedUpdatesCount();
+
+    const progress = totalUpdates > 0 ? (analyzedUpdates / totalUpdates) * 100 : 0;
+
+    res.json({
+      success: true,
+      totalUpdates,
+      analyzedUpdates,
+      progress: progress.toFixed(2),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ API Error getting AI analysis progress:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      totalUpdates: 0,
+      analyzedUpdates: 0,
+      progress: 0
+    });
+  }
+});
+
 router.get('/ai/insights', async (req, res) => {
   try {
     console.log('🧠 API: Getting AI insights')
