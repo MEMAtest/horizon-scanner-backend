@@ -1126,7 +1126,7 @@ router.get('/ai-intelligence', async (req, res) => {
                                                 </div>
                                             </div>
                                             <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
-                                                    onclick="WorkspaceModule.togglePin('${update.url}', '${(update.headline || '').replace(/'/g, '&#39;')}', '${update.authority || 'Unknown'}')">
+                                                    onclick="WorkspaceModule.togglePin('${(update.url || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.headline || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.authority || 'Unknown').replace(/'/g, "\'").replace(/"/g, '\"')}')">
                                                 ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
                                             </button>
                                         </div>
@@ -1162,7 +1162,7 @@ router.get('/ai-intelligence', async (req, res) => {
                                                 </div>
                                             </div>
                                             <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
-                                                    onclick="WorkspaceModule.togglePin('${update.url}', '${(update.headline || '').replace(/'/g, '&#39;')}', '${update.authority || 'Unknown'}')">
+                                                    onclick="WorkspaceModule.togglePin('${(update.url || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.headline || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.authority || 'Unknown').replace(/'/g, "\'").replace(/"/g, '\"')}')">
                                                 ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
                                             </button>
                                         </div>
@@ -1198,7 +1198,7 @@ router.get('/ai-intelligence', async (req, res) => {
                                                 </div>
                                             </div>
                                             <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
-                                                    onclick="WorkspaceModule.togglePin('${update.url}', '${(update.headline || '').replace(/'/g, '&#39;')}', '${update.authority || 'Unknown'}')">
+                                                    onclick="WorkspaceModule.togglePin('${(update.url || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.headline || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.authority || 'Unknown').replace(/'/g, "\'").replace(/"/g, '\"')}')">
                                                 ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
                                             </button>
                                         </div>
