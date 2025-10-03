@@ -7,12 +7,15 @@ const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
 
 function serializeForScript(data) {
-  // Use a safer approach - wrap in template literal instead of fixing JSON
-  const jsonString = JSON.stringify(data, null, 0);
+  const json = JSON.stringify(data)
 
-  // For script safety, use a different approach
-  // Instead of modifying JSON, we'll use a safe assignment method
-  return `JSON.parse(${JSON.stringify(jsonString)})`;
+  // Escape characters that can break out of <script> tags or terminate strings
+  return json
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
 }
 
 async function renderDashboardPage(req, res) {
