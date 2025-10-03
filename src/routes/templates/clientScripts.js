@@ -1534,7 +1534,7 @@ function getClientScriptsContent() {
                 const idArg = JSON.stringify(update.id || '');
                 const urlArg = JSON.stringify(update.url || '');
                 const formattedDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
-                const summary = truncateText(update.summary || update.ai_summary || '', 120);
+                const summary = update.summary || update.ai_summary || '';
                 const impactLevel = (update.impactLevel || update.impact_level || 'Informational');
                 const urgency = update.urgency || 'Low';
 
@@ -1603,7 +1603,7 @@ function getClientScriptsContent() {
                                     const idArg = JSON.stringify(update.id || '');
                                     const urlArg = JSON.stringify(update.url || '');
                                     const urgency = update.urgency || 'Low';
-                                    const summary = truncateText(update.summary || update.ai_summary || '', 150);
+                                    const summary = update.summary || update.ai_summary || '';
 
                                     return (
                                         '<div class="timeline-item">' +

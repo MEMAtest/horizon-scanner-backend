@@ -84,7 +84,7 @@ function getContentModule() {
             const baseSummary = !useFallback && aiSummary.trim().length > 0
                 ? aiSummary.trim()
                 : (update.summary || update.description || '').trim();
-            const shortSummary = truncateText(baseSummary);
+            const shortSummary = baseSummary;
             const isPinned = pinnedUrls.has(update.url);
             const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
 
