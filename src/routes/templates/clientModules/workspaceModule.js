@@ -169,8 +169,8 @@ function getWorkspaceModule() {
                     searchItem.innerHTML = \`
                         <div class="search-name">\${search.searchName || search.search_name}</div>
                         <div class="search-actions">
-                            <button onclick="WorkspaceModule.loadSearch(\${searchId})" class="btn-small">Load</button>
-                            <button onclick="WorkspaceModule.deleteSearch(\${searchId})" class="btn-small btn-danger">Delete</button>
+                            <button onclick="WorkspaceModule.loadSearch('" + searchId + "')" class="btn-small">Load</button>
+                            <button onclick="WorkspaceModule.deleteSearch('" + searchId + "')" class="btn-small btn-danger">Delete</button>
                         </div>
                     \`;
                     searchList.appendChild(searchItem);
@@ -212,11 +212,11 @@ function getWorkspaceModule() {
                             </div>
                         </div>
                         <div class="alert-actions">
-                            <button onclick="WorkspaceModule.toggleAlert('\${alert.id}', \${!alert.isActive})" 
+                            <button onclick="WorkspaceModule.toggleAlert('" + String(alert.id).replace(/'/g, "\\'").replace(/"/g, '\\"') + "', " + (!alert.isActive) + ")"
                                     class="btn-small">
-                                \${alert.isActive ? 'Disable' : 'Enable'}
+                                " + (alert.isActive ? 'Disable' : 'Enable') + "
                             </button>
-                            <button onclick="WorkspaceModule.deleteAlert('\${alert.id}')" 
+                            <button onclick="WorkspaceModule.deleteAlert('" + String(alert.id).replace(/'/g, "\\'").replace(/"/g, '\\"') + "')"
                                     class="btn-small btn-danger">Delete</button>
                         </div>
                     \`;

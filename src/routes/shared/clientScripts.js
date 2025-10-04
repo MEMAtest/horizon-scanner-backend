@@ -444,9 +444,9 @@ function getCommonClientScripts() {
                         \${updates.map((update, index) => \`
                             <div class="update-card" data-url="\${update.url}">
                                 <div class="update-header">
-                                    <div class="update-title" onclick="window.open('\${update.url}', '_blank')">\${update.headline || 'No title'}</div>
+                                    <div class="update-title" onclick="window.open('\${(update.url || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}', '_blank')">\${update.headline || 'No title'}</div>
                                     <div class="update-actions">
-                                        <button class="pin-btn" onclick="event.stopPropagation(); togglePin('\${update.url}', '\${(update.headline || '').replace(/'/g, "\\\\'")}', '\${update.authority}')" title="Pin item">📍</button>
+                                        <button class="pin-btn" onclick="event.stopPropagation(); togglePin('\${(update.url || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}', '\${(update.headline || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}', '\${(update.authority || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}')" title="Pin item">📍</button>
                                     </div>
                                 </div>
                                 <div class="update-badges">

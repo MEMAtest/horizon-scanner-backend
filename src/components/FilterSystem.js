@@ -287,14 +287,14 @@ class FilterSystem {
             <div class="filter-section-controls">
                 <button 
                     class="filter-control-btn" 
-                    onclick="filterSystem.selectAll('${filterKey}')"
+                    onclick="filterSystem.selectAll('${filterKey.replace(/'/g, "\\'").replace(/"/g, '\\"')}')"
                     ${allSelected ? 'disabled' : ''}
                 >
                     Select All
                 </button>
                 <button 
                     class="filter-control-btn" 
-                    onclick="filterSystem.clearFilter('${filterKey}')"
+                    onclick="filterSystem.clearFilter('${filterKey.replace(/'/g, "\\'").replace(/"/g, '\\"')}')"
                     ${this.filters[filterKey].length === 0 ? 'disabled' : ''}
                 >
                     Clear
@@ -322,7 +322,7 @@ class FilterSystem {
                             <span class="active-filter-text">${filter.label}</span>
                             <button 
                                 class="active-filter-remove" 
-                                onclick="filterSystem.removeActiveFilter('${filter.key}', '${filter.value}')"
+                                onclick="filterSystem.removeActiveFilter('${filter.key.replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${filter.value.replace(/'/g, "\\'").replace(/"/g, '\\"')}')"
                                 aria-label="Remove ${filter.label} filter"
                             >
                                 ✕
