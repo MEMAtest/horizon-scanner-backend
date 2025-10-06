@@ -102,6 +102,7 @@ async function renderDashboardPage(req, res) {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Dashboard - AI Regulatory Intelligence</title>
             ${getCommonStyles()}
+
             <style>
                 /* Dashboard Specific Styles */
                 .dashboard-header {
@@ -990,7 +991,7 @@ async function renderDashboardPage(req, res) {
                 </main>
             </div>
             
-            <!-- Initialize with data -->
+            <!-- Initialize with data and lightweight stubs before main client scripts load -->
             <script>
                 // Pass server-side data to client
                 window.initialUpdates = ${serializedInitialUpdates};
@@ -998,96 +999,105 @@ async function renderDashboardPage(req, res) {
                 window.filterOptions = ${serializedFilterOptions};
                 window.currentFilters = ${serializedCurrentFilters};
 
-                // Simple FilterModule for WorkspaceModule integration
-                window.FilterModule = {
-                    getCurrentFilters: function() {
+                window.FilterModule = window.FilterModule || {};
+                if (typeof window.FilterModule.getCurrentFilters !== 'function') {
+                    window.FilterModule.getCurrentFilters = function() {
                         return {
                             category: window.currentFilters.category,
                             authority: window.currentFilters.authority || null,
                             sector: window.currentFilters.sector || null,
                             impact: window.currentFilters.impact || null,
+                            urgency: window.currentFilters.urgency || null,
                             range: window.currentFilters.range || null,
-                            search: window.currentFilters.search || null
+                            search: window.currentFilters.search || null,
+                            sort: window.currentFilters.sort || 'newest'
                         };
+                    };
+                }
+
+                (function setupFilterStubs() {
+                    const pendingCalls = window.__pendingFilterCalls = window.__pendingFilterCalls || [];
+
+                    function invokeWhenReady(method, args) {
+                        const module = window.FilterModule;
+                        const target = module && typeof module[method] === 'function'
+                            ? module[method]
+                            : null;
+
+                        if (target) {
+                            target.apply(module, args);
+                            return;
+                        }
+
+                        pendingCalls.push({ method, args });
                     }
-                };
-            </script>
-            
-            <!-- Define filter function stubs before loading scripts -->
-            <script>
-                // Define filter function stubs to prevent errors before full script load
-                window.filterByCategory = function(category) {
-                    console.log('Filtering by category:', category);
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByCategory === 'function') {
-                        window.FilterModule.filterByCategory(category);
-                    } else {
-                        console.warn('FilterModule.filterByCategory not available yet');
+
+                    const methodNames = [
+                        'filterByCategory',
+                        'filterByAuthority',
+                        'filterBySector',
+                        'filterByImpactLevel',
+                        'filterByDateRange',
+                        'filterByUrgency',
+                        'sortUpdates',
+                        'loadMoreUpdates',
+                        'clearAllFilters',
+                        'clearFilters',
+                        'applyActiveFilters',
+                        'applyFilters'
+                    ];
+
+                    function promoteMethod(method) {
+                        if (typeof window.FilterModule === 'object' && typeof window.FilterModule[method] === 'function') {
+                            window[method] = window.FilterModule[method];
+                        }
                     }
-                };
-                
-                window.filterByAuthority = function(authority) {
-                    console.log('Filtering by authority:', authority);
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByAuthority === 'function') {
-                        window.FilterModule.filterByAuthority(authority);
-                    } else {
-                        console.warn('FilterModule.filterByAuthority not available yet');
+
+                    methodNames.forEach(method => {
+                        if (typeof window[method] !== 'function' || window[method].__isFilterStub) {
+                            const wrapper = function(...args) {
+                                invokeWhenReady(method, args);
+                            };
+                            wrapper.__isFilterStub = true;
+                            window[method] = wrapper;
+                        }
+                    });
+
+                    function flushFilterQueue() {
+                        if (!window.FilterModule) return;
+
+                        let executed = false;
+                        let safety = pendingCalls.length + 5;
+
+                        while (pendingCalls.length && safety > 0) {
+                            safety -= 1;
+                            const call = pendingCalls.shift();
+                            const target = window.FilterModule && typeof window.FilterModule[call.method] === 'function'
+                                ? window.FilterModule[call.method]
+                                : null;
+
+                            if (target) {
+                                try {
+                                    target.apply(window.FilterModule, call.args);
+                                    executed = true;
+                                } catch (error) {
+                                    console.error('Error executing queued filter call:', error);
+                                }
+                            } else {
+                                pendingCalls.push(call);
+                                break;
+                            }
+                        }
+
+                        if (executed) {
+                            methodNames.forEach(promoteMethod);
+                        }
                     }
-                };
-                
-                window.filterBySector = function(sector) {
-                    console.log('Filtering by sector:', sector);
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterBySector === 'function') {
-                        window.FilterModule.filterBySector(sector);
-                    } else {
-                        console.warn('FilterModule.filterBySector not available yet');
-                    }
-                };
-                
-                window.filterByImpactLevel = function(level) {
-                    console.log('Filtering by impact level:', level);
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByImpactLevel === 'function') {
-                        window.FilterModule.filterByImpactLevel(level);
-                    } else {
-                        console.warn('FilterModule.filterByImpactLevel not available yet');
-                    }
-                };
-                
-                window.filterByDateRange = function(range) {
-                    console.log('Filtering by date range:', range);
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.filterByDateRange === 'function') {
-                        window.FilterModule.filterByDateRange(range);
-                    } else {
-                        console.warn('FilterModule.filterByDateRange not available yet');
-                    }
-                };
-                
-                window.sortUpdates = function(sortBy) {
-                    console.log('Sorting by:', sortBy);
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.sortUpdates === 'function') {
-                        window.FilterModule.sortUpdates(sortBy);
-                    } else {
-                        console.warn('FilterModule.sortUpdates not available yet');
-                    }
-                };
-                
-                window.loadMoreUpdates = function() {
-                    console.log('Loading more updates...');
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.loadMoreUpdates === 'function') {
-                        window.FilterModule.loadMoreUpdates();
-                    } else {
-                        console.warn('FilterModule.loadMoreUpdates not available yet');
-                    }
-                };
-                
-                window.clearAllFilters = function() {
-                    console.log('Clearing all filters...');
-                    if (typeof window.FilterModule !== 'undefined' && typeof window.FilterModule.clearAllFilters === 'function') {
-                        window.FilterModule.clearAllFilters();
-                    } else {
-                        console.warn('FilterModule.clearAllFilters not available yet');
-                    }
-                };
-                
+
+                    window.__flushFilterQueue = flushFilterQueue;
+                    window.addEventListener('dashboard:filters-ready', flushFilterQueue);
+                })();
+
                 // Client-side helper functions for Cards view
                 function getImpactBadge(update) {
                     const level = update.impactLevel || update.impact_level || 'Informational';
@@ -1121,9 +1131,9 @@ async function renderDashboardPage(req, res) {
                     }
 
                     return sectors.slice(0, 3).map(sector => {
-                        const escapedValue = sector.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-                        const label = sector.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        return '<span class="sector-tag" onclick="filterBySector(\'' + escapedValue + '\')">' + label + '</span>';
+                        const value = String(sector ?? '').trim();
+                        const label = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        return '<span class="sector-tag" data-sector="' + label + '">' + label + '</span>';
                     }).join('');
                 }
 
@@ -1341,9 +1351,9 @@ function generateUpdateCard(update) {
                     ${impactBadge}
                 </div>
                 <div class="update-actions">
-                    <button onclick="bookmarkUpdate('${String(update.id || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;')}')" class="action-btn" title="Bookmark">⭐</button>
-                    <button onclick="shareUpdate('${String(update.id || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;')}')" class="action-btn" title="Share">🔗</button>
-                    <button onclick="viewDetails('${String(update.id || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;')}')" class="action-btn" title="Details">👁️</button>
+                    <button onclick="bookmarkUpdate('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Bookmark">⭐</button>
+                    <button onclick="shareUpdate('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Share">🔗</button>
+                    <button onclick="viewDetails('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Details">👁️</button>
                 </div>
             </div>
             
@@ -1446,9 +1456,9 @@ function getSectorTags(update) {
   const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : [])
 
   return sectors.slice(0, 3).map(sector => {
-    const escapedValue = sector.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-    const label = sector.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<span class="sector-tag" onclick="filterBySector('${escapedValue}')">${label}</span>`;
+    const value = String(sector ?? '').trim();
+    const label = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<span class="sector-tag" data-sector="${label}">${label}</span>`;
   }).join('')
 }
 

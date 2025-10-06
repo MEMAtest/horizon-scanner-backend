@@ -141,55 +141,53 @@ function getClientScriptsContent() {
             return window.currentFilters;
         }
 
-        function applyFiltersOrFallback(fallbackFn) {
-            if (typeof window.applyCurrentFilters === 'function') {
-                window.applyCurrentFilters();
-            } else if (typeof fallbackFn === 'function') {
-                fallbackFn();
-            }
+        function formatFilterLabel(value) {
+            if (!value) return '';
+            return String(value)
+                .replace(/[-_]/g, ' ')
+                .replace(/\b\w/g, char => char.toUpperCase());
         }
 
-        // Filter Functions for Dashboard
-        window.filterByCategory = function(category) {
+        function hasActiveNonCategoryFilters(filters) {
+            return Boolean(
+                filters.authority ||
+                filters.sector ||
+                filters.impact ||
+                filters.urgency ||
+                filters.range ||
+                filters.search
+            );
+        }
+
+        function filterByCategory(category) {
             console.log('Filtering by category:', category);
             try {
-                const filters = ensureFilterState();
+                let filters = ensureFilterState();
+                const previousSort = filters.sort || 'newest';
+
+                if (hasActiveNonCategoryFilters(filters)) {
+                    clearAllFilters({ preserveSort: true, silent: true, skipApply: true });
+                    filters = ensureFilterState();
+                    filters.sort = previousSort;
+                    showMessage('Other filters cleared to apply quick category.', 'info');
+                }
+
                 filters.category = category || 'all';
 
-                applyFiltersOrFallback(() => {
-                    const updates = document.querySelectorAll('.update-card');
-                    const filterBtns = document.querySelectorAll('.quick-filter-btn');
+                applyCurrentFilters();
 
-                    filterBtns.forEach(btn => btn.classList.remove('active'));
-                    const activeBtn = document.querySelector('[data-filter="' + category + '"]');
-                    if (activeBtn) activeBtn.classList.add('active');
-
-                    updates.forEach(card => {
-                        const shouldShow = !category || category === 'all' || card.dataset.category === category ||
-                                         card.classList.contains(category) || card.dataset.filter === category;
-                        card.style.display = shouldShow ? 'block' : 'none';
-                    });
-
-                    const url = new URL(window.location);
-                    if (category && category !== 'all') {
-                        url.searchParams.set('category', category);
-                    } else {
-                        url.searchParams.delete('category');
-                    }
-                    window.history.replaceState({}, '', url);
-                });
-
-                const message = !category || category === 'all'
+                const normalized = (filters.category || 'all').toLowerCase();
+                const message = normalized === 'all'
                     ? 'Showing all updates'
-                    : 'Filtered to ' + category + ' updates';
+                    : 'Filtered to ' + formatFilterLabel(filters.category) + ' updates';
                 showMessage(message, 'info');
             } catch (error) {
                 console.error('Filter error:', error);
                 showMessage('Filter failed', 'error');
             }
-        };
+        }
 
-        window.filterByAuthority = function(authority) {
+        function filterByAuthority(authority) {
             console.log('Filtering by authority:', authority);
             try {
                 const filters = ensureFilterState();
@@ -199,22 +197,16 @@ function getClientScriptsContent() {
                     delete filters.authority;
                 }
 
-                applyFiltersOrFallback(() => {
-                    const updates = document.querySelectorAll('.update-card');
-                    updates.forEach(card => {
-                        const cardAuthority = card.dataset.authority || card.querySelector('.authority-tag')?.textContent;
-                        const shouldShow = !authority || cardAuthority === authority;
-                        card.style.display = shouldShow ? 'block' : 'none';
-                    });
-                });
+                applyCurrentFilters();
 
                 showMessage(authority ? 'Showing ' + authority + ' updates' : 'Showing all authorities', 'info');
             } catch (error) {
                 console.error('Authority filter error:', error);
+                showMessage('Authority filter failed', 'error');
             }
-        };
+        }
 
-        window.filterBySector = function(sector) {
+        function filterBySector(sector) {
             console.log('Filtering by sector:', sector);
             try {
                 const filters = ensureFilterState();
@@ -224,23 +216,16 @@ function getClientScriptsContent() {
                     delete filters.sector;
                 }
 
-                applyFiltersOrFallback(() => {
-                    const updates = document.querySelectorAll('.update-card');
-                    updates.forEach(card => {
-                        const sectorTags = card.querySelectorAll('.sector-tag');
-                        const cardSectors = Array.from(sectorTags).map(tag => tag.textContent.trim());
-                        const shouldShow = !sector || cardSectors.includes(sector);
-                        card.style.display = shouldShow ? 'block' : 'none';
-                    });
-                });
+                applyCurrentFilters();
 
                 showMessage(sector ? 'Showing ' + sector + ' updates' : 'Showing all sectors', 'info');
             } catch (error) {
                 console.error('Sector filter error:', error);
+                showMessage('Sector filter failed', 'error');
             }
-        };
+        }
 
-        window.filterByImpactLevel = function(impact) {
+        function filterByImpactLevel(impact) {
             console.log('Filtering by impact level:', impact);
             try {
                 const filters = ensureFilterState();
@@ -250,22 +235,16 @@ function getClientScriptsContent() {
                     delete filters.impact;
                 }
 
-                applyFiltersOrFallback(() => {
-                    const updates = document.querySelectorAll('.update-card');
-                    updates.forEach(card => {
-                        const impactLevel = card.dataset.impact || card.querySelector('.impact-level')?.textContent;
-                        const shouldShow = !impact || impactLevel === impact;
-                        card.style.display = shouldShow ? 'block' : 'none';
-                    });
-                });
+                applyCurrentFilters();
 
                 showMessage(impact ? 'Showing ' + impact + ' impact updates' : 'Showing all impact levels', 'info');
             } catch (error) {
                 console.error('Impact filter error:', error);
+                showMessage('Impact filter failed', 'error');
             }
-        };
+        }
 
-        window.filterByDateRange = function(range) {
+        function filterByDateRange(range) {
             console.log('Filtering by date range:', range);
             try {
                 const filters = ensureFilterState();
@@ -275,45 +254,27 @@ function getClientScriptsContent() {
                     delete filters.range;
                 }
 
-                applyFiltersOrFallback(() => {
-                    const updates = document.querySelectorAll('.update-card');
-                    const now = new Date();
+                applyCurrentFilters();
 
-                    updates.forEach(card => {
-                        const publishedDate = new Date(card.dataset.publishedDate || card.querySelector('.date')?.textContent);
-                        let shouldShow = true;
-
-                        if (range && !isNaN(publishedDate)) {
-                            const daysDiff = Math.floor((now - publishedDate) / (1000 * 60 * 60 * 24));
-
-                            switch (range) {
-                                case 'today':
-                                    shouldShow = daysDiff === 0;
-                                    break;
-                                case 'week':
-                                    shouldShow = daysDiff <= 7;
-                                    break;
-                                case 'month':
-                                    shouldShow = daysDiff <= 30;
-                                    break;
-                                case 'quarter':
-                                    shouldShow = daysDiff <= 90;
-                                    break;
-                            }
-                        }
-
-                        card.style.display = shouldShow ? 'block' : 'none';
-                    });
-                });
-
-                showMessage(range ? 'Showing ' + range + ' updates' : 'Showing all time periods', 'info');
+                const labelMap = {
+                    today: 'today',
+                    week: 'this week',
+                    'this-week': 'this week',
+                    month: 'this month',
+                    quarter: 'this quarter'
+                };
+                const normalized = (range || '').toLowerCase();
+                const message = range
+                    ? 'Showing updates from ' + (labelMap[normalized] || formatFilterLabel(range))
+                    : 'Showing all time periods';
+                showMessage(message, 'info');
             } catch (error) {
                 console.error('Date filter error:', error);
+                showMessage('Date range filter failed', 'error');
             }
-        };
+        }
 
-        // Filter by urgency function
-        window.filterByUrgency = function(urgency) {
+        function filterByUrgency(urgency) {
             console.log('Filtering by urgency:', urgency);
             try {
                 const filters = ensureFilterState();
@@ -323,20 +284,14 @@ function getClientScriptsContent() {
                     delete filters.urgency;
                 }
 
-                applyFiltersOrFallback(() => {
-                    const updates = document.querySelectorAll('.update-card');
-                    updates.forEach(card => {
-                        const cardUrgency = card.dataset.urgency || card.querySelector('.urgency-tag')?.textContent;
-                        const shouldShow = !urgency || cardUrgency === urgency;
-                        card.style.display = shouldShow ? 'block' : 'none';
-                    });
-                });
+                applyCurrentFilters();
 
                 showMessage(urgency ? 'Showing ' + urgency + ' urgency updates' : 'Showing all urgency levels', 'info');
             } catch (error) {
                 console.error('Urgency filter error:', error);
+                showMessage('Urgency filter failed', 'error');
             }
-        };
+        }
         
         // Analytics refresh function
         window.refreshAnalytics = async function() {
@@ -413,15 +368,18 @@ function getClientScriptsContent() {
             impactDistribution: null
         };
         let expandedStreams = new Set();
-        let selectedAuthorities = new Set();
-        let selectedImpactLevels = new Set();
-        let selectedUrgencies = new Set();
+
+        // CRITICAL: These must be window-scoped for FilterModule access
+        window.selectedAuthorities = window.selectedAuthorities || new Set();
+        window.selectedImpactLevels = window.selectedImpactLevels || new Set();
+        window.selectedUrgencies = window.selectedUrgencies || new Set();
+
         let currentFilter = null;
         let pinnedUrls = new Set();
         let currentOffset = 0;
         let itemsPerPage = 20;
         let shareInProgress = false;
-        
+
         let systemStatus = {
             database: false,
             api: false,
@@ -450,7 +408,7 @@ function getClientScriptsContent() {
                     });
                 }
                 
-                console.log('✅ Filters initialized');
+                console.log('[OK] Filters initialized');
             } catch (error) {
                 console.error('❌ Error initializing filters:', error);
             }
@@ -598,9 +556,9 @@ function getClientScriptsContent() {
                             impactBadge +
                         '</div>' +
                         '<div class="update-actions">' +
-                            '<button onclick="bookmarkUpdate(\'' + (update.id || '') + '\')" class="action-btn" title="Bookmark">⭐</button>' +
-                            '<button onclick="shareUpdate(\'' + (update.id || '') + '\')" class="action-btn" title="Share">🔗</button>' +
-                            '<button onclick="viewDetails(\'' + (update.id || '') + '\')" class="action-btn" title="Details">👁️</button>' +
+                            '<button class="action-btn bookmark-btn" data-update-id="' + (update.id || '') + '" title="Bookmark">⭐</button>' +
+                            '<button class="action-btn share-btn" data-update-id="' + (update.id || '') + '" title="Share">🔗</button>' +
+                            '<button class="action-btn details-btn" data-update-id="' + (update.id || '') + '" title="Details">👁️</button>' +
                         '</div>' +
                     '</div>' +
                     '<h3 class="update-headline">' +
@@ -674,8 +632,7 @@ function getClientScriptsContent() {
                 const value = String(sector ?? '').trim();
                 if (!value) return '';
                 const label = escapeHtml(value);
-                const escapedValue = value.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-                return '<span class="sector-tag" onclick="filterBySector(\'' + escapedValue + '\')">' + label + '</span>';
+                return '<span class="sector-tag" data-sector="' + label + '">' + label + '</span>';
             }).join('');
         }
 
@@ -1001,8 +958,98 @@ function getClientScriptsContent() {
         }
         
         function applyActiveFilters() {
-            console.log('🎯 Applying filters');
-            // Filter logic here
+            console.log('🎯 Applying filters from UI controls');
+
+            try {
+                const filters = ensureFilterState();
+
+                const authorityValues = Array.from(window.selectedAuthorities).filter(Boolean);
+                if (authorityValues.length > 0) {
+                    filters.authority = authorityValues.join(',');
+                } else {
+                    delete filters.authority;
+                }
+
+                const impactValues = Array.from(window.selectedImpactLevels).filter(Boolean);
+                if (impactValues.length > 0) {
+                    filters.impact = impactValues.join(',');
+                } else {
+                    delete filters.impact;
+                }
+
+                const urgencyValues = Array.from(window.selectedUrgencies).filter(Boolean);
+                if (urgencyValues.length > 0) {
+                    filters.urgency = urgencyValues.join(',');
+                } else {
+                    delete filters.urgency;
+                }
+
+                const searchBox = document.getElementById('searchBox') || document.getElementById('search-input');
+                if (searchBox) {
+                    const term = searchBox.value.trim();
+                    if (term) {
+                        filters.search = term;
+                    } else {
+                        delete filters.search;
+                    }
+                }
+
+                const activeOptions = document.querySelectorAll('.filter-option.active');
+                const pendingFilters = {};
+
+                activeOptions.forEach(option => {
+                    const type = (option.dataset.filterType || option.getAttribute('data-filter-type') || '').toLowerCase();
+                    const value = option.dataset.filterValue || option.getAttribute('data-filter-value') || option.value || option.textContent?.trim();
+                    if (!type || !value) return;
+
+                    if (!pendingFilters[type]) {
+                        pendingFilters[type] = [];
+                    }
+                    pendingFilters[type].push(value);
+                });
+
+                Object.entries(pendingFilters).forEach(([type, values]) => {
+                    const uniqueValues = Array.from(new Set(values.map(String).filter(Boolean)));
+                    switch (type) {
+                        case 'category':
+                            if (uniqueValues.length > 0) {
+                                filters.category = uniqueValues[0];
+                            }
+                            break;
+                        case 'authority':
+                            filters.authority = uniqueValues.join(',');
+                            break;
+                        case 'sector':
+                            filters.sector = uniqueValues.join(',');
+                            break;
+                        case 'impact':
+                            filters.impact = uniqueValues.join(',');
+                            break;
+                        case 'urgency':
+                            filters.urgency = uniqueValues.join(',');
+                            break;
+
+                        case 'range':
+                        case 'date':
+                            if (uniqueValues.length > 0) {
+                                filters.range = uniqueValues[0];
+                            }
+                            break;
+                        case 'search':
+                            if (uniqueValues.length > 0) {
+                                filters.search = uniqueValues[0];
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                });
+
+                applyCurrentFilters();
+            } catch (error) {
+                console.error('❌ Error applying filters:', error);
+                showMessage('Error applying filters: ' + error.message, 'error');
+            }
         }
         
         async function checkSystemStatus() {
@@ -1056,7 +1103,51 @@ function getClientScriptsContent() {
                 setInterval(updateLiveCounters, 30000);
 
                 applyCurrentFilters();
-                console.log('✅ System initialized');
+
+                // Event delegation for action buttons (bookmark, share, details)
+                document.addEventListener('click', function(e) {
+                    // Check for action buttons
+                    const actionBtn = e.target.closest('.action-btn, .timeline-btn');
+                    if (actionBtn) {
+                        const updateId = actionBtn.dataset.updateId;
+                        const updateUrl = actionBtn.dataset.updateUrl;
+
+                        if (actionBtn.classList.contains('bookmark-btn') && updateId) {
+                            e.preventDefault();
+                            if (typeof bookmarkUpdate === 'function') {
+                                bookmarkUpdate(updateId);
+                            }
+                        } else if (actionBtn.classList.contains('share-btn') && updateId) {
+                            e.preventDefault();
+                            if (typeof shareUpdate === 'function') {
+                                shareUpdate(updateId);
+                            }
+                        } else if (actionBtn.classList.contains('details-btn') && updateId) {
+                            e.preventDefault();
+                            if (typeof viewDetails === 'function') {
+                                viewDetails(updateId);
+                            }
+                        } else if (actionBtn.classList.contains('timeline-btn') && updateId) {
+                            e.preventDefault();
+                            if (typeof viewUpdateDetails === 'function') {
+                                viewUpdateDetails(updateId, updateUrl);
+                            }
+                        }
+                        return;
+                    }
+
+                    // Check for sector tags
+                    const sectorTag = e.target.closest('.sector-tag');
+                    if (sectorTag) {
+                        const sector = sectorTag.dataset.sector;
+                        if (sector && typeof filterBySector === 'function') {
+                            e.preventDefault();
+                            filterBySector(sector);
+                        }
+                    }
+                });
+
+                console.log('[OK] System initialized');
             } catch (error) {
                 console.error('❌ Initialization failed:', error);
             }
@@ -1253,15 +1344,37 @@ function getClientScriptsContent() {
             }
         }
 
+        function normalizeFilterValues(value) {
+            if (value == null) return [];
+            if (Array.isArray(value)) {
+                return value.map(item => String(item).trim()).filter(Boolean);
+            }
+            if (typeof value === 'string') {
+                return value.split(',').map(part => part.trim()).filter(Boolean);
+            }
+            return [String(value).trim()].filter(Boolean);
+        }
+
+        function serializeFilterValue(value) {
+            if (value == null) return '';
+            if (Array.isArray(value)) {
+                return value.join(',');
+            }
+            if (typeof value === 'string') {
+                return value.trim();
+            }
+            return String(value);
+        }
+
         function syncUrlWithFilters(filters) {
             const url = new URL(window.location.href);
             const params = url.searchParams;
             const keys = ['category', 'authority', 'sector', 'impact', 'urgency', 'range', 'search'];
 
             keys.forEach(key => {
-                const value = filters[key];
-                if (value) {
-                    params.set(key, value);
+                const serialized = serializeFilterValue(filters[key]);
+                if (serialized) {
+                    params.set(key, serialized);
                 } else {
                     params.delete(key);
                 }
@@ -1281,44 +1394,46 @@ function getClientScriptsContent() {
         }
 
         function applyCurrentFilters() {
+            console.log('🎯 applyCurrentFilters called');
             const filters = window.currentFilters = Object.assign({ category: 'all', sort: 'newest' }, window.currentFilters || {});
+            console.log('📊 Current filters:', filters);
 
             let updates = originalUpdates.slice();
+            console.log('📦 Original updates count:', originalUpdates.length);
 
             if (filters.category && filters.category !== 'all') {
                 updates = updates.filter(update => matchesCategory(update, filters.category));
             }
 
-            if (filters.authority) {
-                const authorityMatch = filters.authority.toLowerCase();
-                updates = updates.filter(update => (update.authority || '').toLowerCase() === authorityMatch);
+            const authorityValues = normalizeFilterValues(filters.authority);
+            if (authorityValues.length > 0) {
+                const allowedAuthorities = new Set(authorityValues.map(value => value.toLowerCase()));
+                updates = updates.filter(update => allowedAuthorities.has((update.authority || '').toLowerCase()));
             }
 
-            if (filters.sector) {
-                updates = updates.filter(update => matchesSector(update, filters.sector));
+            const sectorValues = normalizeFilterValues(filters.sector);
+            if (sectorValues.length > 0) {
+                updates = updates.filter(update => sectorValues.some(sector => matchesSector(update, sector)));
             }
 
-            if (filters.impact) {
+            const impactValues = normalizeFilterValues(filters.impact);
+            if (impactValues.length > 0) {
+                const allowedImpacts = new Set(impactValues.map(value => value.toLowerCase()));
                 updates = updates.filter(update => {
-                    const impactLevel = update.impactLevel || update.impact_level || '';
-                    return impactLevel === filters.impact;
+                    const impactLevel = (update.impactLevel || update.impact_level || '').toLowerCase();
+                    return allowedImpacts.has(impactLevel);
                 });
             }
 
-            if (filters.urgency) {
-                const allowedUrgencies = new Set(String(filters.urgency)
-                    .split(',')
-                    .map(value => value.trim())
-                    .filter(Boolean));
-
-                updates = updates.filter(update => {
-                    const currentUrgency = (update.urgency || '').trim();
-                    return allowedUrgencies.size === 0 || allowedUrgencies.has(currentUrgency);
-                });
+            const urgencyValues = normalizeFilterValues(filters.urgency);
+            if (urgencyValues.length > 0) {
+                const allowedUrgencies = new Set(urgencyValues.map(value => value.toLowerCase()));
+                updates = updates.filter(update => allowedUrgencies.has((update.urgency || '').toLowerCase()));
             }
 
-            if (filters.range) {
-                updates = filterUpdatesByRange(updates, filters.range);
+            const rangeValues = normalizeFilterValues(filters.range);
+            if (rangeValues.length > 0) {
+                updates = filterUpdatesByRange(updates, rangeValues[0]);
             }
 
             if (filters.search) {
@@ -1326,6 +1441,7 @@ function getClientScriptsContent() {
             }
 
             updates = applySort(updates, filters.sort);
+            console.log('✅ After filtering/sorting:', updates.length, 'updates');
 
             setActiveCategoryButton(filters.category || 'all');
 
@@ -1333,7 +1449,9 @@ function getClientScriptsContent() {
                 btn.classList.toggle('active', btn.dataset.sort === filters.sort);
             });
 
+            console.log('🎨 Calling renderUpdatesList with', updates.length, 'updates');
             renderUpdatesList(updates);
+            console.log('✅ renderUpdatesList completed');
         }
 
 
@@ -1345,13 +1463,27 @@ function getClientScriptsContent() {
         }
 
 
-        function clearAllFilters() {
-            console.log('Clearing all filters');
-            window.currentFilters = { category: 'all', sort: 'newest' };
+        function clearAllFilters(options = {}) {
+            const {
+                preserveCategory = false,
+                preserveSort = false,
+                silent = false,
+                skipApply = false
+            } = options;
 
+            console.log('Clearing all filters');
+
+            const current = ensureFilterState();
+            const categoryValue = preserveCategory ? (current.category || 'all') : 'all';
+            const sortValue = preserveSort ? (current.sort || 'newest') : 'newest';
+
+            window.currentFilters = { category: categoryValue, sort: sortValue };
+
+            // Clear search input
             const searchInput = document.getElementById('search-input');
             if (searchInput) searchInput.value = '';
 
+            // Clear dropdown selects
             const authoritySelect = document.querySelector('select[onchange*="filterByAuthority"]');
             if (authoritySelect) authoritySelect.value = '';
 
@@ -1364,8 +1496,31 @@ function getClientScriptsContent() {
             const rangeSelect = document.querySelector('select[onchange*="filterByDateRange"]');
             if (rangeSelect) rangeSelect.value = '';
 
-            applyCurrentFilters();
-            showMessage('All filters cleared', 'info');
+            // Clear checkbox filter sets
+            window.selectedAuthorities.clear();
+            window.selectedImpactLevels.clear();
+            window.selectedUrgencies.clear();
+
+            // Uncheck all filter checkboxes
+            document.querySelectorAll('.authority-checkbox, .impact-checkbox, .urgency-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+
+            // Reset quick filter buttons
+            document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const allBtn = document.querySelector('.quick-filter-btn[data-filter="all"]');
+            if (allBtn) allBtn.classList.add('active');
+
+            // Apply unified filter pipeline (will show all updates)
+            if (!skipApply) {
+                applyCurrentFilters();
+            }
+
+            if (!silent) {
+                showMessage('All filters cleared', 'info');
+            }
         }
 
         function clearFilters() {
@@ -1427,18 +1582,21 @@ function getClientScriptsContent() {
             window.location.href = '/dashboard?' + params.toString();
         }
         
-        // Search functionality
+        // Search functionality - STATE-DRIVEN APPROACH
         function performSearch() {
             const searchInput = document.getElementById('search-input');
             if (!searchInput) return;
 
             const searchTerm = searchInput.value.trim();
+            const filters = ensureFilterState();
+
             if (!searchTerm) {
-                delete window.currentFilters.search;
+                delete filters.search;
             } else {
-                window.currentFilters.search = searchTerm;
+                filters.search = searchTerm;
             }
 
+            // Apply unified filter pipeline
             applyCurrentFilters();
         }
 
@@ -1615,7 +1773,7 @@ function getClientScriptsContent() {
                                                 '</div>' +
                                                 '<h4 class="timeline-headline">' + (update.headline || 'No headline') + '</h4>' +
                                                 '<p class="timeline-summary">' + summary + '</p>' +
-                                                '<button class="timeline-btn" onclick="viewUpdateDetails(' + idArg + ', ' + urlArg + ')">View Details</button>' +
+                                                '<button class="timeline-btn" data-update-id="' + (update.id || '') + '" data-update-url="' + (update.url || '#') + '">View Details</button>' +
                                             '</div>' +
                                         '</div>'
                                     );
@@ -1634,40 +1792,189 @@ function getClientScriptsContent() {
         
         // Create FilterModule object to expose all filter functions
         window.FilterModule = {
-            filterByCategory: filterByCategory,
-            filterByAuthority: filterByAuthority,
-            filterBySector: filterBySector,
-            filterByImpactLevel: filterByImpactLevel,
-            filterByDateRange: filterByDateRange,
-            filterByUrgency: filterByUrgency || function(urgency) {
-                console.log('Filtering by urgency:', urgency);
-                // This is a placeholder - implement if needed
+            filterByCategory,
+            filterByAuthority,
+            filterBySector,
+            filterByImpactLevel,
+            filterByDateRange,
+            filterByUrgency,
+            sortUpdates,
+            loadMoreUpdates,
+            clearAllFilters,
+            clearFilters,
+            applyActiveFilters,
+            applyCurrentFilters,
+            applyFilters(filterParams = {}) {
+                const filters = ensureFilterState();
+                delete filters.specialView;
+
+                const setFromValues = (setRef, values) => {
+                    setRef.clear();
+                    values.forEach(value => setRef.add(value));
+                };
+
+                const authorityValues = normalizeFilterValues(filterParams.authority);
+                if (authorityValues.length > 0) {
+                    filters.authority = authorityValues.join(',');
+                    setFromValues(selectedAuthorities, authorityValues);
+                } else {
+                    delete filters.authority;
+                    selectedAuthorities.clear();
+                }
+
+                const impactValues = normalizeFilterValues(filterParams.impact);
+                if (impactValues.length > 0) {
+                    filters.impact = impactValues.join(',');
+                    setFromValues(selectedImpactLevels, impactValues);
+                } else {
+                    delete filters.impact;
+                    selectedImpactLevels.clear();
+                }
+
+                const urgencyValues = normalizeFilterValues(filterParams.urgency);
+                if (urgencyValues.length > 0) {
+                    filters.urgency = urgencyValues.join(',');
+                    setFromValues(selectedUrgencies, urgencyValues);
+                } else {
+                    delete filters.urgency;
+                    selectedUrgencies.clear();
+                }
+
+                const sectorValues = normalizeFilterValues(filterParams.sector);
+                if (sectorValues.length > 0) {
+                    filters.sector = sectorValues.join(',');
+                } else {
+                    delete filters.sector;
+                }
+
+                const rangeValues = normalizeFilterValues(filterParams.range);
+                if (rangeValues.length > 0) {
+                    filters.range = rangeValues[0];
+                } else {
+                    delete filters.range;
+                }
+
+                if (filterParams.search != null && String(filterParams.search).trim() !== '') {
+                    filters.search = String(filterParams.search).trim();
+                } else {
+                    delete filters.search;
+                }
+
+                if (filterParams.category != null && String(filterParams.category).trim() !== '') {
+                    filters.category = String(filterParams.category).trim();
+                } else {
+                    filters.category = 'all';
+                }
+
+                if (filterParams.sort != null && String(filterParams.sort).trim() !== '') {
+                    filters.sort = String(filterParams.sort).trim();
+                } else {
+                    filters.sort = 'newest';
+                }
+
+                const searchInput = document.getElementById('search-input') || document.getElementById('searchBox');
+                if (searchInput) {
+                    searchInput.value = filters.search || '';
+                }
+
+                const authoritySelect = document.querySelector('select[onchange*="filterByAuthority"]');
+                if (authoritySelect) {
+                    authoritySelect.value = authorityValues[0] || '';
+                }
+
+                const sectorSelect = document.querySelector('select[onchange*="filterBySector"]');
+                if (sectorSelect) {
+                    sectorSelect.value = sectorValues[0] || '';
+                }
+
+                const impactSelect = document.querySelector('select[onchange*="filterByImpactLevel"]');
+                if (impactSelect) {
+                    impactSelect.value = impactValues[0] || '';
+                }
+
+                const rangeSelect = document.querySelector('select[onchange*="filterByDateRange"]');
+                if (rangeSelect) {
+                    rangeSelect.value = rangeValues[0] || '';
+                }
+
+                document.querySelectorAll('.authority-checkbox').forEach(cb => {
+                    cb.checked = authorityValues.includes(cb.value);
+                });
+
+                document.querySelectorAll('.impact-checkbox').forEach(cb => {
+                    cb.checked = impactValues.includes(cb.value);
+                });
+
+                document.querySelectorAll('.urgency-checkbox').forEach(cb => {
+                    cb.checked = urgencyValues.includes(cb.value);
+                });
+
+                applyCurrentFilters();
             },
-            sortUpdates: sortUpdates,
-            loadMoreUpdates: loadMoreUpdates,
-            clearAllFilters: clearAllFilters,
-            clearFilters: clearFilters,
-            applyActiveFilters: applyActiveFilters,
-            getCurrentFilters: function() {
-                return window.currentFilters || {
-                    category: 'all',
-                    authority: null,
-                    sector: null,
-                    impact: null,
-                    range: null,
-                    search: null,
-                    sort: 'newest'
+            applyFilter(filterName) {
+                if (!filterName) {
+                    applyCurrentFilters();
+                    return;
+                }
+
+                if (filterName === 'pinned') {
+                    const filters = ensureFilterState();
+                    filters.specialView = 'pinned';
+                    const pinnedSet = new Set(Array.from(pinnedUrls).map(value => String(value)));
+                    const pinnedUpdates = originalUpdates.filter(update => pinnedSet.has(String(update.id)) || pinnedSet.has(update.url));
+
+                    if (pinnedUpdates.length === 0) {
+                        showMessage('No pinned updates yet', 'warning');
+                    } else {
+                        showMessage('Showing pinned updates', 'info');
+                    }
+
+                    renderUpdatesList(pinnedUpdates);
+                    return;
+                }
+
+                const filters = ensureFilterState();
+                delete filters.specialView;
+                filterByCategory(filterName);
+            },
+            getCurrentFilters() {
+                const filters = ensureFilterState();
+                return {
+                    category: filters.category,
+                    authority: filters.authority || null,
+                    sector: filters.sector || null,
+                    impact: filters.impact || null,
+                    urgency: filters.urgency || null,
+                    range: filters.range || null,
+                    search: filters.search || null,
+                    sort: filters.sort || 'newest'
                 };
             }
         };
-        
+
+        if (typeof window.__flushFilterQueue === 'function') {
+            try {
+                window.__flushFilterQueue();
+            } catch (error) {
+                console.error('Failed to flush queued filter calls:', error);
+            }
+        }
+
+        if (typeof window.dispatchEvent === 'function') {
+            try {
+                window.dispatchEvent(new Event('dashboard:filters-ready'));
+            } catch (error) {
+                console.error('Failed to dispatch filters-ready event:', error);
+            }
+        }
+
         // Also expose functions globally for backward compatibility
         window.filterByCategory = filterByCategory;
         window.filterByAuthority = filterByAuthority;
         window.filterBySector = filterBySector;
         window.filterByImpactLevel = filterByImpactLevel;
         window.filterByDateRange = filterByDateRange;
-        window.filterByUrgency = window.FilterModule.filterByUrgency;
+        window.filterByUrgency = filterByUrgency;
         window.sortUpdates = sortUpdates;
         window.loadMoreUpdates = loadMoreUpdates;
         window.clearAllFilters = clearAllFilters;
@@ -1692,6 +1999,7 @@ function getClientScriptsContent() {
         window.updateWorkspaceCounts = updateWorkspaceCounts;
         window.updateAnalyticsPreview = updateAnalyticsPreview;
         window.applyActiveFilters = applyActiveFilters;
+        window.applyCurrentFilters = applyCurrentFilters;
         window.checkSystemStatus = checkSystemStatus;
         window.initializeSystem = initializeSystem;
         
@@ -1714,18 +2022,13 @@ function getClientScriptsContent() {
         // =================
         // START INITIALIZATION
         // =================
-        
+
         document.addEventListener('DOMContentLoaded', function() {
             initializeSystem();
             initializeViewSwitching();
         });
-        
-        // Also try immediate initialization if DOM is ready
-        if (document.readyState !== 'loading') {
-            initializeSystem();
-        }
-        
-        console.log('✅ Client scripts loaded');
+
+        console.log('[OK] Client scripts loaded with unified filter functions');
     </script>
     `
 }
