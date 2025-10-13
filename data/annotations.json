@@ -1,0 +1,169 @@
+[
+  {
+    "note_id": "5b93ba7c-fe83-4c53-a178-0f1461d6c1e0",
+    "update_id": "1958",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "note",
+    "content": "test",
+    "tags": [
+      "note"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "note",
+    "priority": null,
+    "persona": "executive",
+    "report_included": false,
+    "context": null,
+    "created_at": "2025-10-08T22:15:28.241Z",
+    "updated_at": "2025-10-08T22:15:28.241Z"
+  },
+  {
+    "note_id": "4ff65137-b813-4271-874e-6cd6546fe02c",
+    "update_id": "1958",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "action_required",
+    "content": "test",
+    "tags": [
+      "task"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "task",
+    "priority": "medium",
+    "persona": "executive",
+    "report_included": false,
+    "context": null,
+    "created_at": "2025-10-08T22:15:49.660Z",
+    "updated_at": "2025-10-08T22:15:49.660Z"
+  },
+  {
+    "note_id": "ab60ba97-53d5-47da-88ac-09b8869d858b",
+    "update_id": "2151",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "flagged",
+    "content": "Flagged for Weekly Brief: European supervisors tell financial institutions to stay alert to stability risks in uncertain and volatile times",
+    "tags": [
+      "weekly_brief",
+      "triage"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "flag",
+    "priority": null,
+    "persona": "executive",
+    "report_included": true,
+    "context": null,
+    "created_at": "2025-10-12T14:48:46.271Z",
+    "updated_at": "2025-10-12T14:48:46.271Z"
+  },
+  {
+    "note_id": "18648a95-044d-4047-87bc-cbe4a7e79166",
+    "update_id": "2155",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "flagged",
+    "content": "Flagged for Weekly Brief: FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024 FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024",
+    "tags": [
+      "weekly_brief",
+      "triage"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "flag",
+    "priority": null,
+    "persona": "executive",
+    "report_included": true,
+    "context": {
+      "url": "https://www.fatf-gafi.org/en/the-fatf/fatf-presidency/Elisa-De-Anda-Madrazo-inclusive-approach-G20-july-2024.html",
+      "headline": "FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024 FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024",
+      "authority": "FATF"
+    },
+    "created_at": "2025-10-13T11:31:14.520Z",
+    "updated_at": "2025-10-13T11:31:14.520Z"
+  },
+  {
+    "note_id": "3b9209a1-a09d-4a98-9a71-2a4e5bcf96e0",
+    "update_id": "2155",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "note",
+    "content": "Test note",
+    "tags": [
+      "note"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "note",
+    "priority": null,
+    "persona": "executive",
+    "report_included": false,
+    "context": {
+      "url": "https://www.fatf-gafi.org/en/the-fatf/fatf-presidency/Elisa-De-Anda-Madrazo-inclusive-approach-G20-july-2024.html",
+      "headline": "FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024 FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024",
+      "authority": "FATF"
+    },
+    "created_at": "2025-10-13T11:31:22.537Z",
+    "updated_at": "2025-10-13T11:31:22.537Z"
+  },
+  {
+    "note_id": "3aac3d69-8ec3-4578-a7d7-6bb0fd596607",
+    "update_id": "2155",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "action_required",
+    "content": "set up test",
+    "tags": [
+      "task"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "task",
+    "priority": "medium",
+    "persona": "executive",
+    "report_included": false,
+    "context": {
+      "url": "https://www.fatf-gafi.org/en/the-fatf/fatf-presidency/Elisa-De-Anda-Madrazo-inclusive-approach-G20-july-2024.html",
+      "headline": "FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024 FATF President, Elisa de Anda Madrazo of Mexico, highlights FATF's inclusive approach at the G20 Meeting, July 2024",
+      "authority": "FATF",
+      "due_date": "2www"
+    },
+    "created_at": "2025-10-13T11:31:41.531Z",
+    "updated_at": "2025-10-13T11:31:41.531Z"
+  },
+  {
+    "note_id": "058175a8-f51e-43ce-9e52-5c4474c3ae2a",
+    "update_id": "2195",
+    "author": "intelligence-center",
+    "visibility": "team",
+    "status": "flagged",
+    "content": "Flagged for Weekly Brief: VAT Civil Penalties",
+    "tags": [
+      "weekly_brief",
+      "triage"
+    ],
+    "assigned_to": [],
+    "linked_resources": [],
+    "origin_page": "intelligence_center",
+    "action_type": "flag",
+    "priority": null,
+    "persona": "executive",
+    "report_included": true,
+    "context": {
+      "url": "https://www.gov.uk/hmrc-internal-manuals/vat-civil-penalties",
+      "headline": "VAT Civil Penalties",
+      "authority": "HMRC"
+    },
+    "created_at": "2025-10-13T13:17:49.279Z",
+    "updated_at": "2025-10-13T13:17:49.279Z"
+  }
+]

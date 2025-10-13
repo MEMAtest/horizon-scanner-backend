@@ -10,12 +10,12 @@ function getRefreshModule() {
             
             if (btn) {
                 btn.disabled = true;
-                if (icon) icon.textContent = '⏳';
-                btn.innerHTML = '<span>⏳</span><span>Refreshing...</span>';
+                if (icon) icon.textContent = 'Loading';
+                btn.innerHTML = '<span>Loading</span><span>Refreshing...</span>';
             }
             
             try {
-                console.log('🔄 Starting intelligence refresh...');
+                console.log('Refresh Starting intelligence refresh...');
                 
                 const response = await fetch('/api/refresh', { 
                     method: 'POST',
@@ -46,15 +46,15 @@ function getRefreshModule() {
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    if (icon) icon.textContent = '🔄';
-                    btn.innerHTML = '<span>🔄</span><span>Refresh Intelligence</span>';
+                    if (icon) icon.textContent = 'Refresh';
+                    btn.innerHTML = '<span>Refresh</span><span>Refresh Intelligence</span>';
                 }
             }
         }
         
         async function loadIntelligenceStreams() {
             try {
-                console.log('📊 Loading intelligence streams...');
+                console.log('Analytics Loading intelligence streams...');
                 
                 const response = await fetch('/api/streams');
                 const data = await response.json();

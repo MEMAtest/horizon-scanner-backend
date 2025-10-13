@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Filter System - Manual Test Harness</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; background: #f5f5f5; }
+        .test-section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .test-passed { color: #059669; font-weight: bold; }
+        .test-failed { color: #dc2626; font-weight: bold; }
+        .test-result { margin: 10px 0; padding: 10px; background: #f9fafb; border-left: 3px solid #e5e7eb; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        .filter-active { background: #3b82f6; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Filter System - Manual Test Harness</h1>
+    <p>This page tests the current filter/search behavior to establish a baseline before refactoring.</p>
+
+    <!-- Test Section 1: Global State -->
+    <div class="test-section">
+        <h2>Test 1: Global State Initialization</h2>
+        <div id="test-1-result"></div>
+        <button onclick="runTest1()">Run Test</button>
+    </div>
+
+    <!-- Test Section 2: Filter Functions Availability -->
+    <div class="test-section">
+        <h2>Test 2: Filter Functions Availability</h2>
+        <div id="test-2-result"></div>
+        <button onclick="runTest2()">Run Test</button>
+    </div>
+
+    <!-- Test Section 3: FilterModule API -->
+    <div class="test-section">
+        <h2>Test 3: FilterModule API</h2>
+        <div id="test-3-result"></div>
+        <button onclick="runTest3()">Run Test</button>
+    </div>
+
+    <!-- Test Section 4: Mock Filter Execution -->
+    <div class="test-section">
+        <h2>Test 4: Mock Filter Execution</h2>
+        <button class="quick-filter-btn" data-filter="all">All</button>
+        <button class="quick-filter-btn" data-filter="high-impact">High Impact</button>
+        <button class="quick-filter-btn" data-filter="consultations">Consultations</button>
+
+        <!-- Mock update cards -->
+        <div class="update-card" data-impact="Significant" style="margin: 10px 0; padding: 10px; border: 1px solid #ddd;">
+            <div class="update-headline">High Impact Update</div>
+            <div class="authority-badge">FCA</div>
+        </div>
+        <div class="update-card" data-impact="Moderate" style="margin: 10px 0; padding: 10px; border: 1px solid #ddd;">
+            <div class="update-headline">Consultation on New Rules</div>
+            <div class="authority-badge">PRA</div>
+        </div>
+
+        <div id="test-4-result"></div>
+        <button onclick="runTest4()">Run Test</button>
+    </div>
+
+    <!-- Test Section 5: Known Issues -->
+    <div class="test-section">
+        <h2>Test 5: Known Issues (Expected Failures)</h2>
+        <div id="test-5-result"></div>
+        <button onclick="runTest5()">Run Test</button>
+    </div>
+
+    <script>
+        // Initialize global state (simulate dashboard initialization)
+        window.currentFilters = { category: 'all', sort: 'newest' };
+        window.originalUpdates = [
+            { id: 1, headline: 'FCA fines bank', authority: 'FCA', impactLevel: 'Significant' },
+            { id: 2, headline: 'PRA consultation', authority: 'PRA', impactLevel: 'Moderate' },
+            { id: 3, headline: 'ICO guidance', authority: 'ICO', impactLevel: 'Informational' }
+        ];
+        window.filteredUpdates = [...window.originalUpdates];
+        window.selectedAuthorities = new Set();
+        window.selectedImpactLevels = new Set();
+        window.selectedUrgencies = new Set();
+
+        function runTest1() {
+            const results = [];
+
+            // Test: window.currentFilters exists
+            if (window.currentFilters && typeof window.currentFilters === 'object') {
+                results.push('✅ window.currentFilters exists');
+            } else {
+                results.push('❌ window.currentFilters missing');
+            }
+
+            // Test: Default values
+            if (window.currentFilters.category === 'all' && window.currentFilters.sort === 'newest') {
+                results.push('✅ Default filter values correct');
+            } else {
+                results.push('❌ Default filter values incorrect');
+            }
+
+            // Test: originalUpdates array
+            if (Array.isArray(window.originalUpdates) && window.originalUpdates.length > 0) {
+                results.push(`✅ window.originalUpdates initialized (${window.originalUpdates.length} items)`);
+            } else {
+                results.push('❌ window.originalUpdates missing or empty');
+            }
+
+            // Test: filteredUpdates array
+            if (Array.isArray(window.filteredUpdates)) {
+                results.push(`✅ window.filteredUpdates initialized (${window.filteredUpdates.length} items)`);
+            } else {
+                results.push('❌ window.filteredUpdates missing');
+            }
+
+            document.getElementById('test-1-result').innerHTML = results.map(r =>
+                `<div class="test-result">${r}</div>`
+            ).join('');
+        }
+
+        function runTest2() {
+            const results = [];
+            const functions = [
+                'filterByCategory',
+                'filterByAuthority',
+                'filterBySector',
+                'filterByImpactLevel',
+                'filterByDateRange',
+                'filterByUrgency',
+                'sortUpdates',
+                'clearAllFilters',
+                'applyCurrentFilters'
+            ];
+
+            functions.forEach(fn => {
+                if (typeof window[fn] === 'function') {
+                    results.push(`✅ window.${fn} is available`);
+                } else {
+                    results.push(`❌ window.${fn} is missing`);
+                }
+            });
+
+            document.getElementById('test-2-result').innerHTML = results.map(r =>
+                `<div class="test-result">${r}</div>`
+            ).join('');
+        }
+
+        function runTest3() {
+            const results = [];
+
+            // Test: FilterModule exists
+            if (window.FilterModule && typeof window.FilterModule === 'object') {
+                results.push('✅ window.FilterModule exists');
+
+                const methods = [
+                    'filterByCategory',
+                    'filterByAuthority',
+                    'filterBySector',
+                    'filterByImpactLevel',
+                    'clearAllFilters',
+                    'applyActiveFilters'
+                ];
+
+                methods.forEach(method => {
+                    if (typeof window.FilterModule[method] === 'function') {
+                        results.push(`✅ FilterModule.${method} available`);
+                    } else {
+                        results.push(`❌ FilterModule.${method} missing`);
+                    }
+                });
+
+            } else {
+                results.push('❌ window.FilterModule not found');
+            }
+
+            document.getElementById('test-3-result').innerHTML = results.map(r =>
+                `<div class="test-result">${r}</div>`
+            ).join('');
+        }
+
+        function runTest4() {
+            const results = [];
+
+            // Test: Click filter button behavior
+            try {
+                const cards = document.querySelectorAll('.update-card');
+                const initialVisibleCount = Array.from(cards).filter(c => c.style.display !== 'none').length;
+                results.push(`✅ Initial state: ${initialVisibleCount} cards visible`);
+
+                // Simulate filterByCategory if available
+                if (typeof window.filterByCategory === 'function') {
+                    results.push('✅ filterByCategory function callable');
+                } else {
+                    results.push('❌ filterByCategory not available');
+                }
+
+            } catch (error) {
+                results.push(`❌ Test error: ${error.message}`);
+            }
+
+            document.getElementById('test-4-result').innerHTML = results.map(r =>
+                `<div class="test-result">${r}</div>`
+            ).join('');
+        }
+
+        function runTest5() {
+            const results = [];
+
+            // Known Issue 1: applyActiveFilters is stub
+            try {
+                if (typeof window.applyActiveFilters === 'function') {
+                    const funcString = window.applyActiveFilters.toString();
+                    if (funcString.includes('// Filter logic here') || funcString.length < 100) {
+                        results.push('⚠️ KNOWN ISSUE: applyActiveFilters is a stub (will be fixed)');
+                    } else {
+                        results.push('✅ applyActiveFilters appears implemented');
+                    }
+                }
+            } catch (e) {
+                results.push('❌ Cannot inspect applyActiveFilters');
+            }
+
+            // Known Issue 2: Undefined global references
+            try {
+                if (typeof window.selectedAuthorities === 'undefined') {
+                    results.push('⚠️ KNOWN ISSUE: selectedAuthorities undefined (will be fixed)');
+                } else if (window.selectedAuthorities instanceof Set) {
+                    results.push('✅ selectedAuthorities properly initialized');
+                }
+            } catch (e) {
+                results.push('⚠️ selectedAuthorities check failed');
+            }
+
+            document.getElementById('test-5-result').innerHTML = results.map(r =>
+                `<div class="test-result">${r}</div>`
+            ).join('');
+        }
+
+        // Auto-run all tests on load
+        window.addEventListener('load', () => {
+            console.log('🧪 Running baseline tests...');
+            setTimeout(() => {
+                runTest1();
+                runTest2();
+                runTest3();
+                runTest4();
+                runTest5();
+            }, 100);
+        });
+    </script>
+
+    <div class="test-section">
+        <h2>Expected State Flow (Post-Refactor)</h2>
+        <pre style="background: #1f2937; color: #f9fafb; padding: 15px; border-radius: 4px; overflow-x: auto;">
+User Action → Update currentFilters → applyCurrentFilters()
+            ↓
+Filter originalUpdates → Update filteredUpdates
+            ↓
+renderUpdatesList(filteredUpdates) → renderUpdatesInView(view, filteredUpdates)
+            ↓
+Update URL + Counters + Show Message
+        </pre>
+    </div>
+</body>
+</html>

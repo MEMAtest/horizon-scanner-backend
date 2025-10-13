@@ -506,9 +506,9 @@ const testPage = async (req, res) => {
         
         <div class="diagnostics-main">
             <div class="diagnostics-header">
-                <a href="/" class="back-link">← Back to Home</a>
+                <a href="/" class="back-link"><- Back to Home</a>
                 <h1 class="diagnostics-title">
-                    <span class="score-icon">${healthScore >= 80 ? '✅' : healthScore >= 60 ? '⚠️' : '❌'}</span>
+                    <span class="score-icon">${healthScore >= 80 ? 'Complete' : healthScore >= 60 ? 'Warning' : 'X'}</span>
                     <a href="/">System Diagnostics</a>
                 </h1>
                 
@@ -550,13 +550,13 @@ const testPage = async (req, res) => {
                 <div class="diagnostic-card">
                     <h2 class="card-title">
                         <div class="status-icon ${dbConnected ? 'status-good' : 'status-error'}"></div>
-                        🗄️ Database Status
+                        Archive Database Status
                     </h2>
                     
                     <div class="metric-row">
                         <span class="metric-label">Connection</span>
                         <span class="metric-value ${dbConnected ? 'status-good-text' : 'status-error-text'}">
-                            ${dbConnected ? '✓ Connected' : '✗ Failed'}
+                            ${dbConnected ? 'Yes Connected' : 'No Failed'}
                         </span>
                     </div>
 
@@ -614,20 +614,20 @@ const testPage = async (req, res) => {
                 <div class="diagnostic-card">
                     <h2 class="card-title">
                         <div class="status-icon ${envVars.hasGroqKey && envVars.hasDatabaseUrl ? 'status-good' : 'status-warning'}"></div>
-                        ⚙️ Environment Configuration
+                        Gear Environment Configuration
                     </h2>
                     
                     <div class="metric-row">
                         <span class="metric-label">Groq AI API Key</span>
                         <span class="metric-value ${envVars.hasGroqKey ? 'status-good-text' : 'status-error-text'}">
-                            ${envVars.hasGroqKey ? '✓ Configured' : '✗ Missing'}
+                            ${envVars.hasGroqKey ? 'Yes Configured' : 'No Missing'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Database URL</span>
                         <span class="metric-value ${envVars.hasDatabaseUrl ? 'status-good-text' : 'status-warning-text'}">
-                            ${envVars.hasDatabaseUrl ? '✓ Configured' : '⚠ Using Fallback'}
+                            ${envVars.hasDatabaseUrl ? 'Yes Configured' : 'Warning Using Fallback'}
                         </span>
                     </div>
                     
@@ -673,34 +673,34 @@ const testPage = async (req, res) => {
                 <div class="diagnostic-card">
                     <h2 class="card-title">
                         <div class="status-icon ${analyticsStatus === 'operational' ? 'status-good' : 'status-error'}"></div>
-                        📊 Analytics & Predictions
+                        Analytics Analytics & Predictions
                     </h2>
                     
                     <div class="metric-row">
                         <span class="metric-label">Analytics Service</span>
                         <span class="metric-value ${analyticsStatus === 'operational' ? 'status-good-text' : 'status-error-text'}">
-                            ${analyticsStatus === 'operational' ? '✓ Operational' : '✗ Error'}
+                            ${analyticsStatus === 'operational' ? 'Yes Operational' : 'No Error'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Velocity Analysis</span>
                         <span class="metric-value ${analyticsData ? 'status-good-text' : 'status-error-text'}">
-                            ${analyticsData ? '✓ Available' : '✗ Unavailable'}
+                            ${analyticsData ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Sector Hotspots</span>
                         <span class="metric-value ${analyticsData ? 'status-good-text' : 'status-error-text'}">
-                            ${analyticsData ? '✓ Available' : '✗ Unavailable'}
+                            ${analyticsData ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Predictions</span>
                         <span class="metric-value ${analyticsData ? 'status-good-text' : 'status-error-text'}">
-                            ${analyticsData ? '✓ Available' : '✗ Unavailable'}
+                            ${analyticsData ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
 
@@ -738,33 +738,33 @@ const testPage = async (req, res) => {
                 <div class="diagnostic-card">
                     <h2 class="card-title">
                         <div class="status-icon ${workspaceStatus === 'operational' ? 'status-good' : 'status-error'}"></div>
-                        💼 Workspace Features
+                        Case Workspace Features
                     </h2>
                     
                     <div class="metric-row">
                         <span class="metric-label">Workspace Service</span>
                         <span class="metric-value ${workspaceStatus === 'operational' ? 'status-good-text' : 'status-error-text'}">
-                            ${workspaceStatus === 'operational' ? '✓ Operational' : '✗ Error'}
+                            ${workspaceStatus === 'operational' ? 'Yes Operational' : 'No Error'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Pin Functionality</span>
                         <span class="metric-value ${workspaceData ? 'status-good-text' : 'status-error-text'}">
-                            ${workspaceData ? '✓ Available' : '✗ Unavailable'}
+                            ${workspaceData ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Alert System</span>
                         <span class="metric-value ${workspaceData ? 'status-good-text' : 'status-error-text'}">
-                            ${workspaceData ? '✓ Available' : '✗ Unavailable'}
+                            ${workspaceData ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Data Export</span>
-                        <span class="metric-value status-good-text">✓ Available</span>
+                        <span class="metric-value status-good-text">Yes Available</span>
                     </div>
 
                     <div class="test-results">
@@ -799,34 +799,34 @@ const testPage = async (req, res) => {
                 <div class="diagnostic-card">
                     <h2 class="card-title">
                         <div class="status-icon ${relevanceStatus === 'operational' ? 'status-good' : 'status-error'}"></div>
-                        🎯 Relevance Engine
+                        Target Relevance Engine
                     </h2>
                     
                     <div class="metric-row">
                         <span class="metric-label">Relevance Service</span>
                         <span class="metric-value ${relevanceStatus === 'operational' ? 'status-good-text' : 'status-error-text'}">
-                            ${relevanceStatus === 'operational' ? '✓ Operational' : '✗ Error'}
+                            ${relevanceStatus === 'operational' ? 'Yes Operational' : 'No Error'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Firm Matching</span>
                         <span class="metric-value ${relevanceStatus === 'operational' ? 'status-good-text' : 'status-error-text'}">
-                            ${relevanceStatus === 'operational' ? '✓ Available' : '✗ Unavailable'}
+                            ${relevanceStatus === 'operational' ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Content Scoring</span>
                         <span class="metric-value ${relevanceStatus === 'operational' ? 'status-good-text' : 'status-error-text'}">
-                            ${relevanceStatus === 'operational' ? '✓ Available' : '✗ Unavailable'}
+                            ${relevanceStatus === 'operational' ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
                     
                     <div class="metric-row">
                         <span class="metric-label">Smart Categorization</span>
                         <span class="metric-value ${relevanceStatus === 'operational' ? 'status-good-text' : 'status-error-text'}">
-                            ${relevanceStatus === 'operational' ? '✓ Available' : '✗ Unavailable'}
+                            ${relevanceStatus === 'operational' ? 'Yes Available' : 'No Unavailable'}
                         </span>
                     </div>
 
@@ -864,7 +864,7 @@ const testPage = async (req, res) => {
                 <div class="diagnostic-card">
                     <h2 class="card-title">
                         <div class="status-icon status-good"></div>
-                        ⚡ System Performance
+                        Power System Performance
                     </h2>
                     
                     <div class="metric-row">
@@ -913,22 +913,22 @@ const testPage = async (req, res) => {
             
             <div class="action-buttons">
                 <button onclick="runFullDiagnostics()" class="btn btn-test">
-                    🔬 Run Full Test Suite
+                    Lab Run Full Test Suite
                 </button>
                 <button onclick="clearSystemCache()" class="btn btn-secondary">
-                    🗑️ Clear Cache
+                    Trash Clear Cache
                 </button>
                 <a href="/analytics" class="btn btn-primary">
-                    📊 View Analytics Dashboard
+                    Analytics View Analytics Dashboard
                 </a>
                 <a href="/dashboard" class="btn btn-primary">
-                    📰 View News Feed
+                    News View News Feed
                 </a>
                 <a href="/api/system-status" class="btn btn-secondary">
-                    📄 JSON System Status
+                    Doc JSON System Status
                 </a>
                 <a href="/" class="btn btn-secondary">
-                    🏠 Return to Home
+                    Home Return to Home
                 </a>
             </div>
         </div>
@@ -952,13 +952,13 @@ const testPage = async (req, res) => {
         
         // Initialize test dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔧 Test Page: Initializing...');
+            console.log('Tools Test Page: Initializing...');
             updateTestCounts();
             
             // Auto-refresh diagnostics every 30 seconds
             setInterval(refreshDiagnostics, 30000);
             
-            console.log('✅ System Diagnostics initialized');
+            console.log('Complete System Diagnostics initialized');
         });
 
         function updateTestCounts() {
@@ -989,12 +989,12 @@ const testPage = async (req, res) => {
                         const result = await test.test();
                         if (result) {
                             passedTests++;
-                            console.log(\`✅ \${test.name}: PASSED\`);
+                            console.log(\`Complete \${test.name}: PASSED\`);
                         } else {
-                            console.log(\`❌ \${test.name}: FAILED\`);
+                            console.log(\`X \${test.name}: FAILED\`);
                         }
                     } catch (error) {
-                        console.error(\`❌ \${test.name}: ERROR - \${error.message}\`);
+                        console.error(\`X \${test.name}: ERROR - \${error.message}\`);
                     }
                 }
                 
@@ -1102,7 +1102,7 @@ const testPage = async (req, res) => {
                 testResults.environment = data.environment.hasGroqKey;
                 
                 updateTestCounts();
-                console.log('🔄 Diagnostics refreshed');
+                console.log('Refresh Diagnostics refreshed');
             } catch (error) {
                 console.error('Error refreshing diagnostics:', error);
             }
@@ -1114,7 +1114,7 @@ const testPage = async (req, res) => {
         window.refreshDiagnostics = refreshDiagnostics;
         window.updateTestCounts = updateTestCounts;
         
-        console.log('🔧 Test Page: Script loaded and ready');
+        console.log('Tools Test Page: Script loaded and ready');
     </script>
 </body>
 </html>`
@@ -1126,7 +1126,7 @@ const testPage = async (req, res) => {
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>System Diagnostics Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
-                <a href="/" style="color: #3b82f6; text-decoration: none;">← Back to Home</a>
+                <a href="/" style="color: #3b82f6; text-decoration: none;"><- Back to Home</a>
             </div>
         `)
   }

@@ -6,56 +6,76 @@ const router = express.Router()
 const dbService = require('../services/dbService')
 const aiAnalyzer = require('../services/aiAnalyzer')
 const weeklyRoundupRoutes = require('./weeklyRoundup')
+const smartBriefingRoutes = require('./smartBriefingRoutes')
 const relevanceService = require('../services/relevanceService')
+const predictiveIntelligenceService = require('../services/predictiveIntelligenceService')
+const annotationService = require('../services/annotationService')
+const reportExportService = require('../services/reportExportService')
+const {
+  prepareAvailableSectors,
+  getSectorAliasMap,
+  normalizeSectorName
+} = require('../utils/sectorTaxonomy')
 
 // Import FCA enforcement routes
 const enforcementRoutes = require('./api/enforcement')
 
 router.use('/', weeklyRoundupRoutes)
+router.use('/', smartBriefingRoutes)
 router.use('/enforcement', enforcementRoutes)
 
 // ANALYTICS ENDPOINT
 router.get('/analytics', async (req, res) => {
   try {
-    console.log('📊 API: Getting analytics dashboard...')
+    console.log('Analytics API: Getting analytics dashboard...')
 
-    // Get or import analytics service
-    let analyticsService
-    try {
-      analyticsService = require('../services/analyticsService')
-    } catch (error) {
-      console.warn('📊 Analytics service not available, using fallback')
-      return res.json({
-        success: false,
-        error: 'Analytics service not available',
-        dashboard: {
-          overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
-          velocity: {},
-          hotspots: [],
-          predictions: []
-        }
-      })
+    let firmProfile = null
+    if (req.query.profile) {
+      try {
+        firmProfile = JSON.parse(req.query.profile)
+      } catch (parseError) {
+        console.warn('Analytics Invalid profile query parameter, ignoring:', parseError.message)
+      }
     }
 
-    // Get analytics dashboard
-    const dashboard = await analyticsService.getAnalyticsDashboard()
+    const dashboard = await predictiveIntelligenceService.getPredictiveDashboard(firmProfile)
 
     res.json({
       success: true,
       dashboard,
+      source: 'predictive',
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ Analytics API error:', error)
-    res.status(500).json({
+    console.error('X Predictive analytics error:', error)
+
+    const emptyDashboard = {
+      overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
+      velocity: {},
+      hotspots: [],
+      predictions: []
+    }
+
+    try {
+      const legacyAnalyticsService = require('../services/analyticsService')
+      const legacyDashboard = await legacyAnalyticsService.getAnalyticsDashboard()
+      return res.json({
+        success: true,
+        dashboard: legacyDashboard,
+        source: 'legacy',
+        warning: 'Predictive analytics temporarily unavailable; served legacy analytics.',
+        timestamp: new Date().toISOString()
+      })
+    } catch (fallbackError) {
+      console.warn('Analytics Legacy analytics fallback unavailable:', fallbackError.message)
+    }
+
+    res.status(503).json({
       success: false,
-      error: 'Internal server error',
-      dashboard: {
-        overview: { totalUpdates: 0, averageRiskScore: 0, activePredictions: 0, hotspotCount: 0 },
-        velocity: {},
-        hotspots: [],
-        predictions: []
-      }
+      error: 'Predictive analytics unavailable',
+      dashboard: emptyDashboard,
+      source: 'none',
+      timestamp: new Date().toISOString()
     })
   }
 })
@@ -63,7 +83,7 @@ router.get('/analytics', async (req, res) => {
 // ENHANCED UPDATES ENDPOINTS
 router.get('/updates', async (req, res) => {
   try {
-    console.log('📊 API: Getting enhanced updates with filters:', req.query)
+    console.log('Analytics API: Getting enhanced updates with filters:', req.query)
 
     const filters = {
       category: req.query.category || 'all',
@@ -86,7 +106,7 @@ router.get('/updates', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting updates:', error)
+    console.error('X API Error getting updates:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -98,7 +118,7 @@ router.get('/updates', async (req, res) => {
 
 router.get('/updates/counts', async (req, res) => {
   try {
-    console.log('📊 API: Getting live update counts')
+    console.log('Analytics API: Getting live update counts')
 
     const counts = await dbService.getUpdateCounts()
 
@@ -108,7 +128,7 @@ router.get('/updates/counts', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting counts:', error)
+    console.error('X API Error getting counts:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -120,13 +140,145 @@ router.get('/updates/counts', async (req, res) => {
   }
 })
 
+// SMART BRIEFING ANNOTATIONS
+router.get('/annotations', async (req, res) => {
+  try {
+    const updateIds = req.query.updateId
+      ? Array.isArray(req.query.updateId)
+        ? req.query.updateId
+        : req.query.updateId.split(',').map(id => id.trim()).filter(Boolean)
+      : []
+
+    const visibility = req.query.visibility
+      ? req.query.visibility.split(',').map(value => value.trim()).filter(Boolean)
+      : []
+
+    const status = req.query.status
+      ? req.query.status.split(',').map(value => value.trim()).filter(Boolean)
+      : []
+
+    const annotations = await annotationService.listAnnotations({
+      updateIds,
+      visibility,
+      status,
+      since: req.query.since || null
+    })
+
+    res.json({ success: true, annotations })
+  } catch (error) {
+    console.error('Annotation listing failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+router.post('/annotations', async (req, res) => {
+  try {
+    const {
+      update_id: updateId,
+      author,
+      visibility,
+      status,
+      content,
+      tags,
+      assigned_to: assignedTo,
+      linked_resources: linkedResources,
+      origin_page: originPage,
+      action_type: actionType,
+      priority,
+      persona,
+      report_included: reportIncluded,
+      context
+    } = req.body || {}
+
+    if (!updateId || !content) {
+      return res.status(400).json({ success: false, error: 'update_id and content are required' })
+    }
+
+    const annotation = await annotationService.addAnnotation({
+      update_id: updateId,
+      author,
+      visibility,
+      status,
+      content,
+      tags,
+      assigned_to: assignedTo,
+      linked_resources: linkedResources,
+      origin_page: originPage,
+      action_type: actionType,
+      priority,
+      persona,
+      report_included: reportIncluded,
+      context
+    })
+
+    res.status(201).json({ success: true, annotation })
+  } catch (error) {
+    console.error('Annotation creation failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+router.put('/annotations/:noteId', async (req, res) => {
+  try {
+    const noteId = req.params.noteId
+    const updated = await annotationService.updateAnnotation(noteId, req.body || {})
+
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Annotation not found' })
+    }
+
+    res.json({ success: true, annotation: updated })
+  } catch (error) {
+    console.error('Annotation update failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+router.delete('/annotations/:noteId', async (req, res) => {
+  try {
+    const noteId = req.params.noteId
+    const success = await annotationService.deleteAnnotation(noteId)
+
+    if (!success) {
+      return res.status(404).json({ success: false, error: 'Annotation not found' })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Annotation deletion failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// REPORT EXPORTS
+router.post('/reports', async (req, res) => {
+  try {
+    const { report_type: reportType, filters = {} } = req.body || {}
+
+    if (!reportType) {
+      return res.status(400).json({ success: false, error: 'report_type is required' })
+    }
+
+    const report = await reportExportService.generateReport(reportType, filters)
+
+    res.status(201).json({
+      success: true,
+      report
+    })
+  } catch (error) {
+    console.error('Report export failed:', error)
+    const status = /required/.test(error.message) ? 400 : 500
+    res.status(status).json({ success: false, error: error.message })
+  }
+})
+
 // =================================================================
-// 🆕 PHASE 1.3 - RELEVANCE-BASED UPDATES ENDPOINT
+// New PHASE 1.3 - RELEVANCE-BASED UPDATES ENDPOINT
 // =================================================================
 
 router.get('/updates/relevant', async (req, res) => {
   try {
-    console.log('🎯 API: Getting relevance-scored updates')
+    console.log('Target API: Getting relevance-scored updates')
 
     // Get firm profile
     const firmProfile = await dbService.getFirmProfile()
@@ -156,7 +308,7 @@ router.get('/updates/relevant', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting relevant updates:', error)
+    console.error('X API Error getting relevant updates:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -170,7 +322,7 @@ router.get('/updates/relevant', async (req, res) => {
 router.get('/updates/:id', async (req, res) => {
   try {
     const updateId = req.params.id
-    console.log(`📄 API: Getting update details for ID: ${updateId}`)
+    console.log(`Doc API: Getting update details for ID: ${updateId}`)
 
     // Get specific update with enhanced details
     const updates = await dbService.getEnhancedUpdates({
@@ -200,7 +352,7 @@ router.get('/updates/:id', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting update details:', error)
+    console.error('X API Error getting update details:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -211,7 +363,7 @@ router.get('/updates/:id', async (req, res) => {
 // Live counts endpoint for sidebar - fixes 404 error
 router.get('/live-counts', async (req, res) => {
   try {
-    console.log('📊 API: Getting live counts for sidebar')
+    console.log('Analytics API: Getting live counts for sidebar')
 
     const counts = await dbService.getUpdateCounts()
 
@@ -239,7 +391,7 @@ router.get('/live-counts', async (req, res) => {
 
     res.json(response)
   } catch (error) {
-    console.error('❌ API Error getting live counts:', error)
+    console.error('X API Error getting live counts:', error)
 
     // Return default values on error to prevent frontend crashes
     res.status(500).json({
@@ -261,55 +413,85 @@ router.get('/live-counts', async (req, res) => {
 })
 
 // =================================================================
-// 🆕 PHASE 1.3 - FIRM PROFILE MANAGEMENT ENDPOINTS
+// New PHASE 1.3 - FIRM PROFILE MANAGEMENT ENDPOINTS
 // =================================================================
 
 router.get('/firm-profile', async (req, res) => {
   try {
-    console.log('🏢 API: Getting firm profile')
+    console.log('Firm API: Getting firm profile')
 
     const profile = await dbService.getFirmProfile()
+    const normalizedProfile = profile
+      ? {
+          ...profile,
+          primarySectors: Array.isArray(profile.primarySectors)
+            ? profile.primarySectors
+              .map(normalizeSectorName)
+              .filter(Boolean)
+            : []
+        }
+      : null
+
+    const filterOptions = await dbService.getFilterOptions()
+    const availableSectors = prepareAvailableSectors(filterOptions.sectors || [])
 
     res.json({
       success: true,
-      profile,
-      hasProfile: !!profile,
+      profile: normalizedProfile,
+      hasProfile: !!normalizedProfile,
+      availableSectors,
+      sectorAliasMap: getSectorAliasMap(),
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting firm profile:', error)
+    console.error('X API Error getting firm profile:', error)
     res.status(500).json({
       success: false,
       error: error.message,
-      profile: null
+      profile: null,
+      availableSectors: [],
+      sectorAliasMap: getSectorAliasMap()
     })
   }
 })
 
 router.post('/firm-profile', async (req, res) => {
   try {
-    console.log('🏢 API: Saving firm profile', req.body)
+    console.log('Firm API: Saving firm profile', req.body)
 
     const profileData = {
       firmName: req.body.firmName || req.body.firm_name,
-      primarySectors: req.body.primarySectors || req.body.primary_sectors || [],
+      primarySectors: (req.body.primarySectors || req.body.primary_sectors || [])
+        .map(normalizeSectorName)
+        .filter(Boolean),
       firmSize: req.body.firmSize || req.body.firm_size || 'Medium',
       isActive: true
     }
+
+    // Remove duplicates while preserving order
+    profileData.primarySectors = Array.from(new Set(profileData.primarySectors))
 
     const savedProfile = await dbService.saveFirmProfile(profileData)
 
     // Invalidate relevance cache
     relevanceService.invalidateProfileCache()
 
+    const filterOptions = await dbService.getFilterOptions()
+    const availableSectors = prepareAvailableSectors(filterOptions.sectors || [])
+
     res.json({
       success: true,
       message: 'Firm profile saved successfully',
-      profile: savedProfile,
+      profile: {
+        ...savedProfile,
+        primarySectors: profileData.primarySectors
+      },
+      availableSectors,
+      sectorAliasMap: getSectorAliasMap(),
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error saving firm profile:', error)
+    console.error('X API Error saving firm profile:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -319,7 +501,7 @@ router.post('/firm-profile', async (req, res) => {
 
 router.delete('/firm-profile', async (req, res) => {
   try {
-    console.log('🏢 API: Clearing firm profile')
+    console.log('Firm API: Clearing firm profile')
 
     await dbService.clearFirmProfile()
     relevanceService.invalidateProfileCache()
@@ -327,10 +509,12 @@ router.delete('/firm-profile', async (req, res) => {
     res.json({
       success: true,
       message: 'Firm profile cleared successfully',
+      availableSectors: [],
+      sectorAliasMap: getSectorAliasMap(),
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error clearing firm profile:', error)
+    console.error('X API Error clearing firm profile:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -339,12 +523,12 @@ router.delete('/firm-profile', async (req, res) => {
 })
 
 // =================================================================
-// 🆕 PHASE 1.3 - WORKSPACE MANAGEMENT: PINNED ITEMS
+// New PHASE 1.3 - WORKSPACE MANAGEMENT: PINNED ITEMS
 // =================================================================
 
 router.get('/workspace/pinned', async (req, res) => {
   try {
-    console.log('📌 API: Getting pinned items')
+    console.log('Pin API: Getting pinned items')
 
     const items = await dbService.getPinnedItems()
 
@@ -355,7 +539,7 @@ router.get('/workspace/pinned', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting pinned items:', error)
+    console.error('X API Error getting pinned items:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -366,9 +550,20 @@ router.get('/workspace/pinned', async (req, res) => {
 
 router.post('/workspace/pin', async (req, res) => {
   try {
-    console.log('📌 API: Pinning update', req.body)
+    console.log('Pin API: Pinning update', req.body)
 
-    const { url, title, authority, notes } = req.body
+    const {
+      url,
+      title,
+      authority,
+      notes,
+      sectors = [],
+      personas = [],
+      summary = '',
+      published = '',
+      metadata = {},
+      updateId
+    } = req.body
 
     if (!url || !title) {
       return res.status(400).json({
@@ -377,7 +572,35 @@ router.post('/workspace/pin', async (req, res) => {
       })
     }
 
-    const result = await dbService.addPinnedItem(url, title, notes, authority)
+    const normalizedSectors = Array.isArray(sectors)
+      ? Array.from(new Set(sectors.map(normalizeSectorName).filter(Boolean)))
+      : []
+
+    const normalizedPersonas = Array.isArray(personas)
+      ? personas.filter(Boolean)
+      : []
+
+    const mergedMetadata = Object.assign(
+      {},
+      metadata && typeof metadata === 'object' ? metadata : {},
+      {
+        sectors: normalizedSectors,
+        personas: normalizedPersonas,
+        summary: summary || (metadata && metadata.summary) || '',
+        published: published || (metadata && metadata.published) || '',
+        updateId: updateId || (metadata && metadata.updateId) || null,
+        authority: authority || (metadata && metadata.authority) || ''
+      }
+    )
+
+    const result = await dbService.addPinnedItem(url, title, notes, authority, {
+      sectors: normalizedSectors,
+      personas: normalizedPersonas,
+      summary,
+      published,
+      updateId,
+      metadata: mergedMetadata
+    })
 
     res.json({
       success: true,
@@ -386,7 +609,7 @@ router.post('/workspace/pin', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error pinning update:', error)
+    console.error('X API Error pinning update:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -397,7 +620,7 @@ router.post('/workspace/pin', async (req, res) => {
 router.delete('/workspace/pin/:url', async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url)
-    console.log('📌 API: Unpinning update', url)
+    console.log('Pin API: Unpinning update', url)
 
     const success = await dbService.removePinnedItem(url)
 
@@ -414,7 +637,7 @@ router.delete('/workspace/pin/:url', async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('❌ API Error unpinning update:', error)
+    console.error('X API Error unpinning update:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -427,7 +650,7 @@ router.put('/workspace/pin/:url/notes', async (req, res) => {
     const url = decodeURIComponent(req.params.url)
     const { notes } = req.body
 
-    console.log('📝 API: Updating pinned item notes', url)
+    console.log('Note API: Updating pinned item notes', url)
 
     const success = await dbService.updatePinnedItemNotes(url, notes)
 
@@ -444,7 +667,7 @@ router.put('/workspace/pin/:url/notes', async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('❌ API Error updating notes:', error)
+    console.error('X API Error updating notes:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -453,12 +676,12 @@ router.put('/workspace/pin/:url/notes', async (req, res) => {
 })
 
 // =================================================================
-// 🆕 PHASE 1.3 - WORKSPACE MANAGEMENT: SAVED SEARCHES
+// New PHASE 1.3 - WORKSPACE MANAGEMENT: SAVED SEARCHES
 // =================================================================
 
 router.get('/workspace/searches', async (req, res) => {
   try {
-    console.log('🔍 API: Getting saved searches')
+    console.log('Search API: Getting saved searches')
 
     const searches = await dbService.getSavedSearches()
 
@@ -469,7 +692,7 @@ router.get('/workspace/searches', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting saved searches:', error)
+    console.error('X API Error getting saved searches:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -480,7 +703,7 @@ router.get('/workspace/searches', async (req, res) => {
 
 router.post('/workspace/search', async (req, res) => {
   try {
-    console.log('🔍 API: Saving search', req.body)
+    console.log('Search API: Saving search', req.body)
 
     const { searchName, filterParams } = req.body
 
@@ -500,7 +723,7 @@ router.post('/workspace/search', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error saving search:', error)
+    console.error('X API Error saving search:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -511,7 +734,7 @@ router.post('/workspace/search', async (req, res) => {
 router.get('/workspace/search/:id', async (req, res) => {
   try {
     const searchId = req.params.id
-    console.log('🔍 API: Getting saved search', searchId)
+    console.log('Search API: Getting saved search', searchId)
 
     const search = await dbService.getSavedSearch(searchId)
 
@@ -528,7 +751,7 @@ router.get('/workspace/search/:id', async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('❌ API Error getting saved search:', error)
+    console.error('X API Error getting saved search:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -539,7 +762,7 @@ router.get('/workspace/search/:id', async (req, res) => {
 router.delete('/workspace/search/:id', async (req, res) => {
   try {
     const searchId = req.params.id
-    console.log('🔍 API: Deleting saved search', searchId)
+    console.log('Search API: Deleting saved search', searchId)
 
     const success = await dbService.deleteSavedSearch(searchId)
 
@@ -556,7 +779,7 @@ router.delete('/workspace/search/:id', async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('❌ API Error deleting search:', error)
+    console.error('X API Error deleting search:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -565,12 +788,12 @@ router.delete('/workspace/search/:id', async (req, res) => {
 })
 
 // =================================================================
-// 🆕 PHASE 1.3 - WORKSPACE MANAGEMENT: CUSTOM ALERTS
+// New PHASE 1.3 - WORKSPACE MANAGEMENT: CUSTOM ALERTS
 // =================================================================
 
 router.get('/workspace/alerts', async (req, res) => {
   try {
-    console.log('🚨 API: Getting custom alerts')
+    console.log('Alert API: Getting custom alerts')
 
     const alerts = await dbService.getCustomAlerts()
 
@@ -582,7 +805,7 @@ router.get('/workspace/alerts', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting alerts:', error)
+    console.error('X API Error getting alerts:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -593,7 +816,7 @@ router.get('/workspace/alerts', async (req, res) => {
 
 router.post('/workspace/alert', async (req, res) => {
   try {
-    console.log('🚨 API: Creating custom alert', req.body)
+    console.log('Alert API: Creating custom alert', req.body)
 
     const { alertName, alertConditions } = req.body
 
@@ -613,7 +836,7 @@ router.post('/workspace/alert', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error creating alert:', error)
+    console.error('X API Error creating alert:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -626,7 +849,7 @@ router.put('/workspace/alert/:id', async (req, res) => {
     const alertId = req.params.id
     const { isActive } = req.body
 
-    console.log(`🚨 API: Updating alert ${alertId} status to ${isActive}`)
+    console.log(`Alert API: Updating alert ${alertId} status to ${isActive}`)
 
     const success = await dbService.updateAlertStatus(alertId, isActive)
 
@@ -643,7 +866,7 @@ router.put('/workspace/alert/:id', async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('❌ API Error updating alert:', error)
+    console.error('X API Error updating alert:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -654,7 +877,7 @@ router.put('/workspace/alert/:id', async (req, res) => {
 router.delete('/workspace/alert/:id', async (req, res) => {
   try {
     const alertId = req.params.id
-    console.log('🚨 API: Deleting alert', alertId)
+    console.log('Alert API: Deleting alert', alertId)
 
     const success = await dbService.deleteCustomAlert(alertId)
 
@@ -671,7 +894,7 @@ router.delete('/workspace/alert/:id', async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('❌ API Error deleting alert:', error)
+    console.error('X API Error deleting alert:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -680,12 +903,12 @@ router.delete('/workspace/alert/:id', async (req, res) => {
 })
 
 // =================================================================
-// 🆕 PHASE 1.3 - WORKSPACE STATS ENDPOINT
+// New PHASE 1.3 - WORKSPACE STATS ENDPOINT
 // =================================================================
 
 router.get('/workspace/stats', async (req, res) => {
   try {
-    console.log('📊 API: Getting workspace statistics')
+    console.log('Analytics API: Getting workspace statistics')
 
     const pinnedItems = await dbService.getPinnedItems()
     const savedSearches = await dbService.getSavedSearches()
@@ -704,7 +927,7 @@ router.get('/workspace/stats', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting workspace stats:', error)
+    console.error('X API Error getting workspace stats:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -722,12 +945,12 @@ router.get('/workspace/stats', async (req, res) => {
 // AI INTELLIGENCE ENDPOINTS (existing code continues below...)
 router.get('/ai/analysis-progress', async (req, res) => {
   try {
-    console.log('📊 API: Getting AI analysis progress');
+    console.log('Analytics API: Getting AI analysis progress')
 
-    const totalUpdates = await dbService.getTotalUpdatesCount();
-    const analyzedUpdates = await dbService.getAnalyzedUpdatesCount();
+    const totalUpdates = await dbService.getTotalUpdatesCount()
+    const analyzedUpdates = await dbService.getAnalyzedUpdatesCount()
 
-    const progress = totalUpdates > 0 ? (analyzedUpdates / totalUpdates) * 100 : 0;
+    const progress = totalUpdates > 0 ? (analyzedUpdates / totalUpdates) * 100 : 0
 
     res.json({
       success: true,
@@ -735,22 +958,22 @@ router.get('/ai/analysis-progress', async (req, res) => {
       analyzedUpdates,
       progress: progress.toFixed(2),
       timestamp: new Date().toISOString()
-    });
+    })
   } catch (error) {
-    console.error('❌ API Error getting AI analysis progress:', error);
+    console.error('X API Error getting AI analysis progress:', error)
     res.status(500).json({
       success: false,
       error: error.message,
       totalUpdates: 0,
       analyzedUpdates: 0,
       progress: 0
-    });
+    })
   }
-});
+})
 
 router.get('/ai/insights', async (req, res) => {
   try {
-    console.log('🧠 API: Getting AI insights')
+    console.log('Brain API: Getting AI insights')
 
     const limit = parseInt(req.query.limit) || 10
     const insights = await dbService.getRecentAIInsights(limit)
@@ -762,7 +985,7 @@ router.get('/ai/insights', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting AI insights:', error)
+    console.error('X API Error getting AI insights:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -773,7 +996,7 @@ router.get('/ai/insights', async (req, res) => {
 
 router.get('/ai/weekly-roundup', async (req, res) => {
   try {
-    console.log('📋 API: Generating AI weekly roundup')
+    console.log('Note API: Generating AI weekly roundup')
 
     // Get updates from the last week
     const updates = await dbService.getEnhancedUpdates({
@@ -808,7 +1031,7 @@ router.get('/ai/weekly-roundup', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error generating weekly roundup:', error)
+    console.error('X API Error generating weekly roundup:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -820,7 +1043,7 @@ router.get('/ai/weekly-roundup', async (req, res) => {
 router.get('/ai/authority-spotlight/:authority', async (req, res) => {
   try {
     const authority = req.params.authority
-    console.log(`🏛️ API: Generating authority spotlight for: ${authority}`)
+    console.log(`Authority API: Generating authority spotlight for: ${authority}`)
 
     // Get recent updates from this authority
     const updates = await dbService.getEnhancedUpdates({
@@ -855,7 +1078,7 @@ router.get('/ai/authority-spotlight/:authority', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error generating authority spotlight:', error)
+    console.error('X API Error generating authority spotlight:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -867,7 +1090,7 @@ router.get('/ai/authority-spotlight/:authority', async (req, res) => {
 router.get('/ai/sector-analysis/:sector', async (req, res) => {
   try {
     const sector = req.params.sector
-    console.log(`🏢 API: Generating sector analysis for: ${sector}`)
+    console.log(`Firm API: Generating sector analysis for: ${sector}`)
 
     // Get recent updates affecting this sector
     const updates = await dbService.getEnhancedUpdates({
@@ -902,7 +1125,7 @@ router.get('/ai/sector-analysis/:sector', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error generating sector analysis:', error)
+    console.error('X API Error generating sector analysis:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -913,7 +1136,7 @@ router.get('/ai/sector-analysis/:sector', async (req, res) => {
 
 router.get('/ai/trend-analysis', async (req, res) => {
   try {
-    console.log('📈 API: Generating trend analysis')
+    console.log('Growth API: Generating trend analysis')
 
     const period = req.query.period || 'month'
     const limit = parseInt(req.query.limit) || 100
@@ -949,7 +1172,7 @@ router.get('/ai/trend-analysis', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error generating trend analysis:', error)
+    console.error('X API Error generating trend analysis:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -963,7 +1186,7 @@ router.get('/ai/trend-analysis', async (req, res) => {
 // AI Early Warnings Endpoint - NEW ADDITION
 router.get('/ai/early-warnings', async (req, res) => {
   try {
-    console.log('🔮 Generating AI early warnings...')
+    console.log('Outlook Generating AI early warnings...')
 
     // Get recent updates and firm profile
     const updates = await dbService.getAllUpdates()
@@ -1080,7 +1303,7 @@ async function generateEarlyWarnings(updates, firmProfile) {
 // ANALYTICS AND STATISTICS ENDPOINTS
 router.get('/analytics/dashboard', async (req, res) => {
   try {
-    console.log('📊 API: Getting dashboard analytics')
+    console.log('Analytics API: Getting dashboard analytics')
 
     const stats = await dbService.getDashboardStatistics()
     const filterOptions = await dbService.getFilterOptions()
@@ -1092,7 +1315,7 @@ router.get('/analytics/dashboard', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting dashboard analytics:', error)
+    console.error('X API Error getting dashboard analytics:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1103,7 +1326,7 @@ router.get('/analytics/dashboard', async (req, res) => {
 
 router.get('/analytics/impact-distribution', async (req, res) => {
   try {
-    console.log('📊 API: Getting impact distribution analytics')
+    console.log('Analytics API: Getting impact distribution analytics')
 
     const updates = await dbService.getEnhancedUpdates({
       range: req.query.period || 'month',
@@ -1119,7 +1342,7 @@ router.get('/analytics/impact-distribution', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Error getting impact distribution:', error)
+    console.error('X API Error getting impact distribution:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1131,7 +1354,7 @@ router.get('/analytics/impact-distribution', async (req, res) => {
 // SYSTEM HEALTH AND STATUS ENDPOINTS
 router.get('/health', async (req, res) => {
   try {
-    console.log('🔍 API: Health check requested')
+    console.log('Search API: Health check requested')
 
     const dbHealth = await dbService.healthCheck()
     const aiHealth = await aiAnalyzer.healthCheck()
@@ -1151,7 +1374,7 @@ router.get('/health', async (req, res) => {
       environment: process.env.NODE_ENV || 'development'
     })
   } catch (error) {
-    console.error('❌ API Health check failed:', error)
+    console.error('X API Health check failed:', error)
     res.status(500).json({
       status: 'unhealthy',
       error: error.message,
@@ -1162,7 +1385,7 @@ router.get('/health', async (req, res) => {
 
 router.get('/status', async (req, res) => {
   try {
-    console.log('📊 API: System status requested')
+    console.log('Analytics API: System status requested')
 
     const stats = await dbService.getSystemStatistics()
     const counts = await dbService.getUpdateCounts()
@@ -1177,7 +1400,7 @@ router.get('/status', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ API Status check failed:', error)
+    console.error('X API Status check failed:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1189,7 +1412,7 @@ router.get('/status', async (req, res) => {
 // System status endpoint (different from /status - frontend expects this exact endpoint)
 router.get('/system-status', async (req, res) => {
   try {
-    console.log('🔍 API: System status check requested')
+    console.log('Search API: System status check requested')
 
     const dbHealth = await dbService.healthCheck()
     const aiHealth = await aiAnalyzer.healthCheck()
@@ -1222,7 +1445,7 @@ router.get('/system-status', async (req, res) => {
 // Main refresh endpoint (POST)
 router.post('/refresh', async (req, res) => {
   try {
-    console.log('🔄 Refresh endpoint called')
+    console.log('Refresh Refresh endpoint called')
 
     // Try to use rssFetcher if available
     const rssFetcher = require('../services/rssFetcher')
@@ -1250,7 +1473,7 @@ router.post('/manual-refresh', async (req, res) => {
     const manualRefreshService = require('../services/manualRefreshService')
     const options = req.body || {}
 
-    console.log('📡 Manual refresh API called with options:', options)
+    console.log('Signal Manual refresh API called with options:', options)
 
     const result = await manualRefreshService.performManualRefresh(options)
 
@@ -1287,7 +1510,7 @@ router.get('/refresh-status', async (req, res) => {
 // Weekly Roundup endpoint (404 fix)
 router.get('/weekly-roundup', async (req, res) => {
   try {
-    console.log('📊 Weekly roundup requested')
+    console.log('Analytics Weekly roundup requested')
 
     const updates = await dbService.getAllUpdates()
     const weekStart = new Date()
@@ -1382,7 +1605,7 @@ router.get('/weekly-roundup', async (req, res) => {
 router.get('/authority-spotlight/:authority', async (req, res) => {
   try {
     const authority = req.params.authority
-    console.log(`🔍 Authority spotlight requested for: ${authority}`)
+    console.log(`Search Authority spotlight requested for: ${authority}`)
 
     const updates = await dbService.getAllUpdates()
     const authorityUpdates = updates.filter(update =>
@@ -1726,7 +1949,7 @@ router.post('/alerts', async (req, res) => {
 // ADD THE SEARCH ENDPOINT HERE:
 router.get('/search', async (req, res) => {
   try {
-    console.log('🔍 Search requested with filters:', req.query)
+    console.log('Search Search requested with filters:', req.query)
 
     const filters = {
       authority: req.query.authority || null,
@@ -1746,7 +1969,7 @@ router.get('/search', async (req, res) => {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ Search error:', error)
+    console.error('X Search error:', error)
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1758,7 +1981,7 @@ router.get('/search', async (req, res) => {
 // UTILITY ENDPOINTS
 router.get('/test', async (req, res) => {
   try {
-    console.log('🧪 API: Test endpoint accessed')
+    console.log('Test API: Test endpoint accessed')
 
     res.json({
       success: true,
@@ -1778,7 +2001,7 @@ router.get('/test', async (req, res) => {
       ]
     })
   } catch (error) {
-    console.error('❌ API Test failed:', error)
+    console.error('X API Test failed:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -1788,7 +2011,7 @@ router.get('/test', async (req, res) => {
 
 // HELPER FUNCTIONS FOR AI ANALYSIS (existing helper functions continue below...)
 async function generateAuthoritySpotlight(authority, updates) {
-  console.log(`🏛️ Generating spotlight analysis for ${authority}`)
+  console.log(`Authority Generating spotlight analysis for ${authority}`)
 
   try {
     // Calculate activity level
@@ -1833,7 +2056,7 @@ async function generateAuthoritySpotlight(authority, updates) {
 }
 
 async function generateSectorAnalysis(sector, updates) {
-  console.log(`🏢 Generating sector analysis for ${sector}`)
+  console.log(`Firm Generating sector analysis for ${sector}`)
 
   try {
     // Calculate regulatory pressure
@@ -1890,7 +2113,7 @@ async function generateSectorAnalysis(sector, updates) {
 }
 
 async function generateTrendAnalysis(updates, period) {
-  console.log(`📈 Generating trend analysis for ${period} period`)
+  console.log(`Growth Generating trend analysis for ${period} period`)
 
   try {
     // Extract emerging themes

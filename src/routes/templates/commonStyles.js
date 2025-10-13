@@ -67,29 +67,22 @@ function getCommonStyles() {
             padding: 0;
         }
 
-        /* Override professional theme sidebar conflicts - FORCE VISIBILITY */
-        .sidebar, .sidebar * {
-            background: #ffffff !important;
-            color: #1f2937 !important;
+        /* Sidebar base styling without overriding state states */
+        .sidebar {
+            background: #ffffff;
+            color: #1f2937;
         }
 
-        .sidebar-header {
-            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%) !important;
-            color: white !important;
-        }
-
-        .sidebar-header *, .sidebar-header h2, .sidebar-header .status-indicator {
-            color: white !important;
-        }
-
-        .nav-text, .nav-link, .counter-label {
-            color: #1f2937 !important;
+        .sidebar .nav-link,
+        .sidebar .nav-text,
+        .sidebar .counter-label {
+            color: #1f2937;
         }
 
         .sidebar-header {
             padding: 24px 20px;
-            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%) !important;
-            color: white;
+            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+            color: #ffffff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
@@ -105,7 +98,8 @@ function getCommonStyles() {
             align-items: center;
             justify-content: space-between;
             font-size: 0.8rem;
-            opacity: 0.9;
+            opacity: 0.95;
+            color: rgba(255, 255, 255, 0.9);
         }
         
         .status-indicator {

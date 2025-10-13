@@ -40,9 +40,9 @@ function getContentModule() {
             const background = updates.filter(u => u.impactLevel === 'Informational' || u.impact_level === 'Informational');
 
             streamContainer.innerHTML = \`
-                \${generateStream('urgent', '🔴 Critical Impact', urgent, true)}
-                \${generateStream('moderate', '🟡 Active Monitoring', moderate, false)}
-                \${generateStream('background', '🟢 Background Intelligence', background, false)}
+                \${generateStream('urgent', 'Red Critical Impact', urgent, true)}
+                \${generateStream('moderate', 'Yellow Active Monitoring', moderate, false)}
+                \${generateStream('background', 'Green Background Intelligence', background, false)}
             \`;
         }
         
@@ -50,7 +50,7 @@ function getContentModule() {
             const updateCards = updates.slice(0, 5).map(update => generateUpdateCard(update)).join('');
             const expandClass = isExpanded ? 'expanded' : '';
             const expandText = isExpanded ? 'Collapse' : 'Expand';
-            const expandIcon = isExpanded ? '🔽' : '▶️';
+            const expandIcon = isExpanded ? 'Down' : 'Play';
             
             return \`
                 <div class="intelligence-stream \${expandClass}" id="\${id}">
@@ -102,7 +102,7 @@ function getContentModule() {
                             <span class="impact-badge \${impactColor}">\${impactLevel}</span>
                             \${sector ? \`<span class="sector-badge">\${sector}</span>\` : ''}
                             \${area ? \`<span class="category-badge">\${area}</span>\` : ''}
-                            <button class="pin-btn \${isPinned ? 'pinned' : ''}" onclick="WorkspaceModule.togglePin('\${update.url}')">\${isPinned ? '📌' : '📍'}</button>
+                            <button class="pin-btn \${isPinned ? 'pinned' : ''}" onclick="WorkspaceModule.togglePin('\${update.url}')">\${isPinned ? 'Pin' : 'Location'}</button>
                         </div>
                     </div>
                     <div class="update-content">
@@ -131,12 +131,12 @@ function getContentModule() {
                 expandedStreams.delete(streamId);
                 stream.classList.remove('expanded');
                 if (content) content.classList.remove('expanded');
-                if (expandBtn) expandBtn.innerHTML = '<span>▶️</span><span>Expand</span>';
+                if (expandBtn) expandBtn.innerHTML = '<span>Play</span><span>Expand</span>';
             } else {
                 expandedStreams.add(streamId);
                 stream.classList.add('expanded');
                 if (content) content.classList.add('expanded');
-                if (expandBtn) expandBtn.innerHTML = '<span>🔽</span><span>Collapse</span>';
+                if (expandBtn) expandBtn.innerHTML = '<span>Down</span><span>Collapse</span>';
             }
         }
         

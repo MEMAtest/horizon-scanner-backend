@@ -5,10 +5,22 @@ const dbService = require('../../services/dbService')
 
 async function getSidebar(currentPage = '') {
   try {
-    console.log('🔧 Generating clean sidebar...')
+    console.log('Tools Generating clean sidebar...')
 
     // Get recent update counts for live counters
     const recentCounts = await getRecentUpdateCounts()
+
+    const icons = {
+      home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.5 12 4l7.5 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 9.75v9.25a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.75" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
+      dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="13" y="4" width="7" height="4.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="13" y="10" width="7" height="9.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="4" y="13" width="7" height="6.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
+      analytics: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 15.5 9.5 11l3.2 3.5 6.3-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="9.5" cy="11" r="1.3" fill="currentColor"></circle><circle cx="18.5" cy="7.5" r="1.3" fill="currentColor"></circle></svg>',
+      intelligence: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path d="M15.5 15.5 20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      roundup: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h7l4 4v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M14 4.5v4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M9 15h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      enforcement: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5.5 13.5 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M10.5 3.5 17 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 13.5h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 15.5h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="16.5" width="10" height="2.5" rx="1.1" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
+      authority: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 4.5 7.5v11h15v-11L12 4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M7.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M12 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M16.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 18.5h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      sector: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M4.5 14.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="5" width="15" height="14" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M9 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M15 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 20v-6h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.5 8a7 7 0 0 1 11.5-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M18.5 16a7 7 0 0 1-11.5 2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>'
+    }
 
     return `
         <div class="sidebar" id="sidebar">
@@ -27,34 +39,34 @@ async function getSidebar(currentPage = '') {
                 <ul class="nav-list">
                     <li class="nav-item ${currentPage === '' || currentPage === 'home' ? 'active' : ''}">
                         <a href="/" class="nav-link">
-                            <span class="nav-icon">🏠</span>
+                            <span class="nav-icon">${icons.home}</span>
                             <span class="nav-text">Home</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'dashboard' ? 'active' : ''}">
                         <a href="/dashboard" class="nav-link">
-                            <span class="nav-icon">📊</span>
+                            <span class="nav-icon">${icons.dashboard}</span>
                             <span class="nav-text">Dashboard</span>
                             ${recentCounts.unread > 0 ? `<span class="nav-badge">${recentCounts.unread}</span>` : ''}
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'analytics' ? 'active' : ''}">
                         <a href="/analytics" class="nav-link">
-                            <span class="nav-icon">📈</span>
+                            <span class="nav-icon">${icons.analytics}</span>
                             <span class="nav-text">Analytics</span>
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'ai-intelligence' ? 'active' : ''}">
                         <a href="/ai-intelligence" class="nav-link">
-                            <span class="nav-icon">🔍</span>
+                            <span class="nav-icon">${icons.intelligence}</span>
                             <span class="nav-text">Intelligence</span>
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'weekly-roundup' ? 'active' : ''}">
                         <a href="/weekly-roundup" class="nav-link">
-                            <span class="nav-icon">📋</span>
+                            <span class="nav-icon">${icons.roundup}</span>
                             <span class="nav-text">Weekly Roundup</span>
                         </a>
                     </li>
@@ -64,20 +76,20 @@ async function getSidebar(currentPage = '') {
                 <ul class="nav-list">
                     <li class="nav-item ${currentPage === 'enforcement' ? 'active' : ''}">
                         <a href="/enforcement" class="nav-link">
-                            <span class="nav-icon">⚖️</span>
+                            <span class="nav-icon">${icons.enforcement}</span>
                             <span class="nav-text">Enforcement</span>
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'authority-spotlight' ? 'active' : ''}">
                         <a href="/authority-spotlight/FCA" class="nav-link">
-                            <span class="nav-icon">🏛️</span>
+                            <span class="nav-icon">${icons.authority}</span>
                             <span class="nav-text">Authority Spotlight</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'sector-intelligence' ? 'active' : ''}">
                         <a href="/sector-intelligence/Banking" class="nav-link">
-                            <span class="nav-icon">🏢</span>
+                            <span class="nav-icon">${icons.sector}</span>
                             <span class="nav-text">Sector Intelligence</span>
                         </a>
                     </li>
@@ -87,7 +99,7 @@ async function getSidebar(currentPage = '') {
             <!-- Manual Refresh Section -->
             <div class="refresh-section">
                 <button onclick="triggerManualRefresh()" class="manual-refresh-btn" id="manualRefreshBtn">
-                    <span class="refresh-icon">🔄</span>
+                    <span class="refresh-icon">${icons.refresh}</span>
                     <span class="refresh-text">Refresh Data</span>
                 </button>
             </div>
@@ -104,7 +116,7 @@ async function getSidebar(currentPage = '') {
             <div class="sidebar-footer-clean">
                 <div class="footer-links">
                     <a href="#" onclick="showFilterPanel()" class="footer-link">Filters</a>
-                    <span class="separator">•</span>
+                    <span class="separator">- </span>
                     <a href="#" onclick="showHelp()" class="footer-link">Help</a>
                 </div>
             </div>
@@ -202,31 +214,62 @@ async function getSidebar(currentPage = '') {
             .nav-link {
                 display: flex;
                 align-items: center;
-                padding: 0.75rem 1.5rem;
+                gap: 0.9rem;
+                padding: 0.75rem 1.3rem;
                 text-decoration: none;
-                color: #4b5563;
-                transition: all 0.2s;
+                color: #475569;
+                transition: all 0.2s ease;
                 position: relative;
-                font-size: 0.9rem;
+                font-size: 0.92rem;
+                font-weight: 500;
+                border-radius: 12px;
+                border-left: 4px solid transparent;
             }
             
             .nav-link:hover {
-                background: #f3f4f6;
-                color: #1f2937;
+                background: #edf2ff;
+                color: #1d4ed8;
+                border-left: 4px solid #93c5fd;
             }
             
             .nav-item.active .nav-link {
-                background: #eff6ff;
-                color: #1e40af;
-                border-left: 3px solid #3b82f6;
-                padding-left: calc(1.5rem - 3px);
+                background: #e0e7ff;
+                color: #1d4ed8;
+                border-radius: 12px;
+                font-weight: 600;
+                border-left: 4px solid #1d4ed8;
             }
-            
+
             .nav-icon {
-                margin-right: 0.75rem;
-                font-size: 1.1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.6rem;
+                height: 1.6rem;
+                color: inherit;
+                opacity: 0.8;
+                transition: opacity 0.2s ease, color 0.2s ease;
             }
-            
+
+            .nav-icon svg {
+                width: 100%;
+                height: 100%;
+                stroke: currentColor;
+                stroke-width: 1.6;
+                fill: none;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+            .nav-link:hover .nav-icon {
+                opacity: 1;
+            }
+
+            .nav-item.active .nav-icon {
+                opacity: 1;
+                color: #1e3a8a;
+            }
+
             .nav-text {
                 flex: 1;
             }
@@ -240,6 +283,7 @@ async function getSidebar(currentPage = '') {
                 font-weight: 600;
                 min-width: 18px;
                 text-align: center;
+                margin-left: 0.5rem;
             }
             
             .nav-badge.new {
@@ -290,8 +334,17 @@ async function getSidebar(currentPage = '') {
             }
 
             .manual-refresh-btn .refresh-icon {
-                font-size: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.2rem;
+                height: 1.2rem;
                 transition: transform 0.5s ease;
+            }
+
+            .manual-refresh-btn .refresh-icon svg {
+                width: 100%;
+                height: 100%;
             }
 
             .manual-refresh-btn.refreshing .refresh-icon {
@@ -714,7 +767,7 @@ async function getSidebar(currentPage = '') {
             setInterval(updateLiveCounters, 30000);
         </script>`
   } catch (error) {
-    console.error('❌ Error generating sidebar:', error)
+    console.error('[error] Error generating sidebar:', error)
     return generateFallbackSidebar(currentPage)
   }
 }

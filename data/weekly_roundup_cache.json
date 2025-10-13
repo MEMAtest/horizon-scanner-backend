@@ -1,293 +1,270 @@
 {
   "success": true,
   "roundup": {
-    "weekSummary": "495 regulatory updates published this week across 16 authorities. 65 high-impact items requiring immediate attention, with 3 upcoming compliance deadlines.",
+    "weekSummary": "136 regulatory updates published this week across 8 authorities. 77 high-impact items requiring immediate attention, with 7 upcoming compliance deadlines.",
     "keyThemes": [
-      "consumer protection",
       "financial services regulation",
-      "competition law"
+      "customs and international trade regulation",
+      "customs and excise"
     ],
     "topAuthorities": [
       {
         "authority": "HM Government",
-        "updateCount": 148,
+        "updateCount": 60,
         "focusArea": "Policy and legislation"
       },
       {
         "authority": "HMRC",
-        "updateCount": 108,
+        "updateCount": 43,
         "focusArea": "Tax and customs"
       },
       {
         "authority": "FCA",
-        "updateCount": 48,
+        "updateCount": 11,
         "focusArea": "Consumer protection, market integrity"
       },
       {
-        "authority": "Bank of England",
-        "updateCount": 41,
-        "focusArea": "Monetary policy, systemic risk"
+        "authority": "FRC",
+        "updateCount": 8,
+        "focusArea": "Multiple areas"
       },
       {
-        "authority": "HM Treasury",
-        "updateCount": 39,
-        "focusArea": "Economic policy, financial services"
+        "authority": "Bank of England",
+        "updateCount": 6,
+        "focusArea": "Monetary policy, systemic risk"
       }
     ],
     "highImpactUpdates": [
       {
-        "id": 1772,
-        "title": "Boosting collaboration between UK and US financial systems to drive innovation and growth in global markets",
-        "authority": "HM Government",
+        "id": 1980,
+        "title": "14m unfair motor loans due compensation under FCA-proposed scheme",
+        "authority": "FCA",
         "impactLevel": "Significant",
         "businessImpactScore": 10,
-        "summary": "The establishment of the Transatlantic Taskforce for Markets of the Future aims to enhance collaboration between the UK and US financial systems, driving innovation and growth in global markets. This will likely lead to increased opportunities for UK and US financial institutions to expand their services, invest in new technologies, and access new markets. However, it also poses challenges for firms to adapt to changing regulatory requirements and maintain compliance.",
-        "url": "https://www.gov.uk/government/news/boosting-collaboration-between-uk-and-us-financial-systems-to-drive-innovation-and-growth-in-global-markets",
-        "publishedDate": "2025-09-22T13:00:07.000Z",
+        "summary": "The proposed compensation scheme could significantly impact the consumer credit sector, with lenders facing potential payouts of £8.2 billion. This may lead to increased costs, reduced profitability, and a re-evaluation of lending practices. Consumers may also benefit from clearer disclosure and potentially lower loan costs. The scheme's implementation could be complex, requiring significant resources and coordination among lenders.",
+        "url": "https://www.fca.org.uk/news/press-releases/14m-unfair-motor-loans-compensation-proposed-scheme",
+        "publishedDate": "2025-10-07T16:00:50.140Z",
         "sectors": [
           "Banking",
           "Fintech",
-          "Digital Assets",
-          "Capital Markets",
-          "Investment Management"
+          "Consumer Credit"
         ],
         "complianceDeadline": null,
         "aiTags": [
           "impact:significant",
           "urgency:medium",
-          "sector:capital-markets",
+          "sector:consumer-credit",
+          "sector:banking",
           "sector:fintech",
-          "sector:digital-assets",
-          "sector:banking",
-          "sector:investment-management",
-          "area:capital-markets,-digital-assets,-and-fintech"
+          "area:consumer-credit-regulation"
         ]
       },
       {
-        "id": 1744,
-        "title": "Keep your pension safe from scammers, warns the Financial Ombudsman Service",
-        "authority": "FOS",
+        "id": 1981,
+        "title": "FCA consults on motor finance compensation scheme",
+        "authority": "FCA",
         "impactLevel": "Significant",
         "businessImpactScore": 10,
-        "summary": "The Financial Ombudsman Service (FOS) has highlighted the risks of pension scams, emphasizing the importance of protecting clients' interests. This warning has significant implications for firms in the pension sector, as they must ensure their clients are aware of the risks and take necessary precautions. Firms should review their processes to prevent potential scams and educate clients on how to avoid them. This may involve updating policies, procedures, and communication channels to ensure clients are informed and protected.",
-        "url": "https://www.financial-ombudsman.org.uk/news/keep-pension-safe-scammers-warns-financial-ombudsman-service",
-        "publishedDate": "2025-09-17T23:00:00.000Z",
-        "sectors": [
-          "Pension Funds",
-          "Wealth Management",
-          "Investment Management"
-        ],
-        "complianceDeadline": null,
-        "aiTags": [
-          "impact:significant",
-          "urgency:high",
-          "sector:pension-funds",
-          "sector:wealth-management",
-          "sector:investment-management",
-          "area:pension-scams-and-financial-protection"
-        ]
-      },
-      {
-        "id": 78,
-        "title": "UK tightens Oil Price Cap in blow to Putin's war machine",
-        "authority": "HM Treasury",
-        "impactLevel": "Significant",
-        "businessImpactScore": 10,
-        "summary": "The UK and EU's decision to lower the crude Oil Price Cap will likely disrupt the global energy market, affecting firms involved in oil trade and financing. This move aims to limit Russia's revenue from oil exports, but may also impact energy prices and availability.",
-        "url": "https://www.gov.uk/government/news/uk-tightens-oil-price-cap-in-blow-to-putins-war-machine",
-        "publishedDate": "2025-07-17T23:00:00.000Z",
-        "sectors": [
-          "Energy",
-          "Banking",
-          "Insurance",
-          "Capital Markets"
-        ],
-        "complianceDeadline": null,
-        "aiTags": [
-          "impact:significant",
-          "urgency:high",
-          "sector:energy",
-          "sector:banking",
-          "sector:insurance",
-          "sector:capital-markets",
-          "area:sanctions-and-trade-restrictions"
-        ]
-      },
-      {
-        "id": 115,
-        "title": "UK sanctions Russian spies at the heart of Putin’s malicious regime",
-        "authority": "HM Government",
-        "impactLevel": "Significant",
-        "businessImpactScore": 10,
-        "summary": "The UK has imposed sanctions on Russian spies, which may impact financial institutions' dealings with Russian entities and individuals. Firms must ensure compliance with the sanctions to avoid legal and reputational risks.",
-        "url": "https://www.gov.uk/government/news/uk-sanctions-russian-spies-at-the-heart-of-putins-malicious-regime",
-        "publishedDate": "2025-07-17T22:00:00.000Z",
-        "sectors": [
-          "Banking",
-          "Insurance",
-          "Payment Services",
-          "Investment Management"
-        ],
-        "complianceDeadline": null,
-        "aiTags": [
-          "impact:significant",
-          "urgency:high",
-          "sector:banking",
-          "sector:investment-management",
-          "sector:insurance",
-          "sector:payment-services",
-          "area:sanctions-and-embargoes"
-        ]
-      },
-      {
-        "id": 82,
-        "title": "Engines of AI primed to accelerate new breakthroughs, economic growth, and transform the UK into an AI maker",
-        "authority": "HM Treasury",
-        "impactLevel": "Significant",
-        "businessImpactScore": 10,
-        "summary": "The UK government's Compute Roadmap aims to harness AI to drive economic growth and transform the UK into an AI leader. This initiative may lead to new business opportunities and investments in AI technology, but also raises concerns about data privacy, security, and regulatory oversight.",
-        "url": "https://www.gov.uk/government/news/engines-of-ai-primed-to-accelerate-new-breakthroughs-economic-growth-and-transform-the-uk-into-an-ai-maker",
-        "publishedDate": "2025-07-16T23:00:00.000Z",
+        "summary": "The proposed compensation scheme aims to address widespread failures in motor finance disclosure, ensuring consumers receive fair compensation in an orderly and efficient manner. This will impact firms' administrative and legal costs, as well as consumer outcomes. Firms must review their past practices and consider the potential costs and benefits of participating in the scheme.",
+        "url": "https://www.fca.org.uk/news/statements/fca-consults-motor-finance-compensation-scheme",
+        "publishedDate": "2025-10-07T16:00:50.140Z",
         "sectors": [
           "Banking",
           "Fintech",
-          "Insurance",
-          "Payment Services"
+          "Consumer Credit"
         ],
         "complianceDeadline": null,
         "aiTags": [
           "impact:significant",
           "urgency:medium",
-          "sector:fintech",
-          "sector:payment-services",
-          "sector:insurance",
+          "sector:consumer-credit",
           "sector:banking",
-          "area:artificial-intelligence"
+          "sector:fintech",
+          "area:consumer-credit"
         ]
       },
       {
-        "id": 86,
-        "title": "Leeds Reforms to rewire financial system, boost investment and create skilled jobs across UK",
-        "authority": "HM Treasury",
+        "id": 1963,
+        "title": "UK’s Industrial Strategy hits the ground running, securing £250bn in investment and supporting 45,000 jobs",
+        "authority": "HM Government",
         "impactLevel": "Significant",
         "businessImpactScore": 10,
-        "summary": "The Leeds Reforms aim to rewire the UK's financial system, cutting red tape and supporting savers to invest, leading to increased investment and creation of skilled jobs across the UK. This reform is expected to have a significant impact on the financial services industry, with practical implications for firms operating in the UK.",
-        "url": "https://www.gov.uk/government/news/leeds-reforms-to-rewire-financial-system-boost-investment-and-create-skilled-jobs-across-uk",
-        "publishedDate": "2025-07-14T23:00:00.000Z",
+        "summary": "The UK's Industrial Strategy has secured £250 billion in investment and supported 45,000 high-quality jobs, primarily in the IS-8 sectors. This development may lead to increased economic growth, job creation, and investment opportunities in the UK. Businesses may benefit from the growth of key sectors such as manufacturing, life sciences, and renewable energy. However, the increased investment and job creation may also lead to higher costs, increased competition, and regulatory challenges.",
+        "url": "https://www.gov.uk/government/news/uks-industrial-strategy-hits-the-ground-running-securing-250bn-in-investment-and-supporting-45000-jobs",
+        "publishedDate": "2025-10-07T10:27:32.000Z",
         "sectors": [
           "Banking",
+          "Fintech",
+          "RegTech",
+          "Hedge Funds",
+          "Private Equity",
           "Capital Markets",
           "Corporate Finance",
           "Wealth Management",
-          "Investment Management"
-        ],
-        "complianceDeadline": null,
-        "aiTags": [
-          "impact:significant",
-          "urgency:medium",
-          "sector:banking",
-          "sector:investment-management",
-          "sector:capital-markets",
-          "sector:wealth-management",
-          "sector:corporate-finance",
-          "area:financial-services-regulation"
-        ]
-      },
-      {
-        "id": 85,
-        "title": "Rachel Reeves Mansion House 2025 speech",
-        "authority": "HM Treasury",
-        "impactLevel": "Significant",
-        "businessImpactScore": 10,
-        "summary": "Chancellor Rachel Reeves' Mansion House speech sets out a vision for the UK's financial services sector, emphasizing competitiveness, innovation, and consumer protection. The speech hints at potential reforms to the regulatory framework, which may impact firms' business models and operations.",
-        "url": "https://www.gov.uk/government/speeches/rachel-reeves-mansion-house-2025-speech",
-        "publishedDate": "2025-07-14T23:00:00.000Z",
-        "sectors": [
-          "Banking",
-          "Fintech",
-          "Insurance",
-          "Investment Management"
-        ],
-        "complianceDeadline": null,
-        "aiTags": [
-          "impact:significant",
-          "urgency:medium",
-          "sector:banking",
-          "sector:investment-management",
-          "sector:insurance",
-          "sector:fintech",
-          "sector:capital-markets",
-          "area:financial-services-regulation"
-        ]
-      },
-      {
-        "id": 1749,
-        "title": "Redress system reforms to prevent compensation delays and provide predictability needed for innovation",
-        "authority": "FOS",
-        "impactLevel": "Significant",
-        "businessImpactScore": 10,
-        "summary": "The proposed reforms aim to modernise the financial redress system, preventing delays in consumer compensation and providing predictability for innovation. This will likely lead to increased efficiency and reduced costs for financial institutions. However, the practical implications of these reforms are still unclear, and firms will need to adapt to the changing regulatory landscape. The reforms may also create new opportunities for firms to innovate and improve their redress processes.",
-        "url": "https://www.financial-ombudsman.org.uk/news/redress-system-reforms-prevent-compensation-delays-provide-predictability-needed-innovation",
-        "publishedDate": "2025-07-14T23:00:00.000Z",
-        "sectors": [
-          "Banking",
-          "Fintech",
-          "Insurance",
-          "Wealth Management",
-          "Investment Management"
-        ],
-        "complianceDeadline": null,
-        "aiTags": [
-          "impact:significant",
-          "urgency:medium",
-          "sector:banking",
-          "sector:investment-management",
-          "sector:insurance",
-          "sector:payment-services",
-          "sector:fintech",
-          "sector:wealth-management",
-          "area:financial-redress-system"
-        ]
-      },
-      {
-        "id": 88,
-        "title": "Reeves to cut financial red tape to boost homeownership",
-        "authority": "HM Treasury",
-        "impactLevel": "Significant",
-        "businessImpactScore": 10,
-        "summary": "The UK government's plan to reduce financial regulation will simplify the mortgage application process, increasing homeownership and putting more money into people's pockets. This reform is expected to benefit consumers and lenders alike, with potential cost savings and increased competition in the mortgage market.",
-        "url": "https://www.gov.uk/government/news/reeves-to-cut-financial-red-tape-to-boost-homeownership",
-        "publishedDate": "2025-07-14T23:00:00.000Z",
-        "sectors": [
-          "Banking",
-          "Consumer Credit",
           "Real Estate Finance"
         ],
         "complianceDeadline": null,
         "aiTags": [
           "impact:significant",
           "urgency:medium",
-          "sector:real-estate-finance",
-          "sector:banking",
-          "sector:consumer-credit",
-          "area:financial-regulation-reform"
+          "sector:manufacturing",
+          "sector:life-sciences",
+          "sector:renewable-energy",
+          "sector:financial-services",
+          "area:economic-development-and-industrial-strategy"
         ]
       },
       {
-        "id": 93,
-        "title": "Recommendations for the Financial Conduct Authority: November 2024",
-        "authority": "HM Treasury",
-        "impactLevel": "Significant",
+        "id": 1961,
+        "title": "Currency Matters Limited enters special administration",
+        "authority": "FCA",
+        "impactLevel": "Moderate",
         "businessImpactScore": 10,
-        "summary": "The Chancellor's letter outlines key priorities for the FCA, focusing on consumer protection, financial stability, and innovation. Firms should review their compliance frameworks to ensure alignment with the FCA's revised priorities.",
-        "url": "https://www.gov.uk/government/publications/recommendations-for-the-financial-conduct-authority-november-2024",
-        "publishedDate": "2025-07-09T23:00:00.000Z",
+        "summary": "Currency Matters Limited, a payment services provider, has entered special administration under the Payment and Electronic Money Institution Insolvency Regulations 2021. This may impact customers who have claims against the firm and may have restrictions on their activities. The special administrators will manage customer claims and return funds where possible.",
+        "url": "https://www.fca.org.uk/news/news-stories/currency-matters-limited-enters-special-administration",
+        "publishedDate": "2025-10-07T09:19:46.966Z",
         "sectors": [
           "Banking",
           "Fintech",
+          "Payment Services"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:moderate",
+          "urgency:high",
+          "sector:payment-services",
+          "sector:fintech",
+          "sector:banking",
+          "area:payment-services-regulation"
+        ]
+      },
+      {
+        "id": 1952,
+        "title": "Daniel Pugh sentenced to 7 and a half years in prison for £1.3m Ponzi scheme",
+        "authority": "FCA",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The FCA's prosecution of Daniel Pugh for running a £1.3m Ponzi scheme highlights the importance of due diligence and risk management in investment activities. Firms must ensure they have robust systems in place to prevent and detect fraudulent activities, and that they are transparent in their communication with investors. This case serves as a reminder of the severe consequences of failing to comply with regulatory requirements.",
+        "url": "https://www.fca.org.uk/news/press-releases/daniel-pugh-sentenced-for-ponzi-scheme",
+        "publishedDate": "2025-10-06T15:26:13.530Z",
+        "sectors": [
+          "Banking",
+          "Wealth Management",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:investment-management",
+          "sector:banking",
+          "sector:wealth-management",
+          "type:enforcement",
+          "area:financial-crime-and-anti-money-laundering"
+        ]
+      },
+      {
+        "id": 1931,
+        "title": "EU Supervisory Authorities warn consumers of risks and limited protection for certain crypto-assets and providers",
+        "authority": "ESMA",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The European Supervisory Authorities (ESAs) have issued a warning to consumers about the risks and limited protection associated with certain crypto-assets and providers. This warning is accompanied by a factsheet explaining the EU regulation on Markets in Crypto-Assets (MiCA) and its implications for consumers. The ESAs recommend that consumers check if the provider is authorised in the EU before investing in crypto-assets. This warning is particularly relevant for consumers who are considering investing in crypto-assets, as it highlights the potential risks and limited protection available. The warning also serves as a reminder for providers to ensure they are compliant with the MiCA regulation.",
+        "url": "https://www.esma.europa.eu/press-news/esma-news/eu-supervisory-authorities-warn-consumers-risks-and-limited-protection-certain",
+        "publishedDate": "2025-10-06T14:26:25.311Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
+          "Cryptocurrency",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:medium",
+          "sector:fintech",
+          "sector:cryptocurrency",
+          "sector:investment-management",
+          "sector:banking",
+          "area:crypto-asset-regulation"
+        ]
+      },
+      {
+        "id": 1929,
+        "title": "Regulators join forces to tackle poor claims management practices",
+        "authority": "FCA",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "Regulators are joining forces to address poor claims management practices, focusing on misleading advertising, inadequate disclosure, and excessive fees charged to clients. This initiative aims to protect consumers and ensure they make informed choices. The practical implications include increased scrutiny of claims management companies and law firms, potential fines or penalties for non-compliance, and a need for firms to review their advertising and disclosure practices.",
+        "url": "https://www.fca.org.uk/news/press-releases/regulators-join-forces-tackle-poor-claims-management-practices",
+        "publishedDate": "2025-10-06T14:26:18.613Z",
+        "sectors": [
+          "Banking",
           "Insurance",
-          "Capital Markets",
+          "Consumer Credit"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:high",
+          "sector:consumer-credit",
+          "sector:banking",
+          "sector:insurance",
+          "area:claims-management-regulation"
+        ]
+      },
+      {
+        "id": 1934,
+        "title": "Guidance: Economic Crime Levy: service availability and issues",
+        "authority": "HMRC",
+        "impactLevel": "Moderate",
+        "businessImpactScore": 10,
+        "summary": "The HMRC guidance on Economic Crime Levy service availability and issues may impact financial institutions' ability to comply with the levy, potentially leading to delays or penalties. Affected firms should check the availability and any issues affecting the Economic Crime Levy services to ensure timely compliance. This guidance is crucial for firms to avoid any disruptions in their operations and maintain a good regulatory standing.",
+        "url": "https://www.gov.uk/government/publications/economic-crime-levy-service-availability-and-issues",
+        "publishedDate": "2025-10-06T10:24:38.000Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
+          "Credit Unions",
+          "Pension Funds",
           "Consumer Credit",
+          "Payment Services",
+          "Real Estate Finance",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:moderate",
+          "urgency:high",
+          "sector:banking",
+          "sector:investment-management",
+          "sector:payment-services",
+          "sector:fintech",
+          "sector:credit-unions",
+          "sector:pension-funds",
+          "sector:real-estate-finance",
+          "sector:consumer-credit",
+          "sector:capital-markets",
+          "sector:private-equity",
+          "sector:hedge-funds",
+          "sector:wealth-management",
+          "sector:corporate-finance",
+          "type:guidance",
+          "area:economic-crime-levy"
+        ]
+      },
+      {
+        "id": 1906,
+        "title": "Minutes of the Meeting of the Court of Directors held on 24 July 2025",
+        "authority": "Bank of England",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The Bank of England's Court of Directors has set the organisation's strategy and budget for 2025-26, with a focus on maintaining financial stability and promoting economic growth. This decision will have a significant impact on the banking sector, as it will influence the Bank's approach to monetary policy and regulation. The Court's decision to increase the Bank's budget for 2025-26 will also have implications for the financial services industry as a whole, as it will affect the availability of credit and the overall level of economic activity.",
+        "url": "https://www.bankofengland.co.uk/minutes/2025/july/court-july-2025",
+        "publishedDate": "2025-10-03T08:00:00.000Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
           "Payment Services",
           "Investment Management"
         ],
@@ -297,146 +274,173 @@
           "urgency:medium",
           "sector:banking",
           "sector:investment-management",
-          "sector:insurance",
           "sector:payment-services",
           "sector:fintech",
-          "sector:consumer-credit",
+          "area:monetary-policy-and-regulation"
+        ]
+      },
+      {
+        "id": 1884,
+        "title": "UK reimposes UN sanctions on Iran",
+        "authority": "HM Government",
+        "impactLevel": "Significant",
+        "businessImpactScore": 10,
+        "summary": "The UK's decision to reimpose UN sanctions on Iran may lead to increased scrutiny and compliance requirements for financial institutions. This may result in higher costs, reduced business opportunities, and potential reputational risks for firms with existing or planned business in Iran. Firms must review their exposure to Iran and ensure compliance with relevant sanctions regulations.",
+        "url": "https://www.gov.uk/government/news/uk-reimposes-un-sanctions-on-iran",
+        "publishedDate": "2025-10-01T20:17:47.000Z",
+        "sectors": [
+          "Banking",
+          "Fintech",
+          "Payment Services",
+          "Investment Management"
+        ],
+        "complianceDeadline": null,
+        "aiTags": [
+          "impact:significant",
+          "urgency:high",
+          "sector:banking",
+          "sector:investment-management",
+          "sector:payment-services",
+          "sector:fintech",
           "sector:capital-markets",
-          "area:financial-conduct-authority-(fca)-regulatory-priorities"
+          "area:sanctions-and-anti-money-laundering"
         ]
       }
     ],
     "sectorInsights": {
-      "Banking": "88 updates affecting Banking, 58 with significant impact. Key authorities: HM Government, HMRC, Bank of England",
-      "Investment Management": "46 updates affecting Investment Management, 42 with significant impact. Key authorities: HM Government, HMRC, Bank of England",
-      "Payment Services": "39 updates affecting Payment Services, 35 with significant impact. Key authorities: HMRC, HM Government, Bank of England"
+      "Banking": "93 updates affecting Banking, 85 with significant impact. Key authorities: HM Government, FCA, Bank of England",
+      "Investment Management": "81 updates affecting Investment Management, 73 with significant impact. Key authorities: HM Government, Bank of England, ESMA",
+      "Payment Services": "59 updates affecting Payment Services, 49 with significant impact. Key authorities: HM Government, HMRC, Bank of England"
     },
     "upcomingDeadlines": [
       {
-        "date": "2025-10-08T23:00:00.000Z",
-        "description": "Calling all aviators! Government launches applications for next round of DfT aviation ambassadors",
-        "authority": "HM Government",
-        "updateId": 1736,
-        "daysRemaining": 17,
-        "impactScore": 4
+        "date": "2025-10-07T23:00:00.000Z",
+        "description": "Publication of the first single volume cap data",
+        "authority": "ESMA",
+        "updateId": 1960,
+        "daysRemaining": 1,
+        "impactScore": 8
       },
       {
-        "date": "2025-10-11T23:00:00.000Z",
-        "description": "Financial Ombudsman Service consults on changes to its case fees",
-        "authority": "FOS",
-        "updateId": 1746,
-        "daysRemaining": 20,
+        "date": "2025-12-02T00:00:00.000Z",
+        "description": "ESMA organises its first Data Day focused on burden reduction and digitalisation",
+        "authority": "ESMA",
+        "updateId": 1968,
+        "daysRemaining": 56,
+        "impactScore": 8
+      },
+      {
+        "date": "2026-01-09T00:00:00.000Z",
+        "description": "FRC Launches Consultation on Enhanced Enforcement Procedures as part of its end to end enforcement review",
+        "authority": "FRC",
+        "updateId": 1856,
+        "daysRemaining": 94,
+        "impactScore": 9
+      },
+      {
+        "date": "2026-01-29T00:00:00.000Z",
+        "description": "FRC launches consultation on enhanced auditing standards",
+        "authority": "FRC",
+        "updateId": 1859,
+        "daysRemaining": 114,
         "impactScore": 7
       },
       {
-        "date": "2025-12-15T00:00:00.000Z",
-        "description": "PRA proposes reduced reporting requirements for banks",
-        "authority": "Bank of England",
-        "updateId": 1732,
-        "daysRemaining": 84,
-        "impactScore": 8
+        "date": "2026-01-29T00:00:00.000Z",
+        "description": "FRC launches consultation on enhanced auditing standards to strengthen fraud detection and evaluation of going concern",
+        "authority": "FRC",
+        "updateId": 1860,
+        "daysRemaining": 114,
+        "impactScore": 10
+      },
+      {
+        "date": "2030-05-17T23:00:00.000Z",
+        "description": "David Kogan OBE confirmed as Independent Football Regulator Chair and Non-Executives appointed",
+        "authority": "HM Government",
+        "updateId": 1938,
+        "daysRemaining": 1684,
+        "impactScore": 3
       }
     ],
     "weeklyPriorities": [
-      "**Review and update compliance procedures**: Ensure that your firm is aware of and compliant with the latest sanctions imposed on Russian entities and individuals, and update your policies and procedures to reflect these changes.",
-      "**Enhance pension scam prevention measures**: Review your firm's processes and procedures to prevent pension scams, and educate clients on how to avoid them. This may involve updating policies, procedures, and communication channels to ensure clients are informed and protected.",
-      "**Assess the impact of the Oil Price Cap on your business**: If your firm is involved in oil trade and financing, assess the potential impact of the lowered crude Oil Price Cap on your business, and develop strategies to mitigate any potential disruptions to energy prices and availability.",
-      "**Explore opportunities for innovation and growth**: Consider how your firm can leverage the establishment of the Transatlantic Taskforce for Markets of the Future and the UK government's Compute Roadmap to drive innovation and growth, and identify potential investments in new technologies and markets.",
-      "**Review data privacy and security measures**: As the UK government's Compute Roadmap aims to harness AI to drive economic growth, review your firm's data privacy and security measures to ensure that they are adequate to protect client data and maintain regulatory compliance."
+      "**Review and assess potential exposure to the proposed compensation scheme**: Financial firms, particularly those in the consumer credit and motor finance sectors, should review their past practices and assess the potential costs and benefits of participating in the scheme to ensure they are prepared for potential payouts and changes to lending practices.",
+      "**Enhance due diligence and risk management processes**: Firms should review and strengthen their due diligence and risk management processes to prevent and detect fraudulent activities, such as Ponzi schemes, and ensure transparency in communication with investors to avoid severe regulatory consequences.",
+      "**Monitor the impact of the UK's Industrial Strategy on business operations**: Financial firms should monitor the growth of key sectors such as manufacturing, life sciences, and renewable energy, and be prepared to adapt to potential increased economic growth, job creation, and investment opportunities, as well as higher costs, increased competition, and regulatory challenges.",
+      "**Review customer protection policies and procedures**: Firms should review their customer protection policies and procedures, particularly in light of the special administration of Currency Matters Limited, to ensure they have adequate measures in place to manage customer claims and return funds where possible in the event of insolvency.",
+      "**Ensure compliance with regulatory requirements**: Financial firms should ensure they are complying with all relevant regulatory requirements, including those related to consumer credit, motor finance, and investment activities, to avoid severe consequences, such as prosecution and fines, and to maintain trust and confidence in the financial sector."
     ],
     "statistics": {
       "authorityBreakdown": {
-        "HM Government": 148,
-        "HMRC": 108,
-        "FCA": 48,
-        "Bank of England": 41,
-        "HM Treasury": 39,
-        "Competition and Markets Authority": 30,
-        "ESMA": 17,
-        "FATF": 17,
-        "FSB": 15,
-        "FRC": 7,
-        "FOS": 6,
-        "SFO": 6,
-        "JMLSG": 6,
-        "ICO": 3,
-        "TPR": 3,
-        "PRA": 1
+        "HM Government": 60,
+        "HMRC": 43,
+        "FCA": 11,
+        "FRC": 8,
+        "Bank of England": 6,
+        "ESMA": 5,
+        "SFO": 2,
+        "FSB": 1
       },
       "sectorBreakdown": {
-        "Banking": 61,
-        "Corporate Finance": 22,
-        "Investment Management": 46,
-        "Fintech": 38,
-        "Payment Services": 39,
-        "Wealth Management": 15,
-        "Real Estate Finance": 33,
-        "Digital Assets": 1,
-        "Capital Markets": 12,
-        "Pension Funds": 6,
-        "Energy": 5,
-        "Utilities": 1,
-        "Construction": 3,
-        "Sustainable Development": 1,
-        "Property Development": 1,
-        "RegTech": 5,
-        "Maritime": 1,
-        "Insurance": 25,
-        "Infrastructure": 5,
-        "Transportation": 1,
-        "Healthcare": 6,
+        "Banking": 93,
+        "Fintech": 50,
+        "Payment Services": 59,
+        "Investment Management": 81,
+        "Wealth Management": 31,
+        "Consumer Credit": 14,
+        "RegTech": 12,
+        "Family Law Services": 1,
+        "Security Services": 1,
+        "International Trade": 1,
+        "Defense and Aerospace": 1,
+        "Real Estate Finance": 24,
+        "Capital Markets": 25,
+        "Pension Funds": 19,
+        "Hedge Funds": 7,
+        "Private Equity": 9,
+        "Corporate Finance": 19,
+        "Construction": 2,
+        "Waste Management": 1,
+        "Healthcare": 2,
+        "Medical Devices": 1,
+        "Pharmaceuticals": 2,
+        "Biotechnology": 1,
+        "Insurance": 15,
+        "Cryptocurrency": 5,
+        "Credit Unions": 8,
+        "Financial Services": 1,
+        "Government Relations": 1,
+        "Regulatory Intelligence": 1,
+        "Logistics": 1,
+        "Supply Chain Management": 1,
+        "Academies": 1,
+        "Education": 1,
+        "Further Education": 1,
         "Agriculture": 1,
-        "Food Production": 1,
-        "Manufacturing": 2,
-        "Export-oriented industries": 1,
-        "Financial Services": 2,
-        "Travel and Tourism": 2,
-        "Logistics and Transportation": 1,
-        "Government": 1,
-        "Consumer Credit": 16,
-        "Infrastructure and Construction": 1,
-        "Public Sector": 2,
-        "Government Agencies": 2,
-        "Sustainable Finance": 1,
-        "Water Services": 1,
-        "Building Societies": 1,
-        "Hedge Funds": 1,
-        "Private Equity": 3,
-        "Credit Unions": 1,
-        "Fuel Retail": 1,
-        "E-commerce": 3,
-        "Logistics": 2,
-        "Retail": 2,
-        "Public Finance": 1,
-        "Digital Marketplaces": 1,
-        "Retail Banking": 1,
+        "Food and Beverage": 1,
+        "Export and Import Services": 1,
         "Renewable Energy": 1,
-        "Water Industry": 1,
-        "Pharmaceuticals": 1,
-        "Cryptocurrency": 1,
-        "Oilfield Services": 1,
-        "Chemical Solutions": 1,
-        "Aerospace": 1
+        "Logistics and Supply Chain": 1,
+        "Transportation and Logistics": 1
       },
       "impactBreakdown": {
-        "Significant": 36,
-        "Moderate": 68,
-        "Informational": 391
+        "Significant": 16,
+        "Moderate": 88,
+        "Informational": 32
       },
-      "avgImpactScore": 2.1
+      "avgImpactScore": 6.5
     },
-    "totalUpdates": 495,
-    "weekStart": "2025-09-15",
-    "weekEnd": "2025-09-22",
-    "generatedAt": "2025-09-22T14:40:55.598Z",
+    "totalUpdates": 136,
+    "weekStart": "2025-09-30",
+    "weekEnd": "2025-10-07",
+    "generatedAt": "2025-10-07T22:53:26.172Z",
     "dataQuality": {
       "aiGenerated": true,
-      "confidence": 0.83,
-      "sourceCount": 495,
+      "confidence": 0.91,
+      "sourceCount": 136,
       "aiCoverage": 1,
-      "completeness": 0.37575757575757573
+      "completeness": 1
     }
   },
-  "sourceUpdates": 495,
-  "timestamp": "2025-09-22T14:40:55.598Z"
+  "sourceUpdates": 136,
+  "timestamp": "2025-10-07T22:53:26.172Z"
 }

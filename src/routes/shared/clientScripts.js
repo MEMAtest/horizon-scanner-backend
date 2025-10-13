@@ -27,8 +27,8 @@ function getCommonClientScripts() {
             
             if (btn) {
                 btn.disabled = true;
-                if (icon) icon.textContent = '⏳';
-                btn.innerHTML = '<span>⏳</span><span>Refreshing...</span>';
+                if (icon) icon.textContent = 'Loading';
+                btn.innerHTML = '<span>Loading</span><span>Refreshing...</span>';
             }
             
             try {
@@ -63,7 +63,7 @@ function getCommonClientScripts() {
                     setTimeout(() => window.location.reload(), 1500);
                 }
                 
-                console.log('✅ Intelligence refresh completed');
+                console.log('Complete Intelligence refresh completed');
                 
             } catch (error) {
                 console.error('Refresh error:', error);
@@ -71,7 +71,7 @@ function getCommonClientScripts() {
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<span id="refreshIcon">🔄</span><span>Refresh Data</span>';
+                    btn.innerHTML = '<span id="refreshIcon">Refresh</span><span>Refresh Data</span>';
                 }
             }
         }
@@ -106,7 +106,7 @@ function getCommonClientScripts() {
                 URL.revokeObjectURL(url);
                 
                 showMessage('Data exported successfully!', 'success');
-                console.log('✅ Data export completed');
+                console.log('Complete Data export completed');
                 
             } catch (error) {
                 console.error('Export error:', error);
@@ -203,7 +203,7 @@ function getCommonClientScripts() {
         // Category Filtering Functions
         async function filterByCategory(category) {
             try {
-                console.log('🏷️ Filtering by category:', category);
+                console.log('Tag Filtering by category:', category);
                 showMessage(\`Filtering by category: \${category}...\`, 'info');
                 
                 const response = await fetch(\`/api/updates/category/\${encodeURIComponent(category)}\`);
@@ -224,7 +224,7 @@ function getCommonClientScripts() {
         }
 
         function selectAllCategories() {
-            console.log('🔄 Showing all categories');
+            console.log('Refresh Showing all categories');
             currentFilter = null;
             if (typeof loadIntelligenceStreams === 'function') {
                 loadIntelligenceStreams();
@@ -241,7 +241,7 @@ function getCommonClientScripts() {
         // Content Type Filtering Functions  
         async function filterByContentType(contentType) {
             try {
-                console.log('📄 Filtering by content type:', contentType);
+                console.log('Doc Filtering by content type:', contentType);
                 showMessage(\`Filtering by content type: \${contentType}...\`, 'info');
                 
                 const response = await fetch(\`/api/updates/content-type/\${encodeURIComponent(contentType)}\`);
@@ -262,7 +262,7 @@ function getCommonClientScripts() {
         }
 
         function selectAllContentTypes() {
-            console.log('🔄 Showing all content types');
+            console.log('Refresh Showing all content types');
             currentFilter = null;
             if (typeof loadIntelligenceStreams === 'function') {
                 loadIntelligenceStreams();
@@ -279,7 +279,7 @@ function getCommonClientScripts() {
         // Source Type Filtering Functions
         async function filterBySourceType(sourceType) {
             try {
-                console.log('📡 Filtering by source type:', sourceType);
+                console.log('Signal Filtering by source type:', sourceType);
                 showMessage(\`Filtering by source type: \${sourceType}...\`, 'info');
                 
                 const response = await fetch(\`/api/updates/source-type/\${encodeURIComponent(sourceType)}\`);
@@ -300,7 +300,7 @@ function getCommonClientScripts() {
         }
 
         function selectAllSourceTypes() {
-            console.log('🔄 Showing all source types');
+            console.log('Refresh Showing all source types');
             currentFilter = null;
             if (typeof loadIntelligenceStreams === 'function') {
                 loadIntelligenceStreams();
@@ -317,7 +317,7 @@ function getCommonClientScripts() {
         // Relevance Filtering Functions
         async function filterByRelevance(relevanceLevel) {
             try {
-                console.log('🎯 Filtering by relevance:', relevanceLevel);
+                console.log('Target Filtering by relevance:', relevanceLevel);
                 showMessage(\`Filtering by relevance: \${relevanceLevel}...\`, 'info');
                 
                 const response = await fetch(\`/api/search?relevanceFilter=\${relevanceLevel}\`);
@@ -340,7 +340,7 @@ function getCommonClientScripts() {
         // Authority Filtering Functions
         async function filterByAuthority(authority) {
             try {
-                console.log('🏛️ Filtering by authority:', authority);
+                console.log('Authority Filtering by authority:', authority);
                 showMessage(\`Filtering by authority: \${authority}...\`, 'info');
                 
                 const response = await fetch(\`/api/search?authority=\${encodeURIComponent(authority)}\`);
@@ -362,23 +362,23 @@ function getCommonClientScripts() {
 
         // Workspace Functions
         function showPinnedItems() {
-            console.log('📌 Opening pinned items');
+            console.log('Pin Opening pinned items');
             window.open('/dashboard#pinned', '_blank');
         }
 
         function showSavedSearches() {
-            console.log('🔍 Opening saved searches');
+            console.log('Search Opening saved searches');
             window.open('/dashboard#searches', '_blank');
         }
 
         function showCustomAlerts() {
-            console.log('🔔 Opening custom alerts');
+            console.log('Bell Opening custom alerts');
             window.open('/dashboard#alerts', '_blank');
         }
 
         // General Filtering Functions
         function clearFilters() {
-            console.log('🔄 Clearing all filters');
+            console.log('Refresh Clearing all filters');
             currentFilter = null;
             if (typeof loadIntelligenceStreams === 'function') {
                 loadIntelligenceStreams();
@@ -418,7 +418,7 @@ function getCommonClientScripts() {
             if (!updates || updates.length === 0) {
                 return \`
                     <div class="welcome-content">
-                        <div class="welcome-icon">📭</div>
+                        <div class="welcome-icon">Inbox</div>
                         <div class="welcome-title">No Updates Found</div>
                         <div class="welcome-subtitle">
                             No updates match the current filter: \${title}
@@ -434,7 +434,7 @@ function getCommonClientScripts() {
                         <div class="stream-title">
                             <div class="stream-icon low"></div>
                             <span>\${title}</span>
-                            <span style="color: #6b7280;">• \${updates.length} Item\${updates.length !== 1 ? 's' : ''}</span>
+                            <span style="color: #6b7280;">-  \${updates.length} Item\${updates.length !== 1 ? 's' : ''}</span>
                         </div>
                         <div class="stream-meta">
                             <button onclick="clearFilters()" style="background: #f3f4f6; border: 1px solid #e5e7eb; color: #374151; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">Clear Filter</button>
@@ -442,11 +442,11 @@ function getCommonClientScripts() {
                     </div>
                     <div class="stream-content">
                         \${updates.map((update, index) => \`
-                            <div class="update-card" data-url="\${update.url}">
+                            <div class="update-card" data-url="\${update.url || ''}">
                                 <div class="update-header">
-                                    <div class="update-title" onclick="window.open('\${(update.url || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}', '_blank')">\${update.headline || 'No title'}</div>
+                                    <div class="update-title" onclick="window.open(\${JSON.stringify(update.url || '')}, '_blank')">\${update.headline || 'No title'}</div>
                                     <div class="update-actions">
-                                        <button class="pin-btn" onclick="event.stopPropagation(); togglePin('\${(update.url || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}', '\${(update.headline || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}', '\${(update.authority || '').replace(/'/g, \"\\\\\\\\'\").replace(/\"/g, '\\\\\\\\\"')}')" title="Pin item">📍</button>
+                                        <button class="pin-btn" onclick="event.stopPropagation(); togglePin(\${JSON.stringify(update.url || '')}, \${JSON.stringify(update.headline || '')}, \${JSON.stringify(update.authority || '')})" title="Pin item">Location</button>
                                     </div>
                                 </div>
                                 <div class="update-badges">
@@ -462,7 +462,7 @@ function getCommonClientScripts() {
                                 </div>
                                 <div class="update-footer">
                                     <div class="update-time">
-                                        <span>📅</span>
+                                        <span>Date</span>
                                         <span>\${new Date(update.fetchedDate || Date.now()).toLocaleDateString('en-GB', { 
                                             day: 'numeric', 
                                             month: 'short', 
@@ -470,7 +470,7 @@ function getCommonClientScripts() {
                                         })}</span>
                                     </div>
                                     <a href="\${update.url}" target="_blank" class="view-details" onclick="event.stopPropagation()">
-                                        View Source →
+                                        View Source ->
                                     </a>
                                 </div>
                             </div>
@@ -613,7 +613,7 @@ function getCommonClientScripts() {
                         'Capital Markets', 'Cryptocurrency', 'Fintech', 'General'
                     ];
                     
-                    console.log('✅ Firm profile loaded:', firmProfile ? firmProfile.firmName : 'No profile');
+                    console.log('Complete Firm profile loaded:', firmProfile ? firmProfile.firmName : 'No profile');
                 } else {
                     console.log('No firm profile found');
                     availableSectors = [
@@ -652,7 +652,7 @@ function getCommonClientScripts() {
             
             if (profileInfo) {
                 profileInfo.textContent = firmProfile ? 
-                    \`\${firmProfile.firmName} • \${firmProfile.primarySectors.join(', ')}\` :
+                    \`\${firmProfile.firmName} -  \${firmProfile.primarySectors.join(', ')}\` :
                     'Configure your firm\\'s sectors for personalized analytics';
             }
             
@@ -692,7 +692,7 @@ function getCommonClientScripts() {
                 }
                 
                 showMessage('Firm profile cleared successfully!', 'success');
-                console.log('✅ Firm profile cleared');
+                console.log('Complete Firm profile cleared');
                 
             } catch (error) {
                 console.error('Error clearing firm profile:', error);
@@ -750,7 +750,7 @@ function getCommonClientScripts() {
                     const result = await response.json();
                     
                     if (result.success) {
-                        pinBtn.textContent = '📍';
+                        pinBtn.textContent = 'Location';
                         pinBtn.classList.remove('pinned');
                         pinBtn.title = 'Pin item';
                         workspaceStats.pinnedItems = Math.max(0, workspaceStats.pinnedItems - 1);
@@ -772,7 +772,7 @@ function getCommonClientScripts() {
                     const result = await response.json();
                     
                     if (result.success) {
-                        pinBtn.textContent = '📌';
+                        pinBtn.textContent = 'Pin';
                         pinBtn.classList.add('pinned');
                         pinBtn.title = 'Unpin item';
                         workspaceStats.pinnedItems++;
@@ -849,7 +849,7 @@ function getCommonClientScripts() {
                 updateWorkspaceCounts();
             });
             
-            console.log('✅ Common client scripts initialized with all sidebar functions');
+            console.log('Complete Common client scripts initialized with all sidebar functions');
         }
 
         async function saveFirmProfile(firmName, firmSize, selectedSectors) {
@@ -890,7 +890,7 @@ function getCommonClientScripts() {
                         await loadIntelligenceStreams();
                     }
                     
-                    console.log('✅ Firm profile saved successfully');
+                    console.log('Complete Firm profile saved successfully');
                 } else {
                     throw new Error(result.message || 'Failed to save profile');
                 }
@@ -951,8 +951,8 @@ function getCommonClientScripts() {
         window.updateWorkspaceCounts = updateWorkspaceCounts;
         window.renderFilteredUpdates = renderFilteredUpdates;
         
-        console.log('🚀 All sidebar functions now globally available!');
-        console.log('✅ Functions loaded:', Object.keys(window).filter(key => key.startsWith('filter') || key.startsWith('show') || key.startsWith('clear')));
+        console.log('Launch All sidebar functions now globally available!');
+        console.log('Complete Functions loaded:', Object.keys(window).filter(key => key.startsWith('filter') || key.startsWith('show') || key.startsWith('clear')));
     </script>
     `
 }

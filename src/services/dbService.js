@@ -4,6 +4,7 @@
 const { Pool } = require('pg')
 const fs = require('fs').promises
 const path = require('path')
+const { normalizeSectorName } = require('../utils/sectorTaxonomy')
 
 class EnhancedDBService {
   constructor() {
@@ -32,6 +33,55 @@ class EnhancedDBService {
       business_impact_score: update.businessImpactScore || update.business_impact_score,
       ai_summary: update.ai_summary || update.aiSummary,
       content_type: update.content_type || update.contentType
+    }
+  }
+
+  normalizePinnedItemRecord(item) {
+    if (!item || typeof item !== 'object') return null
+
+    const metadata = item.metadata && typeof item.metadata === 'object'
+      ? { ...item.metadata }
+      : {}
+
+    const sectorSources = Array.isArray(item.sectors)
+      ? item.sectors
+      : Array.isArray(metadata.sectors)
+        ? metadata.sectors
+        : []
+    const sectors = Array.from(
+      new Set(
+        sectorSources
+          .map(normalizeSectorName)
+          .filter(Boolean)
+      )
+    )
+    metadata.sectors = sectors
+
+    if (!metadata.summary && item.summary) {
+      metadata.summary = item.summary
+    }
+    if (!metadata.published && item.pinned_date) {
+      metadata.published = item.pinned_date
+    }
+    if (!metadata.personas && Array.isArray(item.personas)) {
+      metadata.personas = item.personas.filter(Boolean)
+    } else if (Array.isArray(metadata.personas)) {
+      metadata.personas = metadata.personas.filter(Boolean)
+    }
+    if (!metadata.updateId && (item.update_id || item.updateId)) {
+      metadata.updateId = item.update_id || item.updateId
+    }
+    metadata.authority = metadata.authority || item.update_authority || item.authority || null
+
+    return {
+      id: item.id,
+      update_url: item.update_url || item.updateUrl || item.url || '',
+      update_title: item.update_title || item.updateTitle || item.title || '',
+      update_authority: item.update_authority || item.updateAuthority || item.authority || '',
+      notes: item.notes || '',
+      pinned_date: item.pinned_date || item.pinnedDate || new Date().toISOString(),
+      sectors,
+      metadata
     }
   }
 
@@ -440,6 +490,16 @@ class EnhancedDBService {
         params.push(searchTerm)
       }
 
+      if (filters.startDate) {
+        query += ` AND published_date >= $${++paramCount}`
+        params.push(filters.startDate)
+      }
+
+      if (filters.endDate) {
+        query += ` AND published_date <= $${++paramCount}`
+        params.push(filters.endDate)
+      }
+
       // Date range filter
       if (filters.range) {
         const dateFilter = this.getDateRangeFilter(filters.range)
@@ -540,6 +600,22 @@ class EnhancedDBService {
                 (u.summary && u.summary.toLowerCase().includes(searchTerm)) ||
                 (u.ai_summary && u.ai_summary.toLowerCase().includes(searchTerm))
       )
+    }
+
+    if (filters.startDate) {
+      const startDate = new Date(filters.startDate)
+      filtered = filtered.filter(u => {
+        const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt)
+        return !isNaN(updateDate) && updateDate >= startDate
+      })
+    }
+
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate)
+      filtered = filtered.filter(u => {
+        const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt)
+        return !isNaN(updateDate) && updateDate <= endDate
+      })
     }
 
     // Date range filter
@@ -960,7 +1036,15 @@ class EnhancedDBService {
         newToday: 0,
         newAuthorities: 0,
         impactTrend: 'stable',
-        impactChange: 0
+        impactChange: 0,
+        totalUpdatesDelta: 0,
+        totalUpdatesDeltaPercent: 0,
+        highImpactDelta: 0,
+        highImpactDeltaPercent: 0,
+        aiAnalyzedDelta: 0,
+        aiAnalyzedDeltaPercent: 0,
+        activeAuthoritiesDelta: 0,
+        activeAuthoritiesDeltaPercent: 0
       }
     }
   }
@@ -970,6 +1054,8 @@ class EnhancedDBService {
     try {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
+      const startOfWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const startOfPrevWeek = new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000)
 
       const result = await client.query(`
                 SELECT 
@@ -977,11 +1063,32 @@ class EnhancedDBService {
                     COUNT(*) FILTER (WHERE impact_level = 'Significant' OR business_impact_score >= 7) as high_impact,
                     COUNT(*) FILTER (WHERE ai_summary IS NOT NULL) as ai_analyzed,
                     COUNT(DISTINCT authority) as active_authorities,
-                    COUNT(*) FILTER (WHERE published_date >= $1) as new_today
+                    COUNT(*) FILTER (WHERE published_date >= $1) as new_today,
+                    COUNT(*) FILTER (WHERE published_date >= $2) as total_last_week,
+                    COUNT(*) FILTER (WHERE published_date >= $3 AND published_date < $2) as total_prev_week,
+                    COUNT(*) FILTER (WHERE (impact_level = 'Significant' OR business_impact_score >= 7) AND published_date >= $2) as high_impact_last_week,
+                    COUNT(*) FILTER (WHERE (impact_level = 'Significant' OR business_impact_score >= 7) AND published_date >= $3 AND published_date < $2) as high_impact_prev_week,
+                    COUNT(*) FILTER (WHERE ai_summary IS NOT NULL AND published_date >= $2) as ai_analyzed_last_week,
+                    COUNT(*) FILTER (WHERE ai_summary IS NOT NULL AND published_date >= $3 AND published_date < $2) as ai_analyzed_prev_week,
+                    COUNT(DISTINCT CASE WHEN published_date >= $2 THEN authority END) as authorities_last_week,
+                    COUNT(DISTINCT CASE WHEN published_date >= $3 AND published_date < $2 THEN authority END) as authorities_prev_week
                 FROM regulatory_updates
-            `, [today])
+            `, [today, startOfWeek, startOfPrevWeek])
 
       const stats = result.rows[0]
+
+      const calcDelta = (current, previous) => {
+        const currentValue = Number(current || 0)
+        const previousValue = Number(previous || 0)
+        const delta = currentValue - previousValue
+        const percent = previousValue > 0 ? Math.round((delta / previousValue) * 100) : (currentValue > 0 ? 100 : 0)
+        return { delta, percent }
+      }
+
+      const totalChange = calcDelta(stats.total_last_week, stats.total_prev_week)
+      const highImpactChange = calcDelta(stats.high_impact_last_week, stats.high_impact_prev_week)
+      const aiAnalyzedChange = calcDelta(stats.ai_analyzed_last_week, stats.ai_analyzed_prev_week)
+      const authorityChange = calcDelta(stats.authorities_last_week, stats.authorities_prev_week)
 
       return {
         totalUpdates: parseInt(stats.total_updates),
@@ -989,9 +1096,17 @@ class EnhancedDBService {
         aiAnalyzed: parseInt(stats.ai_analyzed),
         activeAuthorities: parseInt(stats.active_authorities),
         newToday: parseInt(stats.new_today),
-        newAuthorities: 0, // TODO: Calculate new authorities this week
-        impactTrend: 'stable', // TODO: Calculate trend
-        impactChange: 0 // TODO: Calculate change percentage
+        newAuthorities: Math.max(authorityChange.delta, 0),
+        impactTrend: highImpactChange.delta > 0 ? 'up' : highImpactChange.delta < 0 ? 'down' : 'stable',
+        impactChange: highImpactChange.percent,
+        totalUpdatesDelta: totalChange.delta,
+        totalUpdatesDeltaPercent: totalChange.percent,
+        highImpactDelta: highImpactChange.delta,
+        highImpactDeltaPercent: highImpactChange.percent,
+        aiAnalyzedDelta: aiAnalyzedChange.delta,
+        aiAnalyzedDeltaPercent: aiAnalyzedChange.percent,
+        activeAuthoritiesDelta: authorityChange.delta,
+        activeAuthoritiesDeltaPercent: authorityChange.percent
       }
     } finally {
       client.release()
@@ -1016,15 +1131,60 @@ class EnhancedDBService {
       return updateDate >= today
     }).length
 
+    const startOfWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const startOfPrevWeek = new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    const withinRange = (start, end) => (update) => {
+      const date = new Date(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
+      if (isNaN(date)) return false
+      if (end) {
+        return date >= start && date < end
+      }
+      return date >= start
+    }
+
+    const isHighImpact = update => (
+      update.impactLevel === 'Significant' ||
+      update.impact_level === 'Significant' ||
+      (update.business_impact_score || update.businessImpactScore || 0) >= 7
+    )
+
+    const lastWeekUpdates = updates.filter(withinRange(startOfWeek))
+    const previousWeekUpdates = updates.filter(withinRange(startOfPrevWeek, startOfWeek))
+
+    const countHighImpact = arr => arr.filter(isHighImpact).length
+    const countAiAnalyzed = arr => arr.filter(u => u.ai_summary || u.businessImpactScore || u.business_impact_score).length
+    const countAuthorities = arr => new Set(arr.map(u => u.authority).filter(Boolean)).size
+
+    const calcDelta = (current, previous) => {
+      const delta = current - previous
+      const percent = previous > 0 ? Math.round((delta / previous) * 100) : (current > 0 ? 100 : 0)
+      return { delta, percent }
+    }
+
+    const totalChange = calcDelta(lastWeekUpdates.length, previousWeekUpdates.length)
+    const highImpactChange = calcDelta(countHighImpact(lastWeekUpdates), countHighImpact(previousWeekUpdates))
+    const aiAnalyzedChange = calcDelta(countAiAnalyzed(lastWeekUpdates), countAiAnalyzed(previousWeekUpdates))
+    const authorityChange = calcDelta(countAuthorities(lastWeekUpdates), countAuthorities(previousWeekUpdates))
+    const impactTrend = highImpactChange.delta > 0 ? 'up' : highImpactChange.delta < 0 ? 'down' : 'stable'
+
     return {
       totalUpdates,
       highImpact,
       aiAnalyzed,
       activeAuthorities,
       newToday,
-      newAuthorities: 0,
-      impactTrend: 'stable',
-      impactChange: 0
+      newAuthorities: Math.max(authorityChange.delta, 0),
+      impactTrend,
+      impactChange: highImpactChange.percent,
+      totalUpdatesDelta: totalChange.delta,
+      totalUpdatesDeltaPercent: totalChange.percent,
+      highImpactDelta: highImpactChange.delta,
+      highImpactDeltaPercent: highImpactChange.percent,
+      aiAnalyzedDelta: aiAnalyzedChange.delta,
+      aiAnalyzedDeltaPercent: aiAnalyzedChange.percent,
+      activeAuthoritiesDelta: authorityChange.delta,
+      activeAuthoritiesDeltaPercent: authorityChange.percent
     }
   }
 
@@ -1632,6 +1792,8 @@ class EnhancedDBService {
                     ORDER BY pinned_date DESC
                 `)
         return result.rows
+          .map(row => this.normalizePinnedItemRecord(row))
+          .filter(Boolean)
       } catch (error) {
         console.log('📊 Using JSON fallback for pinned items')
         return this.getPinnedItemsJSON()
@@ -1647,15 +1809,55 @@ class EnhancedDBService {
     try {
       const data = await fs.readFile(this.workspaceFile, 'utf8')
       const workspace = JSON.parse(data)
-      return workspace.pinnedItems || []
+      const items = Array.isArray(workspace.pinnedItems) ? workspace.pinnedItems : []
+      return items
+        .map(item => this.normalizePinnedItemRecord(item))
+        .filter(Boolean)
     } catch (error) {
       return []
     }
   }
 
   // Add this after getPinnedItems() method (around line 1680)
-  async addPinnedItem(url, title, notes = '', authority = '') {
+  async addPinnedItem(url, title, notes = '', authority = '', options = {}) {
     await this.initializeDatabase() // FIX: Not this.initialize()
+
+    const sectors = Array.isArray(options.sectors)
+      ? Array.from(new Set(options.sectors.map(normalizeSectorName).filter(Boolean)))
+      : []
+
+    const personas = Array.isArray(options.personas)
+      ? options.personas.filter(Boolean)
+      : []
+
+    const summary = options.summary || (options.metadata && options.metadata.summary) || ''
+    const published = options.published || (options.metadata && options.metadata.published) || null
+    const updateId = options.updateId || (options.metadata && options.metadata.updateId) || null
+
+    const metadata = Object.assign(
+      {},
+      options.metadata || {},
+      {
+        sectors,
+        personas,
+        summary,
+        published,
+        updateId,
+        authority: authority || options.authority || ''
+      }
+    )
+
+    if (!Array.isArray(metadata.sectors) || metadata.sectors.length === 0) {
+      metadata.sectors = sectors
+    } else {
+      metadata.sectors = Array.from(
+        new Set(
+          metadata.sectors
+            .map(normalizeSectorName)
+            .filter(Boolean)
+        )
+      )
+    }
 
     const pinnedItem = {
       id: Date.now(),
@@ -1663,18 +1865,40 @@ class EnhancedDBService {
       update_title: title,
       update_authority: authority,
       notes,
-      pinned_date: new Date().toISOString()
+      pinned_date: new Date().toISOString(),
+      sectors,
+      personas,
+      summary,
+      published,
+      update_id: updateId,
+      metadata
     }
 
     if (!this.fallbackMode) { // FIX: Not this.usePostgres
       const client = await this.pool.connect()
       try {
-        const result = await client.query(`
-                    INSERT INTO pinned_items (update_url, update_title, notes, pinned_date)
-                    VALUES ($1, $2, $3, $4) RETURNING id
-                `, [url, title, notes, pinnedItem.pinned_date])
-        pinnedItem.id = result.rows[0].id
-        return pinnedItem
+        try {
+          const result = await client.query(`
+                    INSERT INTO pinned_items (update_url, update_title, update_authority, notes, pinned_date, metadata, sectors)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    RETURNING id, metadata, sectors
+                `, [url, title, authority || '', notes, pinnedItem.pinned_date, metadata, sectors])
+          const row = result.rows[0]
+          pinnedItem.id = row.id
+          pinnedItem.metadata = row.metadata || metadata
+          pinnedItem.sectors = Array.isArray(row.sectors)
+            ? row.sectors.map(normalizeSectorName).filter(Boolean)
+            : sectors
+          return this.normalizePinnedItemRecord(pinnedItem)
+        } catch (insertError) {
+          console.warn('Pinned items metadata insert failed, falling back to legacy schema:', insertError.message)
+          const legacyResult = await client.query(`
+                        INSERT INTO pinned_items (update_url, update_title, notes, pinned_date)
+                        VALUES ($1, $2, $3, $4) RETURNING id
+                    `, [url, title, notes, pinnedItem.pinned_date])
+          pinnedItem.id = legacyResult.rows[0].id
+          return this.normalizePinnedItemRecord(pinnedItem)
+        }
       } finally {
         client.release()
       }
@@ -1685,7 +1909,7 @@ class EnhancedDBService {
       workspace.pinnedItems = workspace.pinnedItems || []
       workspace.pinnedItems.push(pinnedItem)
       await fs.writeFile(this.workspaceFile, JSON.stringify(workspace, null, 2))
-      return pinnedItem
+      return this.normalizePinnedItemRecord(pinnedItem)
     }
   }
 

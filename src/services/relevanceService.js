@@ -3,6 +3,7 @@
 // UPGRADE: Automatic priority assignment based on content type + deadline awareness
 
 const dbService = require('./dbService')
+const { normalizeSectorName } = require('../utils/sectorTaxonomy')
 
 class RelevanceService {
   constructor() {
@@ -339,18 +340,34 @@ class RelevanceService {
   }
 
   calculateBasicSectorRelevance(update, firmProfile) {
+    if (!firmProfile || !Array.isArray(firmProfile.primarySectors)) {
+      return 40
+    }
+
+    const firmSectors = new Set(
+      (firmProfile.primarySectors || [])
+        .map(normalizeSectorName)
+        .filter(Boolean)
+    )
+
+    if (firmSectors.size === 0) {
+      return 40 // Low sector relevance when no firm sectors configured
+    }
+
     // Check primary sectors match
     if (update.primarySectors && Array.isArray(update.primarySectors)) {
-      const hasDirectMatch = update.primarySectors.some(sector =>
-        firmProfile.primarySectors.includes(sector)
-      )
+      const updateSectors = update.primarySectors
+        .map(normalizeSectorName)
+        .filter(Boolean)
+      const hasDirectMatch = updateSectors.some(sector => firmSectors.has(sector))
       if (hasDirectMatch) {
         return 80 // High sector relevance
       }
     }
 
     // Check single sector field
-    if (update.sector && firmProfile.primarySectors.includes(update.sector)) {
+    const singleSector = normalizeSectorName(update.sector)
+    if (singleSector && firmSectors.has(singleSector)) {
       return 75 // High sector relevance
     }
 
@@ -441,11 +458,19 @@ class RelevanceService {
   // ====== EXISTING METHODS (MAINTAINED FOR COMPATIBILITY) ======
 
   calculateFromSectorScores(sectorRelevanceScores, firmProfile) {
+    if (!firmProfile || !Array.isArray(firmProfile.primarySectors)) {
+      return sectorRelevanceScores.General || 30
+    }
+
     let maxScore = 0
     let totalScore = 0
     let matchCount = 0
 
-    firmProfile.primarySectors.forEach(firmSector => {
+    const normalizedFirmSectors = (firmProfile.primarySectors || [])
+      .map(normalizeSectorName)
+      .filter(Boolean)
+
+    normalizedFirmSectors.forEach(firmSector => {
       if (sectorRelevanceScores[firmSector] !== undefined) {
         const score = sectorRelevanceScores[firmSector]
         maxScore = Math.max(maxScore, score)
@@ -584,6 +609,11 @@ class RelevanceService {
 
     try {
       this.firmProfile = await dbService.getFirmProfile()
+      if (this.firmProfile && Array.isArray(this.firmProfile.primarySectors)) {
+        this.firmProfile.primarySectors = this.firmProfile.primarySectors
+          .map(normalizeSectorName)
+          .filter(Boolean)
+      }
       this.lastProfileCheck = now
       return this.firmProfile
     } catch (error) {

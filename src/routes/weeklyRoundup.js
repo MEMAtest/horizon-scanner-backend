@@ -11,7 +11,7 @@ const weeklyRoundupService = require('../services/weeklyRoundupService')
  */
 router.get('/weekly-roundup', async (req, res) => {
   try {
-    console.log('📊 Weekly roundup requested')
+    console.log('Analytics Weekly roundup requested')
 
     // Optional query parameters for custom date range
     const { start, end } = req.query
@@ -28,7 +28,7 @@ router.get('/weekly-roundup', async (req, res) => {
 
     res.json(roundup)
   } catch (error) {
-    console.error('❌ Error generating weekly roundup:', error)
+    console.error('X Error generating weekly roundup:', error)
     res.status(500).json({
       success: false,
       error: 'Failed to generate weekly roundup',
@@ -71,7 +71,7 @@ router.get('/weekly-roundup/cached', async (req, res) => {
     }
   } catch (error) {
     // No cache available, generate new roundup
-    console.log('📊 No cache available, generating fresh roundup')
+    console.log('Analytics No cache available, generating fresh roundup')
     const roundup = await weeklyRoundupService.generateWeeklyRoundup()
     res.json(roundup)
   }
@@ -115,7 +115,7 @@ router.get('/weekly-roundup/preview', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('❌ Error generating preview:', error)
+    console.error('X Error generating preview:', error)
     res.status(500).json({
       success: false,
       error: 'Failed to generate preview',
@@ -184,7 +184,7 @@ router.get('/weekly-roundup/authorities/:authority', async (req, res) => {
       generatedAt: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ Error generating authority roundup:', error)
+    console.error('X Error generating authority roundup:', error)
     res.status(500).json({
       success: false,
       error: 'Failed to generate authority roundup',

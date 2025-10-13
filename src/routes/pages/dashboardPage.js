@@ -20,7 +20,7 @@ function serializeForScript(data) {
 
 async function renderDashboardPage(req, res) {
   try {
-    console.log('📊 Rendering enhanced dashboard page...')
+    console.log('Analytics Rendering enhanced dashboard page...')
 
     // Get query parameters for filtering
     const {
@@ -61,12 +61,12 @@ async function renderDashboardPage(req, res) {
     })
 
     if (cleanedCount > 0) {
-      console.log(`🧹 Cleaned ${cleanedCount} AI summaries with "undefined" suffix`)
+      console.log(`Clean Cleaned ${cleanedCount} AI summaries with "undefined" suffix`)
     }
 
     // Debug: Check if ai_summary exists in first few updates
     if (updates.length > 0) {
-      console.log('🔍 DEBUG - Sample update fields:', {
+      console.log('Search DEBUG - Sample update fields:', {
         ai_summary: updates[0].ai_summary,
         summary: updates[0].summary ? updates[0].summary.substring(0, 100) + '...' : null,
         headline: updates[0].headline
@@ -81,6 +81,21 @@ async function renderDashboardPage(req, res) {
 
     // Generate sidebar
     const sidebar = await getSidebar('dashboard')
+
+    const aiCoverage = dashboardStats.totalUpdates > 0
+      ? Math.round((dashboardStats.aiAnalyzed / dashboardStats.totalUpdates) * 100)
+      : 0
+
+    const formatStatChange = (delta = 0, percent = 0) => {
+      const value = Number(delta) || 0
+      const percentValue = Number(percent) || 0
+      const direction = value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'
+      const arrow = value > 0 ? 'Up' : value < 0 ? 'Down' : '-'
+      const absValue = Math.abs(value)
+      const absPercent = Math.abs(percentValue)
+      const percentLabel = absPercent ? ` (${absPercent}%)` : ''
+      return `<div class="stat-change ${direction}">${arrow} ${absValue}${percentLabel} vs last week</div>`
+    }
 
     const serializedInitialUpdates = serializeForScript(updates)
     const serializedDashboardStats = serializeForScript(dashboardStats)
@@ -166,9 +181,12 @@ async function renderDashboardPage(req, res) {
                 }
                 
                 .stat-change {
-                    font-size: 0.8rem;
-                    margin-top: 5px;
-                    font-weight: 500;
+                    font-size: 0.85rem;
+                    margin-top: 6px;
+                    font-weight: 600;
+                    display: inline-flex;
+                    gap: 6px;
+                    align-items: center;
                 }
                 
                 .stat-change.positive {
@@ -179,6 +197,16 @@ async function renderDashboardPage(req, res) {
                     color: #dc2626;
                 }
                 
+                .stat-change.neutral {
+                    color: #6b7280;
+                }
+                
+                .stat-subtext {
+                    font-size: 0.8rem;
+                    color: #6b7280;
+                    margin-top: 4px;
+                }
+                
                 .controls-panel {
                     background: white;
                     padding: 25px;
@@ -187,7 +215,312 @@ async function renderDashboardPage(req, res) {
                     margin-bottom: 30px;
                     border: 1px solid #e5e7eb;
                 }
-                
+
+                .priority-highlights {
+                    margin: 30px 0;
+                    background: white;
+                    border-radius: 16px;
+                    border: 1px solid #e5e7eb;
+                    padding: 24px;
+                    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+                }
+
+                .priority-highlights-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 16px;
+                    margin-bottom: 20px;
+                }
+
+                .priority-highlights-title {
+                    font-size: 1.3rem;
+                    font-weight: 600;
+                    color: #111827;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+
+                .priority-highlights-subtitle {
+                    color: #6b7280;
+                    font-size: 0.9rem;
+                    margin-top: 6px;
+                }
+
+                .priority-highlights-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 18px;
+                }
+
+                .priority-card {
+                    border: 1px solid #e5e7eb;
+                    border-radius: 14px;
+                    padding: 18px 20px;
+                    background: linear-gradient(135deg, rgba(248,250,252,0.9), rgba(255,255,255,0.95));
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 12px 25px rgba(15, 23, 42, 0.08);
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    position: relative;
+                }
+
+                .priority-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 18px 35px rgba(79, 70, 229, 0.12);
+                }
+
+                .priority-card.reviewed::after {
+                    content: 'Reviewed';
+                    position: absolute;
+                    top: 12px;
+                    right: 20px;
+                    font-size: 0.7rem;
+                    letter-spacing: 0.08em;
+                    padding: 3px 8px;
+                    border-radius: 999px;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    text-transform: uppercase;
+                }
+
+                .priority-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 12px;
+                }
+
+                .priority-card-meta {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+
+                .priority-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                    background: #eef2ff;
+                    color: #4338ca;
+                }
+
+                .priority-badge.high-impact {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+
+                .priority-badge.deadline {
+                    background: #fef3c7;
+                    color: #b45309;
+                }
+
+                .priority-card-title {
+                    margin: 12px 0 10px;
+                    font-size: 1.05rem;
+                    font-weight: 600;
+                    color: #111827;
+                    line-height: 1.4;
+                }
+
+                .priority-card-summary {
+                    color: #4b5563;
+                    font-size: 0.9rem;
+                    line-height: 1.5;
+                    min-height: 45px;
+                }
+
+                .priority-card-metrics {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px 12px;
+                    align-items: center;
+                    margin-top: 14px;
+                }
+
+                .priority-urgency {
+                    font-size: 0.75rem;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    background: #f3f4f6;
+                    color: #111827;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+
+                .priority-urgency.urgency-high {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+
+                .priority-urgency.urgency-medium {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+
+                .priority-urgency.urgency-low {
+                    background: #dcfce7;
+                    color: #166534;
+                }
+
+                .priority-deadline {
+                    font-size: 0.8rem;
+                    color: #b91c1c;
+                    font-weight: 600;
+                }
+
+                .priority-actions {
+                    margin-top: 16px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+
+                .priority-action-btn {
+                    border: none;
+                    border-radius: 999px;
+                    padding: 8px 14px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: background 0.2s ease, transform 0.2s ease;
+                }
+
+                .priority-action-btn.primary {
+                    background: #4f46e5;
+                    color: white;
+                }
+
+                .priority-action-btn.primary:hover {
+                    background: #4338ca;
+                }
+
+                .priority-action-btn.secondary {
+                    background: #eef2ff;
+                    color: #3730a3;
+                }
+
+                .priority-action-btn.secondary:hover {
+                    background: #e0e7ff;
+                }
+
+                .priority-action-btn.muted {
+                    background: #f3f4f6;
+                    color: #4b5563;
+                }
+
+                .priority-action-btn.muted:hover {
+                    background: #e5e7eb;
+                }
+
+                .priority-toggle {
+                    border: none;
+                    background: none;
+                    color: #4f46e5;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 0.85rem;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .priority-card-details {
+                    display: none;
+                    margin-top: 14px;
+                    color: #374151;
+                    font-size: 0.9rem;
+                    line-height: 1.6;
+                }
+
+                .priority-card-details a {
+                    color: #4f46e5;
+                    font-weight: 600;
+                    text-decoration: none;
+                }
+
+                .priority-card-details a:hover {
+                    text-decoration: underline;
+                }
+
+                .priority-card.expanded .priority-card-details {
+                    display: block;
+                }
+
+                .priority-card.expanded .priority-toggle::after {
+                    content: 'Up';
+                }
+
+                .priority-toggle::after {
+                    content: 'Down';
+                    font-size: 0.7rem;
+                }
+
+                .impact-gauge {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    min-width: 0;
+                }
+
+                .impact-gauge.compact .impact-gauge-label {
+                    font-size: 0.75rem;
+                }
+
+                .impact-gauge-track {
+                    flex: 1;
+                    height: 8px;
+                    background: #e5e7eb;
+                    border-radius: 999px;
+                    overflow: hidden;
+                    position: relative;
+                }
+
+                .impact-gauge-fill {
+                    height: 100%;
+                    border-radius: 999px;
+                    transition: width 0.3s ease;
+                }
+
+                .impact-gauge-label {
+                    font-size: 0.8rem;
+                    color: #4b5563;
+                    font-weight: 600;
+                    min-width: 40px;
+                    text-align: right;
+                }
+
+                .impact-gauge.impact-high .impact-gauge-fill {
+                    background: linear-gradient(90deg, #dc2626, #f97316);
+                }
+
+                .impact-gauge.impact-medium .impact-gauge-fill {
+                    background: linear-gradient(90deg, #f59e0b, #facc15);
+                }
+
+                .impact-gauge.impact-low .impact-gauge-fill {
+                    background: linear-gradient(90deg, #10b981, #34d399);
+                }
+
+                .priority-empty {
+                    grid-column: 1 / -1;
+                    text-align: center;
+                    padding: 30px;
+                    border: 1px dashed #d1d5db;
+                    border-radius: 12px;
+                    color: #6b7280;
+                    background: #f9fafb;
+                }
+
+                .impact-gauge-item .impact-gauge {
+                    width: 100%;
+                }
+
                 .controls-header {
                     display: flex;
                     justify-content: space-between;
@@ -827,7 +1160,7 @@ async function renderDashboardPage(req, res) {
                     <!-- Dashboard Header -->
                     <header class="dashboard-header">
                         <h1 class="dashboard-title">
-                            📊 Regulatory Intelligence Dashboard
+                            Analytics Regulatory Intelligence Dashboard
                         </h1>
                         <p class="dashboard-subtitle">
                             Real-time regulatory monitoring with AI-powered analysis and business impact intelligence
@@ -838,27 +1171,37 @@ async function renderDashboardPage(req, res) {
                             <div class="stat-card">
                                 <span class="stat-number">${dashboardStats.totalUpdates}</span>
                                 <span class="stat-label">Total Updates</span>
-                                <div class="stat-change positive">+${dashboardStats.newToday} today</div>
+                                ${formatStatChange(dashboardStats.totalUpdatesDelta, dashboardStats.totalUpdatesDeltaPercent)}
                             </div>
                             <div class="stat-card">
                                 <span class="stat-number">${dashboardStats.highImpact}</span>
                                 <span class="stat-label">High Impact</span>
-                                <div class="stat-change ${dashboardStats.impactTrend === 'up' ? 'positive' : 'negative'}">
-                                    ${dashboardStats.impactTrend === 'up' ? '↗' : '↘'} ${dashboardStats.impactChange}%
-                                </div>
+                                ${formatStatChange(dashboardStats.highImpactDelta, dashboardStats.highImpactDeltaPercent)}
                             </div>
                             <div class="stat-card">
                                 <span class="stat-number">${dashboardStats.aiAnalyzed}</span>
                                 <span class="stat-label">AI Analyzed</span>
-                                <div class="stat-change positive">${Math.round(dashboardStats.aiAnalyzed / dashboardStats.totalUpdates * 100)}% coverage</div>
+                                ${formatStatChange(dashboardStats.aiAnalyzedDelta, dashboardStats.aiAnalyzedDeltaPercent)}
+                                <div class="stat-subtext">${aiCoverage}% coverage</div>
                             </div>
                             <div class="stat-card">
                                 <span class="stat-number">${dashboardStats.activeAuthorities}</span>
                                 <span class="stat-label">Active Authorities</span>
-                                <div class="stat-change positive">+${dashboardStats.newAuthorities} this week</div>
+                                ${formatStatChange(dashboardStats.activeAuthoritiesDelta, dashboardStats.activeAuthoritiesDeltaPercent)}
                             </div>
                         </div>
                     </header>
+
+                    <section class="priority-highlights">
+                        <div class="priority-highlights-header">
+                            <div>
+                                <h2 class="priority-highlights-title">Power Priority Highlights</h2>
+                                <p class="priority-highlights-subtitle">Weekly priorities and high-impact intelligence combined in one actionable view.</p>
+                            </div>
+                            <div class="stat-change neutral">Updated ${new Date().toLocaleDateString('en-GB')}</div>
+                        </div>
+                        <div id="priorityHighlights" class="priority-highlights-grid"></div>
+                    </section>
                     
                     <!-- Controls Panel -->
                     <section class="controls-panel">
@@ -872,8 +1215,8 @@ async function renderDashboardPage(req, res) {
                                     placeholder="Search updates, authorities, sectors..."
                                     value="${search || ''}"
                                 >
-                                <button id="search-button" class="search-button">🔍</button>
-                                <button id="save-search-button" class="save-search-button" onclick="WorkspaceModule.saveCurrentSearch()" title="Save current search & filters">💾</button>
+                                <button id="search-button" class="search-button">Search</button>
+                                <button id="save-search-button" class="save-search-button" onclick="WorkspaceModule.saveCurrentSearch()" title="Save current search & filters">Save</button>
                             </div>
                         </div>
                         
@@ -884,9 +1227,6 @@ async function renderDashboardPage(req, res) {
                             </button>
                             <button class="quick-filter-btn ${category === 'high-impact' ? 'active' : ''}" data-filter="high-impact" onclick="filterByCategory('high-impact')">
                                 High Impact
-                            </button>
-                            <button class="quick-filter-btn ${category === 'today' ? 'active' : ''}" data-filter="today" onclick="filterByCategory('today')">
-                                Today
                             </button>
                             <button class="quick-filter-btn ${category === 'this-week' ? 'active' : ''}" data-filter="this-week" onclick="filterByCategory('this-week')">
                                 This Week
@@ -971,9 +1311,9 @@ async function renderDashboardPage(req, res) {
                             Showing <span id="results-count">${updates.length}</span> updates
                         </span>
                         <div class="view-options">
-                            <button class="view-btn active" data-view="cards">📋 Cards</button>
-                            <button class="view-btn" data-view="table">📊 Table</button>
-                            <button class="view-btn" data-view="timeline">⏰ Timeline</button>
+                            <button class="view-btn active" data-view="cards">Note Cards</button>
+                            <button class="view-btn" data-view="table">Analytics Table</button>
+                            <button class="view-btn" data-view="timeline">Clock Timeline</button>
                         </div>
                     </div>
                     
@@ -1063,7 +1403,7 @@ async function renderDashboardPage(req, res) {
                         }
                     });
 
-                    function flushFilterQueue() {
+                    async function flushFilterQueue() {
                         if (!window.FilterModule) return;
 
                         let executed = false;
@@ -1078,7 +1418,10 @@ async function renderDashboardPage(req, res) {
 
                             if (target) {
                                 try {
-                                    target.apply(window.FilterModule, call.args);
+                                    const result = target.apply(window.FilterModule, call.args);
+                                    if (result && typeof result.then === 'function') {
+                                        await result;
+                                    }
                                     executed = true;
                                 } catch (error) {
                                     console.error('Error executing queued filter call:', error);
@@ -1095,7 +1438,9 @@ async function renderDashboardPage(req, res) {
                     }
 
                     window.__flushFilterQueue = flushFilterQueue;
-                    window.addEventListener('dashboard:filters-ready', flushFilterQueue);
+                    window.addEventListener('dashboard:filters-ready', () => {
+                        flushFilterQueue();
+                    });
                 })();
 
                 // Client-side helper functions for Cards view
@@ -1142,19 +1487,19 @@ async function renderDashboardPage(req, res) {
 
                     // Primary AI features (if available)
                     if (update.business_impact_score && update.business_impact_score >= 7) {
-                        features.push('<span class="ai-feature high-impact">🔥 High Impact (' + update.business_impact_score + '/10)</span>');
+                        features.push('<span class="ai-feature high-impact">Hot High Impact (' + update.business_impact_score + '/10)</span>');
                     }
 
                     if (update.urgency === 'High') {
-                        features.push('<span class="ai-feature urgent">🚨 Urgent</span>');
+                        features.push('<span class="ai-feature urgent">Alert Urgent</span>');
                     }
 
                     if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
-                        features.push('<span class="ai-feature enforcement">🚨 Enforcement Action</span>');
+                        features.push('<span class="ai-feature enforcement">Alert Enforcement Action</span>');
                     }
 
                     if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
-                        features.push('<span class="ai-feature high-confidence">🤖 High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
+                        features.push('<span class="ai-feature high-confidence">AI High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
                     }
 
                     // Fallback features based on available data
@@ -1163,20 +1508,20 @@ async function renderDashboardPage(req, res) {
                         const text = (update.headline + ' ' + (update.summary || update.ai_summary || '')).toLowerCase();
 
                         if (text.includes('fine') || text.includes('penalty') || text.includes('enforcement') || text.includes('breach')) {
-                            features.push('<span class="ai-feature enforcement">⚖️ Enforcement</span>');
+                            features.push('<span class="ai-feature enforcement">Law Enforcement</span>');
                         }
 
                         if (text.includes('consultation') || text.includes('draft') || text.includes('guidance')) {
-                            features.push('<span class="ai-feature guidance">📋 Guidance</span>');
+                            features.push('<span class="ai-feature guidance">Note Guidance</span>');
                         }
 
                         if (text.includes('deadline') || text.includes('compliance') || text.includes('must')) {
-                            features.push('<span class="ai-feature deadline">📅 Action Required</span>');
+                            features.push('<span class="ai-feature deadline">Date Action Required</span>');
                         }
 
                         // Show authority as a feature if no other features found
                         if (features.length === 0 && update.authority) {
-                            features.push('<span class="ai-feature authority">🏛️ ' + update.authority + '</span>');
+                            features.push('<span class="ai-feature authority">Authority ' + update.authority + '</span>');
                         }
                     }
 
@@ -1226,14 +1571,14 @@ async function renderDashboardPage(req, res) {
 
     res.send(html)
   } catch (error) {
-    console.error('❌ Error rendering dashboard page:', error)
+    console.error('X Error rendering dashboard page:', error)
     res.status(500).send(`
             <html>
                 <head><title>Error - Dashboard</title></head>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>⚠️ Dashboard Error</h1>
+                    <h1>Warning Dashboard Error</h1>
                     <p>Unable to load the dashboard. Please try refreshing.</p>
-                    <p><a href="/dashboard">← Try Again</a></p>
+                    <p><a href="/dashboard"><- Try Again</a></p>
                     <small>Error: ${error.message}</small>
                 </body>
             </html>
@@ -1305,7 +1650,7 @@ function generateUpdatesHTML(updates) {
   if (!updates || updates.length === 0) {
     return `
             <div class="no-updates">
-                <div class="no-updates-icon">📭</div>
+                <div class="no-updates-icon">Inbox</div>
                 <h3>No updates found</h3>
                 <p>Try adjusting your filters or search criteria.</p>
                 <button onclick="clearAllFilters()" class="btn btn-secondary">Clear All Filters</button>
@@ -1351,9 +1696,9 @@ function generateUpdateCard(update) {
                     ${impactBadge}
                 </div>
                 <div class="update-actions">
-                    <button onclick="bookmarkUpdate('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Bookmark">⭐</button>
-                    <button onclick="shareUpdate('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Share">🔗</button>
-                    <button onclick="viewDetails('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Details">👁️</button>
+                    <button onclick="bookmarkUpdate('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Bookmark">Star</button>
+                    <button onclick="shareUpdate('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Share">Link</button>
+                    <button onclick="viewDetails('${String(update.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}')" class="action-btn" title="Details">View</button>
                 </div>
             </div>
             
@@ -1441,7 +1786,7 @@ function getImpactBadge(update) {
   const level = update.impactLevel || update.impact_level || 'Informational'
 
   // Map impact levels to proper CSS classes
-  let badgeClass = 'low'  // default
+  let badgeClass = 'low' // default
   if (level === 'Significant') {
     badgeClass = 'urgent'
   } else if (level === 'Moderate') {
@@ -1456,9 +1801,9 @@ function getSectorTags(update) {
   const sectors = update.firm_types_affected || update.primarySectors || (update.sector ? [update.sector] : [])
 
   return sectors.slice(0, 3).map(sector => {
-    const value = String(sector ?? '').trim();
-    const label = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<span class="sector-tag" data-sector="${label}">${label}</span>`;
+    const value = String(sector ?? '').trim()
+    const label = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return `<span class="sector-tag" data-sector="${label}">${label}</span>`
   }).join('')
 }
 
@@ -1466,7 +1811,7 @@ function getAIFeatures(update) {
   const features = []
 
   if (update.business_impact_score && update.business_impact_score >= 7) {
-    features.push(`<span class="ai-feature high-impact">🔥 High Impact (${update.business_impact_score}/10)</span>`)
+    features.push(`<span class="ai-feature high-impact">Hot High Impact (${update.business_impact_score}/10)</span>`)
   }
 
   const complianceDeadline = getDateValue(update.compliance_deadline || update.complianceDeadline)
@@ -1474,20 +1819,20 @@ function getAIFeatures(update) {
     const deadline = complianceDeadline
     const daysUntil = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24))
     if (daysUntil <= 30 && daysUntil > 0) {
-      features.push(`<span class="ai-feature deadline">⏰ Deadline in ${daysUntil} days</span>`)
+      features.push(`<span class="ai-feature deadline">Clock Deadline in ${daysUntil} days</span>`)
     }
   }
 
   if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
-    features.push('<span class="ai-feature enforcement">🚨 Enforcement Action</span>')
+    features.push('<span class="ai-feature enforcement">Alert Enforcement Action</span>')
   }
 
   if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
-    features.push(`<span class="ai-feature high-confidence">🤖 High Confidence (${Math.round(update.ai_confidence_score * 100)}%)</span>`)
+    features.push(`<span class="ai-feature high-confidence">AI High Confidence (${Math.round(update.ai_confidence_score * 100)}%)</span>`)
   }
 
   if (update.urgency === 'High') {
-    features.push('<span class="ai-feature urgent">🚨 Urgent</span>')
+    features.push('<span class="ai-feature urgent">Alert Urgent</span>')
   }
 
   return features.join('')

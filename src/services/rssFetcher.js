@@ -22,6 +22,7 @@ const {
   scrapeEBA,
   normalizeAuthority
 } = require('./webScraper')
+const puppeteerScraper = require('../scrapers/puppeteerScraper')
 
 class EnhancedRSSFetcher {
   constructor() {
@@ -93,14 +94,34 @@ class EnhancedRSSFetcher {
       },
 
       {
-        name: 'FATF News', // Changed from 'FATF Publications'
+        name: 'FATF News & Publications',
         authority: 'FATF',
-        url: 'https://www.fatf-gafi.org/en/the-fatf/news.html', // Changed to news URL
-        type: 'web_scraping',
-        description: 'Financial Action Task Force - News and Press Releases',
+        url: 'https://www.fatf-gafi.org/en/the-fatf/news.html',
+        type: 'puppeteer',
+        description: 'Financial Action Task Force - News and Publications (Puppeteer)',
         priority: 'high',
         recencyDays: 30,
         sectors: ['AML & Financial Crime', 'Banking', 'Compliance']
+      },
+      {
+        name: 'Aquis Exchange Announcements',
+        authority: 'AQUIS',
+        url: 'https://www.aquis.eu/stock-exchange/announcements',
+        type: 'puppeteer',
+        description: 'Aquis Stock Exchange - Company Announcements',
+        priority: 'medium',
+        recencyDays: 30,
+        sectors: ['Capital Markets', 'Listed Companies', 'Market News']
+      },
+      {
+        name: 'London Stock Exchange News',
+        authority: 'LSE',
+        url: 'https://www.londonstockexchange.com/discover/news-and-insights?tab=latest',
+        type: 'puppeteer',
+        description: 'London Stock Exchange - Latest News and Insights',
+        priority: 'medium',
+        recencyDays: 30,
+        sectors: ['Capital Markets', 'Market News', 'Investment']
       },
       // EXISTING RSS FEEDS
       {
@@ -230,12 +251,15 @@ class EnhancedRSSFetcher {
     this.activeFeedCount = this.feedSources.filter(source => source.priority !== 'disabled').length
     this.rssFeedCount = this.feedSources.filter(source => source.type === 'rss' && source.priority !== 'disabled').length
     this.webScrapingCount = this.feedSources.filter(source => source.type === 'web_scraping' && source.priority !== 'disabled').length
+    this.puppeteerCount = this.feedSources.filter(source => source.type === 'puppeteer' && source.priority !== 'disabled').length
 
     console.log('📡 Enhanced RSS Fetcher initialized')
     console.log(`✅ Configured ${this.activeFeedCount} active sources:`)
     console.log(`   📰 ${this.rssFeedCount} RSS feeds`)
     console.log(`   🌐 ${this.webScrapingCount} web scraping sources`)
+    console.log(`   🤖 ${this.puppeteerCount} Puppeteer sources`)
     console.log('   🎯 Dedicated scrapers: FATF, FCA, SFO, TPR')
+    console.log('   🚀 Puppeteer scrapers: FATF, Aquis Exchange, LSE')
   }
 
   async initialize() {
@@ -283,6 +307,8 @@ class EnhancedRSSFetcher {
             this.processingStats.rssSuccess++
           } else if (source.type === 'web_scraping') {
             this.processingStats.webScrapingSuccess++
+          } else if (source.type === 'puppeteer') {
+            this.processingStats.puppeteerSuccess = (this.processingStats.puppeteerSuccess || 0) + 1
           }
 
           results.bySource[source.name] = {
@@ -319,6 +345,7 @@ class EnhancedRSSFetcher {
     console.log(`\n📊 Fetch completed in ${duration}s:`)
     console.log(`   📰 RSS feeds: ${this.processingStats.rssSuccess}/${this.rssFeedCount} successful`)
     console.log(`   🌐 Web scraping: ${this.processingStats.webScrapingSuccess}/${this.webScrapingCount} successful`)
+    console.log(`   🤖 Puppeteer: ${this.processingStats.puppeteerSuccess || 0}/${this.puppeteerCount} successful`)
     console.log(`   ✅ Total: ${results.successful}/${results.total} sources processed`)
     console.log(`   🆕 New updates: ${results.newUpdates}`)
 
@@ -331,6 +358,8 @@ class EnhancedRSSFetcher {
         return await this.fetchRSSFeed(source)
       case 'web_scraping':
         return await this.fetchWebScraping(source)
+      case 'puppeteer':
+        return await this.fetchPuppeteer(source)
       case 'demo':
         return await this.generateDemoUpdates(source)
       default:
@@ -490,6 +519,38 @@ class EnhancedRSSFetcher {
         console.error(`❌ Generic scraping also failed for ${source.name}:`, fallbackError.message)
         return []
       }
+    }
+  }
+
+  async fetchPuppeteer(source) {
+    try {
+      console.log(`🤖 Puppeteer scraping for ${source.name} (${source.authority})...`)
+
+      let scraperResults = []
+
+      // Route to correct Puppeteer scraper method
+      switch (source.authority) {
+        case 'FATF':
+          scraperResults = await puppeteerScraper.scrapeFATF()
+          break
+        case 'AQUIS':
+        case 'Aquis Exchange':
+          scraperResults = await puppeteerScraper.scrapeAquis()
+          break
+        case 'LSE':
+        case 'London Stock Exchange':
+          scraperResults = await puppeteerScraper.scrapeLSE()
+          break
+        default:
+          console.log(`⚠️ No Puppeteer scraper configured for ${source.authority}`)
+          return []
+      }
+
+      console.log(`✅ ${source.name}: Found ${scraperResults.length} items via Puppeteer`)
+      return scraperResults
+    } catch (error) {
+      console.error(`❌ Puppeteer scraping failed for ${source.name}:`, error.message)
+      return []
     }
   }
 

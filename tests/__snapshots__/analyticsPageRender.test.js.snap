@@ -1,0 +1,41 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`analyticsPage predictive layout renders predictive sections and monitoring dashboard with interactive controls 1`] = `
+"
+          <header class="card-header">
+            <div class="meta-row">
+              <span class="meta-chip urgency-CRITICAL">CRITICAL priority</span>
+              <span class="meta-chip confidence">88% confidence</span>
+              <span class="meta-chip window">7-14 days</span>
+            </div>
+            <h3>FCA escalation on climate expected imminently</h3>
+          </header>
+          <div class="card-flags" data-flag-container=""></div>
+          <p class="insight-why">Climate risk supervision is accelerating across FCA and PRA.</p>
+          <dl class="insight-meta">
+            <div class="meta-pair">
+              <dt>Authorities</dt>
+              <dd>FCA, PRA</dd>
+            </div>
+            <div class="meta-pair">
+              <dt>Sectors</dt>
+              <dd>Banking</dd>
+            </div>
+            <div class="meta-pair">
+              <dt>Confidence bucket</dt>
+              <dd>CRITICAL</dd>
+            </div>
+          </dl>
+          <div class="insight-actions">
+            <h4>Next moves</h4>
+            <ul class="insight-action-list">
+              <li>Immediate: Review climate resilience controls.</li><li>This week: Brief senior risk committee.</li>
+            </ul>
+          </div>
+          <footer class="card-footer">
+            <button type="button" class="btn btn-primary" data-action="view-details" data-prediction="p1">View details</button>
+            <button type="button" class="btn btn-secondary" data-action="acknowledge" data-prediction="p1">Acknowledge</button>
+            <button type="button" class="btn btn-tertiary" data-action="delegate" data-prediction="p1">Delegate</button>
+          </footer>
+        "
+`;

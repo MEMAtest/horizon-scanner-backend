@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🧪 Dashboard Smoke Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #f5f7fa;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            background: white;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .test-passed { color: #10b981; font-weight: 600; }
+        .test-failed { color: #ef4444; font-weight: 600; }
+        .test-warning { color: #f59e0b; font-weight: 600; }
+        .test-info { color: #3b82f6; font-weight: 600; }
+        .result-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f9fafb;
+            border-left: 4px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .result-item.passed { border-left-color: #10b981; background: #f0fdf4; }
+        .result-item.failed { border-left-color: #ef4444; background: #fef2f2; }
+        .result-item.warning { border-left-color: #f59e0b; background: #fffbeb; }
+        button {
+            padding: 12px 24px;
+            margin: 8px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { background: #5568d3; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        .run-all { background: #10b981; font-size: 16px; padding: 14px 32px; }
+        .run-all:hover { background: #059669; }
+        iframe { width: 100%; height: 800px; border: 2px solid #e5e7eb; border-radius: 8px; margin-top: 15px; }
+        .summary {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #3b82f6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+        }
+        .metric { display: inline-block; margin: 10px 20px; }
+        .metric-value { font-size: 32px; font-weight: 700; color: #1f2937; }
+        .metric-label { font-size: 14px; color: #6b7280; text-transform: uppercase; }
+        h2 { color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+        .icon { font-size: 20px; }
+        .timestamp { color: #9ca3af; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Dashboard Filter & Search Smoke Test</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9;">Comprehensive UX validation for refactored filter system</p>
+        <p class="timestamp">Started: <span id="test-start-time"></span></p>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Test Suite</h2>
+        <button class="run-all" onclick="runAllTests()">▶️ Run All Tests</button>
+        <div id="overall-summary"></div>
+    </div>
+
+    <!-- Test 1: Page Load -->
+    <div class="test-section">
+        <h2>Test 1: Initial Page Load</h2>
+        <p>Verify dashboard loads without errors and filter functions are available.</p>
+        <button onclick="runTest1()">Run Test 1</button>
+        <div id="test-1-result"></div>
+    </div>
+
+    <!-- Test 2: Quick Filter Buttons -->
+    <div class="test-section">
+        <h2>Test 2: Quick Filter Buttons</h2>
+        <p>Test clicking quick filter buttons (All, High Impact, Today, etc.)</p>
+        <button onclick="runTest2()">Run Test 2</button>
+        <div id="test-2-result"></div>
+    </div>
+
+    <!-- Test 3: Dropdown Filters -->
+    <div class="test-section">
+        <h2>Test 3: Dropdown Filters</h2>
+        <p>Test authority, sector, impact level, and date range selects.</p>
+        <button onclick="runTest3()">Run Test 3</button>
+        <div id="test-3-result"></div>
+    </div>
+
+    <!-- Test 4: Search Input -->
+    <div class="test-section">
+        <h2>Test 4: Search Functionality</h2>
+        <p>Test real-time search across headlines and content.</p>
+        <button onclick="runTest4()">Run Test 4</button>
+        <div id="test-4-result"></div>
+    </div>
+
+    <!-- Test 5: View Switching -->
+    <div class="test-section">
+        <h2>Test 5: View Persistence</h2>
+        <p>Apply filter, switch views (cards → table → timeline), verify data persists.</p>
+        <button onclick="runTest5()">Run Test 5</button>
+        <div id="test-5-result"></div>
+    </div>
+
+    <!-- Test 6: Live Dashboard Iframe -->
+    <div class="test-section">
+        <h2>Test 6: Live Dashboard Preview</h2>
+        <p>Embedded dashboard for manual interaction testing.</p>
+        <button onclick="loadLiveDashboard()">Load Dashboard</button>
+        <div id="dashboard-container"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3002';
+        let allResults = [];
+
+        document.getElementById('test-start-time').textContent = new Date().toLocaleString();
+
+        function addResult(testNum, passed, message, type = null) {
+            const resultType = type || (passed ? 'passed' : 'failed');
+            const icon = passed ? '✅' : '❌';
+            allResults.push({ testNum, passed, message, resultType });
+            return `<div class="result-item ${resultType}">${icon} ${message}</div>`;
+        }
+
+        async function runTest1() {
+            const results = [];
+            document.getElementById('test-1-result').innerHTML = '<div class="result-item">⏳ Running...</div>';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/dashboard`);
+                const html = await response.text();
+
+                // Check page loads
+                if (response.ok) {
+                    results.push(addResult(1, true, 'Dashboard page loaded successfully (HTTP 200)'));
+                } else {
+                    results.push(addResult(1, false, `Dashboard returned HTTP ${response.status}`));
+                }
+
+                // Check FilterModule initialization
+                if (html.includes('window.FilterModule')) {
+                    results.push(addResult(1, true, 'FilterModule object found in page'));
+                } else {
+                    results.push(addResult(1, false, 'FilterModule NOT found'));
+                }
+
+                // Check filter function definitions
+                const functions = ['filterByCategory', 'filterByAuthority', 'filterBySector', 'applyCurrentFilters'];
+                functions.forEach(fn => {
+                    if (html.includes(`window.${fn}`) || html.includes(`${fn}:`)) {
+                        results.push(addResult(1, true, `${fn} defined`));
+                    } else {
+                        results.push(addResult(1, false, `${fn} NOT defined`, 'warning'));
+                    }
+                });
+
+                // Check for stub queue system
+                if (html.includes('__flushFilterQueue')) {
+                    results.push(addResult(1, true, 'Queue-based bootstrap system present'));
+                } else {
+                    results.push(addResult(1, false, 'Queue system missing', 'warning'));
+                }
+
+            } catch (error) {
+                results.push(addResult(1, false, `Error: ${error.message}`));
+            }
+
+            document.getElementById('test-1-result').innerHTML = results.join('');
+        }
+
+        async function runTest2() {
+            const results = [];
+            document.getElementById('test-2-result').innerHTML = '<div class="result-item">⏳ Testing quick filters...</div>';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/dashboard`);
+                const html = await response.text();
+
+                // Check quick filter buttons exist
+                const filters = ['all', 'high-impact', 'today', 'this-week', 'consultations', 'enforcement'];
+                filters.forEach(filter => {
+                    const regex = new RegExp(`onclick="filterByCategory\\('${filter}'\\)"`, 'i');
+                    if (regex.test(html)) {
+                        results.push(addResult(2, true, `Quick filter button '${filter}' found`));
+                    } else {
+                        results.push(addResult(2, false, `Quick filter '${filter}' missing`));
+                    }
+                });
+
+                // Check for active state handling
+                if (html.includes('active') && html.includes('quick-filter-btn')) {
+                    results.push(addResult(2, true, 'Active state CSS classes present'));
+                } else {
+                    results.push(addResult(2, false, 'Active state handling missing', 'warning'));
+                }
+
+            } catch (error) {
+                results.push(addResult(2, false, `Error: ${error.message}`));
+            }
+
+            document.getElementById('test-2-result').innerHTML = results.join('');
+        }
+
+        async function runTest3() {
+            const results = [];
+            document.getElementById('test-3-result').innerHTML = '<div class="result-item">⏳ Testing dropdown filters...</div>';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/dashboard`);
+                const html = await response.text();
+
+                // Check dropdown selects
+                const selects = [
+                    { fn: 'filterByAuthority', label: 'Authority' },
+                    { fn: 'filterBySector', label: 'Sector' },
+                    { fn: 'filterByImpactLevel', label: 'Impact Level' },
+                    { fn: 'filterByDateRange', label: 'Date Range' }
+                ];
+
+                selects.forEach(({ fn, label }) => {
+                    if (html.includes(`onchange="${fn}(`)) {
+                        results.push(addResult(3, true, `${label} dropdown with ${fn} handler`));
+                    } else {
+                        results.push(addResult(3, false, `${label} dropdown missing`));
+                    }
+                });
+
+                // Check options populated
+                if (html.includes('<option value="">All Authorities</option>')) {
+                    results.push(addResult(3, true, 'Authority options populated'));
+                } else {
+                    results.push(addResult(3, false, 'Authority options missing', 'warning'));
+                }
+
+            } catch (error) {
+                results.push(addResult(3, false, `Error: ${error.message}`));
+            }
+
+            document.getElementById('test-3-result').innerHTML = results.join('');
+        }
+
+        async function runTest4() {
+            const results = [];
+            document.getElementById('test-4-result').innerHTML = '<div class="result-item">⏳ Testing search...</div>';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/dashboard`);
+                const html = await response.text();
+
+                // Check search input exists
+                if (html.includes('id="search-input"')) {
+                    results.push(addResult(4, true, 'Search input field present'));
+                } else {
+                    results.push(addResult(4, false, 'Search input missing'));
+                }
+
+                // Check search is wired to performSearch or applyActiveFilters
+                if (html.includes('performSearch') || html.includes('applyActiveFilters')) {
+                    results.push(addResult(4, true, 'Search function handler found'));
+                } else {
+                    results.push(addResult(4, false, 'Search handler missing'));
+                }
+
+                // Check matchesSearch helper exists in clientScripts
+                if (html.includes('matchesSearch')) {
+                    results.push(addResult(4, true, 'Search matching logic present'));
+                } else {
+                    results.push(addResult(4, false, 'Search logic missing', 'warning'));
+                }
+
+            } catch (error) {
+                results.push(addResult(4, false, `Error: ${error.message}`));
+            }
+
+            document.getElementById('test-4-result').innerHTML = results.join('');
+        }
+
+        async function runTest5() {
+            const results = [];
+            document.getElementById('test-5-result').innerHTML = '<div class="result-item">⏳ Testing view switching...</div>';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/dashboard`);
+                const html = await response.text();
+
+                // Check view buttons exist
+                const views = ['cards', 'table', 'timeline'];
+                views.forEach(view => {
+                    if (html.includes(`data-view="${view}"`)) {
+                        results.push(addResult(5, true, `${view} view button present`));
+                    } else {
+                        results.push(addResult(5, false, `${view} view button missing`, 'warning'));
+                    }
+                });
+
+                // Check renderUpdatesInView function
+                if (html.includes('renderUpdatesInView')) {
+                    results.push(addResult(5, true, 'renderUpdatesInView function exists'));
+                } else {
+                    results.push(addResult(5, false, 'renderUpdatesInView missing'));
+                }
+
+                // Check filteredUpdates state variable
+                if (html.includes('window.filteredUpdates') || html.includes('filteredUpdates =')) {
+                    results.push(addResult(5, true, 'filteredUpdates state variable tracked'));
+                } else {
+                    results.push(addResult(5, false, 'filteredUpdates state missing', 'warning'));
+                }
+
+            } catch (error) {
+                results.push(addResult(5, false, `Error: ${error.message}`));
+            }
+
+            document.getElementById('test-5-result').innerHTML = results.join('');
+        }
+
+        function loadLiveDashboard() {
+            const container = document.getElementById('dashboard-container');
+            container.innerHTML = `
+                <div class="result-item passed">✅ Loading live dashboard...</div>
+                <iframe src="${SERVER_URL}/dashboard"></iframe>
+                <div style="margin-top: 15px; padding: 15px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px;">
+                    <strong>⚠️ Manual Test Instructions:</strong>
+                    <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>Click "High Impact" quick filter → verify cards filter</li>
+                        <li>Select an authority from dropdown → verify filtering works</li>
+                        <li>Type in search box → verify real-time filtering</li>
+                        <li>Switch to Table view → verify same filtered data shows</li>
+                        <li>Switch to Timeline view → verify data persists</li>
+                        <li>Click "Clear Filters" → verify all updates return</li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        async function runAllTests() {
+            allResults = [];
+            document.getElementById('overall-summary').innerHTML = '<div class="result-item">⏳ Running all tests...</div>';
+
+            await runTest1();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await runTest2();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await runTest3();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await runTest4();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            await runTest5();
+
+            // Generate summary
+            const passed = allResults.filter(r => r.passed).length;
+            const failed = allResults.filter(r => !r.passed).length;
+            const total = allResults.length;
+            const passRate = ((passed / total) * 100).toFixed(1);
+
+            const summaryHTML = `
+                <div class="summary">
+                    <h3>📊 Test Results Summary</h3>
+                    <div style="display: flex; gap: 30px; margin: 20px 0;">
+                        <div class="metric">
+                            <div class="metric-value" style="color: #10b981;">${passed}</div>
+                            <div class="metric-label">Passed</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" style="color: #ef4444;">${failed}</div>
+                            <div class="metric-label">Failed</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" style="color: #3b82f6;">${total}</div>
+                            <div class="metric-label">Total</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" style="color: ${passRate >= 80 ? '#10b981' : '#f59e0b'};">${passRate}%</div>
+                            <div class="metric-label">Pass Rate</div>
+                        </div>
+                    </div>
+                    ${failed === 0
+                        ? '<p style="color: #10b981; font-size: 18px; font-weight: 600;">🎉 All automated tests passed!</p>'
+                        : '<p style="color: #f59e0b; font-size: 18px; font-weight: 600;">⚠️ Some tests failed. Review results above.</p>'
+                    }
+                    <p style="margin-top: 15px; color: #6b7280;">
+                        <strong>Next step:</strong> Load live dashboard (Test 6) for manual UX validation.
+                    </p>
+                </div>
+            `;
+
+            document.getElementById('overall-summary').innerHTML = summaryHTML;
+
+            // Scroll to summary
+            document.getElementById('overall-summary').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    </script>
+
+    <footer style="margin-top: 50px; padding: 25px; background: #f9fafb; border-top: 2px solid #e5e7eb; text-align: center; border-radius: 8px;">
+        <p style="color: #6b7280; margin: 5px 0;">🧪 Dashboard Filter Smoke Test Suite</p>
+        <p style="color: #9ca3af; font-size: 13px;">Horizon Scanner Backend | Filter System Refactor Validation</p>
+        <p class="timestamp">Report generated: <span id="report-time"></span></p>
+        <script>document.getElementById('report-time').textContent = new Date().toLocaleString();</script>
+    </footer>
+</body>
+</html>

@@ -1,21 +1,65 @@
 // src/routes/templates/clientScripts.js
 // Complete solution with WorkspaceModule included
 
-const { getWorkspaceModule } = require('./clientModules/workspaceModule')
+const { getSectorAliasMap } = require('../../utils/sectorTaxonomy')
 
-function getClientScripts() {
-  // Get the workspace module code
-  const workspaceModuleCode = getWorkspaceModule()
+function sanitizeAliasMap(map) {
+  if (typeof map === 'string') {
+    return map.replace(/</g, '\\u003c')
+  }
+  const source = map || getSectorAliasMap()
+  return JSON.stringify(source).replace(/</g, '\\u003c')
+}
+
+function getWorkspaceBootstrapScripts(aliasMap) {
+  const aliasMapJson = sanitizeAliasMap(aliasMap)
 
   return `
-    <!-- Include Workspace Module First -->
+    <!-- Sector alias bootstrap -->
     <script>
-        ${workspaceModuleCode}
+        window.__sectorAliasMap = window.__sectorAliasMap || ${aliasMapJson};
     </script>
-    
+    <!-- Include Workspace Module First -->
+    <script src="/js/workspaceModule.js"></script>
+  `
+}
+
+function getClientScripts(options = {}) {
+  const {
+    includeWorkspaceModule = true,
+    includeAliasBootstrap = true,
+    aliasMap
+  } = options
+
+  const scripts = []
+  let aliasMapJson
+
+  if (includeAliasBootstrap || includeWorkspaceModule) {
+    aliasMapJson = sanitizeAliasMap(aliasMap)
+  }
+
+  if (includeAliasBootstrap) {
+    scripts.push(`
+    <!-- Sector alias bootstrap -->
+    <script>
+        window.__sectorAliasMap = window.__sectorAliasMap || ${aliasMapJson};
+    </script>
+    `)
+  }
+
+  if (includeWorkspaceModule) {
+    scripts.push(`
+    <!-- Include Workspace Module First -->
+    <script src="/js/workspaceModule.js"></script>
+    `)
+  }
+
+  scripts.push(`
     <!-- Then include the rest of the client scripts -->
     ${getClientScriptsContent()}
-    `
+    `)
+
+  return scripts.join('\n')
 }
 
 function getClientScriptsContent() {
@@ -62,6 +106,20 @@ function getClientScriptsContent() {
                 .replace(/'/g, '&#39;');
         }
 
+        function getSectorAliasMap() {
+            const map = window.__sectorAliasMap;
+            return map && typeof map === 'object' ? map : {};
+        }
+
+        function normalizeSectorLabel(value) {
+            if (value == null) return '';
+            const raw = String(value).trim();
+            if (!raw) return '';
+            const key = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const aliasMap = getSectorAliasMap();
+            return aliasMap[key] || raw;
+        }
+
         function isFallbackSummary(summary = '') {
             const normalized = summary.trim().toLowerCase();
             return normalized.startsWith('informational regulatory update') ||
@@ -72,7 +130,7 @@ function getClientScriptsContent() {
 
         // Define critical functions immediately
         window.updateLiveCounters = function() {
-            console.log('🔄 Updating live counters...');
+            console.log('[refresh] Updating live counters...');
             
             fetch('/api/stats/live')
                 .then(response => response.json())
@@ -101,7 +159,7 @@ function getClientScriptsContent() {
         };
         
         window.refreshData = async function() {
-            console.log('🔄 Refresh data called');
+            console.log('[refresh] Refresh data called');
 
             const btn = event?.target || document.getElementById('refreshBtn');
             if (btn) btn.disabled = true;
@@ -145,7 +203,7 @@ function getClientScriptsContent() {
             if (!value) return '';
             return String(value)
                 .replace(/[-_]/g, ' ')
-                .replace(/\b\w/g, char => char.toUpperCase());
+                .replace(/\b([a-zA-Z])/g, char => char.toUpperCase());
         }
 
         function hasActiveNonCategoryFilters(filters) {
@@ -159,7 +217,7 @@ function getClientScriptsContent() {
             );
         }
 
-        function filterByCategory(category) {
+        async function filterByCategory(category) {
             console.log('Filtering by category:', category);
             try {
                 let filters = ensureFilterState();
@@ -174,7 +232,7 @@ function getClientScriptsContent() {
 
                 filters.category = category || 'all';
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
 
                 const normalized = (filters.category || 'all').toLowerCase();
                 const message = normalized === 'all'
@@ -187,7 +245,7 @@ function getClientScriptsContent() {
             }
         }
 
-        function filterByAuthority(authority) {
+        async function filterByAuthority(authority) {
             console.log('Filtering by authority:', authority);
             try {
                 const filters = ensureFilterState();
@@ -197,7 +255,7 @@ function getClientScriptsContent() {
                     delete filters.authority;
                 }
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
 
                 showMessage(authority ? 'Showing ' + authority + ' updates' : 'Showing all authorities', 'info');
             } catch (error) {
@@ -206,7 +264,7 @@ function getClientScriptsContent() {
             }
         }
 
-        function filterBySector(sector) {
+        async function filterBySector(sector) {
             console.log('Filtering by sector:', sector);
             try {
                 const filters = ensureFilterState();
@@ -216,7 +274,7 @@ function getClientScriptsContent() {
                     delete filters.sector;
                 }
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
 
                 showMessage(sector ? 'Showing ' + sector + ' updates' : 'Showing all sectors', 'info');
             } catch (error) {
@@ -225,7 +283,7 @@ function getClientScriptsContent() {
             }
         }
 
-        function filterByImpactLevel(impact) {
+        async function filterByImpactLevel(impact) {
             console.log('Filtering by impact level:', impact);
             try {
                 const filters = ensureFilterState();
@@ -235,7 +293,7 @@ function getClientScriptsContent() {
                     delete filters.impact;
                 }
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
 
                 showMessage(impact ? 'Showing ' + impact + ' impact updates' : 'Showing all impact levels', 'info');
             } catch (error) {
@@ -244,7 +302,7 @@ function getClientScriptsContent() {
             }
         }
 
-        function filterByDateRange(range) {
+        async function filterByDateRange(range) {
             console.log('Filtering by date range:', range);
             try {
                 const filters = ensureFilterState();
@@ -254,7 +312,7 @@ function getClientScriptsContent() {
                     delete filters.range;
                 }
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
 
                 const labelMap = {
                     today: 'today',
@@ -274,7 +332,7 @@ function getClientScriptsContent() {
             }
         }
 
-        function filterByUrgency(urgency) {
+        async function filterByUrgency(urgency) {
             console.log('Filtering by urgency:', urgency);
             try {
                 const filters = ensureFilterState();
@@ -284,7 +342,7 @@ function getClientScriptsContent() {
                     delete filters.urgency;
                 }
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
 
                 showMessage(urgency ? 'Showing ' + urgency + ' urgency updates' : 'Showing all urgency levels', 'info');
             } catch (error) {
@@ -295,12 +353,12 @@ function getClientScriptsContent() {
         
         // Analytics refresh function
         window.refreshAnalytics = async function() {
-            console.log('📊 Refreshing analytics...');
+            console.log('[analytics] Refreshing analytics...');
 
             const btn = event?.target;
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = '🔄 Refreshing...';
+                btn.textContent = '[refresh] Refreshing...';
             }
 
             try {
@@ -313,7 +371,7 @@ function getClientScriptsContent() {
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.textContent = '🔄 Refresh Analytics';
+                    btn.textContent = '[refresh] Refresh Analytics';
                 }
             }
         };
@@ -358,7 +416,9 @@ function getClientScriptsContent() {
         // =================
         let allUpdatesData = null;
         let firmProfile = null;
-        let availableSectors = [];
+        let availableSectors = Array.isArray(window.availableSectors)
+            ? Array.from(new Set(window.availableSectors.map(normalizeSectorLabel).filter(Boolean)))
+            : [];
         let workspaceStats = { pinnedItems: 0, savedSearches: 0, activeAlerts: 0 };
         let analyticsPreviewData = null;
         const ANALYTICS_LEVELS = ['Significant', 'Moderate', 'Informational'];
@@ -380,18 +440,373 @@ function getClientScriptsContent() {
         let itemsPerPage = 20;
         let shareInProgress = false;
 
+        if (Array.isArray(window.__workspacePinnedUrls)) {
+            setPinnedUrlSet(window.__workspacePinnedUrls);
+        }
+
+        if (window.__workspaceStats && typeof window.__workspaceStats === 'object') {
+            workspaceStats = Object.assign({}, workspaceStats, window.__workspaceStats);
+        }
+
+        function toNumericCount(value, fallback = 0) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : fallback;
+        }
+
+        function setPinnedUrlSet(values) {
+            if (Array.isArray(values)) {
+                pinnedUrls = new Set(values.filter(Boolean).map(value => String(value)));
+            } else if (values instanceof Set) {
+                pinnedUrls = new Set(Array.from(values).filter(Boolean).map(value => String(value)));
+            } else {
+                pinnedUrls = new Set();
+            }
+            workspaceStats.pinnedItems = pinnedUrls.size;
+        }
+
+        async function synchronizePinnedState(options = {}) {
+            const module = window.WorkspaceModule;
+            if (!module) return pinnedUrls;
+            try {
+                let readyPromise = null;
+                if (typeof module.ready === 'function') {
+                    readyPromise = module.ready();
+                } else if (typeof module.init === 'function') {
+                    readyPromise = module.init();
+                }
+                if (readyPromise && typeof readyPromise.then === 'function') {
+                    await readyPromise;
+                }
+                if (typeof module.getPinnedUrls === 'function') {
+                    const urls = module.getPinnedUrls();
+                    if (Array.isArray(urls)) {
+                        setPinnedUrlSet(urls);
+                        if (!options.silent) {
+                            updateWorkspaceCounts();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Pinned synchronization failed:', error);
+            }
+            return pinnedUrls;
+        }
+
+        window.addEventListener('workspace:pins', (event) => {
+            const detail = event && event.detail;
+            const urls = Array.isArray(detail?.urls)
+                ? detail.urls
+                : Array.isArray(detail)
+                    ? detail
+                    : [];
+            setPinnedUrlSet(urls);
+            updateWorkspaceCounts();
+        });
+
+        window.addEventListener('workspace:stats', (event) => {
+            const detail = event && event.detail;
+            if (detail && typeof detail === 'object') {
+                if ('pinnedItems' in detail) {
+                    workspaceStats.pinnedItems = toNumericCount(detail.pinnedItems, workspaceStats.pinnedItems);
+                }
+                if ('savedSearches' in detail) {
+                    workspaceStats.savedSearches = toNumericCount(detail.savedSearches, workspaceStats.savedSearches);
+                }
+                if ('activeAlerts' in detail) {
+                    workspaceStats.activeAlerts = toNumericCount(detail.activeAlerts, workspaceStats.activeAlerts);
+                }
+                updateWorkspaceCounts(detail);
+            }
+        });
+
         let systemStatus = {
             database: false,
             api: false,
             overall: false
         };
+        let priorityHighlightLookup = {};
+        let reviewedHighlightIds = new Set();
+
+        const serverFilterCache = new Map();
+
+        function buildFilterKey(filters) {
+            return JSON.stringify({
+                category: filters.category || 'all',
+                authority: filters.authority || null,
+                sector: filters.sector || null,
+                impact: filters.impact || null,
+                urgency: filters.urgency || null,
+                range: filters.range || null,
+                search: filters.search || null,
+                sort: filters.sort || 'newest'
+            });
+        }
+
+        function buildFilterQuery(filters) {
+            const params = new URLSearchParams();
+            if (filters.category && filters.category !== 'all') params.set('category', filters.category);
+            if (filters.authority) params.set('authority', String(filters.authority));
+            if (filters.sector) params.set('sector', String(filters.sector));
+            if (filters.impact) params.set('impact', String(filters.impact));
+            if (filters.urgency) params.set('urgency', String(filters.urgency));
+            if (filters.range) params.set('range', String(filters.range));
+            if (filters.search) params.set('search', String(filters.search));
+            params.set('limit', '100');
+            return params;
+        }
+
+        async function fetchUpdatesFromServer(filters) {
+            const key = buildFilterKey(filters);
+            if (serverFilterCache.has(key)) {
+                return serverFilterCache.get(key);
+            }
+
+            try {
+                showMessage('Loading more updates for this filter...', 'info');
+                const params = buildFilterQuery(filters);
+                const response = await fetch('/api/updates?' + params.toString());
+                const data = await response.json();
+                if (data.success && Array.isArray(data.updates)) {
+                    serverFilterCache.set(key, data.updates);
+                    return data.updates;
+                }
+            } catch (error) {
+                console.error('Remote filter fetch failed:', error);
+                showMessage('Unable to load additional updates for this filter.', 'error');
+            }
+            return [];
+        }
+
+        function shouldFetchFromServer(filters, localCount) {
+            if (localCount > 0) return false;
+            if (filters.category && filters.category !== 'all') return true;
+            if (filters.authority) return true;
+            if (filters.sector) return true;
+            if (filters.impact) return true;
+            if (filters.urgency) return true;
+            if (filters.range) return true;
+            if (filters.search) return true;
+            return false;
+        }
+
+        function getBusinessImpactScore(update) {
+            return Number(update.business_impact_score || update.businessImpactScore || 0);
+        }
+
+        function renderImpactGauge(score, compact = false) {
+            if (score == null || isNaN(score)) {
+                return '<div class="impact-gauge ' + (compact ? 'compact ' : '') + 'impact-low">' +
+                    '<div class="impact-gauge-track"><div class="impact-gauge-fill impact-low" style="width:0%"></div></div>' +
+                    '<span class="impact-gauge-label">N/A</span>' +
+                '</div>';
+            }
+
+            const clamped = Math.max(0, Math.min(10, Number(score)));
+            const percent = Math.round((clamped / 10) * 100);
+            const level = clamped >= 7 ? 'impact-high' : clamped >= 4 ? 'impact-medium' : 'impact-low';
+
+            return '<div class="impact-gauge ' + (compact ? 'compact ' : '') + level + '">' +
+                '<div class="impact-gauge-track">' +
+                    '<div class="impact-gauge-fill ' + level + '" style="width:' + percent + '%"></div>' +
+                '</div>' +
+                '<span class="impact-gauge-label">' + clamped + '/10</span>' +
+            '</div>';
+        }
+
+        function isHighImpactUpdate(update) {
+            return (
+                (update.impactLevel === 'Significant' || update.impact_level === 'Significant') ||
+                getBusinessImpactScore(update) >= 7 ||
+                (update.urgency || '').toLowerCase() === 'high'
+            );
+        }
+
+        function getDeadlineDate(update) {
+            const raw = update.compliance_deadline || update.complianceDeadline || update.deadline;
+            if (!raw) return null;
+            const date = new Date(raw);
+            return isNaN(date) ? null : date;
+        }
+
+        function computePriorityHighlights(updates) {
+            if (!updates || !Array.isArray(updates)) return [];
+
+            const now = new Date();
+            const upcomingWindow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+            const highlights = [];
+            const seen = new Set();
+
+            const addHighlight = (update, reason) => {
+                const key = String(update.id || update.url || update.headline || Math.random());
+                if (seen.has(key)) return;
+                seen.add(key);
+                highlights.push({ update, reason });
+            };
+
+            const highImpactUpdates = updates
+                .filter(isHighImpactUpdate)
+                .sort((a, b) => getBusinessImpactScore(b) - getBusinessImpactScore(a));
+
+            highImpactUpdates.forEach(update => addHighlight(update, 'High Impact'));
+
+            const deadlineUpdates = updates
+                .filter(update => {
+                    const deadline = getDeadlineDate(update);
+                    return deadline && deadline >= now && deadline <= upcomingWindow;
+                })
+                .sort((a, b) => getDeadlineDate(a) - getDeadlineDate(b));
+
+            deadlineUpdates.forEach(update => addHighlight(update, 'Upcoming Deadline'));
+
+            const urgentUpdates = updates
+                .filter(update => (update.urgency || '').toLowerCase() === 'high')
+                .sort((a, b) => {
+                    const scoreB = getBusinessImpactScore(b);
+                    const scoreA = getBusinessImpactScore(a);
+                    return scoreB - scoreA;
+                });
+
+            urgentUpdates.forEach(update => addHighlight(update, 'Urgent Task'));
+
+            return highlights.slice(0, 6);
+        }
+
+        function renderPriorityHighlights() {
+            const container = document.getElementById('priorityHighlights');
+            if (!container) return;
+
+            const items = computePriorityHighlights(window.originalUpdates || []);
+            if (!items.length) {
+                container.innerHTML = '<div class="priority-empty">No high impact priorities detected this week. Keep an eye on new updates.</div>';
+                priorityHighlightLookup = {};
+                return;
+            }
+
+            const cards = items.map(({ update, reason }, index) => {
+                const rawId = update.id || update.url || ('priority-' + index);
+                const safeId = rawId.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
+                priorityHighlightLookup[safeId] = update;
+
+                const summarySource = update.ai_summary || update.summary || 'No summary available';
+                const summaryText = truncateText(summarySource, 200);
+                const publishedDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);
+                const deadline = getDeadlineDate(update);
+                const gauge = renderImpactGauge(getBusinessImpactScore(update), true);
+                const urgency = (update.urgency || 'Low').toLowerCase();
+                const reasonClass = reason === 'Upcoming Deadline' ? 'deadline' : 'high-impact';
+                const authority = escapeHtml(update.authority || 'Unknown authority');
+                const headline = escapeHtml(update.headline || 'No headline available');
+                const summaryEscaped = escapeHtml(summaryText);
+                const detailsEscaped = escapeHtml(summarySource);
+                const safeUrl = update.url ? escapeHtml(update.url) : null;
+                const link = safeUrl ? '<a href="' + safeUrl + '" target="_blank" rel="noopener">Open source ^</a>' : '';
+                const reviewedClass = reviewedHighlightIds.has(safeId) ? ' reviewed' : '';
+
+                let card = '';
+                card += '<div class="priority-card' + reviewedClass + '" id="priority-card-' + safeId + '">';
+                card += '<div class="priority-card-header">';
+                card += '<div class="priority-card-meta">';
+                card += '<span class="priority-badge ' + reasonClass + '">' + reason + '</span>';
+                card += '<span class="stat-subtext">' + publishedDate + ' - ' + authority + '</span>';
+                card += '</div>';
+                card += '<button class="priority-toggle" data-priority-toggle="' + safeId + '">Details</button>';
+                card += '</div>';
+                card += '<h3 class="priority-card-title">' + headline + '</h3>';
+                card += '<div class="priority-card-summary" id="priority-summary-' + safeId + '">' + summaryEscaped + '</div>';
+                card += '<div class="priority-card-metrics">';
+                card += gauge;
+                card += '<span class="priority-urgency urgency-' + urgency + '">' + (update.urgency || 'Low') + '</span>';
+                if (deadline) {
+                    card += '<span class="priority-deadline">Due ' + formatDateDisplay(deadline) + '</span>';
+                }
+                card += '</div>';
+                card += '<div class="priority-actions">';
+                card += '<button class="priority-action-btn primary" data-priority-action="workspace" data-highlight-id="' + safeId + '">Add to Workspace</button>';
+                card += '<button class="priority-action-btn secondary" data-priority-action="assign" data-highlight-id="' + safeId + '">Assign Task</button>';
+                card += '<button class="priority-action-btn muted" data-priority-action="reviewed" data-highlight-id="' + safeId + '">Mark as Reviewed</button>';
+                card += '</div>';
+                card += '<div class="priority-card-details" id="priority-details-' + safeId + '">';
+                card += '<p>' + detailsEscaped + '</p>';
+                card += link;
+                card += '</div>';
+                card += '</div>';
+                return card;
+            });
+
+            container.innerHTML = cards.join('');
+
+            if (!container.dataset.priorityBound) {
+                container.addEventListener('click', function(event) {
+                    const toggleBtn = event.target.closest('[data-priority-toggle]');
+                    if (toggleBtn) {
+                        const toggleId = toggleBtn.getAttribute('data-priority-toggle');
+                        if (toggleId && window.PriorityModule && typeof PriorityModule.toggleDetails === 'function') {
+                            PriorityModule.toggleDetails(toggleId);
+                        }
+                        return;
+                    }
+
+                    const actionBtn = event.target.closest('[data-priority-action]');
+                    if (!actionBtn) return;
+                    const action = actionBtn.getAttribute('data-priority-action');
+                    const id = actionBtn.getAttribute('data-highlight-id');
+                    if (action && id && window.PriorityModule && typeof PriorityModule.handleAction === 'function') {
+                        PriorityModule.handleAction(action, id);
+                    }
+                });
+                container.dataset.priorityBound = 'true';
+            }
+        }
+
+        function togglePriorityDetails(id) {
+            const card = document.getElementById('priority-card-' + id);
+            if (!card) return;
+            const expanded = card.classList.toggle('expanded');
+            const toggleBtn = card.querySelector('.priority-toggle');
+            if (toggleBtn) {
+                toggleBtn.textContent = expanded ? 'Hide' : 'Details';
+            }
+        }
+
+        function handlePriorityAction(action, id) {
+            const update = priorityHighlightLookup[id];
+            if (!update) {
+                showMessage('Unable to perform action on this update.', 'error');
+                return;
+            }
+
+            switch (action) {
+                case 'workspace': {
+                    const key = update.url || update.id || id;
+                    if (typeof togglePin === 'function' && key) {
+                        togglePin(key);
+                    }
+                    break;
+                }
+                case 'assign': {
+                    showMessage('Task assigned to compliance team for ' + (update.authority || 'this update'), 'success');
+                    break;
+                }
+                case 'reviewed': {
+                    reviewedHighlightIds.add(id);
+                    const card = document.getElementById('priority-card-' + id);
+                    if (card) {
+                        card.classList.add('reviewed');
+                    }
+                    showMessage('Marked as reviewed', 'info');
+                    break;
+                }
+                default:
+                    showMessage('Action not available yet.', 'warning');
+            }
+        }
         
         // =================
         // INITIALIZATION FUNCTIONS
         // =================
         
         function initializeFilters() {
-            console.log('🔧 Initializing filters...');
+            console.log('[tools] Initializing filters...');
             
             try {
                 document.querySelectorAll('.filter-option').forEach(option => {
@@ -410,7 +825,7 @@ function getClientScriptsContent() {
                 
                 console.log('[OK] Filters initialized');
             } catch (error) {
-                console.error('❌ Error initializing filters:', error);
+                console.error('X Error initializing filters:', error);
             }
         }
         
@@ -424,7 +839,7 @@ function getClientScriptsContent() {
         
         async function loadIntelligenceStreams() {
             try {
-                console.log('📊 Loading intelligence streams...');
+                console.log('[analytics] Loading intelligence streams...');
                 
                 const response = await fetch('/api/streams');
                 const data = await response.json();
@@ -459,8 +874,12 @@ function getClientScriptsContent() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    workspaceStats = data.stats;
-                    updateWorkspaceCounts();
+                    workspaceStats = {
+                        pinnedItems: toNumericCount(data.stats?.pinnedItems, workspaceStats.pinnedItems),
+                        savedSearches: toNumericCount(data.stats?.savedSearches, workspaceStats.savedSearches),
+                        activeAlerts: toNumericCount(data.stats?.activeAlerts, workspaceStats.activeAlerts)
+                    };
+                    updateWorkspaceCounts(workspaceStats);
                 }
             } catch (error) {
                 console.warn('Workspace stats not available:', error);
@@ -476,19 +895,19 @@ function getClientScriptsContent() {
             const streams = [
                 {
                     id: 'urgent',
-                    title: '🔴 Critical Impact',
+                    title: 'Red Critical Impact',
                     updates: updates.filter(u => u.urgency === 'High'),
                     expanded: true
                 },
                 {
                     id: 'moderate',
-                    title: '🟡 Active Monitoring',
+                    title: 'Yellow Active Monitoring',
                     updates: updates.filter(u => u.urgency === 'Medium'),
                     expanded: false
                 },
                 {
                     id: 'background',
-                    title: '🟢 Background Intelligence',
+                    title: 'Green Background Intelligence',
                     updates: updates.filter(u => u.urgency === 'Low'),
                     expanded: false
                 }
@@ -530,6 +949,13 @@ function getClientScriptsContent() {
             const contentTypeBadge = getContentTypeBadge(update)
             const sectorTags = getSectorTags(update)
             const aiFeatures = getAIFeatures(update)
+            const impactScore = getBusinessImpactScore(update)
+            const impactGaugeDetail = impactScore
+                ? '<div class="detail-item impact-gauge-item">' +
+                    '<div class="detail-label">Impact</div>' +
+                    renderImpactGauge(impactScore) +
+                  '</div>'
+                : ''
 
             const aiSummary = update.ai_summary ? update.ai_summary.trim() : ''
             const useFallbackSummary = isFallbackSummary(aiSummary)
@@ -556,9 +982,9 @@ function getClientScriptsContent() {
                             impactBadge +
                         '</div>' +
                         '<div class="update-actions">' +
-                            '<button class="action-btn bookmark-btn" data-update-id="' + (update.id || '') + '" title="Bookmark">⭐</button>' +
-                            '<button class="action-btn share-btn" data-update-id="' + (update.id || '') + '" title="Share">🔗</button>' +
-                            '<button class="action-btn details-btn" data-update-id="' + (update.id || '') + '" title="Details">👁️</button>' +
+                            '<button class="action-btn bookmark-btn" data-update-id="' + (update.id || '') + '" title="Bookmark">Star</button>' +
+                            '<button class="action-btn share-btn" data-update-id="' + (update.id || '') + '" title="Share">Link</button>' +
+                            '<button class="action-btn details-btn" data-update-id="' + (update.id || '') + '" title="Details">View</button>' +
                         '</div>' +
                     '</div>' +
                     '<h3 class="update-headline">' +
@@ -572,11 +998,7 @@ function getClientScriptsContent() {
                             '<div class="detail-label">Regulatory Area</div>' +
                             '<div class="detail-value">' + (update.area || 'General') + '</div>' +
                         '</div>' +
-                        (update.business_impact_score ?
-                            '<div class="detail-item">' +
-                                '<div class="detail-label">Impact Score</div>' +
-                                '<div class="detail-value">' + update.business_impact_score + '/10</div>' +
-                            '</div>' : '') +
+                        impactGaugeDetail +
                         (update.urgency ?
                             '<div class="detail-item">' +
                                 '<div class="detail-label">Urgency</div>' +
@@ -641,19 +1063,19 @@ function getClientScriptsContent() {
 
             // Primary AI features (if available)
             if (update.business_impact_score && update.business_impact_score >= 7) {
-                features.push('<span class="ai-feature high-impact">🔥 High Impact (' + update.business_impact_score + '/10)</span>');
+                features.push('<span class="ai-feature high-impact">Hot High Impact (' + update.business_impact_score + '/10)</span>');
             }
 
             if (update.urgency === 'High') {
-                features.push('<span class="ai-feature urgent">🚨 Urgent</span>');
+                features.push('<span class="ai-feature urgent">Alert Urgent</span>');
             }
 
             if (update.ai_tags && update.ai_tags.includes('has:penalty')) {
-                features.push('<span class="ai-feature enforcement">🚨 Enforcement Action</span>');
+                features.push('<span class="ai-feature enforcement">Alert Enforcement Action</span>');
             }
 
             if (update.ai_confidence_score && update.ai_confidence_score >= 0.9) {
-                features.push('<span class="ai-feature high-confidence">🤖 High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
+                features.push('<span class="ai-feature high-confidence">AI High Confidence (' + Math.round(update.ai_confidence_score * 100) + '%)</span>');
             }
 
             // Fallback features based on available data
@@ -662,20 +1084,20 @@ function getClientScriptsContent() {
                 const text = (update.headline + ' ' + (update.summary || update.ai_summary || '')).toLowerCase();
 
                 if (text.includes('fine') || text.includes('penalty') || text.includes('enforcement') || text.includes('breach')) {
-                    features.push('<span class="ai-feature enforcement">⚖️ Enforcement</span>');
+                    features.push('<span class="ai-feature enforcement">Law Enforcement</span>');
                 }
 
                 if (text.includes('consultation') || text.includes('draft') || text.includes('guidance')) {
-                    features.push('<span class="ai-feature guidance">📋 Guidance</span>');
+                    features.push('<span class="ai-feature guidance">Note Guidance</span>');
                 }
 
                 if (text.includes('deadline') || text.includes('compliance') || text.includes('must')) {
-                    features.push('<span class="ai-feature deadline">📅 Action Required</span>');
+                    features.push('<span class="ai-feature deadline">Date Action Required</span>');
                 }
 
                 // Show authority as a feature if no other features found
                 if (features.length === 0 && update.authority) {
-                    features.push('<span class="ai-feature authority">🏛️ ' + update.authority + '</span>');
+                    features.push('<span class="ai-feature authority">Institution ' + update.authority + '</span>');
                 }
             }
 
@@ -708,12 +1130,35 @@ function getClientScriptsContent() {
                 pinnedUrls.add(url);
                 showMessage('Item pinned', 'success');
             }
+            workspaceStats.pinnedItems = pinnedUrls.size;
             updateWorkspaceCounts();
         }
         
-        function updateWorkspaceCounts() {
+        function updateWorkspaceCounts(statOverrides) {
+            if (statOverrides && typeof statOverrides === 'object') {
+                if ('pinnedItems' in statOverrides) {
+                    workspaceStats.pinnedItems = toNumericCount(statOverrides.pinnedItems, workspaceStats.pinnedItems);
+                }
+                if ('savedSearches' in statOverrides) {
+                    workspaceStats.savedSearches = toNumericCount(statOverrides.savedSearches, workspaceStats.savedSearches);
+                }
+                if ('activeAlerts' in statOverrides) {
+                    workspaceStats.activeAlerts = toNumericCount(statOverrides.activeAlerts, workspaceStats.activeAlerts);
+                }
+            }
+
+            if (!Number.isFinite(workspaceStats.pinnedItems)) {
+                workspaceStats.pinnedItems = pinnedUrls.size;
+            }
+
             const pinnedEl = document.getElementById('pinnedCount');
-            if (pinnedEl) pinnedEl.textContent = pinnedUrls.size;
+            if (pinnedEl) pinnedEl.textContent = workspaceStats.pinnedItems ?? pinnedUrls.size;
+
+            const savedEl = document.getElementById('savedSearchesCount');
+            if (savedEl) savedEl.textContent = workspaceStats.savedSearches ?? 0;
+
+            const alertsEl = document.getElementById('customAlertsCount');
+            if (alertsEl) alertsEl.textContent = workspaceStats.activeAlerts ?? 0;
         }
         
         function updateAnalyticsPreview() {
@@ -729,7 +1174,7 @@ function getClientScriptsContent() {
             const analyticsPage = document.querySelector('.analytics-page');
             if (!analyticsPage) return;
 
-            console.log('📈 Initializing analytics dashboard...');
+            console.log('Growth Initializing analytics dashboard...');
 
             analyticsState.filters = {
                 authority: analyticsPage.dataset.selectedAuthority || '',
@@ -957,8 +1402,8 @@ function getClientScriptsContent() {
             ).join('');
         }
         
-        function applyActiveFilters() {
-            console.log('🎯 Applying filters from UI controls');
+        async function applyActiveFilters() {
+            console.log('Target Applying filters from UI controls');
 
             try {
                 const filters = ensureFilterState();
@@ -1045,9 +1490,9 @@ function getClientScriptsContent() {
                     }
                 });
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
             } catch (error) {
-                console.error('❌ Error applying filters:', error);
+                console.error('X Error applying filters:', error);
                 showMessage('Error applying filters: ' + error.message, 'error');
             }
         }
@@ -1083,12 +1528,13 @@ function getClientScriptsContent() {
         }
         
         async function initializeSystem() {
-            console.log('🚀 Initializing system...');
+            console.log('Launch Initializing system...');
             
             try {
                 // Initialize WorkspaceModule if it exists
                 if (window.WorkspaceModule && window.WorkspaceModule.init) {
                     await window.WorkspaceModule.init();
+                    await synchronizePinnedState({ silent: true });
                 }
                 
                 initializeFilters();
@@ -1102,7 +1548,8 @@ function getClientScriptsContent() {
                 updateLiveCounters();
                 setInterval(updateLiveCounters, 30000);
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
+                renderPriorityHighlights();
 
                 // Event delegation for action buttons (bookmark, share, details)
                 document.addEventListener('click', function(e) {
@@ -1149,7 +1596,7 @@ function getClientScriptsContent() {
 
                 console.log('[OK] System initialized');
             } catch (error) {
-                console.error('❌ Initialization failed:', error);
+                console.error('X Initialization failed:', error);
             }
         }
         
@@ -1240,13 +1687,16 @@ function getClientScriptsContent() {
 
         function matchesSector(update, sector) {
             if (!sector) return true;
-            const target = sector.toLowerCase();
+            const target = normalizeSectorLabel(sector);
+            if (!target) return false;
             const sectors = [].concat(
                 update.firm_types_affected || [],
                 update.primarySectors || [],
                 update.primary_sectors || [],
                 update.sector ? [update.sector] : []
-            ).map(value => (value || '').toLowerCase());
+            )
+            .map(value => normalizeSectorLabel(value))
+            .filter(Boolean);
             return sectors.includes(target);
         }
 
@@ -1393,13 +1843,13 @@ function getClientScriptsContent() {
             document.dispatchEvent(new CustomEvent('dashboard:updates-filtered', { detail: { updates } }));
         }
 
-        function applyCurrentFilters() {
-            console.log('🎯 applyCurrentFilters called');
+        async function applyCurrentFilters() {
+            console.log('Target applyCurrentFilters called');
             const filters = window.currentFilters = Object.assign({ category: 'all', sort: 'newest' }, window.currentFilters || {});
-            console.log('📊 Current filters:', filters);
+            console.log('[analytics] Current filters:', filters);
 
             let updates = originalUpdates.slice();
-            console.log('📦 Original updates count:', originalUpdates.length);
+            console.log('Package Original updates count:', originalUpdates.length);
 
             if (filters.category && filters.category !== 'all') {
                 updates = updates.filter(update => matchesCategory(update, filters.category));
@@ -1441,7 +1891,15 @@ function getClientScriptsContent() {
             }
 
             updates = applySort(updates, filters.sort);
-            console.log('✅ After filtering/sorting:', updates.length, 'updates');
+            console.log('Complete After filtering/sorting:', updates.length, 'updates');
+
+            if (shouldFetchFromServer(filters, updates.length)) {
+                const remoteUpdates = await fetchUpdatesFromServer(filters);
+                if (remoteUpdates.length > 0) {
+                    updates = applySort(remoteUpdates, filters.sort);
+                    console.log('Complete Loaded additional updates from server:', updates.length);
+                }
+            }
 
             setActiveCategoryButton(filters.category || 'all');
 
@@ -1449,21 +1907,22 @@ function getClientScriptsContent() {
                 btn.classList.toggle('active', btn.dataset.sort === filters.sort);
             });
 
-            console.log('🎨 Calling renderUpdatesList with', updates.length, 'updates');
+            console.log('Design Calling renderUpdatesList with', updates.length, 'updates');
             renderUpdatesList(updates);
-            console.log('✅ renderUpdatesList completed');
+            console.log('Complete renderUpdatesList completed');
+            renderPriorityHighlights();
         }
 
 
-        function sortUpdates(sortBy) {
+        async function sortUpdates(sortBy) {
             const filters = ensureFilterState();
             filters.sort = sortBy || 'newest';
-            applyCurrentFilters();
+            await applyCurrentFilters();
             showMessage('Sorted by ' + (filters.sort || 'newest'), 'info');
         }
 
 
-        function clearAllFilters(options = {}) {
+        async function clearAllFilters(options = {}) {
             const {
                 preserveCategory = false,
                 preserveSort = false,
@@ -1515,7 +1974,7 @@ function getClientScriptsContent() {
 
             // Apply unified filter pipeline (will show all updates)
             if (!skipApply) {
-                applyCurrentFilters();
+                await applyCurrentFilters();
             }
 
             if (!silent) {
@@ -1562,7 +2021,7 @@ function getClientScriptsContent() {
         }
         
         function loadMoreUpdates() {
-            console.log('📄 Loading more updates...');
+            console.log('Document Loading more updates...');
             
             const loadMoreBtn = document.getElementById('loadMoreBtn') || 
                                document.querySelector('.btn-secondary');
@@ -1605,7 +2064,7 @@ function getClientScriptsContent() {
         // =================
 
         function initializeViewSwitching() {
-            console.log('🔄 Initializing view switching...');
+            console.log('[refresh] Initializing view switching...');
 
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1625,7 +2084,7 @@ function getClientScriptsContent() {
         }
 
         function switchView(viewType) {
-            console.log('🔄 Switching view to: ' + viewType);
+            console.log('[refresh] Switching view to: ' + viewType);
 
             document.querySelectorAll('.view-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-view') === viewType);
@@ -1636,9 +2095,27 @@ function getClientScriptsContent() {
             renderUpdatesInView(viewType, window.filteredUpdates);
         }
 
+        function ensureUpdatesContainer() {
+            let container = document.getElementById('updates-container') ||
+                document.querySelector('.updates-container');
+
+            if (!container) {
+                const host = document.getElementById('narrativeCard') || document.querySelector('.card');
+                if (host) {
+                    container = document.createElement('div');
+                    container.id = 'updates-container';
+                    container.className = 'updates-container cards-view';
+                    container.innerHTML = buildEmptyStateHtml();
+                    host.appendChild(container);
+                    console.log('[design] Injected fallback updates container');
+                }
+            }
+
+            return container;
+        }
+
         function renderUpdatesInView(viewType, updates) {
-            const container = document.getElementById('updates-container') ||
-                            document.querySelector('.updates-container');
+            const container = ensureUpdatesContainer();
 
             if (!container) {
                 console.warn('Updates container not found');
@@ -1664,7 +2141,7 @@ function getClientScriptsContent() {
         function buildEmptyStateHtml() {
             return (
                 '<div class="no-updates">' +
-                    '<div class="no-updates-icon">📭</div>' +
+                    '<div class="no-updates-icon">Inbox</div>' +
                     '<h3>No updates found</h3>' +
                     '<p>Try adjusting your filters or search criteria.</p>' +
                     '<button onclick="clearAllFilters()" class="btn btn-secondary">Clear All Filters</button>' +
@@ -1804,7 +2281,7 @@ function getClientScriptsContent() {
             clearFilters,
             applyActiveFilters,
             applyCurrentFilters,
-            applyFilters(filterParams = {}) {
+            async applyFilters(filterParams = {}) {
                 const filters = ensureFilterState();
                 delete filters.specialView;
 
@@ -1909,15 +2386,16 @@ function getClientScriptsContent() {
                     cb.checked = urgencyValues.includes(cb.value);
                 });
 
-                applyCurrentFilters();
+                await applyCurrentFilters();
             },
-            applyFilter(filterName) {
+            async applyFilter(filterName) {
                 if (!filterName) {
-                    applyCurrentFilters();
+                    await applyCurrentFilters();
                     return;
                 }
 
                 if (filterName === 'pinned') {
+                    await synchronizePinnedState({ silent: true });
                     const filters = ensureFilterState();
                     filters.specialView = 'pinned';
                     const pinnedSet = new Set(Array.from(pinnedUrls).map(value => String(value)));
@@ -1935,7 +2413,7 @@ function getClientScriptsContent() {
 
                 const filters = ensureFilterState();
                 delete filters.specialView;
-                filterByCategory(filterName);
+                await filterByCategory(filterName);
             },
             getCurrentFilters() {
                 const filters = ensureFilterState();
@@ -1954,7 +2432,10 @@ function getClientScriptsContent() {
 
         if (typeof window.__flushFilterQueue === 'function') {
             try {
-                window.__flushFilterQueue();
+                const result = window.__flushFilterQueue();
+                if (result && typeof result.then === 'function') {
+                    result.catch(error => console.error('Queued filter flush failed:', error));
+                }
             } catch (error) {
                 console.error('Failed to flush queued filter calls:', error);
             }
@@ -2002,7 +2483,62 @@ function getClientScriptsContent() {
         window.applyCurrentFilters = applyCurrentFilters;
         window.checkSystemStatus = checkSystemStatus;
         window.initializeSystem = initializeSystem;
-        
+        window.renderPriorityHighlights = renderPriorityHighlights;
+        const ReportModule = (function() {
+            async function exportReport(type, filters = {}) {
+                const trigger = (window.event && window.event.target instanceof HTMLElement) ? window.event.target : null;
+                if (trigger) trigger.disabled = true;
+
+                try {
+                    showMessage('Generating report export...', 'info');
+
+                    const response = await fetch('/api/reports', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ report_type: type, filters })
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (!response.ok || !payload.success) {
+                        throw new Error(payload.error || 'Report export failed');
+                    }
+
+                    const html = payload.report?.html;
+                    if (!html) {
+                        throw new Error('Report response missing HTML content');
+                    }
+
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const baseName = (payload.report?.title || type)
+                        .replace(/[^a-z0-9]+/gi, '-')
+                        .replace(/^-+|-+$/g, '')
+                        .toLowerCase();
+                    const reportId = (payload.report && payload.report.id) || 'export';
+
+                    link.href = url;
+                    link.download = (baseName || 'report') + '-' + reportId + '.html';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                    showMessage('Report export ready. Download started.', 'success');
+                } catch (error) {
+                    console.error('Report export error:', error);
+                    showMessage('Report export failed: ' + error.message, 'error');
+                } finally {
+                    if (trigger) trigger.disabled = false;
+                }
+            }
+
+            return { exportReport };
+        })();
+
+        window.ReportModule = ReportModule;
+
         // Update action functions
         window.viewDetails = viewDetails;
         window.bookmarkUpdate = bookmarkUpdate;
@@ -2018,7 +2554,11 @@ function getClientScriptsContent() {
         window.renderCardsView = renderCardsView;
         window.renderTableView = renderTableView;
         window.renderTimelineView = renderTimelineView;
-        
+        window.PriorityModule = {
+            toggleDetails: togglePriorityDetails,
+            handleAction: handlePriorityAction
+        };
+
         // =================
         // START INITIALIZATION
         // =================
@@ -2039,5 +2579,6 @@ module.exports = {
   getCommonClientScripts: getClientScripts,
   getClientScripts,
   getSharedClientScripts: getClientScripts,
-  getCommonScripts: getClientScripts
+  getCommonScripts: getClientScripts,
+  getWorkspaceBootstrapScripts
 }

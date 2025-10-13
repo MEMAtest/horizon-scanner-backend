@@ -3,7 +3,7 @@ function getCounterModule() {
     // Counter Module
     const CounterModule = (function() {
         function updateLiveCounters() {
-            console.log('🔄 Updating live counters...');
+            console.log('Refresh Updating live counters...');
             
             try {
                 fetch('/api/stats/live')
@@ -30,14 +30,14 @@ function getCounterModule() {
                                 lastUpdateEl.textContent = \`Last: \${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\`;
                             }
                             
-                            console.log('✅ Live counters updated successfully');
+                            console.log('Complete Live counters updated successfully');
                         }
                     })
                     .catch(error => {
-                        console.warn('⚠️ Live counter update failed:', error);
+                        console.warn('Warning Live counter update failed:', error);
                     });
             } catch (error) {
-                console.error('❌ Error updating live counters:', error);
+                console.error('X Error updating live counters:', error);
             }
         }
         

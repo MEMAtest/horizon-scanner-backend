@@ -42,8 +42,21 @@
 }
 
 .brand-icon {
-  font-size: var(--font-size-2xl);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
   margin-right: var(--space-3);
+  border-radius: 0.9rem;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--color-primary);
+}
+
+.brand-icon svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  stroke-width: 1.6;
 }
 
 .brand-text {
@@ -104,22 +117,42 @@
   font-weight: var(--font-weight-medium);
   transition: var(--transition-base);
   border-bottom: 3px solid transparent;
+  border-left: 4px solid transparent;
 }
 
 .nav-link:hover {
-  color: var(--color-primary);
-  background-color: var(--color-gray-50);
+  color: #1d4ed8;
+  background-color: #edf2ff;
 }
 
 .nav-item--active .nav-link {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-  background-color: var(--color-gray-50);
+  color: #1d4ed8;
+  border-bottom-color: transparent;
+  background-color: #e0e7ff;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: none;
+  border-left: 4px solid #1d4ed8;
 }
 
 .nav-icon {
-  margin-right: var(--space-2);
-  font-size: var(--font-size-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-right: var(--space-3);
+  color: inherit;
+  transition: var(--transition-base);
+}
+
+.nav-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .nav-text {
@@ -140,9 +173,23 @@
 }
 
 .nav-arrow {
-  margin-left: var(--space-1);
-  font-size: var(--font-size-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--space-2);
+  width: 0.9rem;
+  height: 0.9rem;
   transition: var(--transition-base);
+}
+
+.nav-arrow svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .nav-link--dropdown[aria-expanded="true"] .nav-arrow {
@@ -193,7 +240,27 @@
 
 .dropdown-icon {
   margin-right: var(--space-3);
-  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  color: var(--color-gray-500);
+  transition: color var(--transition-base);
+}
+
+.dropdown-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-dropdown-item:hover .dropdown-icon {
+  color: var(--color-primary);
 }
 
 .dropdown-text {

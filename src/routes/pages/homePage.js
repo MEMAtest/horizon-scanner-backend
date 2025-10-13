@@ -8,7 +8,7 @@ const dbService = require('../../services/dbService')
 
 async function renderHomePage(req, res) {
   try {
-    console.log('🏠 Rendering enhanced home page...')
+    console.log('Home Rendering enhanced home page...')
 
     // Get recent updates for home page preview
     const recentUpdates = await dbService.getRecentUpdates(6)
@@ -33,507 +33,91 @@ async function renderHomePage(req, res) {
             <title>Regulatory Horizon Scanner</title>
             ${getCommonStyles()}
             <style>
-                /* Premium Enterprise Homepage Styles */
-                .hero-section {
-                    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
-                    color: white;
-                    padding: 48px 32px;
-                    text-align: center;
-                    margin-bottom: 32px;
-                    border-radius: 16px;
-                    box-shadow: 0 20px 40px rgba(30, 64, 175, 0.15);
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .hero-section::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-                    pointer-events: none;
-                }
-                
-                .hero-title {
-                    font-size: 2.75rem;
-                    font-weight: 600;
-                    margin-bottom: 16px;
-                    letter-spacing: -0.025em;
-                    position: relative;
-                    z-index: 1;
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                }
-
-                .hero-subtitle {
-                    font-size: 1.125rem;
-                    opacity: 1;
-                    margin-bottom: 32px;
-                    max-width: 680px;
-                    margin-left: auto;
-                    margin-right: auto;
-                    line-height: 1.7;
-                    font-weight: 400;
-                    position: relative;
-                    z-index: 1;
-                    color: rgba(255, 255, 255, 0.95);
-                }
-
-                .hero-actions {
-                    display: flex;
-                    justify-content: center;
-                    gap: 16px;
-                    margin-bottom: 32px;
-                    flex-wrap: wrap;
-                }
-
-                .hero-button {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 14px 24px;
-                    border-radius: 999px;
-                    font-weight: 600;
-                    text-decoration: none;
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
-                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-                }
-
-                .hero-button.primary {
+                .home-dashboard { background: #f5f7fb; min-height: 100vh; padding: 32px 40px; }
+                .status-banner {
                     background: #ffffff;
-                    color: #4f46e5;
-                }
-
-                .hero-button.secondary {
-                    background: rgba(255, 255, 255, 0.15);
-                    color: #ffffff;
-                    border: 1px solid rgba(255, 255, 255, 0.4);
-                }
-
-                .hero-button:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.25);
-                }
-
-                .hero-stats {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                    gap: 20px;
-                    margin-top: 40px;
-                    max-width: 800px;
-                    margin-left: auto;
-                    margin-right: auto;
-                }
-                
-                .hero-stat {
-                    background: rgba(255,255,255,0.1);
-                    padding: 20px;
-                    border-radius: 10px;
-                    backdrop-filter: blur(10px);
-                }
-                
-                .hero-stat-number {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    display: block;
-                }
-                
-                .hero-stat-label {
-                    font-size: 0.9rem;
-                    opacity: 0.8;
-                    margin-top: 5px;
-                }
-                
-                .features-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-                    gap: 24px;
-                    margin-bottom: 48px;
-                }
-
-                .feature-card {
-                    background: white;
-                    padding: 32px;
-                    border-radius: 16px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.08);
-                    border: 1px solid rgba(226, 232, 240, 0.8);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .feature-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 3px;
-                    background: linear-gradient(90deg, #1e40af, #3b82f6);
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-
-                .feature-card:hover::before {
-                    opacity: 1;
-                }
-
-                .feature-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 12px 32px rgba(0,0,0,0.12);
-                    border-color: rgba(59, 130, 246, 0.2);
-                }
-                
-                .feature-icon {
-                    font-size: 2.5rem;
-                    margin-bottom: 20px;
-                    display: block;
-                }
-                
-                .feature-title {
-                    font-size: 1.375rem;
-                    font-weight: 600;
-                    margin-bottom: 12px;
                     color: #0f172a;
-                    letter-spacing: -0.01em;
-                    line-height: 1.3;
-                }
-
-                .feature-description {
-                    color: #64748b;
-                    line-height: 1.65;
-                    margin-bottom: 20px;
-                    font-size: 0.95rem;
-                }
-
-                .feature-link {
-                    color: #1e40af;
-                    text-decoration: none;
-                    font-weight: 600;
-                    font-size: 0.875rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 8px 0;
-                    border-bottom: 2px solid transparent;
-                    transition: all 0.2s ease;
-                }
-
-                .feature-link:hover {
-                    color: #1e3a8a;
-                    border-bottom-color: #1e40af;
-                }
-
-                .feature-link::after {
-                    content: '→';
-                    transition: transform 0.2s ease;
-                }
-
-                .feature-link:hover::after {
-                    transform: translateX(2px);
-                }
-                
-                .recent-updates {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 32px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.08);
-                    border: 1px solid rgba(226, 232, 240, 0.8);
-                    margin-bottom: 32px;
-                }
-
-                .section-title {
-                    font-size: 1.5rem;
-                    font-weight: 600;
-                    margin-bottom: 24px;
-                    color: #0f172a;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    letter-spacing: -0.01em;
-                }
-
-                .section-title::before {
-                    content: '';
-                    width: 4px;
-                    height: 24px;
-                    background: linear-gradient(135deg, #1e40af, #3b82f6);
-                    border-radius: 2px;
-                }
-                
-                .update-preview {
-                    display: flex;
-                    align-items: center;
-                    padding: 15px 0;
-                    border-bottom: 1px solid #f3f4f6;
-                    transition: background-color 0.2s;
-                }
-                
-                .update-preview:hover {
-                    background-color: #f9fafb;
-                    margin: 0 -15px;
-                    padding-left: 15px;
-                    padding-right: 15px;
-                }
-                
-                .update-preview:last-child {
-                    border-bottom: none;
-                }
-                
-                .update-authority {
-                    background: #4f46e5;
-                    color: white;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 0.8rem;
-                    font-weight: 500;
-                    min-width: 80px;
-                    text-align: center;
-                    margin-right: 15px;
-                }
-                
-                .update-content {
-                    flex: 1;
-                    min-width: 0;
-                }
-                
-                .update-title {
-                    font-weight: 500;
-                    color: #1f2937;
-                    margin-bottom: 5px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-                
-                .update-meta {
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    font-size: 0.8rem;
-                    color: #6b7280;
-                }
-                
-                .impact-indicator {
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    font-size: 0.7rem;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                
-                .impact-significant {
-                    background: #fef2f2;
-                    color: #dc2626;
-                }
-                
-                .impact-moderate {
-                    background: #fffbeb;
-                    color: #d97706;
-                }
-                
-                .impact-informational {
-                    background: #f0f9ff;
-                    color: #0284c7;
-                }
-                
-                .ai-highlights {
-                    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-                    border-radius: 12px;
-                    padding: 30px;
-                    border: 1px solid #0ea5e9;
+                    border-radius: 18px;
+                    padding: 28px 32px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 24px 48px -28px rgba(15, 23, 42, 0.25);
                     margin-bottom: 40px;
-                }
-                
-                .ai-insight-card {
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    margin-bottom: 15px;
-                    border-left: 4px solid #0ea5e9;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-                
-                .ai-insight-card:last-child {
-                    margin-bottom: 0;
-                }
-                
-                .insight-header {
                     display: flex;
-                    justify-content: between;
-                    align-items: center;
-                    margin-bottom: 10px;
+                    flex-direction: column;
+                    gap: 28px;
                 }
                 
-                .insight-type {
-                    background: #0ea5e9;
-                    color: white;
-                    padding: 4px 10px;
-                    border-radius: 15px;
-                    font-size: 0.8rem;
-                    font-weight: 500;
-                }
-                
-                .insight-urgency {
-                    padding: 2px 8px;
-                    border-radius: 10px;
-                    font-size: 0.7rem;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                }
-                
-                .insight-urgency.high {
-                    background: #fef2f2;
-                    color: #dc2626;
-                }
-                
-                .insight-urgency.medium {
-                    background: #fffbeb;
-                    color: #d97706;
-                }
-                
-                .insight-urgency.low {
-                    background: #f0fdf4;
-                    color: #16a34a;
-                }
-                
-                .insight-title {
-                    font-weight: 600;
-                    color: #1f2937;
-                    margin-bottom: 8px;
-                }
-                
-                .insight-summary {
-                    color: #4b5563;
-                    line-height: 1.5;
-                    margin-bottom: 10px;
-                }
-                
-                .insight-meta {
-                    font-size: 0.8rem;
-                    color: #6b7280;
-                    display: flex;
-                    gap: 15px;
-                }
-                
-                .quick-actions {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 20px;
-                    margin-bottom: 40px;
-                }
-                
-                .action-button {
-                    background: white;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 10px;
-                    padding: 20px;
-                    text-align: center;
-                    text-decoration: none;
-                    color: #374151;
-                    transition: all 0.2s;
-                    font-weight: 500;
-                }
-                
-                .action-button:hover {
-                    border-color: #4f46e5;
-                    background: #f8fafc;
-                    color: #4f46e5;
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-                }
-                
-                .action-icon {
-                    font-size: 2rem;
-                    display: block;
-                    margin-bottom: 10px;
-                }
-                
-                .view-all-link {
-                    display: inline-flex;
-                    align-items: center;
-                    color: #4f46e5;
-                    text-decoration: none;
-                    font-weight: 500;
-                    margin-top: 20px;
-                    padding: 10px 20px;
-                    border: 1px solid #4f46e5;
-                    border-radius: 8px;
-                    transition: all 0.2s;
-                }
-                
-                .view-all-link:hover {
-                    background: #4f46e5;
-                    color: white;
-                    transform: translateX(5px);
-                }
-                
-                .footer-section {
-                    background: #f9fafb;
-                    border-radius: 12px;
-                    padding: 30px;
-                    text-align: center;
-                    color: #6b7280;
-                    border: 1px solid #e5e7eb;
-                }
-                
-                .footer-links {
-                    display: flex;
-                    justify-content: center;
-                    gap: 30px;
-                    margin-top: 20px;
-                    flex-wrap: wrap;
-                }
-                
-                .footer-link {
-                    color: #4b5563;
-                    text-decoration: none;
-                    font-weight: 500;
-                    transition: color 0.2s;
-                }
-                
-                .footer-link:hover {
-                    color: #4f46e5;
-                }
-                
+                .status-title { display: flex; align-items: center; gap: 16px; background: transparent; }
+                .status-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+                .status-info { background: transparent; }
+                .status-info h1 { margin: 0; font-size: 1.95rem; font-weight: 700; letter-spacing: -0.01em; color: #0f172a; }
+                .status-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #f1f5ff; color: #1d4ed8; border: 1px solid rgba(147, 197, 253, 0.5); }
+                .status-icon svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+                .status-meta-grid { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; }
+                .status-meta-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06); }
+                .status-meta-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; font-weight: 600; }
+                .status-meta-value { font-size: 1.18rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+                .status-meta-value .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18); }
+
+                .status-subtitle { margin-top: 4px; font-size: 0.98rem; max-width: 520px; color: #475569; line-height: 1.6; }
+                                                .status-actions { display: flex; align-items: center; gap: 12px; }
+                .primary-action, .secondary-action { border-radius: 999px; padding: 12px 20px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+                .primary-action { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: #0f172a; box-shadow: 0 14px 24px rgba(96, 165, 250, 0.25); border: 1px solid #bfdbfe; }
+                .primary-action:hover { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(96, 165, 250, 0.32); }
+                .secondary-action { background: rgba(37, 99, 235, 0.05); color: #1d4ed8; border: 1px solid rgba(148, 163, 184, 0.4); box-shadow: none; }
+                .secondary-action:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12); }
+                .insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 12px; margin-bottom: 32px; }
+                .insight-card { background: #ffffff; border-radius: 14px; padding: 20px 22px; border: 1px solid #e2e8f0; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05); }
+                .insight-label { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #e0e7ff; color: #1e3a8a; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+                .insight-headline { margin: 14px 0 8px; font-size: 1.15rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; }
+                .insight-body { color: #4b5563; line-height: 1.55; font-size: 0.95rem; }
+                .insight-meta { margin-top: 12px; font-size: 0.8rem; color: #6b7280; }
+                .quick-nav { margin: 32px 0 12px; display: flex; flex-wrap: wrap; gap: 12px; }
+                .quick-chip { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 999px; padding: 10px 16px; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #1f2937; font-weight: 500; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+                .quick-chip:hover { border-color: #1e3a8a; color: #1e3a8a; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12); transform: translateY(-2px); }
+                .quick-chip-icon { width: 1.6rem; height: 1.6rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #eef2ff; color: #1e3a8a; transition: background-color 0.2s ease, color 0.2s ease; }
+                .quick-chip-icon svg { width: 1rem; height: 1rem; }
+                .quick-chip-icon svg * { stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+                .quick-chip:hover .quick-chip-icon { background: #1e3a8a; color: #ffffff; }
+                .chip-label { font-size: 0.9rem; display: block; }
+                .chip-meta { font-size: 0.75rem; color: #6b7280; display: block; }
+                .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-top: 32px; margin-bottom: 32px; }
+                .module-card { background: #ffffff; border-radius: 18px; padding: 24px 26px 28px; border: 1px solid #e2e8f0; box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+                .module-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #1e3a8a; font-weight: 600; margin-bottom: 8px; }
+                .module-card:hover { transform: translateY(-4px); box-shadow: 0 22px 42px rgba(15, 23, 42, 0.12); border-color: rgba(37, 99, 235, 0.28); }
+                .module-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(29, 78, 216, 0.05)); color: #1d4ed8; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+                .module-icon svg { width: 22px; height: 22px; stroke-linecap: round; stroke-linejoin: round; }
+                .module-title { margin: 0; font-size: 1.2rem; font-weight: 600; color: #0f172a; }
+                .module-metric { font-size: 2rem; font-weight: 700; margin: 16px 0 4px; color: #1e293b; letter-spacing: -0.02em; }
+                .module-stat-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; font-weight: 600; }
+                .module-description { color: #475569; font-size: 0.95rem; line-height: 1.55; margin: 14px 0 18px; }
+                .module-link { display: inline-flex; align-items: center; gap: 6px; color: #1e40af; font-weight: 600; text-decoration: none; font-size: 0.9rem; }
+                .module-link:hover { transform: translateX(2px); }
+                .updates-panel { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px 26px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
+                .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+                .panel-title { font-size: 1.25rem; font-weight: 600; color: #0f172a; }
+                .panel-link { color: #1e40af; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 4px; }
+                .panel-link:hover { transform: translateX(3px); }
+                .update-list { list-style: none; margin: 0; padding: 0; }
+                .update-item { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid #edf2f7; transition: background 0.2s ease, transform 0.2s ease; border-radius: 10px; }
+                .update-item:hover { background: #f8fafc; transform: translateY(-1px); padding-left: 12px; padding-right: 12px; }
+                .update-item:last-child { border-bottom: none; }
+                .update-badge { background: #e0e7ff; color: #3730a3; padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; margin-right: 16px; }
+                .update-copy { flex: 1; min-width: 0; }
+                .update-headline { font-weight: 600; color: #0f172a; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .update-headline a { color: inherit; text-decoration: none; }
+                .update-headline a:hover { text-decoration: underline; }
+                .update-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; color: #64748b; }
+                .footer-note { margin-top: 32px; text-align: center; color: #64748b; font-size: 0.85rem; }
+                .footer-note a { color: #1e40af; text-decoration: none; font-weight: 600; }
+                .footer-note a:hover { text-decoration: underline; }
                 @media (max-width: 768px) {
-                    .hero-title {
-                        font-size: 2rem;
-                    }
-
-                    .hero-actions {
-                        flex-direction: column;
-                        align-items: stretch;
-                    }
-
-                    .hero-button {
-                        justify-content: center;
-                        width: 100%;
-                    }
-
-                    .hero-stats {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
-                    
-                    .features-grid {
-                        grid-template-columns: 1fr;
-                    }
-                    
-                    .quick-actions {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
-                    
-                    .footer-links {
-                        flex-direction: column;
-                        gap: 15px;
-                    }
+                    .home-dashboard { padding: 24px 18px; }
+                    .status-actions { flex-direction: column; align-items: stretch; }
+                    .primary-action, .secondary-action { justify-content: center; width: 100%; }
+                    .module-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
                 }
-            </style>
+            </style></style>
         </head>
         <body>
          <!-- Firm Profile Modal -->
@@ -541,7 +125,7 @@ async function renderHomePage(req, res) {
                 <div class="modal">
                     <div class="modal-header">
                         <h3>Firm Profile Settings</h3>
-                        <button onclick="closeFirmProfileModal()" class="close-btn">×</button>
+                        <button onclick="closeFirmProfileModal()" class="close-btn">x</button>
                     </div>
                     <div class="modal-content">
                         <form id="firmProfileForm">
@@ -744,171 +328,68 @@ async function renderHomePage(req, res) {
             <div class="app-container">
                 ${sidebar}
                 
-                <main class="main-content">
-                    <!-- Hero Section -->
-                    <section class="hero-section">
-                        <h1 class="hero-title">Regulatory Horizon Scanner</h1>
-                        <p class="hero-subtitle">
-                            UK Financial Regulatory Updates - Professional regulatory intelligence
-                            and compliance monitoring for financial services
-                        </p>
+                <main class="main-content home-dashboard">
+                    <section class="status-banner">
+                        <div class="status-header">
+                            <div class="status-title">
+                                <div class="status-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="5" y="10" width="3" height="8" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="10.5" y="7" width="3" height="11" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="16" y="4" width="3" height="14" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg></div>
+                                <div class="status-info">
+                                    <h1>Regulatory Horizon Scanner</h1>
+                                    <p class="status-subtitle">Prioritised regulatory intelligence and actions for financial services teams.</p>
+                                </div>
+                            </div>
+                            <div class="status-actions">
+                                <a class="primary-action" href="/ai-intelligence">Open Intelligence Center</a>
+                                <a class="secondary-action" href="/weekly-roundup">Open Weekly Brief</a>
+                            </div>
+                        </div>
+                        <div class="status-meta-grid">
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">Status</span>
+                                <span class="status-meta-value"><span class="status-dot"></span>Operational</span>
+                            </div>
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">Total updates</span>
+                                <span class="status-meta-value">${formatNumber(systemStats.totalUpdates || 0)}</span>
+                            </div>
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">Active authorities</span>
+                                <span class="status-meta-value">${formatNumber(systemStats.activeAuthorities || 0)}</span>
+                            </div>
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">High-impact items</span>
+                                <span class="status-meta-value">${formatNumber(systemStats.highImpact || 0)}</span>
+                            </div>
+                        </div>
+                    </section>
 
-                        <div class="hero-actions">
-                            <a href="/analytics" class="hero-button primary">
-                                <span>📈</span>
-                                <span>Launch Analytics Dashboard</span>
-                            </a>
-                            <a href="/dashboard" class="hero-button secondary">
-                                <span>📊</span>
-                                <span>View Live Intelligence</span>
-                            </a>
-                        </div>
+                    <section class="quick-nav">
+                        ${generateQuickNav()}
+                    </section>
 
-                        <div class="hero-stats">
-                            <div class="hero-stat">
-                                <span class="hero-stat-number">${systemStats.totalUpdates}</span>
-                                <span class="hero-stat-label">Total Updates</span>
-                            </div>
-                            <div class="hero-stat">
-                                <span class="hero-stat-number">${systemStats.activeAuthorities}</span>
-                                <span class="hero-stat-label">Active Authorities</span>
-                            </div>
-                            <div class="hero-stat">
-                                <span class="hero-stat-number">${systemStats.aiAnalyzed}</span>
-                                <span class="hero-stat-label">AI Analyzed</span>
-                            </div>
-                            <div class="hero-stat">
-                                <span class="hero-stat-number">${systemStats.highImpact}</span>
-                                <span class="hero-stat-label">High Impact</span>
-                            </div>
-                        </div>
+                    <section class="insights-grid">
+                        ${generateInsightCards(recentUpdates, systemStats)}
                     </section>
+
                     
-                    <!-- AI Highlights Section -->
-                    <section class="ai-highlights">
-                        <h2 class="section-title">
-                            🧠 AI Intelligence Highlights
-                        </h2>
-                        
-                        ${generateAIHighlightsSection(aiInsights)}
-                        
-                        <a href="/ai-intelligence" class="view-all-link">
-                            View Full AI Intelligence Dashboard →
-                        </a>
+
+                    <section class="module-grid">
+                        ${generateModuleGrid(systemStats, aiInsights)}
                     </section>
-                    
-                    <!-- Quick Actions -->
-                    <section class="quick-actions">
-                        <a href="/dashboard" class="action-button">
-                            <span class="action-icon">📊</span>
-                            <div>Live Dashboard</div>
-                        </a>
-                        
-                        <a href="/weekly-roundup" class="action-button">
-                            <span class="action-icon">📋</span>
-                            <div>Weekly AI Roundup</div>
-                        </a>
-                        
-                        <a href="/analytics" class="action-button">
-                            <span class="action-icon">📈</span>
-                            <div>Trend Analytics</div>
-                        </a>
-                        
-                        <a href="/ai-intelligence" class="action-button">
-                            <span class="action-icon">⚠️</span>
-                            <div>AI Intelligence</div>
-                        </a>
+
+                    <section class="updates-panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Latest Updates</h2>
+                            <a class="panel-link" href="/dashboard">Open dashboard →</a>
+                        </div>
+                        <ul class="update-list">
+                            ${generateRecentUpdatesPreview(recentUpdates)}
+                        </ul>
                     </section>
-                    
-                    <!-- Platform Features -->
-                    <section class="features-grid">
-                        <div class="feature-card">
-                            <span class="feature-icon">🎯</span>
-                            <h3 class="feature-title">Proactive Intelligence</h3>
-                            <p class="feature-description">
-                                AI-powered early warning system identifies regulatory trends and 
-                                potential changes before they impact your business
-                            </p>
-                            <a href="/ai-intelligence" class="feature-link">Explore Intelligence →</a>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <span class="feature-icon">⚡</span>
-                            <h3 class="feature-title">Smart Impact Analysis</h3>
-                            <p class="feature-description">
-                                Automated business impact scoring and sector-specific relevance 
-                                analysis for every regulatory update
-                            </p>
-                            <a href="/dashboard?filter=high-impact" class="feature-link">View High Impact →</a>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <span class="feature-icon">📊</span>
-                            <h3 class="feature-title">Authority Spotlight</h3>
-                            <p class="feature-description">
-                                Deep analysis of regulatory authority patterns, enforcement trends, 
-                                and upcoming policy directions
-                            </p>
-                            <a href="/authority-spotlight/FCA" class="feature-link">View Spotlight →</a>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <span class="feature-icon">🔍</span>
-                            <h3 class="feature-title">Sector Intelligence</h3>
-                            <p class="feature-description">
-                                Sector-specific regulatory pressure analysis and 
-                                compliance priority recommendations
-                            </p>
-                            <a href="/sector-intelligence/Banking" class="feature-link">Banking Analysis →</a>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <span class="feature-icon">📋</span>
-                            <h3 class="feature-title">Weekly AI Roundups</h3>
-                            <p class="feature-description">
-                                Comprehensive weekly intelligence briefings with key themes, 
-                                priorities, and strategic recommendations
-                            </p>
-                            <a href="/weekly-roundup" class="feature-link">Latest Roundup →</a>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <span class="feature-icon">🚀</span>
-                            <h3 class="feature-title">Implementation Planning</h3>
-                            <p class="feature-description">
-                                AI-generated implementation phases, resource requirements, 
-                                and compliance roadmaps for complex regulations
-                            </p>
-                            <a href="/dashboard" class="feature-link">View Dashboard →</a>
-                        </div>
-                    </section>
-                    
-                    <!-- Recent Updates Preview -->
-                    <section class="recent-updates">
-                        <h2 class="section-title">
-                            📰 Latest Regulatory Updates
-                        </h2>
-                        
-                        ${generateRecentUpdatesPreview(recentUpdates)}
-                        
-                        <a href="/dashboard" class="view-all-link">
-                            View All Updates →
-                        </a>
-                    </section>
-                    
-                    <!-- Footer -->
-                    <footer class="footer-section">
-                        <p>Regulatory Horizon Scanner - Professional regulatory intelligence for UK financial services</p>
-                        <div class="footer-links">
-                            <a href="/test" class="footer-link">System Health</a>
-                            <a href="/api/health" class="footer-link">API Status</a>
-                            <a href="/analytics" class="footer-link">Analytics</a>
-                            <a href="/about" class="footer-link">About</a>
-                        </div>
-                        <p style="margin-top: 20px; font-size: 0.8rem;">
-                            Version 2.0 | Last updated: ${new Date().toLocaleDateString('en-UK')}
-                        </p>
-                    </footer>
+
+                    <div class="footer-note">
+                        Need something different? Explore the <a href="/dashboard">full analytics workspace</a> or contact your compliance intelligence partner.
+                    </div>
                 </main>
             </div>
             
@@ -918,14 +399,14 @@ async function renderHomePage(req, res) {
 
     res.send(html)
   } catch (error) {
-    console.error('❌ Error rendering home page:', error)
+    console.error('X Error rendering home page:', error)
     res.status(500).send(`
             <html>
                 <head><title>Error - AI Regulatory Intelligence</title></head>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>⚠️ System Error</h1>
+                    <h1>Warning System Error</h1>
                     <p>Unable to load the home page. Please try refreshing.</p>
-                    <p><a href="/">← Try Again</a></p>
+                    <p><a href="/"><- Try Again</a></p>
                     <small>Error: ${error.message}</small>
                 </body>
             </html>
@@ -953,74 +434,224 @@ async function getSystemStatistics() {
   }
 }
 
-function generateAIHighlightsSection(aiInsights) {
-  if (!aiInsights || aiInsights.length === 0) {
-    return `
-            <div class="ai-insight-card">
-                <div class="insight-header">
-                    <span class="insight-type">System Ready</span>
-                    <span class="insight-urgency low">Active</span>
-                </div>
-                <h4 class="insight-title">AI Intelligence System Online</h4>
-                <p class="insight-summary">
-                    The AI analysis engine is active and processing regulatory updates. 
-                    Intelligent insights and proactive warnings will appear here as they're generated.
-                </p>
-                <div class="insight-meta">
-                    <span>System Status: Operational</span>
-                    <span>AI Confidence: 95%</span>
-                </div>
-            </div>
-        `
+function generateInsightCards(recentUpdates, systemStats) {
+  const highlights = buildHomepageHighlights(recentUpdates, systemStats)
+  return highlights.map(item => `
+        <article class="insight-card">
+            <span class="insight-label">${escapeHtml(item.label)}</span>
+            <h3 class="insight-headline">${escapeHtml(item.headline)}</h3>
+            <p class="insight-body">${escapeHtml(item.body)}</p>
+            ${item.meta ? `<div class="insight-meta">${escapeHtml(item.meta)}</div>` : ''}
+        </article>
+    `).join('')
+}
+
+function buildHomepageHighlights(recentUpdates = [], systemStats = {}) {
+  const highlights = []
+
+  if (recentUpdates.length > 0) {
+    const authorityCounts = {}
+    recentUpdates.forEach(update => {
+      const authority = update.authority || 'Unknown'
+      authorityCounts[authority] = (authorityCounts[authority] || 0) + 1
+    })
+
+    const sortedAuthorities = Object.entries(authorityCounts).sort((a, b) => b[1] - a[1])
+    if (sortedAuthorities.length > 0) {
+      const [authority, count] = sortedAuthorities[0]
+      highlights.push({
+        label: 'Authority focus',
+        headline: `${authority} leading recent activity`,
+        body: `${count} update${count === 1 ? '' : 's'} captured across the latest feed.`,
+        meta: 'Monitoring window: last refresh'
+      })
+    }
+
+    const now = Date.now()
+    let upcomingDeadlines = 0
+    let consultationCount = 0
+
+    recentUpdates.forEach(update => {
+      const summary = `${update.headline || ''} ${update.summary || ''}`.toLowerCase()
+      if (summary.includes('consultation') || summary.includes('feedback')) {
+        consultationCount += 1
+      }
+      const deadlineRaw = update.compliance_deadline || update.complianceDeadline
+      if (deadlineRaw) {
+        const due = new Date(deadlineRaw).getTime()
+        if (!Number.isNaN(due) && due >= now && due - now <= 14 * 24 * 60 * 60 * 1000) {
+          upcomingDeadlines += 1
+        }
+      }
+    })
+
+    highlights.push({
+      label: 'Upcoming deadlines',
+      headline: `${upcomingDeadlines} deadline${upcomingDeadlines === 1 ? '' : 's'} in next 14 days`,
+      body: consultationCount
+        ? `${consultationCount} consultation${consultationCount === 1 ? '' : 's'} currently open for response.`
+        : 'No active consultations flagged in the latest feed.',
+      meta: 'Monitoring window: 14 days'
+    })
   }
 
-  return aiInsights.map(insight => `
-        <div class="ai-insight-card">
-            <div class="insight-header">
-                <span class="insight-type">${insight.insight_type.replace('_', ' ')}</span>
-                <span class="insight-urgency ${insight.urgency_level}">${insight.urgency_level}</span>
-            </div>
-            <h4 class="insight-title">${insight.title}</h4>
-            <p class="insight-summary">${insight.summary}</p>
-            <div class="insight-meta">
-                <span>Impact: ${insight.impact_score}/10</span>
-                <span>Confidence: ${Math.round(insight.probability_score * 100)}%</span>
-                <span>Generated: ${formatRelativeDate(insight.created_at)}</span>
-            </div>
-        </div>
+  if (highlights.length < 2) {
+    highlights.push({
+      label: 'Platform coverage',
+      headline: `${formatNumber(systemStats.totalUpdates || 0)} updates tracked`,
+      body: 'Monitoring engine remains active across all regulatory sources.',
+      meta: 'Live coverage'
+    })
+  }
+
+  return highlights.slice(0, 2)
+}
+
+function generateQuickNav() {
+  const iconSet = {
+    intelligence: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.5" fill="none"></circle><path d="M12 6.5v11M6.5 12h11" stroke-linecap="round"></path><circle cx="12" cy="12" r="8.3" fill="none"></circle></svg>',
+    authority: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 4.5 8v12h15V8L12 4z" fill="none" stroke-linejoin="round"></path><path d="M7.5 11v7M12 11v7M16.5 11v7" stroke-linecap="round"></path><path d="M5 19h14" stroke-linecap="round"></path></svg>',
+    sector: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h16" stroke-linecap="round"></path><rect x="5.5" y="10.5" width="3.5" height="6.5" rx="1"></rect><rect x="10.25" y="8" width="3.5" height="9" rx="1"></rect><rect x="15" y="5.5" width="3.5" height="11.5" rx="1"></rect></svg>',
+    brief: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h8.5L19 8v11.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1z" fill="none" stroke-linejoin="round"></path><path d="M15.5 4.5V8H19" fill="none" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9.5 12h5M9.5 15h3.5" stroke-linecap="round"></path></svg>',
+    planner: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 6h4v4h-4zM14.5 6h4v4h-4zM10.5 14h3" stroke-linecap="round"></path><path d="M5.5 18h13" stroke-linecap="round"></path><path d="M11 10v2a2 2 0 0 0 2 2h1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
+  }
+
+  const iconWithStroke = (svg) => svg.replace(/<svg /, '<svg stroke="currentColor" ')
+
+  const links = [
+    { icon: iconWithStroke(iconSet.intelligence), label: 'Intelligence Center', meta: 'Triage & prioritise', href: '/ai-intelligence' },
+    { icon: iconWithStroke(iconSet.authority), label: 'Authority Spotlight', meta: 'Momentum & enforcement', href: '/authority-spotlight/FCA' },
+    { icon: iconWithStroke(iconSet.sector), label: 'Sector Pressure', meta: 'Sector-specific trends', href: '/sector-intelligence/Banking' },
+    { icon: iconWithStroke(iconSet.brief), label: 'Weekly Brief', meta: 'Executive summary', href: '/weekly-roundup' },
+    { icon: iconWithStroke(iconSet.planner), label: 'Implementation Planner', meta: 'Plan next steps', href: '/dashboard' }
+  ]
+
+  return links.map(link => `
+    <a class="quick-chip" href="${link.href}">
+        <span class="quick-chip-icon" aria-hidden="true">${link.icon}</span>
+        <span>
+            <span class="chip-label">${escapeHtml(link.label)}</span>
+            <span class="chip-meta">${escapeHtml(link.meta)}</span>
+        </span>
+    </a>
+  `).join('')
+}
+
+function generateModuleGrid(systemStats = {}, aiInsights = []) {
+  const modules = [
+    {
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      title: 'Intelligence Center',
+      metric: formatNumber(systemStats.totalUpdates || 0),
+      statLabel: 'updates tracked',
+      description: 'Dashboard for triage, prioritisation, and follow-up capture.',
+      link: '/ai-intelligence',
+      linkText: 'Open dashboard'
+    },
+    {
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M6.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M12 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M17.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 9l7-5 7 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>',
+      title: 'Authority Spotlight',
+      metric: formatNumber(systemStats.activeAuthorities || 0),
+      statLabel: 'active authorities',
+      description: 'Momentum analysis and coordination signals across regulators.',
+      link: '/authority-spotlight/FCA',
+      linkText: 'Open dashboard'
+    },
+    {
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="6" y="11" width="3" height="6" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="10.5" y="9" width="3" height="8" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="15" y="7" width="3" height="10" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
+      title: 'Sector Pressure',
+      metric: formatNumber(systemStats.highImpact || 0),
+      statLabel: 'high-impact items',
+      description: 'Sector dashboards covering pressure scores, deadlines, and owners.',
+      link: '/sector-intelligence/Banking',
+      linkText: 'Open dashboard'
+    },
+    {
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h9l3 3v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M15 4.5V9h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M9 15h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      title: 'Weekly Brief',
+      metric: formatNumber(aiInsights.length || 0),
+      statLabel: 'insights queued',
+      description: 'Download or trigger the latest executive-ready weekly summary.',
+      link: '/weekly-roundup',
+      linkText: 'Open dashboard'
+    }
+  ]
+
+  return modules.map(module => `
+        <article class="module-card">
+            <div class="module-icon">${module.icon}</div>
+            <div class="module-label">Dashboard View</div>
+            <h3 class="module-title">${escapeHtml(module.title)}</h3>
+            <div class="module-metric">${escapeHtml(module.metric)}</div>
+            <div class="module-stat-label">${escapeHtml(module.statLabel)}</div>
+            <p class="module-description">${escapeHtml(module.description)}</p>
+            <a class="module-link" href="${module.link}">${escapeHtml(module.linkText)} →</a>
+        </article>
     `).join('')
 }
 
 function generateRecentUpdatesPreview(updates) {
   if (!updates || updates.length === 0) {
     return `
-            <div style="text-align: center; padding: 40px; color: #6b7280;">
-                <p>📭 No recent updates available</p>
-                <p><a href="/dashboard" style="color: #4f46e5;">Check the dashboard</a> for all regulatory content</p>
-            </div>
+            <li class="update-item">
+                <span class="update-badge">—</span>
+                <div class="update-copy">
+                    <div class="update-headline">No updates captured yet</div>
+                    <div class="update-meta">The monitoring engine will surface new items as soon as they arrive.</div>
+                </div>
+            </li>
         `
   }
 
-  return updates.map(update => `
-        <div class="update-preview">
-            <span class="update-authority">${update.authority}</span>
-            <div class="update-content">
-                <div class="update-title">
-                    <a href="${update.url}" target="_blank" rel="noopener" style="color: inherit; text-decoration: none;">
-                        ${update.headline}
-                    </a>
-                </div>
+  return updates.map(update => {
+    const dateMeta = formatRelativeDate(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
+    const impact = update.impactLevel || update.impact_level || 'Informational'
+    const deadlineRaw = update.compliance_deadline || update.complianceDeadline
+    const deadline = deadlineRaw ? formatShortDate(deadlineRaw) : null
+    const headline = escapeHtml(update.headline || 'Untitled update')
+    const linkOpen = update.url ? `<a href="${escapeAttribute(update.url)}" target="_blank" rel="noopener">${headline}</a>` : headline
+
+    return `
+        <li class="update-item">
+            <span class="update-badge">${escapeHtml(update.authority || 'Unknown')}</span>
+            <div class="update-copy">
+                <div class="update-headline">${linkOpen}</div>
                 <div class="update-meta">
-                    <span class="impact-indicator impact-${(update.impactLevel || 'informational').toLowerCase()}">
-                        ${update.impactLevel || 'Informational'}
-                    </span>
-                    <span>${formatRelativeDate(update.publishedDate || update.createdAt)}</span>
-                    ${update.businessImpactScore ? `<span>Impact: ${update.businessImpactScore}/10</span>` : ''}
-                    ${update.sector || update.primarySectors?.[0] ? `<span>Sector: ${update.sector || update.primarySectors[0]}</span>` : ''}
+                    <span>${escapeHtml(dateMeta)}</span>
+                    <span>${escapeHtml(impact)}</span>
+                    ${deadline ? `<span>Deadline: ${escapeHtml(deadline)}</span>` : ''}
                 </div>
             </div>
-        </div>
-    `).join('')
+        </li>
+    `
+  }).join('')
+}
+
+function formatNumber(value) {
+  try {
+    return new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(value || 0)
+  } catch (error) {
+    return String(value || 0)
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/\s/g, '%20')
+}
+
+function formatShortDate(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'N/A'
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 function formatRelativeDate(dateString) {

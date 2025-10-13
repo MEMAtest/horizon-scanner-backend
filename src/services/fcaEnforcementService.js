@@ -11,6 +11,74 @@ class FCAEnforcementService {
     this.scraper = new FCAFinesScraper(dbConfig)
     this.aiService = new FCAFinesAI(dbConfig, aiAnalyzer)
     this.isInitialized = false
+
+    this.controlPlaybook = {
+      'Anti-Money Laundering': {
+        headline: 'Strengthen AML governance and monitoring to avoid repeat FCA criticism.',
+        controls: [
+          'Run an annual enterprise-wide AML risk assessment covering customer types, products, and geographies.',
+          'Deploy automated transaction monitoring with documented scenario tuning and QA sign-off.',
+          'Evidence independent quality assurance of SAR determinations and timely reporting to the NCA.'
+        ],
+        monitoring: [
+          'Quarterly MI on alert backlog, SAR volumes, and typologies presented to the MLRO and board risk committee.',
+          'Documented model validation of transaction monitoring rules at least every 12 months.'
+        ],
+        riskIfIgnored: 'FCA expects firms to prove they understand and actively mitigate financial crime risk. Weak controls attract multi-million pound penalties and skilled-person reviews.'
+      },
+      'Systems and Controls': {
+        headline: 'Operational controls gaps keep driving fines – tighten oversight and evidencing.',
+        controls: [
+          'Implement RCSA coverage for key operational processes with action tracking for high residual risks.',
+          'Introduce change-management checkpoints that validate regulatory obligations before go-live.',
+          'Maintain auditable control testing with escalation when repeated deficiencies are detected.'
+        ],
+        monitoring: [
+          'Monthly control effectiveness dashboards shared with COO and Internal Audit.',
+          'Formal closure evidence for remediation tasks, signed off by control owners.'
+        ],
+        riskIfIgnored: 'Control environment failures often highlight weak governance and supervision. FCA sanctions typically reference missing audit trails and senior manager accountability lapses.'
+      },
+      'Customer Treatment': {
+        headline: 'Reinforce customer outcome testing to anticipate Consumer Duty scrutiny.',
+        controls: [
+          'Design outcome testing across the customer journey with thresholds linked to fair value indicators.',
+          'Create escalation routes for vulnerable-customer cases and track remediation through root-cause forums.',
+          'Maintain product governance minutes evidencing challenge and approvals.'
+        ],
+        monitoring: [
+          'Monthly MI on complaints, root causes, redress amounts, and vulnerable customer handling.',
+          'Bi-annual board attestations confirming Consumer Duty monitoring effectiveness.'
+        ],
+        riskIfIgnored: 'Failures in treating customers fairly quickly escalate into high-profile enforcement, particularly under the Consumer Duty regime.'
+      },
+      'Market Abuse': {
+        headline: 'Market abuse surveillance must be demonstrably calibrated and independently reviewed.',
+        controls: [
+          'Document rationale for each surveillance scenario with periodic parameter reviews.',
+          'Ensure trade data completeness checks with reconciliations to front-office systems.',
+          'Provide targeted training to front-office and control staff on suspicious pattern escalation.'
+        ],
+        monitoring: [
+          'Monthly surveillance effectiveness reports including alert volumes, tuning decisions, and QA sampling.',
+          'Independent model validation of surveillance tools at least every 18 months.'
+        ],
+        riskIfIgnored: 'Gaps in surveillance tooling and governance underpin many of the FCA’s largest market abuse fines.'
+      },
+      'Financial Crime': {
+        headline: 'Broaden financial crime controls beyond AML to cover sanctions, fraud, and emerging risks.',
+        controls: [
+          'Centralise adverse media, sanctions, and PEP screening with auditable overrides.',
+          'Deploy fraud analytics with thresholds tuned to product-specific risk and geared to rapid customer communication.',
+          'Maintain scenario-based playbooks covering sanctions breaches and law-enforcement requests.'
+        ],
+        monitoring: [
+          'Dashboard tracking sanctions hits, override justifications, and breach escalations each month.',
+          'Annual combined assurance review spanning AML, CTF, sanctions, and fraud controls.'
+        ],
+        riskIfIgnored: 'Regulators expect holistic financial crime defences. Fragmented controls create exposure to enforcement and senior manager accountability challenges.'
+      }
+    }
   }
 
   async initialize() {
@@ -122,48 +190,301 @@ class FCAEnforcementService {
                     SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
                     AVG(amount) FILTER (WHERE amount IS NOT NULL) as average_amount,
                     MAX(amount) FILTER (WHERE amount IS NOT NULL) as largest_fine,
+                    SUM(amount) FILTER (WHERE EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)) as amount_this_year,
+                    SUM(amount) FILTER (WHERE date_issued >= CURRENT_DATE - INTERVAL '30 days') as amount_last_30_days,
+                    COUNT(DISTINCT COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')) as distinct_firms,
+                    COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)
+                        THEN COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') END) as distinct_firms_this_year,
                     AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) as average_risk_score,
                     COUNT(CASE WHEN systemic_risk = true THEN 1 END) as systemic_risk_cases,
                     COUNT(CASE WHEN precedent_setting = true THEN 1 END) as precedent_cases,
-                    MAX(date_issued) as latest_fine_date
+                    MAX(date_issued) as latest_fine_date,
+                    (
+                        SELECT COUNT(*)
+                        FROM (
+                            SELECT COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') AS entity
+                            FROM fca_fines
+                            GROUP BY entity
+                            HAVING COUNT(*) > 1
+                        ) repeat_entities
+                    ) as repeat_offenders
                 FROM fca_fines
             `)
 
       const breachStats = await this.db.query(`
+                WITH category_source AS (
+                    SELECT
+                        COALESCE(
+                            NULLIF(TRIM(bc.category), ''),
+                            NULLIF(TRIM(f.breach_type), ''),
+                            'Uncategorised'
+                        ) AS category,
+                        f.amount
+                    FROM fca_fines f
+                    LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) AS bc(category) ON true
+                )
                 SELECT
-                    bc.category,
-                    COUNT(*) as count,
-                    SUM(f.amount) FILTER (WHERE f.amount IS NOT NULL) as total_amount
-                FROM fca_fines f,
-                jsonb_array_elements_text(f.breach_categories) as bc(category)
-                WHERE f.processed_by_ai = true
-                GROUP BY bc.category
+                    category,
+                    COUNT(*) AS count,
+                    SUM(amount) FILTER (WHERE amount IS NOT NULL) AS total_amount
+                FROM category_source
+                GROUP BY category
                 ORDER BY count DESC
                 LIMIT 10
             `)
 
       const sectorStats = await this.db.query(`
+                WITH sector_source AS (
+                    SELECT
+                        COALESCE(
+                            NULLIF(TRIM(s.sector), ''),
+                            NULLIF(TRIM(f.firm_category), ''),
+                            'Unspecified'
+                        ) AS sector,
+                        f.amount
+                    FROM fca_fines f
+                    LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.affected_sectors, '[]'::jsonb)) AS s(sector) ON true
+                )
                 SELECT
-                    s.sector,
-                    COUNT(*) as count,
-                    SUM(f.amount) FILTER (WHERE f.amount IS NOT NULL) as total_amount
-                FROM fca_fines f,
-                jsonb_array_elements_text(f.affected_sectors) as s(sector)
-                WHERE f.processed_by_ai = true
-                GROUP BY s.sector
+                    sector,
+                    COUNT(*) AS count,
+                    SUM(amount) FILTER (WHERE amount IS NOT NULL) AS total_amount
+                FROM sector_source
+                GROUP BY sector
                 ORDER BY count DESC
                 LIMIT 10
             `)
 
+      const yearsResult = await this.db.query(`
+                SELECT DISTINCT EXTRACT(YEAR FROM date_issued)::INT as year
+                FROM fca_fines
+                ORDER BY year DESC
+                LIMIT 20
+            `)
+
+      const categoriesResult = await this.db.query(`
+                SELECT DISTINCT TRIM(value) as category
+                FROM fca_fines f
+                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) as value
+                WHERE value IS NOT NULL AND TRIM(value) <> ''
+                ORDER BY category ASC
+            `)
+
+      const yearlyStatsResult = await this.db.query(`
+                WITH yearly_base AS (
+                    SELECT
+                        year_issued AS year,
+                        COUNT(*) AS fine_count,
+                        SUM(amount) FILTER (WHERE amount IS NOT NULL) AS total_amount,
+                        AVG(amount) FILTER (WHERE amount IS NOT NULL) AS average_amount,
+                        AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) AS average_risk_score,
+                        COUNT(*) FILTER (WHERE systemic_risk = true) AS systemic_risk_cases,
+                        COUNT(*) FILTER (WHERE precedent_setting = true) AS precedent_cases
+                    FROM fca_fines
+                    GROUP BY year_issued
+                ),
+                category_rank AS (
+                    SELECT
+                        data.year_issued AS year,
+                        data.category,
+                        COUNT(*) AS count,
+                        SUM(data.amount) FILTER (WHERE data.amount IS NOT NULL) AS total_amount,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY data.year_issued
+                            ORDER BY COUNT(*) DESC, SUM(data.amount) DESC
+                        ) AS category_rank
+                    FROM (
+                        SELECT
+                            f.year_issued,
+                            COALESCE(
+                                NULLIF(TRIM(bc.category), ''),
+                                NULLIF(TRIM(f.breach_type), ''),
+                                'Uncategorised'
+                            ) AS category,
+                            f.amount
+                        FROM fca_fines f
+                        LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) AS bc(category) ON true
+                    ) data
+                    GROUP BY data.year_issued, data.category
+                ),
+                sector_rank AS (
+                    SELECT
+                        data.year_issued AS year,
+                        data.sector,
+                        COUNT(*) AS count,
+                        SUM(data.amount) FILTER (WHERE data.amount IS NOT NULL) AS total_amount,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY data.year_issued
+                            ORDER BY COUNT(*) DESC, SUM(data.amount) DESC
+                        ) AS sector_rank
+                    FROM (
+                        SELECT
+                            f.year_issued,
+                            COALESCE(
+                                NULLIF(TRIM(s.sector), ''),
+                                NULLIF(TRIM(f.firm_category), ''),
+                                'Unspecified'
+                            ) AS sector,
+                            f.amount
+                        FROM fca_fines f
+                        LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.affected_sectors, '[]'::jsonb)) AS s(sector) ON true
+                    ) data
+                    GROUP BY data.year_issued, data.sector
+                )
+                SELECT
+                    y.year,
+                    y.fine_count,
+                    y.total_amount,
+                    y.average_amount,
+                    y.average_risk_score,
+                    y.systemic_risk_cases,
+                    y.precedent_cases,
+                    to_jsonb(c) AS dominant_category,
+                    to_jsonb(s) AS dominant_sector
+                FROM yearly_base y
+                LEFT JOIN category_rank c ON c.year = y.year AND c.category_rank = 1
+                LEFT JOIN sector_rank s ON s.year = y.year AND s.sector_rank = 1
+                ORDER BY y.year DESC
+            `)
+
+      const categoryTrendResult = await this.db.query(`
+                WITH category_assignments AS (
+                    SELECT
+                        f.year_issued,
+                        COALESCE(
+                            NULLIF(TRIM(bc.category), ''),
+                            NULLIF(TRIM(f.breach_type), ''),
+                            'Uncategorised'
+                        ) AS category,
+                        f.amount
+                    FROM fca_fines f
+                    LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) AS bc(category) ON true
+                ),
+                top_categories AS (
+                    SELECT category
+                    FROM category_assignments
+                    GROUP BY category
+                    ORDER BY COUNT(*) DESC
+                    LIMIT 6
+                )
+                SELECT
+                    year_issued AS year,
+                    category,
+                    COUNT(*) AS fine_count,
+                    SUM(amount) FILTER (WHERE amount IS NOT NULL) AS total_amount
+                FROM category_assignments
+                WHERE category IN (SELECT category FROM top_categories)
+                GROUP BY year_issued, category
+                ORDER BY year DESC, category ASC
+            `)
+
+      const overview = stats.rows[0] || {}
+      const normalisedOverview = {
+        ...overview,
+        average_amount: overview.average_amount || overview.avg_amount || 0,
+        largest_fine: overview.largest_fine || overview.max_amount || 0,
+        amount_this_year: overview.amount_this_year || 0,
+        amount_last_30_days: overview.amount_last_30_days || 0,
+        distinct_firms: overview.distinct_firms || 0,
+        distinct_firms_this_year: overview.distinct_firms_this_year || 0,
+        repeat_offenders: overview.repeat_offenders || 0
+      }
+
       return {
-        overview: stats.rows[0],
+        overview: normalisedOverview,
         topBreachTypes: breachStats.rows,
-        topSectors: sectorStats.rows
+        topSectors: sectorStats.rows,
+        availableYears: yearsResult.rows.map(row => row.year),
+        availableCategories: categoriesResult.rows.map(row => row.category),
+        yearlyOverview: yearlyStatsResult.rows,
+        topCategoryTrends: categoryTrendResult.rows,
+        controlRecommendations: this.buildControlRecommendations(breachStats.rows, categoryTrendResult.rows, yearlyStatsResult.rows)
       }
     } catch (error) {
       console.error('Error getting enforcement stats:', error)
       throw error
     }
+  }
+
+  buildControlRecommendations(topCategories = [], categoryTrends = [], yearlyOverview = []) {
+    if (!Array.isArray(topCategories) || topCategories.length === 0) return []
+
+    const categoryTrendMap = categoryTrends.reduce((acc, entry) => {
+      if (!entry || !entry.category) return acc
+      const category = entry.category
+      const year = entry.year
+      const count = Number(entry.fine_count || 0)
+      const totalAmount = Number(entry.total_amount || 0)
+
+      if (!acc[category]) acc[category] = []
+      acc[category].push({ year, count, totalAmount })
+      return acc
+    }, {})
+
+    Object.values(categoryTrendMap).forEach(entries => {
+      entries.sort((a, b) => b.year - a.year)
+    })
+
+    const yearlyLookup = yearlyOverview.reduce((map, item) => {
+      if (!item || typeof item.year !== 'number') return map
+      map[item.year] = item
+      return map
+    }, {})
+
+    const recommendations = []
+    let categoriesToHighlight = topCategories
+      .filter(cat => cat && cat.category && cat.category !== 'Uncategorised')
+      .slice(0, 4)
+
+    if (categoriesToHighlight.length === 0 && topCategories.length > 0) {
+      categoriesToHighlight = topCategories.slice(0, 2)
+    }
+
+    categoriesToHighlight.forEach(categoryEntry => {
+      const categoryName = categoryEntry.category
+      const playbook = this.controlPlaybook[categoryName] || {
+        headline: `${categoryName} remains on the FCA radar — ensure governance, control ownership, and evidence of remediation are watertight.`,
+        controls: [
+          'Identify the accountable SMF owner and document governance for this risk theme.',
+          'Refresh the control inventory and confirm effectiveness testing cadence.',
+          'Evidence remediation progress with clear milestones and sign-off.'
+        ],
+        monitoring: [
+          'Provide quarterly MI covering incidents, audit findings, and remediation status.',
+          'Record board or risk committee challenge and follow-up actions.'
+        ],
+        riskIfIgnored: 'FCA enforcement typically highlights weak oversight, missing MI, and slow remediation. Strengthen the control environment before supervisors ask.'
+      }
+
+      const trendHistory = categoryTrendMap[categoryName] || []
+      const multiYearSnapshot = trendHistory.slice(0, 5)
+      const cumulativeCount = multiYearSnapshot.reduce((sum, item) => sum + Number(item.count || 0), 0)
+      const cumulativeAmount = multiYearSnapshot.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0)
+
+      const recentYearsText = multiYearSnapshot
+        .map(item => `${item.year}: ${item.count} fines`)
+        .join(' · ')
+
+      const latestYear = multiYearSnapshot.length ? multiYearSnapshot[0].year : null
+      const latestYearOverview = latestYear ? yearlyLookup[latestYear] : null
+
+      recommendations.push({
+        category: categoryName,
+        headline: playbook.headline,
+        recentActivity: {
+          totalFines: cumulativeCount,
+          totalAmount: cumulativeAmount,
+          narrative: recentYearsText || `No detailed year-by-year data captured for ${categoryName}.`
+        },
+        dominantYears: multiYearSnapshot.map(item => item.year),
+        riskSignal: latestYearOverview ? Number(latestYearOverview.average_risk_score || 0) : null,
+        recommendedControls: playbook.controls,
+        monitoringChecks: playbook.monitoring,
+        riskIfIgnored: playbook.riskIfIgnored
+      })
+    })
+
+    return recommendations
   }
 
   async getRecentFines(limit = 20) {
@@ -195,9 +516,20 @@ class FCAEnforcementService {
     }
   }
 
-  async getFinesTrends(period = 'monthly', limit = 12) {
+  async getFinesTrends(period = 'monthly', limit = 12, options = {}) {
     try {
       let periodSelect, groupBy, intervalUnit
+      const { years } = options
+      const filters = []
+      const params = []
+
+      filters.push("processing_status = 'completed'")
+      filters.push('date_issued IS NOT NULL')
+
+      if (Array.isArray(years) && years.length > 0) {
+        params.push(years.map(year => parseInt(year, 10)).filter(Number.isFinite))
+        filters.push(`year_issued = ANY($${params.length})`)
+      }
 
       switch (period) {
         case 'yearly':
@@ -217,7 +549,13 @@ class FCAEnforcementService {
           intervalUnit = 'months'
       }
 
-      const result = await this.db.query(`
+      const timeframeClause = (!years || years.length === 0)
+        ? `AND date_issued >= CURRENT_DATE - INTERVAL '${limit} ${intervalUnit}'`
+        : ''
+
+      const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
+
+      const query = `
                 SELECT
                     ${periodSelect},
                     COUNT(*) as fine_count,
@@ -225,10 +563,13 @@ class FCAEnforcementService {
                     AVG(amount) FILTER (WHERE amount IS NOT NULL) as average_amount,
                     AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) as average_risk_score
                 FROM fca_fines
-                WHERE date_issued >= CURRENT_DATE - INTERVAL '${limit} ${intervalUnit}'
+                ${whereClause}
+                ${timeframeClause}
                 GROUP BY ${groupBy}
                 ORDER BY ${groupBy}
-            `)
+            `
+
+      const result = await this.db.query(query, params)
 
       return result.rows
     } catch (error) {

@@ -205,6 +205,11 @@ class AIRegulatoryIntelligenceServer {
       }
     })
 
+    // Lightweight favicon handler to avoid 404 noise in browsers
+    this.app.get('/favicon.ico', (req, res) => {
+      res.status(204).end()
+    })
+
     // API routes
     this.app.use('/api', apiRoutes)
 
@@ -373,36 +378,102 @@ class AIRegulatoryIntelligenceServer {
           await this.enforcementService.initialize()
           console.log('✅ FCA Enforcement Service initialized with database')
         } else {
-          // Create fallback enforcement service
           console.log('⚠️ No database URL found - using fallback enforcement service')
           this.enforcementService = {
             async getEnforcementStats() {
               return {
                 overview: {
-                  total_fines: 45,
-                  fines_this_year: 8,
-                  total_amount: 1250000000,
-                  avg_amount: 28000000,
-                  max_amount: 264800000,
-                  min_amount: 5400000
+                  total_fines: 52,
+                  fines_this_year: 11,
+                  fines_last_30_days: 3,
+                  total_amount: 1415000000,
+                  average_amount: 27200000,
+                  largest_fine: 325000000,
+                  amount_this_year: 385000000,
+                  amount_last_30_days: 68000000,
+                  distinct_firms: 44,
+                  distinct_firms_this_year: 9,
+                  average_risk_score: 68,
+                  systemic_risk_cases: 6,
+                  precedent_cases: 4,
+                  repeat_offenders: 12,
+                  latest_fine_date: new Date().toISOString()
                 },
                 byYear: [
-                  { year: 2024, count: 8, total_amount: 125000000 },
+                  { year: 2025, count: 11, total_amount: 215000000 },
+                  { year: 2024, count: 9, total_amount: 242000000 },
                   { year: 2023, count: 12, total_amount: 487000000 },
                   { year: 2022, count: 10, total_amount: 298000000 },
-                  { year: 2021, count: 8, total_amount: 156000000 },
-                  { year: 2020, count: 7, total_amount: 184000000 }
+                  { year: 2021, count: 6, total_amount: 156000000 },
+                  { year: 2020, count: 4, total_amount: 94500000 }
+                ],
+                topBreachTypes: [
+                  { category: 'Anti-Money Laundering', count: 14, total_amount: 520000000 },
+                  { category: 'Customer Treatment', count: 9, total_amount: 215000000 },
+                  { category: 'Market Abuse', count: 7, total_amount: 184000000 },
+                  { category: 'Systems and Controls', count: 6, total_amount: 132000000 }
+                ],
+                topSectors: [
+                  { sector: 'Banking', count: 18, total_amount: 720000000 },
+                  { sector: 'Wealth Management', count: 6, total_amount: 162000000 },
+                  { sector: 'Insurance', count: 5, total_amount: 94000000 },
+                  { sector: 'Fintech', count: 4, total_amount: 56000000 }
+                ],
+                availableYears: [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013],
+                availableCategories: [
+                  'Anti-Money Laundering',
+                  'Market Abuse',
+                  'Customer Treatment',
+                  'Systems and Controls',
+                  'Prudential Requirements',
+                  'Financial Crime',
+                  'Governance',
+                  'Client Money'
                 ]
               }
             },
             async getRecentFines(limit = 10) {
-              return [
+              const sample = [
+                {
+                  fine_reference: 'FCA-2025-003',
+                  date_issued: '2025-04-18',
+                  firm_individual: 'Barclays Bank UK PLC',
+                  amount: 82500000,
+                  ai_summary: 'Barclays fined £82.5m for serious failings in market surveillance and conduct risk controls.',
+                  breach_categories: ['Market Abuse', 'Systems and Controls'],
+                  affected_sectors: ['Banking', 'Wholesale Markets'],
+                  customer_impact_level: 'High',
+                  risk_score: 82,
+                  systemic_risk: true,
+                  precedent_setting: false,
+                  final_notice_url: 'https://www.fca.org.uk/news/press-releases/barclays-fined-market-surveillance'
+                },
+                {
+                  fine_reference: 'FCA-2025-002',
+                  date_issued: '2025-03-06',
+                  firm_individual: 'Revolut Ltd',
+                  amount: 32000000,
+                  ai_summary: 'Revolut fined £32m for deficiencies in anti-money laundering systems and customer onboarding.',
+                  breach_categories: ['Anti-Money Laundering', 'Systems and Controls'],
+                  affected_sectors: ['Fintech', 'Payments'],
+                  customer_impact_level: 'Medium',
+                  risk_score: 74,
+                  systemic_risk: false,
+                  precedent_setting: true,
+                  final_notice_url: 'https://www.fca.org.uk/news/press-releases/revolut-fined-aml-controls'
+                },
                 {
                   fine_reference: 'FCA-2024-001',
                   date_issued: '2024-03-15',
                   firm_individual: 'HSBC Bank plc',
                   amount: 57000000,
                   ai_summary: 'HSBC fined £57 million for serious and systemic failings in anti-money laundering controls.',
+                  breach_categories: ['Anti-Money Laundering'],
+                  affected_sectors: ['Banking'],
+                  customer_impact_level: 'High',
+                  risk_score: 78,
+                  systemic_risk: true,
+                  precedent_setting: false,
                   final_notice_url: 'https://www.fca.org.uk/news/press-releases/hsbc-fined-57-million'
                 },
                 {
@@ -411,21 +482,29 @@ class AIRegulatoryIntelligenceServer {
                   firm_individual: 'Santander UK plc',
                   amount: 108000000,
                   ai_summary: 'Santander UK fined £108 million for serious anti-money laundering failings.',
+                  breach_categories: ['Anti-Money Laundering'],
+                  affected_sectors: ['Banking'],
+                  customer_impact_level: 'High',
+                  risk_score: 84,
+                  systemic_risk: true,
+                  precedent_setting: false,
                   final_notice_url: 'https://www.fca.org.uk/news/press-releases/santander-fined-108-million'
                 }
-              ].slice(0, limit)
+              ]
+              return sample.slice(0, limit)
             },
             async getEnforcementTrends() {
               return {
                 trends: [
-                  { category: 'Anti-Money Laundering', count: 15, percentage: 33.3 },
-                  { category: 'Customer Treatment', count: 8, percentage: 17.8 },
-                  { category: 'Risk Management', count: 6, percentage: 13.3 }
+                  { category: 'Anti-Money Laundering', count: 16, percentage: 34 },
+                  { category: 'Customer Treatment', count: 9, percentage: 19 },
+                  { category: 'Market Abuse', count: 7, percentage: 15 }
                 ],
                 monthlyTrends: [
-                  { month: '2024-01', count: 2, amount: 45000000 },
-                  { month: '2024-02', count: 1, amount: 23000000 },
-                  { month: '2024-03', count: 3, amount: 87000000 }
+                  { month: '2025-04', count: 3, amount: 125000000 },
+                  { month: '2025-03', count: 2, amount: 82000000 },
+                  { month: '2025-02', count: 1, amount: 28000000 },
+                  { month: '2025-01', count: 1, amount: 19000000 }
                 ]
               }
             },
@@ -433,25 +512,26 @@ class AIRegulatoryIntelligenceServer {
               return {
                 period,
                 trends: [
-                  { period: '2024-01', count: 2, total_amount: 45000000, avg_amount: 22500000 },
-                  { period: '2024-02', count: 1, total_amount: 23000000, avg_amount: 23000000 },
-                  { period: '2024-03', count: 3, total_amount: 87000000, avg_amount: 29000000 },
-                  { period: '2023-12', count: 1, total_amount: 108000000, avg_amount: 108000000 },
-                  { period: '2023-11', count: 2, total_amount: 372800000, avg_amount: 186400000 }
+                  { period: '2025-04', fine_count: 3, total_amount: 125000000, average_amount: 41666667, average_risk_score: 76 },
+                  { period: '2025-03', fine_count: 2, total_amount: 82000000, average_amount: 41000000, average_risk_score: 74 },
+                  { period: '2025-02', fine_count: 1, total_amount: 28000000, average_amount: 28000000, average_risk_score: 68 },
+                  { period: '2025-01', fine_count: 1, total_amount: 19000000, average_amount: 19000000, average_risk_score: 64 },
+                  { period: '2024-12', fine_count: 1, total_amount: 108000000, average_amount: 108000000, average_risk_score: 83 }
                 ].slice(0, limit),
                 summary: {
-                  total_count: 9,
-                  total_amount: 635800000,
-                  avg_amount: 70644444,
-                  trend_direction: 'stable'
+                  total_count: 8,
+                  total_amount: 302000000,
+                  avg_amount: 37750000,
+                  trend_direction: 'rising'
                 }
               }
             },
             async getTopFirms(limit = 10) {
               return [
-                { firm_individual: 'NatWest Group plc', fine_count: 3, total_amount: 310000000 },
-                { firm_individual: 'Deutsche Bank AG', fine_count: 2, total_amount: 200000000 },
-                { firm_individual: 'HSBC Bank plc', fine_count: 4, total_amount: 180000000 }
+                { firm_name: 'NatWest Group plc', total_fines: 310000000, fine_count: 3, first_fine_date: '2019-07-01', latest_fine_date: '2025-02-01', is_repeat_offender: true },
+                { firm_name: 'Barclays Bank UK PLC', total_fines: 255000000, fine_count: 4, first_fine_date: '2018-05-12', latest_fine_date: '2025-04-18', is_repeat_offender: true },
+                { firm_name: 'HSBC Bank plc', total_fines: 180000000, fine_count: 4, first_fine_date: '2017-03-22', latest_fine_date: '2024-03-15', is_repeat_offender: true },
+                { firm_name: 'Revolut Ltd', total_fines: 32000000, fine_count: 1, first_fine_date: '2025-03-06', latest_fine_date: '2025-03-06', is_repeat_offender: false }
               ].slice(0, limit)
             }
           }

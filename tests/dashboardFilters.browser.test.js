@@ -32,7 +32,6 @@ describe('Dashboard Filters (client-side)', () => {
       <div class="quick-filters">
         <button class="quick-filter-btn" data-filter="all"></button>
         <button class="quick-filter-btn" data-filter="high-impact"></button>
-        <button class="quick-filter-btn" data-filter="today"></button>
       </div>
       <div class="sort-buttons">
         <button class="sort-btn" data-sort="newest"></button>
@@ -86,7 +85,7 @@ describe('Dashboard Filters (client-side)', () => {
 
     expect(window.filteredUpdates.length).toBe(2)
 
-    window.filterByCategory('high-impact')
+    await window.filterByCategory('high-impact')
 
     expect(window.currentFilters.category).toBe('high-impact')
     expect(window.filteredUpdates.length).toBe(1)
@@ -101,7 +100,7 @@ describe('Dashboard Filters (client-side)', () => {
   test('view switch renders filtered dataset consistently', async () => {
     await loadClientScripts()
 
-    window.filterByCategory('high-impact')
+    await window.filterByCategory('high-impact')
     expect(window.filteredUpdates.length).toBe(1)
 
     window.switchView('table')
@@ -114,5 +113,35 @@ describe('Dashboard Filters (client-side)', () => {
     expect(timelineContainer).not.toBeNull()
     expect(timelineContainer.innerHTML).toContain('timeline-wrapper')
   })
-})
 
+  test('falls back to server when local dataset empty', async () => {
+    const remoteUpdate = {
+      id: '3',
+      headline: 'Consultation paper released',
+      summary: 'Detailed consultation update',
+      authority: 'FCA',
+      impactLevel: 'Moderate',
+      urgency: 'Medium',
+      business_impact_score: 5,
+      publishedDate: new Date().toISOString(),
+      category: 'consultations'
+    }
+
+    global.fetch.mockImplementation(url => {
+      if (String(url).includes('/api/updates')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, updates: [remoteUpdate] })
+        })
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: false }) })
+    })
+
+    await loadClientScripts()
+
+    await window.filterByCategory('consultations')
+
+    expect(global.fetch).toHaveBeenCalled()
+    expect(window.filteredUpdates.length).toBe(1)
+    expect(window.filteredUpdates[0].id).toBe('3')
+  })
+})

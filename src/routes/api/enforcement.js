@@ -77,6 +77,9 @@ router.get('/trends', async (req, res) => {
 
     const period = req.query.period || 'monthly'
     const limit = Math.min(parseInt(req.query.limit) || 12, 24)
+    const years = req.query.years
+      ? req.query.years.split(',').map(year => parseInt(year.trim(), 10)).filter(Number.isFinite)
+      : undefined
 
     if (!['monthly', 'quarterly', 'yearly'].includes(period)) {
       return res.status(400).json({
@@ -85,12 +88,13 @@ router.get('/trends', async (req, res) => {
       })
     }
 
-    const trends = await req.app.locals.enforcementService.getFinesTrends(period, limit)
+    const trends = await req.app.locals.enforcementService.getFinesTrends(period, limit, { years })
 
     res.json({
       success: true,
       trends,
       period,
+      years,
       count: trends.length
     })
   } catch (error) {
@@ -223,7 +227,7 @@ router.post('/update', async (req, res) => {
 
     // This would typically require admin authentication
     // For now, we'll allow it but log the request
-    console.log('🔄 Manual enforcement data update requested')
+    console.log('Refresh Manual enforcement data update requested')
 
     const results = await req.app.locals.enforcementService.updateEnforcementData()
 
@@ -303,7 +307,7 @@ function convertToCSV(fines) {
     'Reference',
     'Date',
     'Firm/Individual',
-    'Amount (£)',
+    'Amount (GBP)',
     'Breach Categories',
     'Affected Sectors',
     'Impact Level',

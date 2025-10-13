@@ -13,7 +13,9 @@ const dbService = require('../services/dbService')
 const aiAnalyzer = require('../services/aiAnalyzer')
 const rssFetcher = require('../services/rssFetcher')
 const relevanceService = require('../services/relevanceService')
-const weeklyRoundupService = require('../services/weeklyRoundupService')
+const renderWeeklyBriefingPage = require('./pages/weeklyBriefingPage')
+const annotationService = require('../services/annotationService')
+const { prepareAvailableSectors, normalizeSectorName } = require('../utils/sectorTaxonomy')
 
 function normalizeDate(value) {
   if (!value) return null
@@ -30,22 +32,382 @@ function formatDateDisplay(value, options = { day: 'numeric', month: 'short', ye
   return date.toLocaleDateString('en-GB', options)
 }
 
-function formatDateISO(value) {
-  const date = normalizeDate(value)
-  if (!date) return 'Unknown'
-  return date.toISOString().split('T')[0]
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+function toTitleCase(value) {
+  return String(value || '')
+    .toLowerCase()
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
 
-function formatDateTime(value) {
-  const date = normalizeDate(value)
-  if (!date) return 'Unknown'
-  return date.toLocaleString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+function getTopicKey(update) {
+  const tags = update.ai_tags || update.aiTags
+  if (Array.isArray(tags) && tags.length > 0) {
+    return String(tags[0]).toLowerCase()
+  }
+  return String(update.authority || 'unknown').toLowerCase()
+}
+
+function getPublishedTimestamp(update) {
+  const raw = update.publishedDate || update.published_date || update.fetchedDate || update.createdAt
+  if (!raw) return null
+  const parsed = new Date(raw).getTime()
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function buildVelocityLookup(updates) {
+  const now = Date.now()
+  const lookup = new Map()
+  updates.forEach(update => {
+    const published = getPublishedTimestamp(update)
+    if (published === null) return
+
+    const diffDays = (now - published) / MS_PER_DAY
+    if (diffDays > 7) return
+
+    const topicKey = getTopicKey(update)
+    if (!lookup.has(topicKey)) {
+      lookup.set(topicKey, { recent: 0, previous: 0 })
+    }
+    const entry = lookup.get(topicKey)
+    if (diffDays <= 3) {
+      entry.recent += 1
+    } else {
+      entry.previous += 1
+    }
   })
+
+  const velocity = {}
+  lookup.forEach((value, key) => {
+    const { recent, previous } = value
+    let trend = 'steady'
+    if (recent >= previous + 1) trend = 'accelerating'
+    else if (previous >= recent + 1) trend = 'decelerating'
+
+    velocity[key] = trend
+  })
+  return velocity
+}
+
+function getVelocityForUpdate(update, velocityLookup) {
+  const topicKey = getTopicKey(update)
+  const trend = velocityLookup[topicKey]
+  if (!trend) return null
+
+  if (trend === 'accelerating') {
+    return { trend, icon: '▲', label: 'Accelerating' }
+  }
+  if (trend === 'decelerating') {
+    return { trend, icon: '▼', label: 'Cooling' }
+  }
+  return { trend: 'steady', icon: '➜', label: 'Steady' }
+}
+
+function generatePredictiveBadges(update) {
+  const badges = []
+  const content = `${update.headline || ''} ${update.summary || ''} ${update.impact || ''}`.toLowerCase()
+  const deadlineRaw = update.compliance_deadline || update.complianceDeadline
+  const deadline = deadlineRaw ? new Date(deadlineRaw) : null
+  const diffDays = deadline && !Number.isNaN(deadline) ? Math.round((deadline.getTime() - Date.now()) / MS_PER_DAY) : null
+
+  if (content.includes('consultation') || content.includes('feedback')) {
+    badges.push('Expected Follow-up')
+  }
+  if (diffDays !== null && diffDays >= 0 && diffDays <= 14) {
+    badges.push('Consultation Closing')
+  }
+  const normalizedSummary = (update.summary || update.ai_summary || '').toLowerCase()
+  if (normalizedSummary.includes('2023') && normalizedSummary.includes('guidance')) {
+    badges.push('Pattern Match to 2023 Guidance')
+  }
+  return badges
+}
+
+function generatePatternAlert(updates) {
+  const windowMs = 48 * 60 * 60 * 1000
+  const now = Date.now()
+  const topicMap = new Map()
+
+  updates.forEach(update => {
+    const published = getPublishedTimestamp(update)
+    if (published === null || now - published > windowMs) return
+
+    const topicKey = getTopicKey(update)
+    if (!topicMap.has(topicKey)) {
+      topicMap.set(topicKey, { authorities: new Set(), count: 0 })
+    }
+    const entry = topicMap.get(topicKey)
+    if (update.authority) {
+      entry.authorities.add(update.authority)
+    }
+    entry.count += 1
+  })
+
+  let bestTopic = null
+  topicMap.forEach((value, key) => {
+    const authorityCount = value.authorities.size
+    if (authorityCount >= 3) {
+      if (!bestTopic || authorityCount > bestTopic.authorities || value.count > bestTopic.count) {
+        bestTopic = {
+          topic: key,
+          authorities: authorityCount,
+          count: value.count
+        }
+      }
+    }
+  })
+
+  if (bestTopic) {
+    const title = `${bestTopic.authorities} authorities discussing ${toTitleCase(bestTopic.topic)} in past 48 hours – coordination pattern detected.`
+    return {
+      title,
+      subtitle: 'Monitoring engine recommends heightened watch on this theme.'
+    }
+  }
+
+  return {
+    title: 'Monitoring engine is scanning cross-authority activity.',
+    subtitle: 'No coordinated patterns detected in the past 48 hours.'
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function getUpdateKey(update) {
+  const base =
+        update?.id ||
+        update?.update_id ||
+        update?.guid ||
+        update?.url ||
+        update?.headline ||
+        Math.random().toString(36).slice(2)
+
+  return Buffer.from(String(base), 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+function classifyUpdatesByPersona(updates = []) {
+  const personaMap = {}
+  const counts = { all: updates.length, executive: 0, analyst: 0, operations: 0 }
+
+  updates.forEach(update => {
+    const key = getUpdateKey(update)
+    const personas = new Set()
+    const impactLevel = (update?.impactLevel || update?.impact_level || '').toLowerCase()
+    const urgency = (update?.urgency || '').toLowerCase()
+    const businessScore = Number(update?.businessImpactScore || update?.business_impact_score || 0)
+    const relevanceScore = Number(update?.relevanceScore || 0)
+    const contentType = (update?.contentType || update?.content_type || '').toLowerCase()
+    const tags = Array.isArray(update?.aiTags || update?.ai_tags)
+      ? (update.aiTags || update.ai_tags)
+      : []
+    const summary = (update?.aiSummary || update?.ai_summary || update?.summary || update?.impact || '').toLowerCase()
+    const headline = (update?.headline || '').toLowerCase()
+
+    const hasDeadline = Boolean(update?.compliance_deadline || update?.complianceDeadline)
+    const mentionsDeadline = summary.includes('deadline') || headline.includes('deadline')
+    const isConsultation =
+      contentType.includes('consult') ||
+      headline.includes('consultation') ||
+      summary.includes('consultation') ||
+      tags.some(tag => typeof tag === 'string' && tag.toLowerCase().includes('consult'))
+
+    const highImpact =
+      impactLevel === 'significant' ||
+      businessScore >= 7 ||
+      relevanceScore >= 80 ||
+      urgency === 'critical'
+
+    const mediumImpact =
+      impactLevel === 'moderate' ||
+      businessScore >= 5 ||
+      relevanceScore >= 60 ||
+      urgency === 'high'
+
+    const operationsTrigger =
+      hasDeadline ||
+      mentionsDeadline ||
+      isConsultation ||
+      (urgency === 'high' && impactLevel !== 'background')
+
+    if (highImpact) personas.add('executive')
+    if (operationsTrigger) personas.add('operations')
+    if (mediumImpact || personas.size === 0) personas.add('analyst')
+
+    const personaList = Array.from(personas)
+    personaMap[key] = personaList
+
+    personaList.forEach(persona => {
+      counts[persona] = (counts[persona] || 0) + 1
+    })
+  })
+
+  return { personaMap, counts }
+}
+
+function summarizeAnnotations(annotations = []) {
+  const summary = {
+    total: 0,
+    flagged: 0,
+    tasks: 0,
+    assignments: 0,
+    notes: 0
+  }
+
+  annotations.forEach(annotation => {
+    summary.total++
+    const status = String(annotation.status || '').toLowerCase()
+    if (status === 'flagged') summary.flagged++
+    else if (status === 'action_required' || status === 'action required') summary.tasks++
+    else if (status === 'assigned') summary.assignments++
+    else if (status === 'note') summary.notes++
+  })
+
+  return summary
+}
+
+function renderUpdateItem(update, pinnedItems = [], personaMap = {}, velocityLookup = {}) {
+  const key = getUpdateKey(update)
+  const personas = personaMap[key] && personaMap[key].length > 0 ? personaMap[key] : ['analyst']
+  const isPinned = pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url)
+  const headlineText = (update.headline || 'Untitled Update').replace(/\s+/g, ' ').trim()
+  const summarySource =
+        update.ai_summary ||
+        update.aiSummary ||
+        update.summary ||
+        update.impact ||
+        update.description ||
+        ''
+  const summaryText = summarySource.length > 260 ? `${summarySource.slice(0, 257).trim()}...` : summarySource.trim()
+  const published = update.publishedDate || update.published_date || update.fetchedDate || update.createdAt
+  const deadline = update.compliance_deadline || update.complianceDeadline || null
+  const impactLevel = update.impactLevel || update.impact_level || 'Informational'
+  const relevanceScore = update.relevanceScore || update.relevance_score || null
+  const authority = update.authority || 'Unknown'
+
+  const sectorCandidates = []
+  const sectorFields = [
+    'primarySectors',
+    'primary_sectors',
+    'sectors',
+    'sectorTags',
+    'sector_tags',
+    'aiSectors',
+    'ai_sectors'
+  ]
+
+  sectorFields.forEach(field => {
+    const value = update[field]
+    if (Array.isArray(value)) {
+      sectorCandidates.push(...value)
+    } else if (typeof value === 'string' && value.trim()) {
+      sectorCandidates.push(value)
+    }
+  })
+
+  if (update.sector) {
+    sectorCandidates.push(update.sector)
+  }
+
+  const normalizedSectors = Array.from(
+    new Set(
+      sectorCandidates
+        .map(normalizeSectorName)
+        .filter(Boolean)
+    )
+  )
+
+  const primarySector = normalizedSectors[0] || ''
+  const velocity = getVelocityForUpdate(update, velocityLookup)
+  const predictiveBadges = generatePredictiveBadges(update)
+
+  const personaBadges = personas
+    .map(persona => `<span class="persona-badge persona-${persona}">${persona.charAt(0).toUpperCase() + persona.slice(1)}</span>`)
+    .join('')
+
+  const chips = [
+    `<span class="meta-chip meta-authority">${escapeHtml(authority)}</span>`,
+    `<span class="meta-chip meta-impact">${escapeHtml(impactLevel)}</span>`
+  ]
+
+  if (relevanceScore) {
+    chips.push(`<span class="meta-chip meta-score">${relevanceScore}% relevance</span>`)
+  }
+
+  if (primarySector) {
+    chips.push(`<span class="meta-chip meta-sector">${escapeHtml(primarySector)}</span>`)
+  }
+
+  if (deadline) {
+    chips.push(`<span class="meta-chip meta-deadline">Deadline ${formatDateDisplay(deadline)}</span>`)
+  }
+
+  chips.push(`<span class="meta-chip meta-date">${formatDateDisplay(published)}</span>`)
+
+  return `
+        <div class="update-item" 
+             data-update-key="${key}"
+             data-update-id="${escapeHtml(update.id || update.update_id || '')}"
+             data-update-url="${escapeHtml(update.url || '')}"
+             data-personas="${personas.join(' ')}"
+             data-headline="${escapeHtml(headlineText)}"
+             data-authority="${escapeHtml(authority)}"
+             data-impact="${escapeHtml(impactLevel)}"
+             data-deadline="${deadline ? formatDateDisplay(deadline) : ''}"
+             data-summary="${escapeHtml(summarySource || '')}"
+             data-published="${escapeHtml(published || '')}"
+             data-sector-list="${escapeHtml(JSON.stringify(normalizedSectors))}"
+             data-url="${escapeHtml(update.url || '')}">
+            <div class="update-content">
+                <div class="update-headline">
+                    <a href="${escapeHtml(update.url || '#')}" target="_blank" rel="noopener" class="update-link">
+                        ${escapeHtml(headlineText)}
+                    </a>
+                </div>
+                <div class="update-meta">
+                    ${personaBadges}
+                    ${chips.join('')}
+                </div>
+                ${summaryText
+? `<p class="update-summary">${escapeHtml(summaryText)}</p>`
+: ''}
+                ${(velocity || predictiveBadges.length)
+? `
+                <div class="update-insights">
+                    ${velocity ? `<span class="velocity-indicator velocity-${velocity.trend}">${velocity.icon} ${escapeHtml(velocity.label)}</span>` : ''}
+                    ${predictiveBadges.length ? `<div class="predictive-badges">${predictiveBadges.map(badge => `<span class="predictive-badge">${escapeHtml(badge)}</span>`).join('')}</div>` : ''}
+                </div>
+                `
+: ''}
+            </div>
+            <div class="quick-action-bar">
+                <button class="quick-action" data-action="flag" onclick="IntelligencePage.flagForBrief('${key}')">Flag Brief</button>
+                <button class="quick-action" data-action="note" onclick="IntelligencePage.addNote('${key}')">Add Note</button>
+                <button class="quick-action" data-action="assign" onclick="IntelligencePage.assign('${key}')">Assign</button>
+                <button class="quick-action" data-action="task" onclick="IntelligencePage.createTask('${key}')">Create Task</button>
+                <button class="quick-action pin-btn ${isPinned ? 'pinned' : ''}"
+                        data-action="pin"
+                        aria-pressed="${isPinned ? 'true' : 'false'}"
+                        title="${isPinned ? 'Unpin this update' : 'Pin this update'}"
+                        onclick="IntelligencePage.togglePin('${key}')">
+                    ${isPinned ? 'Pinned' : 'Pin'}
+                </button>
+            </div>
+        </div>
+    `
 }
 
 // HOME PAGE
@@ -73,7 +435,7 @@ router.get('/update/:id', async (req, res) => {
                 <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                     <h1>Update Not Found</h1>
                     <p style="color: #6b7280; margin: 1rem 0;">The requested update could not be found.</p>
-                    <a href="/dashboard" style="color: #3b82f6; text-decoration: none;">← Back to Dashboard</a>
+                    <a href="/dashboard" style="color: #3b82f6; text-decoration: none;"><- Back to Dashboard</a>
                 </div>
             `)
     }
@@ -127,7 +489,7 @@ router.get('/update/:id', async (req, res) => {
 
         <div class="detail-main">
             <div class="detail-header">
-                <a href="/dashboard" style="color: #6b7280; text-decoration: none; font-size: 0.875rem; margin-bottom: 1rem; display: inline-block;">← Back to Dashboard</a>
+                <a href="/dashboard" style="color: #6b7280; text-decoration: none; font-size: 0.875rem; margin-bottom: 1rem; display: inline-block;"><- Back to Dashboard</a>
                 <h1 class="detail-title">${update.headline || 'Regulatory Update'}</h1>
                 <div class="detail-meta">
                     <span class="detail-badge authority-badge">${update.authority || 'Unknown Authority'}</span>
@@ -140,7 +502,7 @@ router.get('/update/:id', async (req, res) => {
                 ${update.impact
 ? `
                     <div class="detail-section">
-                        <h3>📋 Summary</h3>
+                        <h3>Note Summary</h3>
                         <p>${update.impact}</p>
                     </div>
                 `
@@ -149,7 +511,7 @@ router.get('/update/:id', async (req, res) => {
                 ${update.business_impact_score
 ? `
                     <div class="detail-section">
-                        <h3>📊 Business Impact</h3>
+                        <h3>Analytics Business Impact</h3>
                         <p>Impact Score: <strong>${update.business_impact_score}/10</strong></p>
                         ${update.business_impact_analysis ? `<p>${update.business_impact_analysis}</p>` : ''}
                     </div>
@@ -159,7 +521,7 @@ router.get('/update/:id', async (req, res) => {
                 ${update.compliance_deadline || update.complianceDeadline
 ? `
                     <div class="detail-section">
-                        <h3>⏰ Compliance Deadline</h3>
+                        <h3>Clock Compliance Deadline</h3>
                         <p><strong>${formatDateDisplay(update.compliance_deadline || update.complianceDeadline)}</strong></p>
                     </div>
                 `
@@ -168,7 +530,7 @@ router.get('/update/:id', async (req, res) => {
                 ${update.primarySectors?.length
 ? `
                     <div class="detail-section">
-                        <h3>🏢 Affected Sectors</h3>
+                        <h3>Firm Affected Sectors</h3>
                         <p>${update.primarySectors.join(', ')}</p>
                     </div>
                 `
@@ -177,15 +539,15 @@ router.get('/update/:id', async (req, res) => {
                 ${update.ai_tags?.length
 ? `
                     <div class="detail-section">
-                        <h3>🤖 AI Analysis Tags</h3>
+                        <h3>AI AI Analysis Tags</h3>
                         <p>${update.ai_tags.join(', ')}</p>
                     </div>
                 `
 : ''}
 
                 <div class="detail-actions">
-                    ${update.url ? `<a href="${update.url}" target="_blank" class="btn btn-primary">🔗 View Original Source</a>` : ''}
-                    <a href="/dashboard" class="btn btn-secondary">← Back to Dashboard</a>
+                    ${update.url ? `<a href="${update.url}" target="_blank" class="btn btn-primary">Link View Original Source</a>` : ''}
+                    <a href="/dashboard" class="btn btn-secondary"><- Back to Dashboard</a>
                 </div>
             </div>
         </div>
@@ -202,566 +564,20 @@ router.get('/update/:id', async (req, res) => {
             <div style="padding: 2rem; text-align: center; font-family: system-ui;">
                 <h1>Error</h1>
                 <p style="color: #6b7280; margin: 1rem 0;">${error.message}</p>
-                <a href="/dashboard" style="color: #3b82f6; text-decoration: none;">← Back to Dashboard</a>
+                <a href="/dashboard" style="color: #3b82f6; text-decoration: none;"><- Back to Dashboard</a>
             </div>
         `)
   }
 })
 
 // WEEKLY ROUNDUP PAGE - NEW
-router.get('/weekly-roundup', async (req, res) => {
-  try {
-    console.log('📊 Weekly roundup page requested')
-
-    const { getSidebar } = require('./templates/sidebar')
-    const { getCommonStyles } = require('./templates/commonStyles')
-    const { getClientScripts } = require('./templates/clientScripts')
-
-    const sidebar = await getSidebar('weekly-roundup')
-
-    // Get the roundup data
-    const roundupData = await weeklyRoundupService.generateWeeklyRoundup()
-    const roundup = roundupData.roundup
-
-    const html = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Weekly Roundup - Regulatory Intelligence Platform</title>
-            ${getCommonStyles()}
-            <style>
-                .roundup-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 40px;
-                    border-radius: 12px;
-                    margin-bottom: 30px;
-                }
-                
-                .roundup-summary {
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 20px;
-                    border-radius: 8px;
-                    margin-top: 20px;
-                }
-                
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                    gap: 20px;
-                    margin-top: 20px;
-                }
-                
-                .stat-card {
-                    background: rgba(255, 255, 255, 0.15);
-                    padding: 15px;
-                    border-radius: 8px;
-                    text-align: center;
-                }
-                
-                .stat-value {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    margin-bottom: 5px;
-                }
-                
-                .stat-label {
-                    font-size: 0.9rem;
-                    opacity: 0.9;
-                }
-                
-                .section-card {
-                    background: white;
-                    padding: 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-                    margin-bottom: 20px;
-                }
-                
-                .section-title {
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    color: #1f2937;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                
-                .authority-item {
-                    background: #f9fafb;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-left: 4px solid #667eea;
-                }
-                
-                .authority-name {
-                    font-weight: 600;
-                    color: #1f2937;
-                    font-size: 1.1rem;
-                }
-                
-                .authority-count {
-                    background: #667eea;
-                    color: white;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-weight: 600;
-                }
-                
-                .authority-focus {
-                    color: #6b7280;
-                    font-size: 0.9rem;
-                    margin-top: 5px;
-                }
-                
-                .impact-update {
-                    background: #fef3c7;
-                    border: 1px solid #f59e0b;
-                    padding: 20px;
-                    border-radius: 8px;
-                    margin-bottom: 15px;
-                }
-                
-                .impact-update-title {
-                    font-weight: 600;
-                    color: #92400e;
-                    margin-bottom: 8px;
-                }
-                
-                .impact-update-authority {
-                    background: #f59e0b;
-                    color: white;
-                    padding: 2px 8px;
-                    border-radius: 4px;
-                    font-size: 0.85rem;
-                    display: inline-block;
-                    margin-bottom: 8px;
-                }
-                
-                .impact-update-summary {
-                    color: #78350f;
-                    line-height: 1.6;
-                    margin-top: 8px;
-                }
-                
-                .theme-badge {
-                    background: #e0f2fe;
-                    color: #0369a1;
-                    padding: 8px 16px;
-                    border-radius: 20px;
-                    display: inline-block;
-                    margin: 5px;
-                    font-weight: 500;
-                }
-                
-                .priority-item {
-                    background: #f0f9ff;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    margin-bottom: 10px;
-                    border-left: 4px solid #3b82f6;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                
-                .priority-number {
-                    background: #3b82f6;
-                    color: white;
-                    width: 30px;
-                    height: 30px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-weight: 700;
-                }
-                
-                .deadline-item {
-                    background: #fee2e2;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
-                    border-left: 4px solid #ef4444;
-                }
-                
-                .deadline-date {
-                    font-weight: 600;
-                    color: #991b1b;
-                    margin-bottom: 5px;
-                }
-                
-                .deadline-days {
-                    background: #ef4444;
-                    color: white;
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    font-size: 0.85rem;
-                    display: inline-block;
-                    margin-left: 10px;
-                }
-                
-                .sector-insight {
-                    background: #f3f4f6;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 10px;
-                }
-                
-                .sector-name {
-                    font-weight: 600;
-                    color: #4b5563;
-                    margin-bottom: 8px;
-                }
-                
-                .impact-breakdown {
-                    display: flex;
-                    gap: 20px;
-                    flex-wrap: wrap;
-                    margin-top: 15px;
-                }
-                
-                .impact-stat {
-                    flex: 1;
-                    min-width: 150px;
-                    text-align: center;
-                    padding: 15px;
-                    background: #f9fafb;
-                    border-radius: 8px;
-                }
-                
-                .impact-level {
-                    font-weight: 600;
-                    margin-bottom: 5px;
-                }
-                
-                .impact-count {
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                }
-                
-                .impact-significant { color: #dc2626; }
-                .impact-moderate { color: #f59e0b; }
-                .impact-informational { color: #6b7280; }
-                
-                .data-quality-meter {
-                    background: #e5e7eb;
-                    height: 20px;
-                    border-radius: 10px;
-                    overflow: hidden;
-                    margin-top: 10px;
-                }
-                
-                .data-quality-fill {
-                    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
-                    height: 100%;
-                    transition: width 0.5s ease;
-                }
-                
-                .empty-state {
-                    text-align: center;
-                    padding: 40px;
-                    color: #6b7280;
-                }
-                
-                @media (max-width: 768px) {
-                    .stats-grid {
-                        grid-template-columns: 1fr 1fr;
-                    }
-                    
-                    .impact-breakdown {
-                        flex-direction: column;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="app-container">
-                ${sidebar}
-                
-                <main class="main-content">
-                    <header class="roundup-header">
-                        <h1>📊 Weekly Regulatory Roundup</h1>
-                        <p>Comprehensive intelligence briefing for the week of ${formatDateISO(roundup.weekStart)} to ${formatDateISO(new Date())}</p>
-                        
-                        <div class="roundup-summary">
-                            <p style="font-size: 1.2rem; line-height: 1.6;">
-                                ${roundup.weekSummary}
-                            </p>
-                            
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-value">${roundup.totalUpdates}</div>
-                                    <div class="stat-label">Total Updates</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${Object.keys(roundup.statistics.authorityBreakdown).length}</div>
-                                    <div class="stat-label">Authorities</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${roundup.highImpactUpdates.length}</div>
-                                    <div class="stat-label">High Impact</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value">${roundup.upcomingDeadlines.length}</div>
-                                    <div class="stat-label">Deadlines</div>
-                                </div>
-                            </div>
-                        </div>
-                    </header>
-                    
-                    ${roundup.keyThemes.length > 0
-? `
-                        <div class="section-card">
-                            <h2 class="section-title">
-                                <span>🎯</span> Key Themes This Week
-                            </h2>
-                            <div>
-                                ${roundup.keyThemes.map(theme =>
-                                    `<span class="theme-badge">${theme}</span>`
-                                ).join('')}
-                            </div>
-                        </div>
-                    `
-: ''}
-                    
-                    ${roundup.weeklyPriorities.length > 0
-? `
-                        <div class="section-card">
-                            <h2 class="section-title">
-                                <span>📋</span> Weekly Priorities
-                            </h2>
-                            ${roundup.weeklyPriorities.map((priority, index) => `
-                                <div class="priority-item">
-                                    <span class="priority-number">${index + 1}</span>
-                                    <span>${priority}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `
-: ''}
-                    
-                    ${roundup.highImpactUpdates.length > 0
-? `
-                        <div class="section-card">
-                            <h2 class="section-title">
-                                <span>⚠️</span> High Impact Updates
-                            </h2>
-                            ${roundup.highImpactUpdates.map(update => `
-                                <div class="impact-update">
-                                    <div class="impact-update-authority">${update.authority}</div>
-                                    <div class="impact-update-title">${update.title}</div>
-                                    <div class="impact-update-summary">${update.summary || 'No summary available'}</div>
-                                    ${update.businessImpactScore
-? `
-                                        <div style="margin-top: 10px;">
-                                            <strong>Impact Score:</strong> ${update.businessImpactScore}/10
-                                        </div>
-                                    `
-: ''}
-                                    ${update.complianceDeadline
-? `
-                                        <div style="margin-top: 5px; color: #dc2626;">
-                                            <strong>Deadline:</strong> ${formatDateDisplay(update.complianceDeadline)}
-                                        </div>
-                                    `
-: ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `
-: ''}
-                    
-                    <div class="section-card">
-                        <h2 class="section-title">
-                            <span>🏛️</span> Top Authorities
-                        </h2>
-                        ${roundup.topAuthorities.map(auth => `
-                            <div class="authority-item">
-                                <div>
-                                    <div class="authority-name">${auth.authority}</div>
-                                    <div class="authority-focus">${auth.focusArea}</div>
-                                </div>
-                                <div class="authority-count">${auth.updateCount}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    ${roundup.upcomingDeadlines.length > 0
-? `
-                        <div class="section-card">
-                            <h2 class="section-title">
-                                <span>📅</span> Upcoming Deadlines
-                            </h2>
-                            ${roundup.upcomingDeadlines.map(deadline => `
-                                <div class="deadline-item">
-                                    <div class="deadline-date">
-                                        ${formatDateDisplay(deadline.date)}
-                                        <span class="deadline-days">${deadline.daysRemaining} days</span>
-                                    </div>
-                                    <div style="margin-top: 8px;">
-                                        <strong>${deadline.authority}:</strong> ${deadline.description}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `
-: ''}
-                    
-                    <div class="section-card">
-                        <h2 class="section-title">
-                            <span>📈</span> Impact Distribution
-                        </h2>
-                        <div class="impact-breakdown">
-                            <div class="impact-stat">
-                                <div class="impact-level impact-significant">Significant</div>
-                                <div class="impact-count">${roundup.statistics.impactBreakdown.Significant || 0}</div>
-                            </div>
-                            <div class="impact-stat">
-                                <div class="impact-level impact-moderate">Moderate</div>
-                                <div class="impact-count">${roundup.statistics.impactBreakdown.Moderate || 0}</div>
-                            </div>
-                            <div class="impact-stat">
-                                <div class="impact-level impact-informational">Informational</div>
-                                <div class="impact-count">${roundup.statistics.impactBreakdown.Informational || 0}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${Object.keys(roundup.sectorInsights).length > 0
-? `
-                        <div class="section-card">
-                            <h2 class="section-title">
-                                <span>🏢</span> Sector Insights
-                            </h2>
-                            ${Object.entries(roundup.sectorInsights).map(([sector, insight]) => `
-                                <div class="sector-insight">
-                                    <div class="sector-name">${sector}</div>
-                                    <div>${insight}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `
-: ''}
-                    
-                    <div class="section-card">
-                        <h2 class="section-title">
-                            <span>📊</span> Data Quality Assessment
-                        </h2>
-                        <div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                <span>Confidence Level</span>
-                                <span><strong>${Math.round(roundup.dataQuality.confidence * 100)}%</strong></span>
-                            </div>
-                            <div class="data-quality-meter">
-                                <div class="data-quality-fill" style="width: ${roundup.dataQuality.confidence * 100}%"></div>
-                            </div>
-                            <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <div>
-                                    <small>AI Coverage:</small> ${Math.round(roundup.dataQuality.aiCoverage * 100)}%
-                                </div>
-                                <div>
-                                    <small>Completeness:</small> ${Math.round(roundup.dataQuality.completeness * 100)}%
-                                </div>
-                                <div>
-                                    <small>Source Count:</small> ${roundup.dataQuality.sourceCount}
-                                </div>
-                                <div>
-                                    <small>AI Generated:</small> ${roundup.dataQuality.aiGenerated ? 'Yes' : 'No'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: center; padding: 20px; color: #6b7280;">
-                        <small>Report generated on ${formatDateTime(roundup.generatedAt)}</small>
-                    </div>
-                </main>
-            </div>
-            
-            ${getClientScripts()}
-            
-            <script>
-                // Auto-refresh data quality animation
-                window.addEventListener('load', () => {
-                    const fills = document.querySelectorAll('.data-quality-fill');
-                    fills.forEach(fill => {
-                        const width = fill.style.width;
-                        fill.style.width = '0';
-                        setTimeout(() => {
-                            fill.style.width = width;
-                        }, 100);
-                    });
-                });
-            </script>
-        </body>
-        </html>`
-
-    res.send(html)
-  } catch (error) {
-    console.error('❌ Error rendering weekly roundup page:', error)
-    res.status(500).send(`
-            <html>
-                <head>
-                    <title>Error - Weekly Roundup</title>
-                    <style>
-                        body { 
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            min-height: 100vh;
-                            margin: 0;
-                            background: #f8fafc;
-                        }
-                        .error-container {
-                            text-align: center;
-                            padding: 40px;
-                            background: white;
-                            border-radius: 12px;
-                            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                            max-width: 500px;
-                        }
-                        h1 { color: #dc2626; }
-                        a {
-                            color: #4f46e5;
-                            text-decoration: none;
-                            padding: 10px 20px;
-                            border: 1px solid #4f46e5;
-                            border-radius: 6px;
-                            display: inline-block;
-                            margin-top: 20px;
-                        }
-                        a:hover {
-                            background: #4f46e5;
-                            color: white;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="error-container">
-                        <h1>❌ Error Loading Weekly Roundup</h1>
-                        <p>${error.message}</p>
-                        <a href="/">← Back to Home</a>
-                    </div>
-                </body>
-            </html>
-        `)
-  }
-})
+router.get('/weekly-roundup', renderWeeklyBriefingPage)
 
 // AI INTELLIGENCE PAGE (Phase 1.3 - WORKING VERSION)
 router.get('/ai-intelligence', async (req, res) => {
   try {
     const { getSidebar } = require('./templates/sidebar')
-    const { getClientScripts } = require('./templates/clientScripts')
+    const { getClientScripts, getWorkspaceBootstrapScripts } = require('./templates/clientScripts')
     const { getCommonStyles } = require('./templates/commonStyles')
 
     const sidebar = await getSidebar('ai-intelligence')
@@ -772,11 +588,36 @@ router.get('/ai-intelligence', async (req, res) => {
     // Get relevance-scored updates
     const allUpdates = await dbService.getEnhancedUpdates({ limit: 100 })
     const categorized = relevanceService.categorizeByRelevance(allUpdates, firmProfile)
+    const { personaMap, counts: personaCountsRaw } = classifyUpdatesByPersona(allUpdates)
+    const personaCounts = {
+      all: allUpdates.length,
+      executive: personaCountsRaw.executive || 0,
+      analyst: personaCountsRaw.analyst || 0,
+      operations: personaCountsRaw.operations || 0
+    }
+    const personaMapJson = JSON.stringify(personaMap).replace(/</g, '\\u003c')
+    const personaCountsJson = JSON.stringify(personaCounts).replace(/</g, '\\u003c')
+    const velocityLookup = buildVelocityLookup(allUpdates)
+    const patternAlert = generatePatternAlert(allUpdates)
+    const patternAlertTitle = escapeHtml(patternAlert.title)
+    const patternAlertSubtitle = escapeHtml(patternAlert.subtitle)
 
     // Get workspace stats
     const pinnedItems = await dbService.getPinnedItems()
     const savedSearches = await dbService.getSavedSearches()
     const customAlerts = await dbService.getCustomAlerts()
+
+    const annotations = await annotationService.listAnnotations({
+      status: ['flagged', 'action_required', 'assigned', 'note']
+    })
+    const annotationSummary = summarizeAnnotations(annotations)
+    const annotationSummaryJson = JSON.stringify(annotationSummary).replace(/</g, '\\u003c')
+
+    const filterOptions = await dbService.getFilterOptions()
+    const availableSectors = prepareAvailableSectors(filterOptions.sectors || [])
+    const availableSectorsJson = JSON.stringify(availableSectors).replace(/</g, '\\u003c')
+    const workspaceBootstrapScripts = getWorkspaceBootstrapScripts()
+    const clientScripts = getClientScripts({ includeWorkspaceModule: false, includeAliasBootstrap: false })
 
     const html = `
         <!DOCTYPE html>
@@ -786,24 +627,45 @@ router.get('/ai-intelligence', async (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>AI Intelligence - Regulatory Intelligence Platform</title>
             ${getCommonStyles()}
+            ${workspaceBootstrapScripts}
             <style>
                 .intelligence-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 30px;
-                    border-radius: 12px;
-                    margin-bottom: 30px;
+                    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-charcoal) 100%);
+                    color: #f8fafc;
+                    padding: 36px;
+                    border-radius: 20px;
+                    margin-bottom: 32px;
                     position: relative;
+                    border: none;
+                    box-shadow: 0 44px 90px -48px rgba(15, 23, 42, 0.55);
+                    overflow: hidden;
+                }
+                
+                .intelligence-header h1 {
+                    font-size: 2rem;
+                    margin-bottom: 8px;
+                    letter-spacing: -0.01em;
+                    color: inherit;
+                }
+                
+                .intelligence-header p {
+                    color: rgba(248, 250, 252, 0.82);
+                    font-size: 1rem;
+                    margin-bottom: 22px;
                 }
                 
                 .firm-profile-section {
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    margin-top: 20px;
+                    background: rgba(15, 30, 58, 0.45);
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    padding: 18px 22px;
+                    border-radius: 14px;
+                    margin-top: 18px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    gap: 18px;
+                    color: rgba(248, 250, 252, 0.9);
+                    backdrop-filter: blur(6px);
                 }
                 
                 .firm-info {
@@ -811,61 +673,198 @@ router.get('/ai-intelligence', async (req, res) => {
                 }
                 
                 .firm-name {
-                    font-size: 1.2rem;
+                    font-size: 1.25rem;
                     font-weight: 600;
-                    margin-bottom: 5px;
+                    margin-bottom: 6px;
+                    color: #f8fafc;
                 }
                 
                 .firm-sectors {
                     font-size: 0.9rem;
-                    opacity: 0.9;
+                    color: rgba(226, 232, 240, 0.88);
+                }
+                
+                .persona-switcher {
+                    display: flex;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                    margin-top: 24px;
+                }
+
+                .header-actions {
+                    margin-top: 24px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
+                
+                .header-actions .btn-primary {
+                    background: #ffffff;
+                    color: #0f172a;
+                    border: none;
+                    box-shadow: 0 16px 28px -24px rgba(15, 23, 42, 0.5);
+                }
+
+                .header-actions .btn-primary:hover {
+                    background: rgba(248, 250, 252, 0.92);
+                    color: var(--primary-navy);
+                    transform: translateY(-1px);
+                }
+                
+                .persona-filter {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 18px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(226, 232, 240, 0.9);
+                    background: #ffffff;
+                    color: #0f172a;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 8px 18px -12px rgba(15, 23, 42, 0.3);
+                }
+                
+                .persona-filter .persona-count {
+                    background: rgba(37, 99, 235, 0.12);
+                    color: #1d4ed8;
+                    padding: 2px 10px;
+                    border-radius: 999px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                }
+                
+                .persona-filter.active {
+                    background: linear-gradient(135deg, var(--primary-navy), var(--primary-charcoal));
+                    color: #ffffff;
+                    border-color: rgba(255, 255, 255, 0.35);
+                }
+                
+                .persona-filter.active .persona-count {
+                    background: rgba(255, 255, 255, 0.16);
+                    color: #e2e8f0;
+                }
+                
+                .persona-filter:not(.active):hover {
+                    transform: translateY(-1px);
+                    border-color: rgba(59, 130, 246, 0.35);
+                    box-shadow: 0 12px 22px -16px rgba(15, 23, 42, 0.35);
                 }
                 
                 .sector-badge {
-                    background: rgba(255, 255, 255, 0.2);
-                    padding: 2px 8px;
+                    background: rgba(59, 130, 246, 0.18);
+                    color: #bfdbfe;
+                    padding: 3px 10px;
                     border-radius: 12px;
-                    margin-right: 5px;
+                    margin-right: 6px;
                     display: inline-block;
+                    font-size: 0.8rem;
+                    font-weight: 600;
                 }
                 
                 .workspace-summary {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 20px;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 16px;
                     margin-bottom: 30px;
                 }
                 
                 .workspace-card {
-                    background: white;
-                    padding: 20px;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                    background: #ffffff;
+                    border-radius: 14px;
+                    padding: 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    box-shadow: 0 12px 28px -20px rgba(15, 23, 42, 0.35);
+                    border: 1px solid #e2e8f0;
                     cursor: pointer;
-                    transition: all 0.3s ease;
-                    border: 2px solid transparent;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
                 
                 .workspace-card:hover {
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-                    border-color: #667eea;
+                    transform: translateY(-2px);
+                    box-shadow: 0 16px 32px -22px rgba(37, 99, 235, 0.35);
+                    border-color: #bfdbfe;
                 }
                 
-                .workspace-icon {
-                    font-size: 2rem;
-                    margin-bottom: 10px;
+                .workspace-card-icon {
+                    width: 46px;
+                    height: 46px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                    font-size: 1.4rem;
                 }
                 
-                .workspace-count {
-                    font-size: 2rem;
+                .workspace-card-body {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                
+                .workspace-card-label {
+                    font-size: 0.85rem;
+                    color: rgba(31,41,55,0.75);
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                }
+                
+                .workspace-card-count {
+                    font-size: 1.6rem;
                     font-weight: 700;
                     color: #1f2937;
                 }
                 
-                .workspace-label {
-                    color: #6b7280;
-                    margin-top: 5px;
-                    font-size: 0.9rem;
+                .workspace-card-meta {
+                    font-size: 0.8rem;
+                    color: rgba(71,85,105,0.85);
+                }
+                
+                .pattern-alert {
+                    margin-top: 24px;
+                    display: flex;
+                    gap: 16px;
+                    align-items: center;
+                    background: rgba(15, 30, 58, 0.55);
+                    padding: 18px 20px;
+                    border-radius: 14px;
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    color: rgba(241, 245, 249, 0.92);
+                    backdrop-filter: blur(6px);
+                }
+                
+                .pattern-alert .alert-icon {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 14px;
+                    background: rgba(59, 130, 246, 0.25);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.4rem;
+                    color: #bfdbfe;
+                    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+                }
+                
+                .pattern-alert .alert-body {
+                    flex: 1;
+                }
+                
+                .pattern-alert .alert-title {
+                    font-weight: 600;
+                    font-size: 1rem;
+                    color: #f8fafc;
+                }
+                
+                .pattern-alert .alert-subtitle {
+                    font-size: 0.85rem;
+                    color: rgba(226, 232, 240, 0.78);
+                    margin-top: 4px;
                 }
                 
                 .relevance-streams {
@@ -873,11 +872,12 @@ router.get('/ai-intelligence', async (req, res) => {
                 }
                 
                 .stream-container {
-                    background: white;
+                    background: #ffffff;
                     border-radius: 12px;
                     padding: 20px;
                     margin-bottom: 20px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.35);
                 }
                 
                 .stream-header {
@@ -917,18 +917,22 @@ router.get('/ai-intelligence', async (req, res) => {
                 .relevance-low { background: #6b7280; }
                 
                 .update-item {
-                    background: #f9fafb;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 12px;
+                    background: #ffffff;
+                    padding: 18px;
+                    border-radius: 12px;
+                    margin-bottom: 16px;
                     display: flex;
-                    align-items: start;
+                    flex-direction: column;
+                    gap: 12px;
                     transition: all 0.2s ease;
+                    border: 1px solid #e2e8f0;
                 }
                 
                 .update-item:hover {
-                    background: #f3f4f6;
-                    transform: translateX(4px);
+                    background: #f8fafc;
+                    border-color: #2563eb;
+                    box-shadow: 0 14px 28px -22px rgba(37, 99, 235, 0.45);
+                    transform: translateY(-2px);
                 }
                 
                 .update-content {
@@ -938,16 +942,194 @@ router.get('/ai-intelligence', async (req, res) => {
                 .update-headline {
                     font-weight: 600;
                     color: #1f2937;
-                    margin-bottom: 8px;
+                    margin-bottom: 6px;
                     line-height: 1.4;
+                }
+                
+                .update-link {
+                    color: inherit;
+                    text-decoration: none;
+                }
+                
+                .update-summary {
+                    color: #374151;
+                    font-size: 0.95rem;
+                    line-height: 1.5;
+                    margin: 6px 0 0 0;
                 }
                 
                 .update-meta {
                     display: flex;
-                    gap: 15px;
+                    gap: 10px;
                     font-size: 0.85rem;
                     color: #6b7280;
                     flex-wrap: wrap;
+                }
+                
+                .persona-badge {
+                    background: #eef2ff;
+                    color: #3730a3;
+                    padding: 2px 10px;
+                    border-radius: 999px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                }
+                
+                .persona-badge.persona-executive {
+                    background: #fef3c7;
+                    color: #b45309;
+                }
+                
+                .persona-badge.persona-operations {
+                    background: #ecfdf5;
+                    color: #047857;
+                }
+                
+                .meta-chip {
+                    background: #eef2ff;
+                    color: #4338ca;
+                    padding: 2px 10px;
+                    border-radius: 999px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                
+                .meta-chip.meta-authority {
+                    background: #dbeafe;
+                    color: #1d4ed8;
+                }
+                
+                .meta-chip.meta-impact {
+                    background: #fef3c7;
+                    color: #b45309;
+                }
+                
+                .meta-chip.meta-score {
+                    background: #fef2f2;
+                    color: #b91c1c;
+                }
+                
+                .meta-chip.meta-sector {
+                    background: #ede9fe;
+                    color: #6d28d9;
+                }
+                
+                .meta-chip.meta-deadline {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+                
+                .meta-chip.meta-date {
+                    background: #e5e7eb;
+                    color: #374151;
+                }
+                
+                .quick-action-bar {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
+                
+                .quick-action {
+                    border: 1px solid #d1d5db;
+                    border-radius: 999px;
+                    padding: 8px 14px;
+                    font-size: 0.82rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    background: #ffffff;
+                    color: #1f2937;
+                    transition: all 0.2s ease;
+                }
+                
+                .quick-action[data-action="task"] {
+                    border-color: #16a34a;
+                    background: #ecfdf5;
+                    color: #047857;
+                }
+                
+                .quick-action[data-action="assign"] {
+                    border-color: #7c3aed;
+                    background: #f5f3ff;
+                    color: #5b21b6;
+                }
+                
+                .quick-action[data-action="note"] {
+                    border-color: #94a3b8;
+                    background: #f3f4f6;
+                    color: #1f2937;
+                }
+                
+                .quick-action[data-action="flag"] {
+                    border-color: #dc2626;
+                    background: #fef2f2;
+                    color: #b91c1c;
+                }
+                
+                .quick-action.pin-btn {
+                    border-color: #f97316;
+                    background: #fff7ed;
+                    color: #9a3412;
+                }
+                
+                .quick-action.pin-btn.pinned {
+                    border-color: #047857;
+                    background: #dcfce7;
+                    color: #047857;
+                }
+                
+                .quick-action:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 22px -14px rgba(15, 23, 42, 0.35);
+                }
+                
+                .update-insights {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    margin-top: 10px;
+                }
+                
+                .velocity-indicator {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    background: #eef2ff;
+                    color: #4338ca;
+                }
+                
+                .velocity-accelerating {
+                    background: #ecfdf5;
+                    color: #047857;
+                }
+                
+                .velocity-decelerating {
+                    background: #fef2f2;
+                    color: #b91c1c;
+                }
+                
+                .predictive-badges {
+                    display: inline-flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                }
+                
+                .predictive-badge {
+                    background: #f1f5f9;
+                    color: #475569;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    font-size: 0.72rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                 }
                 
                 .authority-badge {
@@ -1022,7 +1204,101 @@ router.get('/ai-intelligence', async (req, res) => {
                 .btn-secondary:hover {
                     background: #4b5563;
                 }
-                
+
+                .modal-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                    margin-top: 20px;
+                }
+
+                .pinned-items-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                    margin-top: 12px;
+                }
+
+                .pinned-item-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 16px 18px;
+                    box-shadow: 0 18px 32px -28px rgba(15, 23, 42, 0.38);
+                }
+
+                .pinned-item-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    margin-bottom: 8px;
+                }
+
+                .pinned-item-title {
+                    font-weight: 600;
+                    font-size: 1.02rem;
+                    color: #0f172a;
+                    text-decoration: none;
+                }
+
+                .pinned-item-title:hover {
+                    color: #1d4ed8;
+                    text-decoration: underline;
+                }
+
+                .pinned-item-authority {
+                    font-size: 0.75rem;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    color: rgba(71, 85, 105, 0.78);
+                    font-weight: 600;
+                }
+
+                .pinned-item-sectors {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-bottom: 8px;
+                }
+
+                .pinned-sector-badge {
+                    background: rgba(37, 99, 235, 0.12);
+                    color: #1d4ed8;
+                    border-radius: 999px;
+                    padding: 4px 10px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                }
+
+                .pinned-item-summary {
+                    font-size: 0.85rem;
+                    color: #475569;
+                    line-height: 1.5;
+                }
+
+                .pinned-item-actions {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                    margin-top: 12px;
+                }
+
+                .pinned-items-list .empty-state {
+                    background: #f8fafc;
+                    border: 1px dashed #cbd5f5;
+                    border-radius: 12px;
+                    padding: 20px;
+                    text-align: center;
+                    color: #475569;
+                    font-weight: 500;
+                }
+
+                .pin-btn.pending {
+                    opacity: 0.65;
+                    pointer-events: none;
+                }
+
                 @media (max-width: 768px) {
                     .workspace-summary {
                         grid-template-columns: 1fr;
@@ -1041,8 +1317,8 @@ router.get('/ai-intelligence', async (req, res) => {
                 
                 <main class="main-content">
                     <header class="intelligence-header">
-                        <h1>🤖 AI Intelligence Center</h1>
-                        <p>Personalized regulatory intelligence powered by artificial intelligence</p>
+                        <h1>Intelligence Center</h1>
+                        <p>Live regulatory intelligence tailored to your firm</p>
                         
                         ${firmProfile
 ? `
@@ -1071,31 +1347,87 @@ router.get('/ai-intelligence', async (req, res) => {
                                 </div>
                             </div>
                         `}
+                        <div class="pattern-alert">
+                            <div class="alert-icon">⚡</div>
+                            <div class="alert-body">
+                                <div class="alert-title">${patternAlertTitle}</div>
+                                <div class="alert-subtitle">${patternAlertSubtitle}</div>
+                            </div>
+                        </div>
+
+                
+                        <div class="header-actions">
+                            <button class="btn btn-primary" type="button" onclick="ReportModule.exportReport('intelligence_center', { limit: 75 })">
+                                Export Intelligence Center Report
+                            </button>
+                        </div>
                     </header>
+                    
+                    <div class="persona-switcher">
+                        <button class="persona-filter active" data-persona-filter="all" type="button">
+                            <span>All Updates</span>
+                            <span class="persona-count">${personaCounts.all}</span>
+                        </button>
+                        <button class="persona-filter" data-persona-filter="executive" type="button">
+                            <span>Executive View</span>
+                            <span class="persona-count">${personaCounts.executive}</span>
+                        </button>
+                        <button class="persona-filter" data-persona-filter="analyst" type="button">
+                            <span>Analyst Queue</span>
+                            <span class="persona-count">${personaCounts.analyst}</span>
+                        </button>
+                        <button class="persona-filter" data-persona-filter="operations" type="button">
+                            <span>Operations Desk</span>
+                            <span class="persona-count">${personaCounts.operations}</span>
+                        </button>
+                    </div>
                     
                     <div class="workspace-summary">
                         <div class="workspace-card" onclick="WorkspaceModule.showPinnedItems()">
-                            <div class="workspace-icon">📌</div>
-                            <div class="workspace-count">${pinnedItems.length}</div>
-                            <div class="workspace-label">Pinned Updates</div>
+                            <div class="workspace-card-icon">📌</div>
+                            <div class="workspace-card-body">
+                                <span class="workspace-card-label">Pinned Updates</span>
+                                <span class="workspace-card-count" id="pinnedCount">${pinnedItems.length}</span>
+                                <span class="workspace-card-meta">Saved for action</span>
+                            </div>
                         </div>
                         
                         <div class="workspace-card" onclick="WorkspaceModule.showSavedSearches()">
-                            <div class="workspace-icon">🔍</div>
-                            <div class="workspace-count">${savedSearches.length}</div>
-                            <div class="workspace-label">Saved Searches</div>
+                            <div class="workspace-card-icon">🔍</div>
+                            <div class="workspace-card-body">
+                                <span class="workspace-card-label">Saved Searches</span>
+                                <span class="workspace-card-count" id="savedSearchesCount">${savedSearches.length}</span>
+                                <span class="workspace-card-meta">Curated filters</span>
+                            </div>
                         </div>
                         
                         <div class="workspace-card" onclick="WorkspaceModule.showCustomAlerts()">
-                            <div class="workspace-icon">🔔</div>
-                            <div class="workspace-count">${customAlerts.filter(a => a.isActive).length}</div>
-                            <div class="workspace-label">Active Alerts</div>
+                            <div class="workspace-card-icon">🔔</div>
+                            <div class="workspace-card-body">
+                                <span class="workspace-card-label">Active Alerts</span>
+                                <span class="workspace-card-count" id="customAlertsCount">${customAlerts.filter(a => a.isActive).length}</span>
+                                <span class="workspace-card-meta">Watching thresholds</span>
+                            </div>
+                        </div>
+
+                        <div class="workspace-card" onclick="WorkspaceModule.showAnnotations()">
+                            <div class="workspace-card-icon">🗂️</div>
+                            <div class="workspace-card-body">
+                                <span class="workspace-card-label">Saved Actions</span>
+                                <span class="workspace-card-count" id="annotationCount">${annotationSummary.total}</span>
+                                <span class="workspace-card-meta" id="annotationMeta">${annotationSummary.total > 0
+? `${annotationSummary.tasks} tasks • ${annotationSummary.flagged} briefs`
+: 'Notes & actions'}</span>
+                            </div>
                         </div>
                         
                         <div class="workspace-card" onclick="refreshIntelligence()">
-                            <div class="workspace-icon">🔄</div>
-                            <div class="workspace-count">${allUpdates.length}</div>
-                            <div class="workspace-label">Total Updates</div>
+                            <div class="workspace-card-icon">🔄</div>
+                            <div class="workspace-card-body">
+                                <span class="workspace-card-label">Total Updates</span>
+                                <span class="workspace-card-count">${allUpdates.length}</span>
+                                <span class="workspace-card-meta">Live in feed</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -1107,30 +1439,12 @@ router.get('/ai-intelligence', async (req, res) => {
                                 <div class="stream-header">
                                     <div class="stream-title">
                                         <div class="relevance-indicator relevance-high"></div>
-                                        🎯 High Relevance to Your Firm
+                                        Target High Relevance to Your Firm
                                     </div>
                                     <span class="stream-count">${categorized.high.length} updates</span>
                                 </div>
                                 <div class="stream-content">
-                                    ${categorized.high.slice(0, 10).map(update => `
-                                        <div class="update-item" data-url="${update.url}">
-                                            <div class="update-content">
-                                                <div class="update-headline">
-                                                    <a href="${update.url}" target="_blank">${update.headline}</a>
-                                                </div>
-                                                <div class="update-meta">
-                                                    <span class="authority-badge">${update.authority || 'Unknown'}</span>
-                                                    <span class="relevance-score">${update.relevanceScore}% relevant</span>
-                                                    <span>${update.impactLevel || 'N/A'}</span>
-                                                    <span>${formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                            <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
-                                                    onclick="WorkspaceModule.togglePin('${(update.url || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.headline || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.authority || 'Unknown').replace(/'/g, "\'").replace(/"/g, '\"')}')">
-                                                ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
-                                            </button>
-                                        </div>
-                                    `).join('')}
+                                    ${categorized.high.slice(0, 10).map(update => renderUpdateItem(update, pinnedItems, personaMap, velocityLookup)).join('')}
                                 </div>
                             </div>
                         `
@@ -1143,30 +1457,12 @@ router.get('/ai-intelligence', async (req, res) => {
                                 <div class="stream-header">
                                     <div class="stream-title">
                                         <div class="relevance-indicator relevance-medium"></div>
-                                        📊 Medium Relevance
+                                        Analytics Medium Relevance
                                     </div>
                                     <span class="stream-count">${categorized.medium.length} updates</span>
                                 </div>
                                 <div class="stream-content">
-                                    ${categorized.medium.slice(0, 10).map(update => `
-                                        <div class="update-item" data-url="${update.url}">
-                                            <div class="update-content">
-                                                <div class="update-headline">
-                                                    <a href="${update.url}" target="_blank">${update.headline}</a>
-                                                </div>
-                                                <div class="update-meta">
-                                                    <span class="authority-badge">${update.authority || 'Unknown'}</span>
-                                                    <span class="relevance-score">${update.relevanceScore}% relevant</span>
-                                                    <span>${update.impactLevel || 'N/A'}</span>
-                                                    <span>${formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                            <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
-                                                    onclick="WorkspaceModule.togglePin('${(update.url || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.headline || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.authority || 'Unknown').replace(/'/g, "\'").replace(/"/g, '\"')}')">
-                                                ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
-                                            </button>
-                                        </div>
-                                    `).join('')}
+                                    ${categorized.medium.slice(0, 10).map(update => renderUpdateItem(update, pinnedItems, personaMap, velocityLookup)).join('')}
                                 </div>
                             </div>
                         `
@@ -1179,30 +1475,12 @@ router.get('/ai-intelligence', async (req, res) => {
                                 <div class="stream-header">
                                     <div class="stream-title">
                                         <div class="relevance-indicator relevance-low"></div>
-                                        📰 Background Intelligence
+                                        News Background Intelligence
                                     </div>
                                     <span class="stream-count">${categorized.low.length} updates</span>
                                 </div>
                                 <div class="stream-content">
-                                    ${categorized.low.slice(0, 10).map(update => `
-                                        <div class="update-item" data-url="${update.url}">
-                                            <div class="update-content">
-                                                <div class="update-headline">
-                                                    <a href="${update.url}" target="_blank">${update.headline}</a>
-                                                </div>
-                                                <div class="update-meta">
-                                                    <span class="authority-badge">${update.authority || 'Unknown'}</span>
-                                                    <span class="relevance-score">${update.relevanceScore}% relevant</span>
-                                                    <span>${update.impactLevel || 'N/A'}</span>
-                                                    <span>${formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                            <button class="pin-button ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? 'pinned' : ''}" 
-                                                    onclick="WorkspaceModule.togglePin('${(update.url || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.headline || '').replace(/'/g, "\'").replace(/"/g, '\"')}', '${(update.authority || 'Unknown').replace(/'/g, "\'").replace(/"/g, '\"')}')">
-                                                ${pinnedItems.some(p => (p.update_url || p.updateUrl) === update.url) ? '📌' : '📍'}
-                                            </button>
-                                        </div>
-                                    `).join('')}
+                                    ${categorized.low.slice(0, 10).map(update => renderUpdateItem(update, pinnedItems, personaMap, velocityLookup)).join('')}
                                 </div>
                             </div>
                         `
@@ -1275,14 +1553,307 @@ router.get('/ai-intelligence', async (req, res) => {
                 \`;
                 document.head.appendChild(style);
             </script>
-            
-            ${getClientScripts()}
+            <script>
+                window.availableSectors = ${availableSectorsJson};
+                window.initialAnnotationSummary = ${annotationSummaryJson};
+            </script>
+            ${clientScripts}
+            <script>
+                (function() {
+                    const personaMap = ${personaMapJson};
+                    const personaCounts = ${personaCountsJson};
+                    const state = { activePersona: 'all' };
+                    const notify = typeof window.showMessage === 'function'
+                        ? window.showMessage
+                        : function(message, type) { console.log('[' + (type || 'info') + ']', message); };
+
+                    function parseJsonDataset(value) {
+                        if (!value) return null;
+                        try {
+                            return JSON.parse(value);
+                        } catch (error) {
+                            try {
+                                return JSON.parse(decodeURIComponent(value));
+                            } catch (_) {
+                                return null;
+                            }
+                        }
+                    }
+
+                    function getUpdateElement(key) {
+                        return document.querySelector('[data-update-key="' + key + '"]');
+                    }
+
+                    function getUpdateData(key) {
+                        const element = getUpdateElement(key);
+                        if (!element) {
+                            notify('Update card not found for action', 'warning');
+                            return null;
+                        }
+
+                        const personas = personaMap[key] || ['analyst'];
+                        const rawSectors = parseJsonDataset(element.dataset.sectorList) || [];
+                        const normalizer = typeof window.normalizeSectorLabel === 'function'
+                            ? window.normalizeSectorLabel
+                            : function(value) { return value; };
+                        const sectors = Array.isArray(rawSectors)
+                            ? rawSectors.map(normalizer).filter(Boolean)
+                            : [];
+                        const summary = element.dataset.summary || '';
+                        const published = element.dataset.published || '';
+
+                        return {
+                            key: key,
+                            id: element.dataset.updateId || '',
+                            url: element.dataset.updateUrl || '',
+                            headline: element.dataset.headline || '',
+                            authority: element.dataset.authority || '',
+                            personas: personas,
+                            sectors: sectors,
+                            summary: summary,
+                            published: published
+                        };
+                    }
+
+                    async function createAnnotation(data, overrides) {
+                        overrides = overrides || {};
+                        const baseContext = {
+                            url: data.url || '',
+                            headline: data.headline || '',
+                            authority: data.authority || '',
+                            summary: data.summary || '',
+                            published: data.published || '',
+                            personas: Array.isArray(data.personas) ? data.personas : [],
+                            sectors: Array.isArray(data.sectors) ? data.sectors : []
+                        };
+
+                        if (Array.isArray(baseContext.sectors) && baseContext.sectors.length > 0) {
+                            baseContext.taxonomy = {
+                                sectors: baseContext.sectors.slice()
+                            };
+                        }
+
+                        const overrideContext = overrides.context
+                            ? Object.assign({}, overrides.context)
+                            : {};
+
+                        const mergedContext = Object.assign({}, baseContext, overrideContext);
+
+                        if (Array.isArray(data.sectors) && data.sectors.length > 0) {
+                            const mergedSectors = Array.isArray(mergedContext.sectors)
+                                ? Array.from(new Set([...mergedContext.sectors, ...data.sectors]))
+                                : data.sectors.slice();
+                            mergedContext.sectors = mergedSectors;
+
+                            const existingTaxonomy = mergedContext.taxonomy && typeof mergedContext.taxonomy === 'object'
+                                ? mergedContext.taxonomy
+                                : {};
+                            existingTaxonomy.sectors = Array.isArray(existingTaxonomy.sectors)
+                                ? Array.from(new Set([...existingTaxonomy.sectors, ...data.sectors]))
+                                : data.sectors.slice();
+                            mergedContext.taxonomy = existingTaxonomy;
+                        }
+
+                        const payload = {
+                            update_id: data.id || data.url,
+                            author: overrides.author || 'intelligence-center',
+                            visibility: overrides.visibility || 'team',
+                            status: overrides.status || 'triage',
+                            content: overrides.content || '',
+                            tags: overrides.tags || [],
+                            assigned_to: overrides.assigned_to || [],
+                            origin_page: 'intelligence_center',
+                            action_type: overrides.action_type || null,
+                            priority: overrides.priority || null,
+                            persona: overrides.persona || (data.personas && data.personas[0]) || null,
+                            report_included: Boolean(overrides.report_included),
+                            context: mergedContext
+                        };
+
+                        const response = await fetch('/api/annotations', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            let reason = 'Annotation failed';
+                            try {
+                                const err = await response.json();
+                                if (err && err.error) reason = err.error;
+                            } catch (_) {}
+                            throw new Error(reason);
+                        }
+
+                        const result = await response.json();
+                        if (window.WorkspaceModule && typeof WorkspaceModule.refreshAnnotations === 'function') {
+                            WorkspaceModule.refreshAnnotations();
+                        }
+                        return result;
+                    }
+
+                    const IntelligencePage = {
+                        init: function() {
+                            this.bindPersonaFilters();
+                            this.filterByPersona('all', { silent: true });
+                        },
+                        bindPersonaFilters: function() {
+                            var self = this;
+                            document.querySelectorAll('.persona-filter').forEach(function(button) {
+                                button.addEventListener('click', function() {
+                                    var persona = button.dataset.personaFilter || 'all';
+                                    self.filterByPersona(persona);
+                                });
+                            });
+                        },
+                        filterByPersona: function(persona, options) {
+                            options = options || {};
+                            state.activePersona = persona;
+
+                            document.querySelectorAll('.persona-filter').forEach(function(button) {
+                                var isActive = (button.dataset.personaFilter || 'all') === persona;
+                                button.classList.toggle('active', isActive);
+                            });
+
+                            document.querySelectorAll('.update-item').forEach(function(card) {
+                                var key = card.dataset.updateKey;
+                                var personas = personaMap[key] || ['analyst'];
+                                var shouldShow = persona === 'all' || personas.indexOf(persona) !== -1;
+                                card.style.display = shouldShow ? '' : 'none';
+                            });
+
+                            if (!options.silent) {
+                                var label = persona === 'all'
+                                    ? 'All updates'
+                                    : persona.charAt(0).toUpperCase() + persona.slice(1) + ' queue';
+                                notify('View switched to ' + label, 'info');
+                            }
+                        },
+                        getUpdateData: getUpdateData,
+                        flagForBrief: async function(key) {
+                            var data = getUpdateData(key);
+                            if (!data) return;
+                            try {
+                                await createAnnotation(data, {
+                                    status: 'flagged',
+                                    tags: ['weekly_brief', 'triage'],
+                                    action_type: 'flag',
+                                    persona: data.personas[0] || 'analyst',
+                                    report_included: true,
+                                    content: 'Flagged for Weekly Brief: ' + data.headline
+                                });
+                                notify('Flagged for Weekly Brief', 'success');
+                            } catch (error) {
+                                notify(error.message, 'error');
+                            }
+                        },
+                        addNote: async function(key) {
+                            var data = getUpdateData(key);
+                            if (!data) return;
+                            var note = window.prompt('Add note for "' + data.headline + '"');
+                            if (!note || !note.trim()) {
+                                return;
+                            }
+                            try {
+                                await createAnnotation(data, {
+                                    status: 'note',
+                                    tags: ['note'],
+                                    action_type: 'note',
+                                    content: note.trim()
+                                });
+                                notify('Note saved to workspace', 'success');
+                            } catch (error) {
+                                notify(error.message, 'error');
+                            }
+                        },
+                        assign: async function(key) {
+                            var data = getUpdateData(key);
+                            if (!data) return;
+                            var assignee = window.prompt('Assign to (name or email)');
+                            if (!assignee || !assignee.trim()) {
+                                return;
+                            }
+                            assignee = assignee.trim();
+                            try {
+                                await createAnnotation(data, {
+                                    status: 'assigned',
+                                    tags: ['assignment'],
+                                    action_type: 'assign',
+                                    assigned_to: [assignee],
+                                    content: 'Assigned to ' + assignee + ': ' + data.headline
+                                });
+                                notify('Assignment recorded', 'success');
+                            } catch (error) {
+                                notify(error.message, 'error');
+                            }
+                        },
+                        createTask: async function(key) {
+                            var data = getUpdateData(key);
+                            if (!data) return;
+                            var description = window.prompt('Create follow-up task');
+                            if (!description || !description.trim()) {
+                                return;
+                            }
+                            var dueDate = window.prompt('Due date (optional, YYYY-MM-DD)');
+                            var context = dueDate && dueDate.trim() ? { due_date: dueDate.trim() } : null;
+                            try {
+                                await createAnnotation(data, {
+                                    status: 'action_required',
+                                    tags: ['task'],
+                                    action_type: 'task',
+                                    priority: 'medium',
+                                    content: description.trim(),
+                                    report_included: false,
+                                    context: context
+                                });
+                                notify('Task captured for follow-up', 'success');
+                            } catch (error) {
+                                notify(error.message, 'error');
+                            }
+                        },
+                        togglePin: function(key) {
+                            var data = getUpdateData(key);
+                            if (!data || !window.WorkspaceModule || typeof window.WorkspaceModule.togglePin !== 'function') {
+                                return;
+                            }
+                            var itemElement = getUpdateElement(key);
+                            var pinButton = itemElement ? itemElement.querySelector('.pin-btn') : null;
+                            if (pinButton) {
+                                pinButton.disabled = true;
+                                pinButton.classList.add('pending');
+                            }
+                            Promise.resolve(
+                                window.WorkspaceModule.togglePin(
+                                    data.url,
+                                    data.headline,
+                                    data.authority,
+                                    {
+                                        sectors: Array.isArray(data.sectors) ? data.sectors : [],
+                                        summary: data.summary || '',
+                                        published: data.published || '',
+                                        personas: Array.isArray(data.personas) ? data.personas : [],
+                                        updateId: data.id || null
+                                    }
+                                )
+                            ).finally(function() {
+                                if (pinButton) {
+                                    pinButton.disabled = false;
+                                    pinButton.classList.remove('pending');
+                                }
+                            });
+                        }
+                    };
+
+                    window.IntelligencePage = IntelligencePage;
+                    IntelligencePage.init();
+                })();
+            </script>
         </body>
         </html>`
 
     res.send(html)
   } catch (error) {
-    console.error('❌ Error rendering AI Intelligence page:', error)
+    console.error('X Error rendering AI Intelligence page:', error)
     res.status(500).send('Error loading AI Intelligence page')
   }
 })
@@ -1294,7 +1865,7 @@ router.get('/authority-spotlight/:authority?', async (req, res) => {
     const renderAuthoritySpotlightPage = require('./pages/authoritySpotlightPage')
     await renderAuthoritySpotlightPage(req, res, authority)
   } catch (error) {
-    console.error('❌ Error rendering authority spotlight page:', error)
+    console.error('X Error rendering authority spotlight page:', error)
     res.status(500).send('Error loading authority spotlight page')
   }
 })
@@ -1306,7 +1877,7 @@ router.get('/sector-intelligence/:sector?', async (req, res) => {
     const renderSectorIntelligencePage = require('./pages/sectorIntelligencePage')
     await renderSectorIntelligencePage(req, res, sector)
   } catch (error) {
-    console.error('❌ Error rendering sector intelligence page:', error)
+    console.error('X Error rendering sector intelligence page:', error)
     res.status(500).send('Error loading sector intelligence page')
   }
 })
@@ -1365,7 +1936,7 @@ router.get('/about', async (req, res) => {
                 
                 <main class="main-content">
                     <div class="version-info">
-                        <h1>🤖 AI Regulatory Intelligence Platform</h1>
+                        <h1>AI AI Regulatory Intelligence Platform</h1>
                         <p style="font-size: 1.2rem; color: #0c4a6e; margin-bottom: 20px;">
                             <strong>Version 2.0 - Phase 1.3 Complete</strong>
                         </p>
@@ -1376,7 +1947,7 @@ router.get('/about', async (req, res) => {
                     </div>
                     
                     <div class="about-section">
-                        <h2>🎯 Mission</h2>
+                        <h2>Target Mission</h2>
                         <p>
                             To transform regulatory compliance from reactive monitoring to proactive intelligence, 
                             helping financial services firms stay ahead of regulatory changes with AI-powered insights,
@@ -1385,44 +1956,44 @@ router.get('/about', async (req, res) => {
                     </div>
                     
                     <div class="about-section">
-                        <h2>✨ Key Features</h2>
+                        <h2>Spark Key Features</h2>
                         <ul style="line-height: 2;">
-                            <li><strong>🎯 Firm Profile System:</strong> Personalized relevance scoring based on your sectors</li>
-                            <li><strong>📌 Workspace Management:</strong> Pin important updates, save searches, create alerts</li>
-                            <li><strong>🤖 AI-Powered Analysis:</strong> Automated impact scoring and sector relevance analysis</li>
-                            <li><strong>📊 Real-time Dashboard:</strong> Live regulatory updates with intelligent filtering</li>
-                            <li><strong>📋 Weekly AI Roundups:</strong> Comprehensive weekly intelligence briefings</li>
-                            <li><strong>🏛️ Authority Spotlight:</strong> Deep analysis of regulatory authority patterns</li>
-                            <li><strong>📈 Trend Analysis:</strong> Emerging regulatory themes and compliance priorities</li>
-                            <li><strong>⚡ Smart Filtering:</strong> Advanced search and categorization capabilities</li>
+                            <li><strong>Target Firm Profile System:</strong> Personalized relevance scoring based on your sectors</li>
+                            <li><strong>Pin Workspace Management:</strong> Pin important updates, save searches, create alerts</li>
+                            <li><strong>AI AI-Powered Analysis:</strong> Automated impact scoring and sector relevance analysis</li>
+                            <li><strong>Analytics Real-time Dashboard:</strong> Live regulatory updates with intelligent filtering</li>
+                            <li><strong>Note Weekly AI Roundups:</strong> Comprehensive weekly intelligence briefings</li>
+                            <li><strong>Authority Authority Spotlight:</strong> Deep analysis of regulatory authority patterns</li>
+                            <li><strong>Growth Trend Analysis:</strong> Emerging regulatory themes and compliance priorities</li>
+                            <li><strong>Power Smart Filtering:</strong> Advanced search and categorization capabilities</li>
                         </ul>
                     </div>
                     
                     <div class="about-section">
-                        <h2>🛠️ Technology Stack</h2>
+                        <h2>Tools Technology Stack</h2>
                         <div class="tech-stack">
                             <div class="tech-item">
-                                <h4>🚀 Backend</h4>
+                                <h4>Launch Backend</h4>
                                 <p>Node.js, Express.js</p>
                             </div>
                             <div class="tech-item">
-                                <h4>🤖 AI Engine</h4>
+                                <h4>AI AI Engine</h4>
                                 <p>Groq API, Llama-3.3-70B</p>
                             </div>
                             <div class="tech-item">
-                                <h4>💾 Database</h4>
+                                <h4>Save Database</h4>
                                 <p>PostgreSQL + JSON Fallback</p>
                             </div>
                             <div class="tech-item">
-                                <h4>📡 Data Sources</h4>
+                                <h4>Signal Data Sources</h4>
                                 <p>RSS Feeds, Web Scraping</p>
                             </div>
                             <div class="tech-item">
-                                <h4>🎨 Frontend</h4>
+                                <h4>Design Frontend</h4>
                                 <p>Vanilla JS, Modern CSS</p>
                             </div>
                             <div class="tech-item">
-                                <h4>☁️ Infrastructure</h4>
+                                <h4>Cloud Infrastructure</h4>
                                 <p>Docker, Cloud Ready</p>
                             </div>
                         </div>
@@ -1434,7 +2005,7 @@ router.get('/about', async (req, res) => {
 
     res.send(html)
   } catch (error) {
-    console.error('❌ Error rendering about page:', error)
+    console.error('X Error rendering about page:', error)
     res.status(500).send('Error loading about page')
   }
 })
@@ -1442,7 +2013,7 @@ router.get('/about', async (req, res) => {
 // COMPREHENSIVE TEST PAGE
 router.get('/test', async (req, res) => {
   try {
-    console.log('🧪 Test page requested')
+    console.log('Test Test page requested')
 
     // Run system tests
     const testResults = await runSystemTests()
@@ -1554,30 +2125,30 @@ router.get('/test', async (req, res) => {
         <body>
             <div class="test-container">
                 <header class="test-header">
-                    <h1>🧪 AI Regulatory Intelligence Platform</h1>
+                    <h1>Test AI Regulatory Intelligence Platform</h1>
                     <h2>System Diagnostic & Test Suite</h2>
                     <p>Phase 1.3 Complete - Version 2.0</p>
-                    <button class="refresh-btn" onclick="window.location.reload()">🔄 Refresh Tests</button>
+                    <button class="refresh-btn" onclick="window.location.reload()">Refresh Refresh Tests</button>
                 </header>
 
                 ${generateTestResultsHTML(testResults)}
 
                 <div class="test-section">
-                    <h2>🔗 Quick Links & Testing</h2>
+                    <h2>Link Quick Links & Testing</h2>
                     <div class="quick-links">
-                        <a href="/" class="quick-link">🏠 Home</a>
-                        <a href="/dashboard" class="quick-link">📊 Dashboard</a>
-                        <a href="/ai-intelligence" class="quick-link">🤖 AI Intelligence</a>
-                        <a href="/weekly-roundup" class="quick-link">📋 Weekly Roundup</a>
-                        <a href="/api/health" class="quick-link">🔍 Health Check</a>
-                        <a href="/api/firm-profile" class="quick-link">🏢 Firm Profile</a>
-                        <a href="/api/workspace/stats" class="quick-link">📊 Workspace Stats</a>
-                        <a href="/about" class="quick-link">ℹ️ About</a>
+                        <a href="/" class="quick-link">Home Home</a>
+                        <a href="/dashboard" class="quick-link">Analytics Dashboard</a>
+                        <a href="/ai-intelligence" class="quick-link">AI AI Intelligence</a>
+                        <a href="/weekly-roundup" class="quick-link">Note Weekly Roundup</a>
+                        <a href="/api/health" class="quick-link">Search Health Check</a>
+                        <a href="/api/firm-profile" class="quick-link">Firm Firm Profile</a>
+                        <a href="/api/workspace/stats" class="quick-link">Analytics Workspace Stats</a>
+                        <a href="/about" class="quick-link">Info About</a>
                     </div>
                 </div>
 
                 <div class="test-section">
-                    <h2>✅ Phase 1.3 Features Checklist</h2>
+                    <h2>Complete Phase 1.3 Features Checklist</h2>
                     <div style="line-height: 2;">
                         ${generatePhase13ChecklistHTML(testResults)}
                     </div>
@@ -1588,13 +2159,13 @@ router.get('/test', async (req, res) => {
 
     res.send(html)
   } catch (error) {
-    console.error('❌ Error generating test page:', error)
+    console.error('X Error generating test page:', error)
     res.status(500).send(`
             <html>
                 <body style="font-family: Arial; text-align: center; padding: 50px;">
-                    <h1>❌ Test Page Error</h1>
+                    <h1>X Test Page Error</h1>
                     <p>Failed to run system tests: ${error.message}</p>
-                    <a href="/">← Back to Home</a>
+                    <a href="/"><- Back to Home</a>
                 </body>
             </html>
         `)
@@ -1611,7 +2182,7 @@ async function runSystemTests() {
 
   try {
     // Database Service Test
-    console.log('🧪 Testing database service...')
+    console.log('Test Testing database service...')
     const dbHealth = await dbService.healthCheck()
     results.tests.database = {
       status: dbHealth.status === 'healthy' ? 'pass' : 'fail',
@@ -1620,7 +2191,7 @@ async function runSystemTests() {
     }
 
     // AI Analyzer Test
-    console.log('🧪 Testing AI analyzer...')
+    console.log('Test Testing AI analyzer...')
     const aiHealth = await aiAnalyzer.healthCheck()
     results.tests.aiAnalyzer = {
       status: aiHealth.status === 'healthy' ? 'pass' : 'warn',
@@ -1629,7 +2200,7 @@ async function runSystemTests() {
     }
 
     // RSS Fetcher Test
-    console.log('🧪 Testing RSS fetcher...')
+    console.log('Test Testing RSS fetcher...')
     const rssHealth = await rssFetcher.healthCheck()
     results.tests.rssFetcher = {
       status: rssHealth.status === 'healthy' ? 'pass' : 'fail',
@@ -1638,7 +2209,7 @@ async function runSystemTests() {
     }
 
     // Workspace Features Test
-    console.log('🧪 Testing workspace features...')
+    console.log('Test Testing workspace features...')
     const firmProfile = await dbService.getFirmProfile()
     const pinnedItems = await dbService.getPinnedItems()
     const savedSearches = await dbService.getSavedSearches()
@@ -1656,7 +2227,7 @@ async function runSystemTests() {
     }
 
     // Relevance Service Test
-    console.log('🧪 Testing relevance service...')
+    console.log('Test Testing relevance service...')
     const testUpdate = { headline: 'Test update', authority: 'FCA' }
     const relevanceScore = relevanceService.calculateRelevanceScore(testUpdate, firmProfile)
 
@@ -1670,7 +2241,7 @@ async function runSystemTests() {
     const hasFailures = Object.values(results.tests).some(test => test.status === 'fail')
     results.overall = hasFailures ? 'fail' : 'pass'
   } catch (error) {
-    console.error('❌ System test error:', error)
+    console.error('X System test error:', error)
     results.overall = 'fail'
     results.tests.systemError = {
       status: 'fail',
@@ -1723,7 +2294,7 @@ function generatePhase13ChecklistHTML(results) {
 
   let html = ''
   for (const item of checklist) {
-    const icon = item.status ? '✅' : '⚠️'
+    const icon = item.status ? 'Complete' : 'Warning'
     const status = item.status ? 'COMPLETE' : 'PENDING'
     html += `<div>${icon} ${item.item} <em>(${status})</em></div>`
   }
@@ -1733,14 +2304,14 @@ function generatePhase13ChecklistHTML(results) {
 
 function getTestIcon(testName) {
   const icons = {
-    database: '💾',
-    aiAnalyzer: '🤖',
-    rssFetcher: '📡',
-    workspace: '🗂️',
-    relevance: '🎯',
-    systemError: '❌'
+    database: 'Save',
+    aiAnalyzer: 'AI',
+    rssFetcher: 'Signal',
+    workspace: 'Files',
+    relevance: 'Target',
+    systemError: 'X'
   }
-  return icons[testName] || '🧪'
+  return icons[testName] || 'Test'
 }
 
 function formatTestName(testName) {

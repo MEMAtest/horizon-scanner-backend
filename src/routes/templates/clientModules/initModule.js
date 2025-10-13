@@ -3,7 +3,7 @@ function getInitModule() {
     // Initialization Module
     const InitModule = (function() {
         async function initialize() {
-            console.log('🚀 Initializing system...');
+            console.log('Launch Initializing system...');
             
             try {
                 FilterModule.initializeFilters();
@@ -15,10 +15,10 @@ function getInitModule() {
                 CounterModule.updateLiveCounters();
                 setInterval(CounterModule.updateLiveCounters, 30000);
                 
-                console.log('✅ System initialized successfully');
+                console.log('Complete System initialized successfully');
                 
             } catch (error) {
-                console.error('❌ System initialization failed:', error);
+                console.error('X System initialization failed:', error);
                 showMessage('System initialization failed: ' + error.message, 'error');
             }
         }

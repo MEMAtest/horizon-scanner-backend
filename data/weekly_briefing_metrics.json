@@ -1,0 +1,162 @@
+{
+  "totals": {
+    "runs": 8,
+    "cacheHits": 1,
+    "totalTokens": 0
+  },
+  "lastRun": {
+    "runId": "c288002c-d405-42eb-9b8c-964f5fb90191",
+    "briefingId": "a689c957-ab98-42c5-9657-170cfe648f62",
+    "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+    "cacheHit": false,
+    "startedAt": "2025-10-10T22:19:11.378Z",
+    "completedAt": "2025-10-10T22:19:11.613Z",
+    "durationMs": 235,
+    "usage": {
+      "totalTokens": 0,
+      "requests": []
+    },
+    "totals": {
+      "currentUpdates": 382,
+      "annotations": 0
+    }
+  },
+  "history": [
+    {
+      "runId": "c288002c-d405-42eb-9b8c-964f5fb90191",
+      "briefingId": "a689c957-ab98-42c5-9657-170cfe648f62",
+      "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+      "cacheHit": false,
+      "startedAt": "2025-10-10T22:19:11.378Z",
+      "completedAt": "2025-10-10T22:19:11.613Z",
+      "durationMs": 235,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 382,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "314a5d5c-5d53-4475-a64d-948a67f11f7d",
+      "briefingId": "84ad31b6-b890-42ae-9eaf-ef23d01096ca",
+      "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+      "cacheHit": false,
+      "startedAt": "2025-10-10T22:17:29.427Z",
+      "completedAt": "2025-10-10T22:17:29.644Z",
+      "durationMs": 217,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 382,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "fd7dbbd7-53c2-4ff2-9904-fd96248944e2",
+      "briefingId": "59b4ea69-57a9-4da6-8b9d-e8e0b683a0e5",
+      "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+      "cacheHit": false,
+      "startedAt": "2025-10-10T22:15:53.073Z",
+      "completedAt": "2025-10-10T22:15:53.308Z",
+      "durationMs": 235,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 382,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "bd68f670-6ace-4189-9901-44574b8c6ea6",
+      "briefingId": "b4966fff-3e62-4650-8b1e-f6080a6bbdbf",
+      "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+      "cacheHit": false,
+      "startedAt": "2025-10-10T21:30:33.687Z",
+      "completedAt": "2025-10-10T21:30:33.921Z",
+      "durationMs": 234,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 382,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "7c070655-e1e6-4a4c-ac9f-07a8ff8f2f1f",
+      "briefingId": "e943c34d-03c1-447c-b2bb-075dd030463f",
+      "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+      "cacheHit": true,
+      "startedAt": "2025-10-10T21:25:54.524Z",
+      "completedAt": "2025-10-10T21:25:54.802Z",
+      "durationMs": 278,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 382,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "fc0ac23c-f35f-4e76-bdbd-49d5e1b10391",
+      "briefingId": "e943c34d-03c1-447c-b2bb-075dd030463f",
+      "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
+      "cacheHit": false,
+      "startedAt": "2025-10-10T21:24:39.224Z",
+      "completedAt": "2025-10-10T21:24:39.456Z",
+      "durationMs": 232,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 382,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "c85f7e19-2897-4eec-979a-251fabc36ae8",
+      "briefingId": "bfbec989-d74d-4f97-a50e-8a4b8cb68f38",
+      "datasetHash": "c4c1d5ecbae37568f4cebc1df92dcb9385f29d396a1d0437900f1fd9a43f9591",
+      "cacheHit": false,
+      "startedAt": "2025-10-10T21:23:55.725Z",
+      "completedAt": "2025-10-10T21:23:55.814Z",
+      "durationMs": 89,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 0,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "9de4f446-9144-40c2-949d-89ef0ced1d1a",
+      "briefingId": "398f17c4-6bef-4def-bf6e-4b7f1cc84f73",
+      "datasetHash": "e2569ac0348b9334c94a6c525e14f293b61c6a1f97c33db057511b18f8b663eb",
+      "cacheHit": false,
+      "startedAt": "2025-10-08T19:40:17.712Z",
+      "completedAt": "2025-10-08T19:40:17.798Z",
+      "durationMs": 86,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 1,
+        "annotations": 0
+      }
+    }
+  ]
+}

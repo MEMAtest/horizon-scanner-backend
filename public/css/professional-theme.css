@@ -61,17 +61,20 @@ body {
 
 /* Active Navigation Items */
 .nav-item.active .nav-link {
-    background: var(--accent-blue) !important;
-    color: white !important;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    box-shadow: inset 3px 0 0 #1e3a8a !important;
+    border-radius: 12px !important;
 }
 
 .nav-link:hover {
-    background: rgba(59, 130, 246, 0.1) !important;
-    color: var(--primary-navy) !important;
+    background: #f8fafc !important;
+    color: #1e3a8a !important;
+    box-shadow: inset 2px 0 0 #1e3a8a !important;
 }
 
 .nav-badge {
-    background: var(--primary-charcoal) !important;
+    background: var(--primary-dark) !important;
 }
 
 /* Counter Items */

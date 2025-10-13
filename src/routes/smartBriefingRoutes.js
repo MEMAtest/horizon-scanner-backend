@@ -1,0 +1,84 @@
+// Smart Briefing API Routes
+
+const express = require('express')
+const router = express.Router()
+
+const smartBriefingService = require('../services/smartBriefingService')
+
+// Trigger a manual run of the weekly Smart Briefing pipeline
+router.post('/weekly-briefings/run', async (req, res) => {
+  try {
+    const status = await smartBriefingService.startRun(req.body || {})
+    res.status(202).json({ success: true, status })
+  } catch (error) {
+    console.error('SmartBriefing run trigger failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Poll the status of an in-flight run
+router.get('/weekly-briefings/run/:runId', (req, res) => {
+  const runId = req.params.runId
+  const status = smartBriefingService.getRunStatus(runId)
+
+  if (!status) {
+    return res.status(404).json({ success: false, error: 'Run not found' })
+  }
+
+  res.json({ success: true, status })
+})
+
+// Retrieve the latest published briefing
+router.get('/weekly-briefings/latest', async (req, res) => {
+  try {
+    const briefing = await smartBriefingService.getLatestBriefing()
+    if (!briefing) {
+      return res.status(404).json({ success: false, error: 'No briefings available' })
+    }
+
+    res.json({ success: true, briefing })
+  } catch (error) {
+    console.error('SmartBriefing latest retrieval failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// List recent briefings (metadata only)
+router.get('/weekly-briefings', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50)
+    const briefings = await smartBriefingService.listBriefings(limit)
+    res.json({ success: true, briefings })
+  } catch (error) {
+    console.error('SmartBriefing listing failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Metrics summary for instrumentation dashboard
+router.get('/weekly-briefings/metrics', async (req, res) => {
+  try {
+    const metrics = await smartBriefingService.getMetricsSummary()
+    res.json({ success: true, metrics })
+  } catch (error) {
+    console.error('SmartBriefing metrics retrieval failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Fetch a specific briefing bundle
+router.get('/weekly-briefings/:briefingId', async (req, res) => {
+  try {
+    const briefing = await smartBriefingService.getBriefing(req.params.briefingId)
+    if (!briefing) {
+      return res.status(404).json({ success: false, error: 'Briefing not found' })
+    }
+
+    res.json({ success: true, briefing })
+  } catch (error) {
+    console.error('SmartBriefing retrieval failed:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+module.exports = router
