@@ -30,7 +30,7 @@ The script outputs a JSON payload describing the dispatch (recipient count, insi
 
 1. Set `ENABLE_DAILY_DIGEST=true`.
 2. Configure the recipients and cron window (`DAILY_DIGEST_RECIPIENTS`, `DAILY_DIGEST_CRON`, `DAILY_DIGEST_TIMEZONE`).
-3. When the server boots (non-Vercel environments) the scheduler runs in-process. On Vercel the job is registered via `vercel.json` (see `"crons"` entry) which invokes the `POST /api/cron/daily-digest` serverless function daily; if `CRON_SECRET` is configured, Vercel automatically injects the `Authorization: Bearer ${CRON_SECRET}` header.
+3. When the server boots (non-Vercel environments) the scheduler runs in-process. On Vercel the job is registered via `vercel.json` (see `"crons"` entry) which invokes the `POST /api/cron/daily-digest` serverless function daily. Adjust the project time zone in Vercel settings if you need it to run at 06:00 local time. If `CRON_SECRET` is configured, Vercel automatically injects the `Authorization: Bearer ${CRON_SECRET}` header.
 
 Logs appear as:
 
