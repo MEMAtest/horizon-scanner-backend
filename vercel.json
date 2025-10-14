@@ -7,10 +7,25 @@
       "config": {
         "maxDuration": 30
       }
+    },
+    {
+      "src": "api/cron/daily-digest.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30
+      }
     }
   ],
   "routes": [
+    { "src": "/api/cron/daily-digest", "dest": "/api/cron/daily-digest.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/daily-digest",
+      "schedule": "0 6 * * *",
+      "timezone": "Europe/London"
+    }
   ],
   "env": {
     "NODE_ENV": "production",
