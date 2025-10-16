@@ -12,6 +12,7 @@ const dbService = require('./services/dbService')
 const rssFetcher = require('./services/rssFetcher')
 const aiAnalyzer = require('./services/aiAnalyzer')
 const FCAEnforcementService = require('./services/fcaEnforcementService')
+const { scheduleDailyDigest } = require('./services/dailyDigestService')
 
 // Import routes
 const pageRoutes = require('./routes/pageRoutes')
@@ -559,8 +560,10 @@ class AIRegulatoryIntelligenceServer {
       // Start background tasks if not on Vercel
       if (!process.env.VERCEL) {
         await this.startBackgroundTasks()
+        scheduleDailyDigest()
       } else {
         console.log('📝 Vercel environment - background tasks handled via cron')
+        scheduleDailyDigest()
       }
 
       console.log('✅ All services initialized successfully')
