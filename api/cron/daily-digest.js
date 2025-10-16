@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // STEP 1: Fetch fresh regulatory data
+    // STEP 1: Fetch fresh regulatory data (optimized for 30s Vercel timeout)
     console.log('📡 DailyDigest: Starting data refresh before digest generation...')
     const refreshStartTime = Date.now()
 
@@ -49,7 +49,16 @@ module.exports = async (req, res) => {
       const rssFetcher = require('../../src/services/rssFetcher')
       dataRefreshResults.attempted = true
 
-      const fetchResults = await rssFetcher.fetchAllFeeds()
+      // Use fast-mode with timeout protection for Vercel limits
+      const fetchResults = await Promise.race([
+        rssFetcher.fetchAllFeeds({
+          fastMode: true,      // Skip slow Puppeteer scrapers
+          timeout: 18000       // 18 second timeout (leave 12s for digest)
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Data refresh timeout after 18s')), 18000)
+        )
+      ])
 
       dataRefreshResults.success = true
       dataRefreshResults.newUpdates = fetchResults.newUpdates || 0

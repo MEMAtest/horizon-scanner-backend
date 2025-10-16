@@ -267,12 +267,14 @@ class EnhancedRSSFetcher {
     return true
   }
 
-  async fetchAllFeeds() {
+  async fetchAllFeeds(options = {}) {
+    const { fastMode = false, timeout = null } = options
+
     if (!this.isInitialized) {
       await this.initialize()
     }
 
-    console.log('📡 Starting comprehensive regulatory updates fetch...')
+    console.log(`📡 Starting ${fastMode ? 'fast-mode ' : ''}regulatory updates fetch...`)
     this.processingStats.startTime = Date.now()
 
     const results = {
@@ -284,9 +286,17 @@ class EnhancedRSSFetcher {
       bySource: {}
     }
 
-    // Sort feeds by priority
+    // Sort feeds by priority and filter for fast mode
     const sortedFeeds = this.feedSources
-      .filter(source => source.priority !== 'disabled')
+      .filter(source => {
+        if (source.priority === 'disabled') return false
+        // In fast mode, skip slow Puppeteer scrapers
+        if (fastMode && source.type === 'puppeteer') {
+          console.log(`⚡ Fast mode: Skipping slow source ${source.name}`)
+          return false
+        }
+        return true
+      })
       .sort((a, b) => {
         const priorityOrder = { high: 0, medium: 1, low: 2 }
         return priorityOrder[a.priority] - priorityOrder[b.priority]
