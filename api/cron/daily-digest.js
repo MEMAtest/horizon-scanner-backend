@@ -7,8 +7,9 @@ const { sendDailyDigest, parseRecipients } = require('../../src/services/dailyDi
 module.exports = async (req, res) => {
   const startTime = Date.now()
 
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
+  // Vercel Cron uses GET, manual triggers use POST - accept both
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json({ success: false, error: 'Method Not Allowed' })
   }
 
