@@ -7,6 +7,93 @@ const relevanceService = require('./relevanceService')
 const { buildDailyDigestEmail } = require('../templates/emails/dailyDigestEmail-classic')
 const { sendEmail } = require('./email/resendClient')
 
+const DEFAULT_HISTORY_WINDOW_DAYS = 45
+// const DEFAULT_DIGEST_TIMEZONE = 'Europe/London'
+const DEFAULT_DIGEST_ROLLING_WINDOW_HOURS = 24
+
+function resolveHistoryWindowDays() {
+  const envValue = parseInt(process.env.DIGEST_HISTORY_WINDOW_DAYS, 10)
+  if (Number.isFinite(envValue) && envValue > 0) {
+    return envValue
+  }
+  return DEFAULT_HISTORY_WINDOW_DAYS
+}
+
+function resolveHistoryRetentionDays() {
+  const envValue = parseInt(process.env.DIGEST_HISTORY_RETENTION_DAYS, 10)
+  if (Number.isFinite(envValue) && envValue > 0) {
+    return envValue
+  }
+  return resolveHistoryWindowDays()
+}
+
+// function resolveDigestTimezone() {
+//   return process.env.DIGEST_TIMEZONE ||
+//     process.env.DAILY_DIGEST_TIMEZONE ||
+//     DEFAULT_DIGEST_TIMEZONE
+// }
+
+function resolveRollingWindowHours(preferred) {
+  const parsedPreferred = typeof preferred === 'number'
+    ? preferred
+    : parseInt(preferred, 10)
+  if (Number.isFinite(parsedPreferred) && parsedPreferred > 0) {
+    return parsedPreferred
+  }
+  const envValue = parseInt(process.env.DIGEST_ROLLING_WINDOW_HOURS, 10)
+  if (Number.isFinite(envValue) && envValue > 0) {
+    return envValue
+  }
+  return DEFAULT_DIGEST_ROLLING_WINDOW_HOURS
+}
+
+// function formatDateKey(value, timeZone) {
+//   if (!value) return null
+//   const date = value instanceof Date ? value : new Date(value)
+//   if (Number.isNaN(date.getTime())) return null
+
+//   const formatter = new Intl.DateTimeFormat('en-GB', {
+//     timeZone,
+//     year: 'numeric',
+//     month: '2-digit',
+//     day: '2-digit'
+//   })
+
+//   const parts = formatter.formatToParts(date)
+//   const year = parts.find(part => part.type === 'year')?.value
+//   const month = parts.find(part => part.type === 'month')?.value
+//   const day = parts.find(part => part.type === 'day')?.value
+
+//   if (!year || !month || !day) return null
+//   return `${year}-${month}-${day}`
+// }
+
+function extractPublishedDate(update) {
+  if (!update || typeof update !== 'object') return null
+  const candidates = [
+    update.publishedDate,
+    update.published_date,
+    update.date_published,
+    update.metadata?.publishedDate,
+    update.metadata?.date,
+    update.metadata?.pubDate,
+    update.fetchedDate,
+    update.fetched_date,
+    update.createdAt,
+    update.created_at
+  ]
+
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const parsed = candidate instanceof Date ? candidate : new Date(candidate)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
 function parseRecipients(value) {
   if (!value) return []
   return value
@@ -88,11 +175,34 @@ function formatSummary({ highCount, mediumCount, uniqueAuthorities, topSectors, 
 async function buildDigestPayload(options = {}) {
   const {
     persona = process.env.DIGEST_PERSONA || 'Executive',
-    limit = 60
+    limit = 60,
+    digestDate: digestDateInput,
+    rollingWindowHours: rollingWindowPreferred
   } = options
+  // const timeZone = resolveDigestTimezone()
+  let digestDate = digestDateInput instanceof Date
+    ? digestDateInput
+    : (digestDateInput ? new Date(digestDateInput) : new Date())
+  if (Number.isNaN(digestDate.getTime())) {
+    digestDate = new Date()
+  }
+  // const digestDateKey = formatDateKey(digestDate, timeZone)
+  // const timeZone = resolveDigestTimezone()
+  const rollingWindowHours = resolveRollingWindowHours(rollingWindowPreferred)
+
+  // Use a rolling window (default 24 hours) to ensure consistent volume
+  // This captures updates from the past X hours leading up to the digest time
+  // Duplicates are filtered out via digest history tracking
+  const rollingWindowStart = new Date(digestDate)
+  rollingWindowStart.setHours(rollingWindowStart.getHours() - rollingWindowHours)
 
   const firmProfile = await dbService.getFirmProfile().catch(() => null)
-  const updates = await dbService.getEnhancedUpdates({ limit, sort: 'newest' })
+  const updates = await dbService.getEnhancedUpdates({
+    limit,
+    sort: 'newest',
+    startDate: rollingWindowStart.toISOString(),
+    endDate: digestDate.toISOString()
+  })
   const categorized = relevanceService.categorizeByRelevance(updates, firmProfile)
 
   const ranked = [
@@ -101,8 +211,21 @@ async function buildDigestPayload(options = {}) {
     ...(categorized.low || [])
   ]
 
+  // Retrieve digest history to avoid sending duplicate items
+  const digestHistoryWindow = resolveHistoryWindowDays()
+  const previouslySentIdentifiers = await dbService.getRecentDigestIdentifiers(digestHistoryWindow)
+  const previouslySentSet = new Set(previouslySentIdentifiers.map(id => String(id)))
+  const seenThisDigest = new Set()
+
   // Quality filtering: exclude job postings and low-quality content
   const filtered = ranked.filter(update => {
+    const identifierSource = update.id || update.update_id || update.url
+    const identifier = identifierSource != null ? String(identifierSource) : null
+
+    if (identifier && previouslySentSet.has(identifier)) {
+      return false
+    }
+
     // Exclude job postings and careers content
     const headline = (update.headline || '').toLowerCase()
     const category = (update.category || '').toLowerCase()
@@ -150,10 +273,20 @@ async function buildDigestPayload(options = {}) {
       return false
     }
 
+    if (identifier && seenThisDigest.has(identifier)) {
+      return false
+    }
+
+    if (identifier) {
+      seenThisDigest.add(identifier)
+    }
+
     return true
   })
 
   const insights = filtered.slice(0, 10).map(update => {
+    const identifierSource = update.id || update.update_id || update.url
+    const identifier = identifierSource != null ? String(identifierSource) : null
     const sectors = Array.isArray(update.sectors) && update.sectors.length
       ? update.sectors
       : (
@@ -162,21 +295,10 @@ async function buildDigestPayload(options = {}) {
         (update.sector ? [update.sector] : [])
         )
 
-    // Prioritize actual published date over fetch date
-    let publishedDate = update.publishedDate || update.published_date || update.date_published
-
-    // If no published date, try to extract from metadata
-    if (!publishedDate && update.metadata) {
-      publishedDate = update.metadata.publishedDate || update.metadata.date || update.metadata.pubDate
-    }
-
-    // Only use fetch date as absolute last resort
-    if (!publishedDate) {
-      publishedDate = update.fetchedDate || update.fetched_date || update.createdAt || update.created_at
-    }
+    const publishedDate = extractPublishedDate(update)
 
     return {
-      id: update.id || update.update_id || update.url,
+      id: identifier,
       headline: update.headline,
       summary: update.ai_summary || update.summary || update.description,
       authority: update.authority,
@@ -274,6 +396,17 @@ async function sendDailyDigest({ recipients, persona, brand }) {
     html,
     text
   })
+
+  if (digest.insights.length > 0) {
+    const retentionDays = resolveHistoryRetentionDays()
+    await dbService.markDigestItemsSent(
+      digest.insights.map(item => item.id).filter(Boolean),
+      {
+        digestDate: digest.generatedAt,
+        retentionDays
+      }
+    )
+  }
 
   return {
     sent: true,

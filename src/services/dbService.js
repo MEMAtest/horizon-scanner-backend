@@ -16,6 +16,7 @@ class EnhancedDBService {
     this.insightsFile = path.join(this.jsonDataPath, 'ai_insights.json')
     this.profilesFile = path.join(this.jsonDataPath, 'firm_profiles.json')
     this.workspaceFile = path.join(this.jsonDataPath, 'workspace.json')
+    this.digestHistoryFile = path.join(this.jsonDataPath, 'digest_history.json')
 
     this.initializeDatabase()
   }
@@ -131,6 +132,19 @@ class EnhancedDBService {
         console.log('🔧 Running database migration for AI intelligence fields...')
         await this.runMigrations(client)
       }
+
+      // Ensure digest history table exists for daily digest tracking
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS daily_digest_history (
+          update_identifier TEXT PRIMARY KEY,
+          digest_sent_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+        )
+      `)
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_daily_digest_history_sent_at
+          ON daily_digest_history (digest_sent_at DESC)
+      `)
 
       client.release()
     } catch (error) {
@@ -273,6 +287,13 @@ class EnhancedDBService {
           pinnedItems: [],
           firmProfile: null
         }, null, 2))
+      }
+
+      // Ensure digest history file exists
+      try {
+        await fs.access(this.digestHistoryFile)
+      } catch {
+        await fs.writeFile(this.digestHistoryFile, JSON.stringify([], null, 2))
       }
 
       console.log('✅ JSON fallback files initialized')
@@ -739,6 +760,125 @@ class EnhancedDBService {
       default:
         return updates
     }
+  }
+
+  // DAILY DIGEST HISTORY METHODS
+  async markDigestItemsSent(identifiers = [], options = {}) {
+    const digestDate = options.digestDate instanceof Date ? options.digestDate : new Date(options.digestDate || Date.now())
+    const retentionDays = Number.isFinite(options.retentionDays) ? options.retentionDays : 45
+    const cleanIdentifiers = Array.isArray(identifiers)
+      ? identifiers.map(id => (id != null ? String(id) : null)).filter(Boolean)
+      : []
+
+    if (cleanIdentifiers.length === 0) {
+      return { recorded: 0 }
+    }
+
+    try {
+      if (this.fallbackMode) {
+        await this.markDigestItemsSentJSON(cleanIdentifiers, digestDate, retentionDays)
+      } else {
+        await this.markDigestItemsSentPG(cleanIdentifiers, digestDate, retentionDays)
+      }
+      return { recorded: cleanIdentifiers.length }
+    } catch (error) {
+      console.error('❌ Error recording digest history:', error)
+      return { recorded: 0, error: error.message }
+    }
+  }
+
+  async markDigestItemsSentPG(identifiers, digestDate, retentionDays) {
+    const client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      for (const identifier of identifiers) {
+        await client.query(`
+          INSERT INTO daily_digest_history (update_identifier, digest_sent_at)
+          VALUES ($1, $2)
+          ON CONFLICT (update_identifier)
+          DO UPDATE SET digest_sent_at = EXCLUDED.digest_sent_at
+        `, [identifier, digestDate])
+      }
+
+      if (Number.isFinite(retentionDays) && retentionDays > 0) {
+        const cutoff = new Date(digestDate.getTime() - retentionDays * 24 * 60 * 60 * 1000)
+        await client.query('DELETE FROM daily_digest_history WHERE digest_sent_at < $1', [cutoff])
+      }
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  async markDigestItemsSentJSON(identifiers, digestDate, retentionDays) {
+    const history = await this.loadJSONData(this.digestHistoryFile)
+    const isoDate = digestDate.toISOString()
+
+    const historyMap = new Map(history.map(entry => [entry.update_identifier, entry]))
+
+    for (const identifier of identifiers) {
+      historyMap.set(identifier, {
+        update_identifier: identifier,
+        digest_sent_at: isoDate
+      })
+    }
+
+    let updatedHistory = Array.from(historyMap.values())
+
+    if (Number.isFinite(retentionDays) && retentionDays > 0) {
+      const cutoff = new Date(digestDate.getTime() - retentionDays * 24 * 60 * 60 * 1000)
+      updatedHistory = updatedHistory.filter(entry => {
+        const sentAt = new Date(entry.digest_sent_at)
+        return !Number.isNaN(sentAt.getTime()) && sentAt >= cutoff
+      })
+    }
+
+    await this.saveJSONData(this.digestHistoryFile, updatedHistory)
+  }
+
+  async getRecentDigestIdentifiers(windowDays = 45) {
+    const days = Number.isFinite(windowDays) && windowDays > 0 ? windowDays : 45
+    try {
+      if (this.fallbackMode) {
+        return await this.getRecentDigestIdentifiersJSON(days)
+      } else {
+        return await this.getRecentDigestIdentifiersPG(days)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching digest history:', error)
+      return []
+    }
+  }
+
+  async getRecentDigestIdentifiersPG(windowDays) {
+    const client = await this.pool.connect()
+    try {
+      const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+      const result = await client.query(`
+        SELECT update_identifier
+        FROM daily_digest_history
+        WHERE digest_sent_at >= $1
+      `, [cutoff])
+      return result.rows.map(row => row.update_identifier)
+    } finally {
+      client.release()
+    }
+  }
+
+  async getRecentDigestIdentifiersJSON(windowDays) {
+    const history = await this.loadJSONData(this.digestHistoryFile)
+    const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+    return history
+      .filter(entry => {
+        const sentAt = new Date(entry.digest_sent_at)
+        return !Number.isNaN(sentAt.getTime()) && sentAt >= cutoff
+      })
+      .map(entry => entry.update_identifier)
   }
 
   // AI INSIGHTS METHODS

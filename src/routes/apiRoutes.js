@@ -187,7 +187,8 @@ router.post('/annotations', async (req, res) => {
       priority,
       persona,
       report_included: reportIncluded,
-      context
+      context,
+      annotation_type: annotationType
     } = req.body || {}
 
     if (!updateId || !content) {
@@ -208,7 +209,8 @@ router.post('/annotations', async (req, res) => {
       priority,
       persona,
       report_included: reportIncluded,
-      context
+      context,
+      annotation_type: annotationType
     })
 
     res.status(201).json({ success: true, annotation })

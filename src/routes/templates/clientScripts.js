@@ -939,83 +939,124 @@ function getClientScriptsContent() {
             );
         }
         
+        function classifyUpdateTheme(update) {
+            const textParts = [
+                update.headline,
+                update.summary,
+                update.ai_summary,
+                Array.isArray(update.ai_tags) ? update.ai_tags.join(' ') : ''
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            const matches = (patterns) => patterns.some(pattern => textParts.includes(pattern));
+
+            if (matches(['enforcement', 'penalty', 'fined', 'sanction', 'disciplinary', 'ban'])) {
+                return { key: 'enforcement', label: 'Enforcement action' };
+            }
+            if (matches(['consultation', 'call for evidence', 'feedback statement', 'discussion paper', 'request for comment'])) {
+                return { key: 'consultation', label: 'Consultation insight' };
+            }
+            if (matches(['speech', 'remarks', 'address', 'keynote', 'fireside', 'conference', 'summit'])) {
+                return { key: 'speech', label: 'Leadership remarks' };
+            }
+            return { key: 'other', label: 'Strategic signal' };
+        }
+
+        function slugify(value = '') {
+            const slug = String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            return slug || 'info';
+        }
+
+        function safeText(value, fallback = '') {
+            const source = typeof value === 'string' ? value.trim() : '';
+            return source || fallback;
+        }
+
         function generateUpdateCard(update) {
             const impactLevel = update.impactLevel || update.impact_level || 'Informational'
             const urgency = update.urgency || 'Low'
             const publishedAt = parseDate(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
             const publishedDate = formatDateDisplay(publishedAt || new Date())
             const isoDate = publishedAt ? publishedAt.toISOString() : ''
-            const impactBadge = getImpactBadge(update)
-            const contentTypeBadge = getContentTypeBadge(update)
-            const sectorTags = getSectorTags(update)
-            const aiFeatures = getAIFeatures(update)
-            const impactScore = getBusinessImpactScore(update)
-            const impactGaugeDetail = impactScore
-                ? '<div class="detail-item impact-gauge-item">' +
-                    '<div class="detail-label">Impact</div>' +
-                    renderImpactGauge(impactScore) +
-                  '</div>'
-                : ''
-
-            const aiSummary = update.ai_summary ? update.ai_summary.trim() : ''
+            const aiSummary = safeText(update.ai_summary)
             const useFallbackSummary = isFallbackSummary(aiSummary)
             const summaryText = !useFallbackSummary && aiSummary
                 ? aiSummary
-                : (update.summary && update.summary.trim() ? update.summary.trim() : '')
-
-            const idArg = JSON.stringify(update.id || '');
-            const urlArg = JSON.stringify(update.url || '');
+                : safeText(update.summary, '')
+            const summarySource = summaryText ? summaryText.replace(/\\s+/g, ' ').trim() : ''
+            const trimmedSummary = summarySource ? truncateText(summarySource, 320) : 'Summary not available'
+            const headline = safeText(update.headline, update.title || '')
+            const hasHeadline = Boolean(headline)
+            const category = classifyUpdateTheme(update)
+            const impactKey = slugify(impactLevel)
+            const urgencyKey = slugify(urgency)
+            const sourceLink = update.url
+                ? '<a class="update-card__source" href="' + escapeAttribute(update.url) + '" target="_blank" rel="noopener">View source</a>'
+                : ''
+            const authoritySafe = escapeHtml(update.authority || 'Unknown authority')
+            const summarySafe = escapeHtml(trimmedSummary)
+            const headlineSafe = escapeHtml(headline)
+            const categoryLabelSafe = category ? escapeHtml(category.label) : ''
+            const impactLabelSafe = escapeHtml(impactLevel)
+            const urgencyLabelSafe = escapeHtml(urgency)
+            const impactScoreSafe = update.business_impact_score ? escapeHtml(String(update.business_impact_score)) : ''
+            const idAttr = escapeAttribute(String(update.id || ''))
+            const urlAttr = escapeAttribute(update.url || '')
+            const dateAttr = escapeAttribute(isoDate || '')
+            const summaryAttr = escapeAttribute(summarySource || '')
+            const headlineAttr = escapeAttribute(headline)
+            const authorityAttr = escapeAttribute(update.authority || '')
+            const impactAttr = escapeAttribute(impactLevel)
+            const urgencyAttr = escapeAttribute(urgency)
+            const publishedAttr = escapeAttribute(update.published_date || update.publishedDate || isoDate || '')
+            const regulatoryArea = safeText(
+                update.regulatory_area ||
+                update.regulatoryArea ||
+                update.area ||
+                ''
+            )
+            const regulatoryAttr = escapeAttribute(regulatoryArea)
 
             return (
                 '<div class="update-card" ' +
-                    'data-id="' + (update.id || '') + '" ' +
-                    'data-url="' + (update.url || '') + '" ' +
-                    'data-authority="' + (update.authority || '') + '" ' +
-                    'data-impact="' + impactLevel + '" ' +
-                    'data-urgency="' + urgency + '" ' +
-                    'data-date="' + isoDate + '">' +
-                    '<div class="update-header">' +
-                        '<div class="update-meta-primary">' +
-                            '<span class="authority-badge">' + (update.authority || 'Unknown') + '</span>' +
-                            '<span class="date-badge">' + publishedDate + '</span>' +
-                            contentTypeBadge +
-                            impactBadge +
+                    'data-id="' + idAttr + '" ' +
+                    'data-url="' + urlAttr + '" ' +
+                    'data-authority="' + authorityAttr + '" ' +
+                    'data-impact="' + impactAttr + '" ' +
+                    'data-urgency="' + urgencyAttr + '" ' +
+                    'data-date="' + dateAttr + '" ' +
+                    'data-headline="' + headlineAttr + '" ' +
+                    'data-summary="' + summaryAttr + '" ' +
+                    'data-published="' + publishedAttr + '" ' +
+                    'data-regulatory-area="' + regulatoryAttr + '">' +
+                    '<header class="update-card__top">' +
+                        '<div class="update-card__chips">' +
+                            '<span class="update-chip authority-chip">' + authoritySafe + '</span>' +
+                            '<span class="update-chip date-chip">' + publishedDate + '</span>' +
                         '</div>' +
-                        '<div class="update-actions">' +
-                            '<button class="action-btn bookmark-btn" data-update-id="' + (update.id || '') + '" title="Bookmark">Star</button>' +
-                            '<button class="action-btn share-btn" data-update-id="' + (update.id || '') + '" title="Share">Link</button>' +
-                            '<button class="action-btn details-btn" data-update-id="' + (update.id || '') + '" title="Details">View</button>' +
+                        (category ? '<span class="update-chip category-chip category-' + category.key + '">' + categoryLabelSafe + '</span>' : '') +
+                    '</header>' +
+                    '<div class="update-card__title-row">' +
+                        (hasHeadline
+                            ? '<h3 class="update-card__title"><a href="' + (update.url ? escapeAttribute(update.url) : '#') + '" target="_blank" rel="noopener">' + headlineSafe + '</a></h3>'
+                            : '<h3 class="update-card__title update-card__title--empty">No headline provided</h3>') +
+                    '</div>' +
+                    '<p class="update-card__summary">' + summarySafe + '</p>' +
+                    '<div class="update-card__meta-row">' +
+                        '<span class="meta-pill impact-' + impactKey + '">Impact: ' + impactLabelSafe + '</span>' +
+                        '<span class="meta-pill urgency-' + urgencyKey + '">Urgency: ' + urgencyLabelSafe + '</span>' +
+                        (update.business_impact_score ? '<span class="meta-pill score-pill">Impact score: ' + impactScoreSafe + '</span>' : '') +
+                    '</div>' +
+                    '<footer class="update-card__footer">' +
+                        '<div class="update-card__actions">' +
+                            '<button class="action-btn update-action-btn bookmark-btn" data-update-id="' + idAttr + '" title="Bookmark">Star</button>' +
+                            '<button class="action-btn update-action-btn share-btn" data-update-id="' + idAttr + '" title="Share">Share</button>' +
+                            '<button class="action-btn update-action-btn details-btn" data-update-id="' + idAttr + '" title="Details">View</button>' +
+                            '<button class="action-btn update-action-btn quick-note-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="Quick note">Quick Note</button>' +
                         '</div>' +
-                    '</div>' +
-                    '<h3 class="update-headline">' +
-                        '<a href="' + (update.url || '#') + '" target="_blank" rel="noopener">' + (update.headline || 'No headline') + '</a>' +
-                    '</h3>' +
-                    '<div class="update-summary">' +
-                        (summaryText || 'No summary available') +
-                    '</div>' +
-                    '<div class="update-details">' +
-                        '<div class="detail-item">' +
-                            '<div class="detail-label">Regulatory Area</div>' +
-                            '<div class="detail-value">' + (update.area || 'General') + '</div>' +
-                        '</div>' +
-                        impactGaugeDetail +
-                        (update.urgency ?
-                            '<div class="detail-item">' +
-                                '<div class="detail-label">Urgency</div>' +
-                                '<div class="detail-value">' + update.urgency + '</div>' +
-                            '</div>' : '') +
-                        (update.compliance_deadline ?
-                            '<div class="detail-item">' +
-                                '<div class="detail-label">Compliance Deadline</div>' +
-                                '<div class="detail-value">' + formatDateDisplay(update.compliance_deadline || update.complianceDeadline) + '</div>' +
-                            '</div>' : '') +
-                    '</div>' +
-                    '<div class="update-footer">' +
-                        '<div class="sector-tags">' + sectorTags + '</div>' +
-                        '<div class="ai-features">' + aiFeatures + '</div>' +
-                    '</div>' +
+                        sourceLink +
+                    '</footer>' +
                 '</div>'
-            );
+            )
         }
 
         // Client-side helper functions for Cards view
@@ -1573,6 +1614,27 @@ function getClientScriptsContent() {
                             e.preventDefault();
                             if (typeof viewDetails === 'function') {
                                 viewDetails(updateId);
+                            }
+                        } else if (actionBtn.classList.contains('quick-note-btn') && updateId) {
+                            e.preventDefault();
+                            if (typeof window.openQuickNoteComposer === 'function') {
+                                const card = actionBtn.closest('.update-card');
+                                const payload = {
+                                    updateId,
+                                    url: updateUrl || (card ? card.dataset.url : ''),
+                                    headline: card ? card.dataset.headline || '' : '',
+                                    summary: card ? card.dataset.summary || '' : '',
+                                    authority: card ? card.dataset.authority || '' : '',
+                                    impact: card ? card.dataset.impact || '' : '',
+                                    urgency: card ? card.dataset.urgency || '' : '',
+                                    published: card ? card.dataset.published || card.dataset.date || '' : '',
+                                    regulatoryArea: card ? card.dataset.regulatoryArea || '' : ''
+                                };
+                                try {
+                                    window.openQuickNoteComposer(payload);
+                                } catch (error) {
+                                    console.warn('Quick note composer failed:', error);
+                                }
                             }
                         } else if (actionBtn.classList.contains('timeline-btn') && updateId) {
                             e.preventDefault();

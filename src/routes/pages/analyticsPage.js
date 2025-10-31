@@ -317,6 +317,7 @@ const analyticsPage = async (req, res) => {
 
     const clientPayload = {
       generatedAt: predictiveData?.generatedAt,
+      summary: summaryTiles,
       lanes,
       filters,
       momentum,
@@ -354,20 +355,38 @@ const analyticsPage = async (req, res) => {
 
     .predictive-header {
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
     }
 
-    .predictive-header h1 {
+    .header-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .header-copy h1 {
       margin: 0;
       font-size: 2rem;
       color: #0f172a;
     }
 
-    .predictive-header .subtitle {
-      margin-top: 0.4rem;
+    .header-copy .subtitle {
+      margin: 0;
       color: #475569;
       font-size: 1rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header-actions .btn {
+      white-space: nowrap;
     }
 
     .summary-section {
@@ -982,8 +1001,13 @@ const analyticsPage = async (req, res) => {
   ${sidebarHtml}
   <main class="predictive-main" id="predictiveMain">
     <header class="predictive-header">
-      <p class="subtitle">Prioritised regulatory intelligence and actions</p>
-      <h1>Predictive Analytics Dashboard</h1>
+      <div class="header-copy">
+        <p class="subtitle">Prioritised regulatory intelligence and actions</p>
+        <h1>Predictive Analytics Dashboard</h1>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn btn-primary" id="downloadOnePager">Download One-Pager</button>
+      </div>
     </header>
 
     <section class="summary-section">

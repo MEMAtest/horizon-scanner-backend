@@ -6,6 +6,416 @@ const { getCommonStyles } = require('../templates/commonStyles')
 const { getClientScripts } = require('../templates/clientScripts')
 
 const MAX_HIGHLIGHT_UPDATES = 10
+const MAX_UPDATES_PER_GROUP = 4
+
+// const HIGHLIGHT_THEMES = {
+//   enforcement: {
+//     key: 'enforcement',
+//     label: 'Enforcements & Penalties',
+//     accent: '#dc2626',
+//     tint: '#fee2e2'
+//   },
+//   consultation: {
+//     key: 'consultation',
+//     label: 'Consultations & Calls for Input',
+//     accent: '#0284c7',
+//     tint: '#e0f2fe'
+//   },
+//   speech: {
+//     key: 'speech',
+//     label: 'Speeches & Remarks',
+//     accent: '#7c3aed',
+//     tint: '#ede9fe'
+//   },
+//   other: {
+//     key: 'other',
+//     label: 'Strategic Signals',
+//     accent: '#334155',
+//     tint: '#e2e8f0'
+//   }
+// }
+
+// const HIGHLIGHT_CATEGORY_ORDER = ['enforcement', 'consultation', 'speech', 'other']
+
+// function normalizeText(value) {
+//   return typeof value === 'string' ? value.toLowerCase() : ''
+// }
+
+function highlightContains(text, patterns) {
+  if (!text) return false
+  return patterns.some(pattern => text.includes(pattern))
+}
+
+// function classifyHighlight(update) {
+//   const title = normalizeText(update?.title)
+//   const summary = normalizeText(update?.summary)
+//   const joinedTags = Array.isArray(update?.tags) ? normalizeText(update.tags.join(' ')) : ''
+//   const combined = [title, summary, joinedTags].filter(Boolean).join(' ')
+
+//   if (highlightContains(combined, ['enforcement', 'penalty', 'penalties', 'fine', 'fined', 'sanction', 'ban', 'prohibition', 'censure', 'disciplinary'])) {
+//     return 'enforcement'
+//   }
+//   if (highlightContains(combined, ['consultation', 'call for evidence', 'feedback statement', 'discussion paper', 'request for comment', 'call for views'])) {
+//     return 'consultation'
+//   }
+//   if (highlightContains(combined, ['speech', 'speaking', 'remarks', 'address', 'keynote', 'fireside', 'conference', 'summit'])) {
+//     return 'speech'
+//   }
+//   return 'other'
+// }
+
+function classifyCardTheme(update) {
+  const text = [
+    update.title,
+    update.summary,
+    Array.isArray(update.tags) ? update.tags.join(' ') : ''
+  ].filter(Boolean).join(' ').toLowerCase()
+
+  if (highlightContains(text, ['enforcement', 'penalty', 'penalties', 'fine', 'fined', 'sanction', 'ban', 'prohibition', 'censure', 'disciplinary'])) {
+    return { key: 'enforcement', label: 'Enforcement action' }
+  }
+  if (highlightContains(text, ['consultation', 'call for evidence', 'feedback statement', 'discussion paper', 'request for comment', 'call for views'])) {
+    return { key: 'consultation', label: 'Consultation insight' }
+  }
+  if (highlightContains(text, ['speech', 'remarks', 'address', 'keynote', 'fireside', 'conference', 'summit'])) {
+    return { key: 'speech', label: 'Leadership remarks' }
+  }
+  return { key: 'other', label: 'Strategic signal' }
+}
+
+function slugify(value) {
+  const normalized = typeof value === 'string' ? value.toLowerCase() : ''
+  const slug = normalized.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return slug || 'info'
+}
+
+function buildUpdateCardHtml(update) {
+  const theme = classifyCardTheme(update)
+  const authority = escapeHtml(update.authority || 'Unknown authority')
+  const date = escapeHtml(formatDateDisplay(update.published_date))
+  const headline = (update.title || update.headline || '').trim()
+  const aiSummary = (update.ai_summary || '').trim()
+  const summarySource = (aiSummary || update.summary || '').replace(/\s+/g, ' ').trim()
+  const summary = truncateText(summarySource, 320) || 'Summary not available.'
+  const impactLevel = update.impact_level || 'Informational'
+  const urgency = update.urgency || 'Low'
+  const impactKey = slugify(impactLevel)
+  const urgencyKey = slugify(urgency)
+  const regulatoryArea = update.regulatory_area || update.regulatoryArea || ''
+  const idAttr = escapeAttribute(String(update.id || ''))
+  const urlAttr = escapeAttribute(update.url || '')
+  const headlineAttr = escapeAttribute(headline)
+  const summaryAttr = escapeAttribute(summarySource)
+  const authorityAttr = escapeAttribute(update.authority || '')
+  const impactAttr = escapeAttribute(impactLevel)
+  const urgencyAttr = escapeAttribute(urgency)
+  const publishedAttr = escapeAttribute(update.published_date || update.publishedDate || update.created_at || '')
+  const regulatoryAttr = escapeAttribute(regulatoryArea)
+  const titleHtml = headline
+    ? `<h3 class="update-card__title"><a href="${escapeAttribute(update.url || '#')}" target="_blank" rel="noopener">${escapeHtml(headline)}</a></h3>`
+    : '<h3 class="update-card__title update-card__title--empty">No headline provided</h3>'
+  const summaryHtml = `<p class="update-card__summary">${escapeHtml(summary)}</p>`
+  const scoreHtml = update.business_impact_score
+    ? `<span class="meta-pill score-pill">Impact score: ${escapeHtml(String(update.business_impact_score))}</span>`
+    : ''
+  const linkHtml = update.url
+    ? `<a class="update-card__source" href="${escapeAttribute(update.url)}" target="_blank" rel="noopener">View source</a>`
+    : ''
+
+  return `
+    <div class="update-card" data-update-id="${idAttr}" data-update-url="${urlAttr}" data-id="${idAttr}" data-url="${urlAttr}" data-headline="${headlineAttr}" data-summary="${summaryAttr}" data-authority="${authorityAttr}" data-impact="${impactAttr}" data-urgency="${urgencyAttr}" data-published="${publishedAttr}" data-regulatory-area="${regulatoryAttr}">
+      <header class="update-card__top">
+        <div class="update-card__chips">
+          <span class="update-chip authority-chip">${authority}</span>
+          <span class="update-chip date-chip">${date}</span>
+        </div>
+        <span class="update-chip category-chip category-${theme.key}">${escapeHtml(theme.label)}</span>
+      </header>
+      <div class="update-card__title-row">
+        ${titleHtml}
+      </div>
+      ${summaryHtml}
+      <div class="update-card__meta-row">
+        <span class="meta-pill impact-${impactKey}">Impact: ${escapeHtml(impactLevel)}</span>
+        <span class="meta-pill urgency-${urgencyKey}">Urgency: ${escapeHtml(urgency)}</span>
+        ${scoreHtml}
+      </div>
+      <footer class="update-card__footer">
+        <div class="update-card__actions">
+          <button class="action-btn update-action-btn bookmark-btn" data-update-id="${idAttr}" title="Bookmark">Star</button>
+          <button class="action-btn update-action-btn share-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Share">Share</button>
+          <button class="action-btn update-action-btn details-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Details">View</button>
+          <button class="action-btn update-action-btn quick-note-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Quick note">Quick Note</button>
+        </div>
+        ${linkHtml}
+      </footer>
+    </div>
+  `
+}
+
+function truncateText(value, limit = 220) {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (trimmed.length <= limit) return trimmed
+  return `${trimmed.slice(0, Math.max(0, limit - 1)).trim()}…`
+}
+
+// function buildHighlightMetaChips(update) {
+//   const impact = (update?.impact_level || 'Informational').toString()
+//   const urgency = (update?.urgency || 'Low').toString()
+//   const impactKey = impact.toLowerCase().replace(/[^a-z]+/g, '-')
+//   const urgencyKey = urgency.toLowerCase().replace(/[^a-z]+/g, '-')
+//   const chips = [
+//     `<span class="highlight-chip impact-${impactKey}">Impact: ${escapeHtml(impact)}</span>`,
+//     `<span class="highlight-chip urgency-${urgencyKey}">Urgency: ${escapeHtml(urgency)}</span>`
+//   ]
+//   if (update?.business_impact_score) {
+//     chips.push(`<span class="highlight-chip score">Impact score: ${escapeHtml(String(update.business_impact_score))}</span>`)
+//   }
+//   return chips.join('')
+// }
+
+// function buildHighlightCard(update, categoryKey) {
+//   const theme = HIGHLIGHT_THEMES[categoryKey] || HIGHLIGHT_THEMES.other
+//   const authority = escapeHtml(update?.authority || 'Unknown authority')
+//   const date = escapeHtml(formatDateDisplay(update?.published_date))
+//   const title = (update?.title || '').trim()
+//   const titleClass = title ? 'highlight-title' : 'highlight-title highlight-title--empty'
+//   const safeTitle = title ? escapeHtml(title) : 'No headline provided'
+//   const summary = truncateText(update?.summary || '', 220)
+//   const summaryHtml = summary ? escapeHtml(summary) : 'Summary not available.'
+//   const metaChips = buildHighlightMetaChips(update)
+//   const link = update?.url
+//     ? `<a class="highlight-link" href="${escapeAttribute(update.url)}" target="_blank" rel="noopener">View source</a>`
+//     : ''
+
+//   return `
+//     <article class="highlight-card highlight-card--${theme.key}">
+//       <header class="highlight-card__header">
+//         <span class="highlight-chip authority">${authority}</span>
+//         <span class="highlight-chip date">${date}</span>
+//       </header>
+//       <div class="highlight-card__meta">${metaChips}</div>
+//       <h3 class="${titleClass}">${safeTitle}</h3>
+//       <p class="highlight-summary">${summaryHtml}</p>
+//       ${link ? `<footer class="highlight-card__footer">${link}</footer>` : ''}
+//     </article>
+//   `
+// }
+
+// function buildHighlightGroup(key, items) {
+//   const theme = HIGHLIGHT_THEMES[key] || HIGHLIGHT_THEMES.other
+//   const limitedItems = items.slice(0, MAX_UPDATES_PER_GROUP)
+//   const cards = limitedItems.map(item => buildHighlightCard(item, key)).join('')
+//   return `
+//     <section class="highlight-group highlight-group--${theme.key}">
+//       <header class="highlight-group__header" style="--highlight-accent:${theme.accent};--highlight-tint:${theme.tint}">
+//         <span class="highlight-pill">${escapeHtml(theme.label)}</span>
+//         <span class="highlight-count">${items.length} highlight${items.length === 1 ? '' : 's'}</span>
+//       </header>
+//       <div class="highlight-list">
+//         ${cards}
+//       </div>
+//     </section>
+//   `
+// }
+
+const ONE_PAGER_ICONS = {
+  radar: `
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="14" cy="14" r="11" opacity="0.2"></circle>
+          <circle cx="14" cy="14" r="7" opacity="0.35"></circle>
+          <circle cx="14" cy="14" r="3"></circle>
+          <path d="M14 3v4"></path>
+          <path d="M20.5 7.5l-2.8 2.8"></path>
+          <path d="M24 14h-4"></path>
+        </g>
+      </svg>
+  `,
+  alert: `
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M14 4l10 18H4z" opacity="0.25"></path>
+          <path d="M14 10v6" stroke-linecap="round"></path>
+          <circle cx="14" cy="19.5" r="1.2" fill="currentColor" stroke="none"></circle>
+        </g>
+      </svg>
+  `,
+  clock: `
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="14" cy="14" r="10" opacity="0.25"></circle>
+          <path d="M14 8v6l4 2" stroke-linecap="round"></path>
+        </g>
+      </svg>
+  `,
+  building: `
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="6" y="9" width="16" height="14" rx="1.6" opacity="0.25"></rect>
+          <path d="M10 9V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4" opacity="0.4"></path>
+          <path d="M10 14.5h2m4 0h2m-8 4h2m4 0h2" stroke-linecap="round"></path>
+        </g>
+      </svg>
+  `
+}
+
+function getOnePagerIcon(key) {
+  return ONE_PAGER_ICONS[key] || ''
+}
+
+function formatDateTimeDisplay(value) {
+  if (!value) return 'Unknown'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return 'Unknown'
+  return parsed.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function buildOnePagerMetrics(briefing) {
+  const stats = briefing?.dataset?.stats || {}
+  const impact = stats.byImpact || {}
+  const updatesPool = Array.isArray(briefing?.dataset?.highlightUpdates) && briefing.dataset.highlightUpdates.length > 0
+    ? briefing.dataset.highlightUpdates
+    : briefing?.dataset?.currentUpdates || []
+
+  const urgentCount = Array.isArray(updatesPool)
+    ? updatesPool.filter(update => {
+      const urgency = (update?.urgency || '').toString().toLowerCase()
+      return urgency.includes('high') || urgency.includes('urgent')
+    }).length
+    : 0
+
+  const authoritiesCount = Array.isArray(updatesPool)
+    ? Array.from(new Set(updatesPool.map(update => update?.authority).filter(Boolean))).length
+    : 0
+
+  return [
+    {
+      icon: 'radar',
+      value: stats.totalUpdates ?? 0,
+      label: 'Updates monitored',
+      helper: 'Tracked this cycle'
+    },
+    {
+      icon: 'alert',
+      value: impact.Significant ?? 0,
+      label: 'High-impact notices',
+      helper: 'Require immediate review'
+    },
+    {
+      icon: 'clock',
+      value: urgentCount,
+      label: 'Urgent signals',
+      helper: 'Flagged for rapid follow-up'
+    },
+    {
+      icon: 'building',
+      value: authoritiesCount,
+      label: 'Active authorities',
+      helper: 'Issuing updates this week'
+    }
+  ]
+}
+
+function stylizeOnePagerBody(html) {
+  if (!html) return ''
+  return html
+    .replace(/<h4>/g, '<h3 class="one-pager__heading">')
+    .replace(/<\/h4>/g, '</h3>')
+}
+
+function buildOnePagerHighlights(briefing) {
+  const pool = Array.isArray(briefing?.dataset?.highlightUpdates) && briefing.dataset.highlightUpdates.length > 0
+    ? briefing.dataset.highlightUpdates
+    : briefing?.dataset?.currentUpdates || []
+  if (!Array.isArray(pool) || pool.length === 0) return ''
+
+  const topThree = pool.slice(0, 3)
+  const items = topThree.map(item => {
+    const authority = escapeHtml(item?.authority || 'Unknown authority')
+    const title = escapeHtml(item?.title || 'No headline provided')
+    const date = escapeHtml(formatDateDisplay(item?.published_date))
+    return `
+      <li class="executive-highlight">
+        <span class="executive-highlight__authority">${authority}</span>
+        <span class="executive-highlight__title">${title}</span>
+        <span class="executive-highlight__meta">${date}</span>
+      </li>
+    `
+  }).join('')
+
+  return `
+    <section class="executive-sheet__spotlights">
+      <h3 class="executive-sheet__section-title">Spotlight Briefings</h3>
+      <ul class="executive-highlight-list">
+        ${items}
+      </ul>
+    </section>
+  `
+}
+
+function buildExecutiveOnePager(briefing) {
+  if (!briefing?.artifacts?.onePager) {
+    return '<div class="empty-state">Generate a briefing to view the one-pager.</div>'
+  }
+
+  const metrics = buildOnePagerMetrics(briefing)
+  const metricCards = metrics.map(metric => `
+        <div class="executive-metric">
+          <div class="executive-metric__icon">${getOnePagerIcon(metric.icon)}</div>
+          <div class="executive-metric__content">
+            <span class="executive-metric__value">${escapeHtml(String(metric.value ?? '—'))}</span>
+            <span class="executive-metric__label">${escapeHtml(metric.label)}</span>
+            ${metric.helper ? `<span class="executive-metric__helper">${escapeHtml(metric.helper)}</span>` : ''}
+          </div>
+        </div>
+  `).join('')
+
+  const coverage = briefing?.dateRange
+    ? `${formatDateDisplay(briefing.dateRange.start)} — ${formatDateDisplay(briefing.dateRange.end)}`
+    : 'Period unavailable'
+  const generated = formatDateTimeDisplay(briefing?.generatedAt)
+  const bodyHtml = stylizeOnePagerBody(briefing.artifacts.onePager)
+  const spotlights = buildOnePagerHighlights(briefing)
+
+  return `
+    <article class="executive-sheet">
+      <header class="executive-sheet__masthead">
+        <div class="executive-sheet__brand">
+          <div class="executive-sheet__mark">HS</div>
+          <div>
+            <div class="executive-sheet__brand-name">Horizon Scanner</div>
+            <div class="executive-sheet__brand-subtitle">Weekly Smart Brief</div>
+          </div>
+        </div>
+        <div class="executive-sheet__meta">
+          <div class="executive-sheet__meta-item">
+            <span class="executive-sheet__meta-label">Coverage</span>
+            <span class="executive-sheet__meta-value">${escapeHtml(coverage)}</span>
+          </div>
+          <div class="executive-sheet__meta-item">
+            <span class="executive-sheet__meta-label">Published</span>
+            <span class="executive-sheet__meta-value">${escapeHtml(generated)}</span>
+          </div>
+        </div>
+      </header>
+      <section class="executive-sheet__metrics">
+        ${metricCards}
+      </section>
+      ${spotlights}
+      <section class="executive-sheet__body">
+        ${bodyHtml}
+      </section>
+    </article>
+  `
+}
 
 function serialize(value) {
   return JSON.stringify(value || null).replace(/</g, '\\u003c')
@@ -67,10 +477,7 @@ function buildInitialNarrativeHtml(briefing) {
 }
 
 function buildInitialOnePagerHtml(briefing) {
-  if (!briefing?.artifacts?.onePager) {
-    return '<div class="empty-state">Generate a briefing to view the one-pager.</div>'
-  }
-  return formatRichText(briefing.artifacts.onePager, 'Generate a briefing to view the one-pager.')
+  return buildExecutiveOnePager(briefing)
 }
 
 function buildInitialTeamBriefingHtml(briefing) {
@@ -126,32 +533,8 @@ function buildInitialUpdatesHtml(briefing) {
     return '<div class="empty-state">No updates found. Try refreshing the briefing.</div>'
   }
 
-  return updates.map(update => {
-    const tags = Array.isArray(update.tags) ? update.tags.slice(0, 4) : []
-    const sectors = Array.isArray(update.sectors) ? update.sectors.slice(0, 3) : []
-    const badges = [...tags, ...sectors]
-    const link = update.url
-      ? `<a class="panel-link" href="${escapeAttribute(update.url)}" target="_blank" rel="noopener">Open source →</a>`
-      : ''
-
-    return `
-        <article class="update-card">
-            <header class="update-card__header">
-                <span class="update-badge">${escapeHtml(update.authority || 'Unknown')}</span>
-                <span class="update-meta">${escapeHtml(formatDateDisplay(update.published_date))}</span>
-            </header>
-            <h3 class="update-headline">${escapeHtml(update.title || 'Untitled update')}</h3>
-            <p class="update-summary">${escapeHtml((update.summary || '').slice(0, 320))}</p>
-            <div class="update-meta-row">
-                <span>${escapeHtml(update.impact_level || 'Informational')}</span>
-                <span>${escapeHtml(update.urgency || 'Low urgency')}</span>
-                ${update.business_impact_score ? `<span>Impact score: ${escapeHtml(String(update.business_impact_score))}</span>` : ''}
-            </div>
-            ${badges.length ? `<div class="update-tags">${badges.map(tag => `<span class="chip">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
-            ${link}
-        </article>
-    `
-  }).join('')
+  const cards = updates.map(update => buildUpdateCardHtml(update)).join('')
+  return cards
 }
 
 function buildInitialMetaHtml(briefing) {
@@ -315,84 +698,378 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                 }
                 .updates-container {
                     display: grid;
-                    gap: 16px;
+                    gap: 18px;
+                    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                }
+                .updates-container.highlight-mode {
+                    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
                 }
                 .update-card {
-                    border: 1px solid #e5e7eb;
-                    border-radius: 14px;
-                    padding: 20px 22px;
-                    background: #ffffff;
-                    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 20px;
+                    padding: 22px 24px;
+                    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+                    box-shadow: 0 28px 60px -40px rgba(30, 41, 59, 0.5) !important;
                     display: flex;
                     flex-direction: column;
-                    gap: 12px;
+                    gap: 14px;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
-                .update-card__header {
+                .update-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 32px 70px -42px rgba(30, 64, 175, 0.45) !important;
+                }
+                .update-card__top {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     gap: 12px;
-                    font-size: 0.85rem;
-                    color: #475569;
-                }
-                .update-badge {
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 4px 10px;
-                    border-radius: 999px;
-                    background: #e0e7ff;
-                    color: #1d4ed8;
-                    font-weight: 600;
-                    font-size: 0.75rem;
-                    letter-spacing: 0.05em;
-                }
-                .update-headline {
-                    margin: 0;
-                    font-size: 1.05rem;
-                    font-weight: 600;
-                    color: #0f172a;
-                }
-                .update-summary {
-                    margin: 0;
-                    color: #475569;
-                    line-height: 1.5;
-                    font-size: 0.95rem;
-                }
-                .update-meta-row {
-                    display: flex;
                     flex-wrap: wrap;
-                    gap: 12px;
-                    font-size: 0.82rem;
-                    color: #64748b;
                 }
-                .update-tags {
+                .update-card__chips {
                     display: flex;
                     flex-wrap: wrap;
                     gap: 8px;
                 }
-                .chip {
-                    display: inline-flex;
-                    align-items: center;
-                    padding: 4px 10px;
-                    border-radius: 999px;
-                    background: #edf2ff;
-                    color: #1e3a8a;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    letter-spacing: 0.04em;
+                .update-card__title-row {
+                    margin: 0;
                 }
-                .panel-link {
+                .update-chip {
                     display: inline-flex;
                     align-items: center;
+                    padding: 4px 12px;
+                    border-radius: 999px;
+                    font-size: 0.78rem;
+                    font-weight: 600;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    background: #f1f5f9;
+                    color: #1f2937;
+                }
+                .authority-chip {
+                    background: #e0e7ff;
+                    color: #1d4ed8;
+                }
+                .date-chip {
+                    background: #f8fafc;
+                    color: #475569;
+                }
+                .category-chip {
+                    background: #ede9fe;
+                    color: #6d28d9;
+                }
+                .category-chip.category-enforcement {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+                .category-chip.category-consultation {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                }
+                .category-chip.category-speech {
+                    background: #ede9fe;
+                    color: #6d28d9;
+                }
+                .category-chip.category-other {
+                    background: #e2e8f0;
+                    color: #334155;
+                }
+                .update-card__title {
+                    margin: 0;
+                    font-size: 1.05rem;
+                    font-weight: 600;
+                    color: #111827;
+                }
+                .update-card__title a {
+                    color: inherit;
+                    text-decoration: none;
+                }
+                .update-card__title a:hover {
+                    text-decoration: underline;
+                }
+                .update-card__title--empty {
+                    color: #64748b;
+                    font-style: italic;
+                }
+                .update-card__summary {
+                    margin: 0;
+                    color: #475569;
+                    line-height: 1.55;
+                    font-size: 0.95rem;
+                }
+                .update-card__meta-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                .meta-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 6px 12px;
+                    border-radius: 12px;
+                    font-size: 0.78rem;
+                    font-weight: 600;
+                    letter-spacing: 0.04em;
+                    background: #f1f5f9;
+                    color: #1e293b;
+                }
+                .meta-pill.impact-significant,
+                .meta-pill.impact-high,
+                .meta-pill.impact-hot-high-impact-10-10 {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+                .meta-pill.impact-moderate {
+                    background: #fef3c7;
+                    color: #b45309;
+                }
+                .meta-pill.urgency-high,
+                .meta-pill.urgency-alert-urgent {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+                .meta-pill.urgency-medium {
+                    background: #fef3c7;
+                    color: #b45309;
+                }
+                .meta-pill.urgency-low {
+                    background: #dcfce7;
+                    color: #166534;
+                }
+                .meta-pill.score-pill {
+                    background: #fef9c3;
+                    color: #92400e;
+                }
+                .update-card__footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                    margin-top: 4px;
+                }
+                .update-card__actions {
+                    display: flex;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+                .update-action-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px;
+                    border-radius: 10px;
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #1f2937;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.18s ease;
+                }
+                .update-action-btn:hover {
+                    background: #f1f5f9;
+                }
+                .update-card__source {
                     font-size: 0.85rem;
                     font-weight: 600;
                     color: #1d4ed8;
                     text-decoration: none;
-                    gap: 6px;
                 }
-                .panel-link:hover {
-                    text-decoration: underline;
+                .update-card__source::after {
+                    content: '↗';
+                    font-size: 0.8em;
+                    margin-left: 4px;
+                }
+                .quick-note-modal {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                }
+                .quick-note-grid {
+                    display: grid;
+                    gap: 12px;
+                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                }
+                .quick-note-grid label {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    font-size: 0.85rem;
+                    color: #475569;
+                }
+                .quick-note-grid input {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 8px 10px;
+                    font-size: 0.9rem;
+                    color: #0f172a;
+                    background: #ffffff;
+                }
+                #quickNoteContent {
+                    width: 100%;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 10px;
+                    padding: 12px;
+                    font-size: 0.95rem;
+                    line-height: 1.5;
+                    resize: vertical;
+                    min-height: 220px;
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                    color: #0f172a;
+                }
+                .quick-note-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                    width: 100%;
+                }
+                .quick-note-actions .btn-secondary {
+                    background: #f1f5f9;
+                    color: #1f2937;
+                    border: 1px solid #cbd5e1;
+                }
+                .quick-note-actions .btn-secondary:hover {
+                    background: #e2e8f0;
+                }
+                .preview-note {
+                    margin: 0;
+                    font-size: 0.85rem;
+                    color: #475569;
+                }
+                .preview-modal {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 18px;
+                }
+                .preview-controls {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                    align-items: flex-end;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding-bottom: 18px;
+                }
+                .preview-field {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    font-size: 0.85rem;
+                    color: #475569;
+                }
+                .preview-field input {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 8px 10px;
+                    font-size: 0.9rem;
+                    color: #0f172a;
+                    background: #ffffff;
+                }
+                .preview-quick {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+                .preview-quick-btn {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 10px;
+                    padding: 6px 12px;
+                    background: #ffffff;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: #1f2937;
+                    cursor: pointer;
+                    transition: all 0.18s ease;
+                }
+                .preview-quick-btn:hover {
+                    background: #e0e7ff;
+                    border-color: #1d4ed8;
+                    color: #1d4ed8;
+                }
+                .preview-options {
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    margin-left: auto;
+                }
+                .preview-checkbox {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.85rem;
+                    color: #475569;
+                }
+                .preview-checkbox input {
+                    width: 16px;
+                    height: 16px;
+                }
+                .preview-refresh {
+                    margin-left: auto;
+                }
+                .preview-summary {
+                    display: grid;
+                    gap: 14px;
+                }
+                .preview-grid {
+                    display: grid;
+                    gap: 12px;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                }
+                .preview-stat {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 16px;
+                    background: #f8fafc;
+                }
+                .preview-stat__label {
+                    display: block;
+                    font-size: 0.78rem;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    color: #64748b;
+                    margin-bottom: 6px;
+                }
+                .preview-stat__value {
+                    display: block;
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    color: #1f2937;
+                }
+                .preview-highlight-list {
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                    display: grid;
+                    gap: 10px;
+                }
+                .preview-highlight-list li {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                    padding-bottom: 8px;
+                    border-bottom: 1px solid #e2e8f0;
+                    font-size: 0.9rem;
+                    color: #334155;
+                }
+                .preview-highlight-list li:last-child {
+                    border-bottom: none;
+                    padding-bottom: 0;
+                }
+                .preview-highlight-authority {
+                    font-weight: 600;
+                    color: #1d4ed8;
+                }
+                .preview-highlight-meta {
+                    font-size: 0.8rem;
+                    color: #94a3b8;
+                }
+                .preview-note {
+                    margin: 0;
+                    font-size: 0.85rem;
+                    color: #475569;
                 }
                 .briefing-section + .briefing-section {
                     margin-top: 18px;
@@ -429,34 +1106,217 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                     font-weight: 600;
                     color: #1f2937;
                 }
-                .one-pager h4,
                 .team-briefing h4 {
                     margin: 18px 0 10px;
                     font-size: 1rem;
                     font-weight: 600;
                     color: #0f172a;
                 }
-                .one-pager ul,
                 .team-briefing ul {
                     margin: 0 0 12px;
                     padding-left: 18px;
                     color: #475569;
                     line-height: 1.55;
                 }
-                .one-pager ul li,
                 .team-briefing ul li {
                     margin-bottom: 6px;
                 }
-                .updates-container.cards-view .update-card {
-                    border: 1px solid #e5e7eb;
-                    border-radius: 12px;
-                    padding: 18px 20px;
+                .executive-sheet {
                     background: #ffffff;
-                    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 24px;
+                    padding: 32px 36px;
+                    box-shadow: 0 32px 60px -42px rgba(30, 41, 59, 0.45);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 28px;
+                    color: #0f172a;
                 }
-                .updates-container.cards-view .update-card:hover {
-                    border-color: #c7d2fe;
-                    box-shadow: 0 14px 28px rgba(59, 130, 246, 0.12);
+                .executive-sheet__masthead {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 24px;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding-bottom: 20px;
+                }
+                .executive-sheet__brand {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+                .executive-sheet__mark {
+                    width: 46px;
+                    height: 46px;
+                    border-radius: 14px;
+                    background: linear-gradient(135deg, #1d4ed8 0%, #312e81 100%);
+                    color: #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 700;
+                    letter-spacing: 0.08em;
+                    font-size: 0.95rem;
+                }
+                .executive-sheet__brand-name {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    letter-spacing: 0.02em;
+                }
+                .executive-sheet__brand-subtitle {
+                    font-size: 0.9rem;
+                    color: #64748b;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                }
+                .executive-sheet__meta {
+                    display: grid;
+                    gap: 10px;
+                    align-content: flex-start;
+                    min-width: 220px;
+                }
+                .executive-sheet__meta-item {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+                .executive-sheet__meta-label {
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    color: #94a3b8;
+                }
+                .executive-sheet__meta-value {
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+                .executive-sheet__metrics {
+                    display: grid;
+                    gap: 18px;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                }
+                .executive-metric {
+                    display: flex;
+                    gap: 14px;
+                    padding: 18px 20px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    background: #f8fafc;
+                    box-shadow: 0 18px 32px -30px rgba(15, 23, 42, 0.35);
+                }
+                .executive-metric__icon {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 14px;
+                    background: #e0e7ff;
+                    color: #1d4ed8;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .executive-metric__icon svg {
+                    width: 26px;
+                    height: 26px;
+                }
+                .executive-metric__content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+                .executive-metric__value {
+                    font-size: 1.65rem;
+                    font-weight: 700;
+                    color: #0f172a;
+                    letter-spacing: -0.01em;
+                }
+                .executive-metric__label {
+                    font-size: 0.95rem;
+                    color: #334155;
+                    font-weight: 600;
+                }
+                .executive-metric__helper {
+                    font-size: 0.8rem;
+                    color: #64748b;
+                }
+                .executive-sheet__spotlights {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    padding: 20px 22px;
+                    background: #ffffff;
+                }
+                .executive-sheet__section-title {
+                    margin: 0 0 12px;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                    color: #1f2937;
+                }
+                .executive-highlight-list {
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                    display: grid;
+                    gap: 12px;
+                }
+                .executive-highlight {
+                    display: grid;
+                    grid-template-columns: minmax(0, 160px) minmax(0, 1fr) auto;
+                    gap: 12px;
+                    align-items: center;
+                    padding: 8px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                .executive-highlight:last-child {
+                    border-bottom: none;
+                }
+                .executive-highlight__authority {
+                    font-weight: 600;
+                    color: #1d4ed8;
+                    font-size: 0.9rem;
+                }
+                .executive-highlight__title {
+                    font-size: 0.95rem;
+                    color: #334155;
+                }
+                .executive-highlight__meta {
+                    font-size: 0.8rem;
+                    color: #94a3b8;
+                    text-align: right;
+                }
+                .executive-sheet__body {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                }
+                .one-pager {
+                    display: grid;
+                    gap: 18px;
+                }
+                .one-pager__heading {
+                    margin: 0 0 8px;
+                    font-size: 1.05rem;
+                    font-weight: 700;
+                    letter-spacing: 0.04em;
+                    text-transform: uppercase;
+                    color: #1f2937;
+                }
+                .one-pager p {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    color: #334155;
+                    line-height: 1.6;
+                }
+                .one-pager ul {
+                    margin: 0;
+                    padding-left: 20px;
+                    font-size: 0.95rem;
+                    color: #334155;
+                    line-height: 1.6;
+                }
+                .one-pager ul li {
+                    margin-bottom: 8px;
                 }
                 .change-grid {
                     display: grid;
@@ -693,10 +1553,15 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                     }
                 }
                 @media print {
-                    body { background: white; }
-                    .sidebar, .briefing-toolbar, .run-status, .status-banner, .modal-backdrop { display: none !important; }
-                    .main-content { padding: 0; box-shadow: none; }
-                    .card { break-inside: avoid; box-shadow: none; border: 1px solid #d1d5db; }
+                    body { background: #ffffff !important; margin: 0 !important; }
+                    .app-container { display: block !important; background: #ffffff !important; }
+                    .sidebar, .briefing-toolbar, .run-status, .status-banner, .modal-backdrop, .briefing-header, .briefing-layout:first-of-type, .briefing-layout:nth-of-type(2) { display: none !important; }
+                    .main-content { margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; background: #ffffff !important; }
+                    .card { display: none !important; }
+                    #onePagerCard { display: block !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+                    #onePagerCard h2 { display: none !important; }
+                    #onePagerCard .executive-sheet { border: none !important; box-shadow: none !important; padding: 24px 32px !important; }
+                    #onePagerCard .executive-metric { background: #f5f7fb !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
                 }
             </style>
         </head>
@@ -727,7 +1592,7 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                             </div>
                             <div class="updates-card">
                                 <h3 style="margin-top:24px;">Flagged Updates</h3>
-                                <div class="updates-container" id="updates-container">
+                                <div class="updates-container cards-view" id="updates-container">
                                     ${initialUpdatesHtml}
                                 </div>
                             </div>
@@ -799,7 +1664,7 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         </section>
                     </div>
                     <div class="briefing-layout" style="margin-top:24px;">
-                        <section class="card">
+                        <section class="card" id="onePagerCard">
                             <h2>Executive One-Pager</h2>
                             <div class="narrative-content" id="onePagerContent">
                                 ${initialOnePagerHtml}
@@ -821,8 +1686,32 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         <h2>Assemble This Week</h2>
                         <p style="margin:6px 0 0;color:#6b7280;font-size:0.95rem;">Review the scope before triggering the Smart Briefing generation.</p>
                     </header>
-                    <div class="modal-body" id="previewContent">
-                        <div class="empty-state">Loading weekly snapshot…</div>
+                    <div class="modal-body preview-modal">
+                        <div class="preview-controls">
+                            <div class="preview-field">
+                                <span>Start date</span>
+                                <input type="date" id="previewStart" required>
+                            </div>
+                            <div class="preview-field">
+                                <span>End date</span>
+                                <input type="date" id="previewEnd" required>
+                            </div>
+                            <div class="preview-quick">
+                                <button type="button" class="preview-quick-btn" data-preview-range="7">Last 7 days</button>
+                                <button type="button" class="preview-quick-btn" data-preview-range="14">Last 14 days</button>
+                                <button type="button" class="preview-quick-btn" data-preview-range="30">Last 30 days</button>
+                            </div>
+                            <div class="preview-options">
+                                <label class="preview-checkbox">
+                                    <input type="checkbox" id="previewForce" checked>
+                                    <span>Force regenerate (ignore cache)</span>
+                                </label>
+                                <button type="button" class="btn btn-secondary preview-refresh" id="refreshPreview">Update Preview</button>
+                            </div>
+                        </div>
+                        <div class="preview-summary" id="previewSummary">
+                            <div class="empty-state">Loading weekly snapshot…</div>
+                        </div>
                     </div>
                     <footer>
                         <button class="btn" id="cancelAssemble">Cancel</button>
@@ -886,6 +1775,40 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                 </div>
             </div>
 
+            <div class="modal-backdrop" id="quickNoteModal">
+                <div class="modal">
+                    <header>
+                        <h2>Compose Quick Note</h2>
+                        <p style="margin:6px 0 0;color:#6b7280;font-size:0.95rem;">Use this template to brief clients or internal stakeholders on high-impact updates.</p>
+                    </header>
+                    <form class="modal-body quick-note-modal" id="quickNoteForm">
+                        <div class="quick-note-grid">
+                            <label>
+                                <span>Recipient name</span>
+                                <input type="text" id="quickNoteRecipient" placeholder="e.g. Brian" autocomplete="off">
+                            </label>
+                            <label>
+                                <span>Client or team</span>
+                                <input type="text" id="quickNoteFirm" placeholder="e.g. First Sentinel" autocomplete="off">
+                            </label>
+                            <label>
+                                <span>Sender</span>
+                                <input type="text" id="quickNoteSender" placeholder="Horizon Scanner Team" autocomplete="off">
+                            </label>
+                        </div>
+                        <label style="font-weight:600;color:#1f2937;">Note preview</label>
+                        <textarea id="quickNoteContent" rows="12" required></textarea>
+                    </form>
+                    <footer>
+                        <div class="quick-note-actions">
+                            <button class="btn" id="cancelQuickNote" type="button">Cancel</button>
+                            <button class="btn btn-secondary" id="copyQuickNote" type="button">Copy</button>
+                            <button class="btn btn-primary" id="saveQuickNote" form="quickNoteForm" type="submit">Save Quick Note</button>
+                        </div>
+                    </footer>
+                </div>
+            </div>
+
             <script>
                 window.initialUpdates = ${serialize((latestBriefing?.dataset?.highlightUpdates && latestBriefing.dataset.highlightUpdates.length > 0)
                   ? latestBriefing.dataset.highlightUpdates
@@ -916,7 +1839,12 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                     const runStatusEl = document.getElementById('runStatus');
                     const metaEl = document.getElementById('briefingMeta');
                     const modal = document.getElementById('assembleModal');
-                    const previewContent = document.getElementById('previewContent');
+                    const previewSummaryEl = document.getElementById('previewSummary');
+                    const previewStartInput = document.getElementById('previewStart');
+                    const previewEndInput = document.getElementById('previewEnd');
+                    const previewForceCheckbox = document.getElementById('previewForce');
+                    const refreshPreviewBtn = document.getElementById('refreshPreview');
+                    const previewQuickButtons = document.querySelectorAll('.preview-quick-btn');
                     const confirmBtn = document.getElementById('confirmAssemble');
                     const cancelBtn = document.getElementById('cancelAssemble');
                     const annotationFilterEl = document.getElementById('annotationFilter');
@@ -930,6 +1858,25 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                     const metricsCacheEl = document.getElementById('metricCache');
                     const metricsTokensEl = document.getElementById('metricTokens');
                     const metricsDurationEl = document.getElementById('metricDuration');
+                    const quickNoteModal = document.getElementById('quickNoteModal');
+                    const quickNoteForm = document.getElementById('quickNoteForm');
+                    const quickNoteRecipientInput = document.getElementById('quickNoteRecipient');
+                    const quickNoteFirmInput = document.getElementById('quickNoteFirm');
+                    const quickNoteSenderInput = document.getElementById('quickNoteSender');
+                    const quickNoteContentInput = document.getElementById('quickNoteContent');
+                    const quickNoteCopyBtn = document.getElementById('copyQuickNote');
+                    const quickNoteCancelBtn = document.getElementById('cancelQuickNote');
+                    const quickNoteSaveBtn = document.getElementById('saveQuickNote');
+
+                    const MAX_HIGHLIGHT_UPDATES = ${MAX_HIGHLIGHT_UPDATES};
+                    const MAX_UPDATES_PER_GROUP = ${MAX_UPDATES_PER_GROUP};
+                    const highlightThemes = {
+                        enforcement: { key: 'enforcement', label: 'Enforcements & Penalties', accent: '#dc2626', tint: '#fee2e2' },
+                        consultation: { key: 'consultation', label: 'Consultations & Calls for Input', accent: '#0284c7', tint: '#e0f2fe' },
+                        speech: { key: 'speech', label: 'Speeches & Remarks', accent: '#7c3aed', tint: '#ede9fe' },
+                        other: { key: 'other', label: 'Strategic Signals', accent: '#334155', tint: '#e2e8f0' }
+                    };
+                    const highlightCategoryOrder = ['enforcement', 'consultation', 'speech', 'other'];
 
                     function escapeHtml(value) {
                         return String(value || '')
@@ -954,6 +1901,34 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         return date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
                     }
 
+                    if (refreshPreviewBtn) {
+                        refreshPreviewBtn.addEventListener('click', () => {
+                            const start = previewStartInput ? previewStartInput.value : '';
+                            const end = previewEndInput ? previewEndInput.value : '';
+                            if (!start || !end) {
+                                showToast('Select both start and end dates.', 'error');
+                                return;
+                            }
+                            loadPreview({ start, end });
+                        });
+                    }
+
+                    if (previewQuickButtons && previewQuickButtons.length) {
+                        previewQuickButtons.forEach(button => {
+                            button.addEventListener('click', () => {
+                                const rangeDays = Number(button.getAttribute('data-preview-range') || '7');
+                                const endDate = previewEndInput && previewEndInput.value
+                                    ? new Date(previewEndInput.value + 'T00:00:00')
+                                    : new Date();
+                                const startDate = new Date(endDate);
+                                startDate.setDate(startDate.getDate() - (rangeDays - 1));
+                                if (previewStartInput) previewStartInput.value = toInputDate(startDate);
+                                if (previewEndInput) previewEndInput.value = toInputDate(endDate);
+                                loadPreview({ start: previewStartInput.value, end: previewEndInput.value });
+                            });
+                        });
+                    }
+
                     function formatDuration(ms) {
                         if (!ms || Number.isNaN(ms)) return '—';
                         const seconds = Math.round(ms / 1000);
@@ -961,6 +1936,14 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         const minutes = Math.floor(seconds / 60);
                         const remaining = seconds % 60;
                         return minutes + 'm ' + remaining + 's';
+                    }
+
+                    function toInputDate(value) {
+                        if (!value) return '';
+                        const date = value instanceof Date ? value : new Date(value);
+                        if (Number.isNaN(date.getTime())) return '';
+                        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+                        return offsetDate.toISOString().slice(0, 10);
                     }
 
                     function visibilityLabel(value) {
@@ -994,6 +1977,129 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         }
                     }
 
+                    function normalizeHighlightText(value) {
+                        return typeof value === 'string' ? value.toLowerCase() : '';
+                    }
+
+                    function highlightSlug(value) {
+                        return normalizeHighlightText(value).replace(/[^a-z0-9]+/g, '-');
+                    }
+
+                    function highlightTextContains(text, patterns) {
+                        if (!text) return false;
+                        return patterns.some(pattern => text.includes(pattern));
+                    }
+
+                    function classifyHighlightItem(update) {
+                        const title = normalizeHighlightText(update?.title);
+                        const summary = normalizeHighlightText(update?.summary);
+                        const tags = Array.isArray(update?.tags) ? normalizeHighlightText(update.tags.join(' ')) : '';
+                        const combined = [title, summary, tags].filter(Boolean).join(' ');
+
+                        if (highlightTextContains(combined, ['enforcement', 'penalty', 'penalties', 'fine', 'fined', 'sanction', 'ban', 'prohibition', 'censure', 'disciplinary'])) {
+                            return 'enforcement';
+                        }
+                        if (highlightTextContains(combined, ['consultation', 'call for evidence', 'feedback statement', 'discussion paper', 'request for comment', 'call for views'])) {
+                            return 'consultation';
+                        }
+                        if (highlightTextContains(combined, ['speech', 'speaking', 'remarks', 'address', 'keynote', 'fireside', 'conference', 'summit'])) {
+                            return 'speech';
+                        }
+                        return 'other';
+                    }
+
+                    function truncateHighlightSummary(value, limit = 220) {
+                        if (!value) return '';
+                        const trimmed = value.trim();
+                        if (trimmed.length <= limit) return trimmed;
+                        return trimmed.slice(0, Math.max(0, limit - 1)).trim() + '…';
+                    }
+
+                    function buildHighlightMetaChips(update) {
+                        const impact = update?.impact_level || 'Informational';
+                        const urgency = update?.urgency || 'Low';
+                        const impactKey = highlightSlug(impact);
+                        const urgencyKey = highlightSlug(urgency);
+                        const chips = [
+                            '<span class="highlight-chip impact-' + impactKey + '">Impact: ' + escapeHtml(impact) + '</span>',
+                            '<span class="highlight-chip urgency-' + urgencyKey + '">Urgency: ' + escapeHtml(urgency) + '</span>'
+                        ];
+                        if (update?.business_impact_score) {
+                            chips.push('<span class="highlight-chip score">Impact score: ' + escapeHtml(String(update.business_impact_score)) + '</span>');
+                        }
+                        return chips.join('');
+                    }
+
+                    function buildHighlightCardHtml(update, categoryKey) {
+                        const theme = highlightThemes[categoryKey] || highlightThemes.other;
+                        const authority = escapeHtml(update?.authority || 'Unknown authority');
+                        const date = escapeHtml(formatDate(update?.published_date));
+                        const title = (update?.title || '').trim();
+                        const titleClass = title ? 'highlight-title' : 'highlight-title highlight-title--empty';
+                        const summary = truncateHighlightSummary(update?.summary || '', 220);
+                        const summaryHtml = summary ? escapeHtml(summary) : 'Summary not available.';
+                        const chipsHtml = buildHighlightMetaChips(update);
+                        const link = update?.url
+                            ? '<a class="highlight-link" href="' + escapeAttribute(update.url) + '" target="_blank" rel="noopener">View source</a>'
+                            : '';
+
+                        return [
+                            '<article class="highlight-card highlight-card--' + theme.key + '">',
+                            '  <header class="highlight-card__header">',
+                            '    <span class="highlight-chip authority">' + authority + '</span>',
+                            '    <span class="highlight-chip date">' + date + '</span>',
+                            '  </header>',
+                            '  <div class="highlight-card__meta">' + chipsHtml + '</div>',
+                            '  <h3 class="' + titleClass + '">' + (title ? escapeHtml(title) : 'No headline provided') + '</h3>',
+                            '  <p class="highlight-summary">' + summaryHtml + '</p>',
+                            link ? '  <footer class="highlight-card__footer">' + link + '</footer>' : '',
+                            '</article>'
+                        ].join('');
+                    }
+
+                    function buildHighlightGroupHtml(key, items) {
+                        const theme = highlightThemes[key] || highlightThemes.other;
+                        const limited = items.slice(0, MAX_UPDATES_PER_GROUP);
+                        const cards = limited.map(item => buildHighlightCardHtml(item, key)).join('');
+                        return [
+                            '<section class="highlight-group highlight-group--' + theme.key + '">',
+                            '  <header class="highlight-group__header" style="--highlight-accent:' + theme.accent + ';--highlight-tint:' + theme.tint + '">',
+                            '    <span class="highlight-pill">' + escapeHtml(theme.label) + '</span>',
+                            '    <span class="highlight-count">' + items.length + ' highlight' + (items.length === 1 ? '' : 's') + '</span>',
+                            '  </header>',
+                            '  <div class="highlight-list">',
+                                cards,
+                            '  </div>',
+                            '</section>'
+                        ].join('');
+                    }
+
+                    function renderHighlights(updates) {
+                        const container = document.getElementById('updates-container');
+                        const list = Array.isArray(updates) ? updates.slice(0, MAX_HIGHLIGHT_UPDATES) : [];
+                        if (typeof window.renderUpdatesList === 'function') {
+                            window.renderUpdatesList(list);
+                            return;
+                        }
+                        if (!container) return;
+                        container.className = 'updates-container cards-view';
+                        if (list.length === 0) {
+                            container.innerHTML = '<div class="empty-state">No highlighted updates available.</div>';
+                            return;
+                        }
+                        if (typeof window.generateUpdateCard === 'function') {
+                            container.innerHTML = list.map(update => window.generateUpdateCard(update)).join('');
+                        } else {
+                            container.innerHTML = list.map(update => '<div class="update-card"><h3 class="update-card__title">' + escapeHtml(update.headline || 'Update') + '</h3><p class="update-card__summary">' + escapeHtml(update.summary || '') + '</p></div>').join('');
+                        }
+                    }
+
+                    function renderHighlightsSafe(updates) {
+                        const list = Array.isArray(updates) ? updates : [];
+                        renderHighlights(list);
+                        return list;
+                    }
+
                     function showToast(message, type = 'info', autoHide = true) {
                         statusToast.textContent = message;
                         statusToast.className = 'status-banner ' + type;
@@ -1002,6 +2108,379 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                             setTimeout(() => {
                                 statusToast.style.display = 'none';
                             }, 5000);
+                        }
+                    }
+
+                    const QUICK_NOTE_STORAGE_KEY = 'weekly_quick_note_defaults_v1';
+                    const quickNoteElementsReady = Boolean(quickNoteModal && quickNoteForm && quickNoteContentInput);
+                    const quickNoteState = {
+                        activeUpdateId: null,
+                        activeUpdate: null,
+                        base: null,
+                        userEdited: false,
+                        defaults: loadQuickNoteDefaults(),
+                        lastGeneratedContent: ''
+                    };
+
+                    function cleanText(value) {
+                        if (value == null) return '';
+                        return typeof value === 'string' ? value.trim() : String(value).trim();
+                    }
+
+                    function loadQuickNoteDefaults() {
+                        if (typeof window === 'undefined' || !window.localStorage) {
+                            return { recipient: '', firm: '', sender: '' };
+                        }
+                        try {
+                            const raw = window.localStorage.getItem(QUICK_NOTE_STORAGE_KEY);
+                            if (!raw) {
+                                return { recipient: '', firm: '', sender: '' };
+                            }
+                            const parsed = JSON.parse(raw);
+                            return {
+                                recipient: cleanText(parsed.recipient),
+                                firm: cleanText(parsed.firm),
+                                sender: cleanText(parsed.sender)
+                            };
+                        } catch (error) {
+                            console.warn('Quick note defaults load failed:', error);
+                            return { recipient: '', firm: '', sender: '' };
+                        }
+                    }
+
+                    function saveQuickNoteDefaults(overrides) {
+                        if (typeof window === 'undefined' || !window.localStorage) {
+                            return;
+                        }
+                        try {
+                            const payload = {
+                                recipient: cleanText(overrides.recipient),
+                                firm: cleanText(overrides.firm),
+                                sender: cleanText(overrides.sender)
+                            };
+                            window.localStorage.setItem(QUICK_NOTE_STORAGE_KEY, JSON.stringify(payload));
+                        } catch (error) {
+                            console.warn('Quick note defaults save failed:', error);
+                        }
+                    }
+
+                    function extractSummaryBullets(summary) {
+                        const clean = cleanText(summary);
+                        if (!clean) return [];
+                        // Split on sentence endings followed by whitespace
+                        const segments = clean.split(/(?<=[.!?])\\s+/).map(segment => segment.trim()).filter(Boolean);
+                        if (segments.length === 0) {
+                            return [clean.length > 180 ? clean.slice(0, 177).trimEnd() + '…' : clean];
+                        }
+                        return segments.slice(0, 3).map(segment => {
+                            return segment.length > 180 ? segment.slice(0, 177).trimEnd() + '…' : segment;
+                        });
+                    }
+
+                    function resolveUpdateById(updateId, updateUrl) {
+                        const id = cleanText(updateId);
+                        const url = cleanText(updateUrl);
+                        if (!id && !url) return null;
+                        const pools = [
+                            state.current?.dataset?.highlightUpdates,
+                            state.current?.dataset?.currentUpdates,
+                            window.filteredUpdates,
+                            window.originalUpdates,
+                            window.initialUpdates
+                        ];
+                        for (const pool of pools) {
+                            if (!Array.isArray(pool)) continue;
+                            const match = pool.find(update => {
+                                if (!update) return false;
+                                const updateIdentifier = update.id || update.update_id || update.note_id || update.original_id;
+                                if (id && String(updateIdentifier) === id) return true;
+                                if (url && update.url && update.url === url) return true;
+                                return false;
+                            });
+                            if (match) return match;
+                        }
+                        return null;
+                    }
+
+                    function buildQuickNoteBase(payload = {}, resolved = null) {
+                        const source = resolved || {};
+                        const summaryCandidate = payload.summary ||
+                            source.ai_summary ||
+                            source.summary ||
+                            source.description ||
+                            '';
+                        const summary = cleanText(summaryCandidate);
+                        return {
+                            id: cleanText(payload.updateId || source.id || source.update_id || ''),
+                            headline: cleanText(payload.headline || source.headline || source.title || ''),
+                            authority: cleanText(payload.authority || source.authority || ''),
+                            summary,
+                            bullets: extractSummaryBullets(summary),
+                            impact: cleanText(payload.impact || source.impact_level || source.impactLevel || ''),
+                            urgency: cleanText(payload.urgency || source.urgency || ''),
+                            published: cleanText(payload.published || source.published_date || source.publishedDate || source.created_at || source.createdAt || ''),
+                            url: cleanText(payload.url || source.url || ''),
+                            regulatoryArea: cleanText(payload.regulatoryArea || source.regulatory_area || source.regulatoryArea || source.area || '')
+                        };
+                    }
+
+                    function buildQuickNoteContent(base, overrides = {}) {
+                        if (!base) return '';
+                        const recipient = cleanText(overrides.recipient) || 'team';
+                        const firm = cleanText(overrides.firm);
+                        const sender = cleanText(overrides.sender) || 'Horizon Scanner Team';
+                        const lines = [];
+                        const greetingSuffix = firm ? ' (' + firm + ')' : '';
+                        lines.push('Hi ' + recipient + greetingSuffix + ',');
+                        lines.push('');
+                        const headlinePart = base.headline || 'a regulatory update';
+                        const authorityPart = base.authority ? ' from ' + base.authority : '';
+                        const datePart = base.published ? ' (' + formatDate(base.published) + ')' : '';
+                        lines.push('Quick heads-up on ' + headlinePart + authorityPart + datePart + '.');
+                        if (Array.isArray(base.bullets) && base.bullets.length > 0) {
+                            lines.push('');
+                            lines.push('Key points:');
+                            base.bullets.forEach(bullet => {
+                                lines.push('- ' + bullet);
+                            });
+                        } else if (base.summary) {
+                            lines.push('');
+                            lines.push(base.summary);
+                        }
+                        const metaParts = [];
+                        if (base.impact) metaParts.push('Impact: ' + base.impact);
+                        if (base.urgency) metaParts.push('Urgency: ' + base.urgency);
+                        if (base.regulatoryArea) metaParts.push('Focus: ' + base.regulatoryArea);
+                        if (metaParts.length > 0) {
+                            lines.push('');
+                            lines.push(metaParts.join(' • '));
+                        }
+                        if (base.url) {
+                            lines.push('');
+                            lines.push('Source: ' + base.url);
+                        }
+                        lines.push('');
+                        lines.push('— ' + sender);
+                        return lines.join('\\n').replace(/\\n{3,}/g, '\\n\\n');
+                    }
+
+                    function syncQuickNoteDefaultsFromInputs() {
+                        quickNoteState.defaults = {
+                            recipient: quickNoteRecipientInput ? cleanText(quickNoteRecipientInput.value) : quickNoteState.defaults.recipient,
+                            firm: quickNoteFirmInput ? cleanText(quickNoteFirmInput.value) : quickNoteState.defaults.firm,
+                            sender: quickNoteSenderInput ? cleanText(quickNoteSenderInput.value) : quickNoteState.defaults.sender
+                        };
+                    }
+
+                    function updateQuickNotePreview(force = false) {
+                        if (!quickNoteElementsReady || !quickNoteState.base || !quickNoteContentInput) return;
+                        if (!force && quickNoteState.userEdited && quickNoteContentInput.value !== quickNoteState.lastGeneratedContent) {
+                            return;
+                        }
+                        const overrides = {
+                            recipient: quickNoteRecipientInput ? quickNoteRecipientInput.value : '',
+                            firm: quickNoteFirmInput ? quickNoteFirmInput.value : '',
+                            sender: quickNoteSenderInput ? quickNoteSenderInput.value : ''
+                        };
+                        const content = buildQuickNoteContent(quickNoteState.base, overrides);
+                        quickNoteState.lastGeneratedContent = content;
+                        quickNoteState.userEdited = false;
+                        quickNoteContentInput.value = content;
+                    }
+
+                    function closeQuickNoteComposer() {
+                        if (quickNoteModal) {
+                            quickNoteModal.classList.remove('visible');
+                        }
+                        syncQuickNoteDefaultsFromInputs();
+                        saveQuickNoteDefaults(quickNoteState.defaults);
+                        quickNoteState.activeUpdateId = null;
+                        quickNoteState.activeUpdate = null;
+                        quickNoteState.base = null;
+                        quickNoteState.userEdited = false;
+                    }
+
+                    function openQuickNoteComposer(payload = {}) {
+                        if (!quickNoteElementsReady) {
+                            showToast('Quick notes are not available on this view.', 'warning');
+                            return;
+                        }
+                        const resolved = resolveUpdateById(payload.updateId, payload.url);
+                        const base = buildQuickNoteBase(payload, resolved);
+                        if (!base.id && resolved && resolved.id) {
+                            base.id = cleanText(resolved.id);
+                        }
+                        quickNoteState.activeUpdateId = base.id;
+                        quickNoteState.activeUpdate = resolved;
+                        quickNoteState.base = base;
+                        quickNoteState.userEdited = false;
+                        quickNoteState.lastGeneratedContent = '';
+                        if (quickNoteRecipientInput) quickNoteRecipientInput.value = quickNoteState.defaults.recipient || '';
+                        if (quickNoteFirmInput) quickNoteFirmInput.value = quickNoteState.defaults.firm || '';
+                        if (quickNoteSenderInput) quickNoteSenderInput.value = quickNoteState.defaults.sender || '';
+                        updateQuickNotePreview(true);
+                        if (quickNoteModal) {
+                            quickNoteModal.classList.add('visible');
+                        }
+                        setTimeout(() => {
+                            if (quickNoteRecipientInput) {
+                                quickNoteRecipientInput.focus();
+                            }
+                        }, 0);
+                    }
+
+                    if (quickNoteElementsReady) {
+                        window.openQuickNoteComposer = openQuickNoteComposer;
+                    } else {
+                        window.openQuickNoteComposer = () => {
+                            showToast('Quick notes are not available on this page.', 'warning');
+                        };
+                    }
+
+                    if (quickNoteElementsReady) {
+                        if (quickNoteContentInput) {
+                            quickNoteContentInput.addEventListener('input', () => {
+                                quickNoteState.userEdited = true;
+                            });
+                        }
+                        const quickNoteInputs = [
+                            quickNoteRecipientInput,
+                            quickNoteFirmInput,
+                            quickNoteSenderInput
+                        ].filter(Boolean);
+                        quickNoteInputs.forEach(input => {
+                            input.addEventListener('input', () => {
+                                syncQuickNoteDefaultsFromInputs();
+                                updateQuickNotePreview();
+                            });
+                            input.addEventListener('blur', () => {
+                                syncQuickNoteDefaultsFromInputs();
+                                saveQuickNoteDefaults(quickNoteState.defaults);
+                            });
+                        });
+                        if (quickNoteCopyBtn && quickNoteContentInput) {
+                            quickNoteCopyBtn.addEventListener('click', async () => {
+                                const text = quickNoteContentInput.value;
+                                if (!text) {
+                                    showToast('Nothing to copy yet.', 'warning');
+                                    return;
+                                }
+                                try {
+                                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                                        await navigator.clipboard.writeText(text);
+                                    } else {
+                                        const helper = document.createElement('textarea');
+                                        helper.value = text;
+                                        helper.setAttribute('readonly', '');
+                                        helper.style.position = 'absolute';
+                                        helper.style.left = '-9999px';
+                                        document.body.appendChild(helper);
+                                        helper.select();
+                                        document.execCommand('copy');
+                                        document.body.removeChild(helper);
+                                    }
+                                    showToast('Quick note copied to clipboard.', 'success');
+                                } catch (error) {
+                                    console.warn('Clipboard copy failed:', error);
+                                    showToast('Unable to copy note.', 'error', false);
+                                }
+                            });
+                        }
+                        if (quickNoteCancelBtn) {
+                            quickNoteCancelBtn.addEventListener('click', () => {
+                                closeQuickNoteComposer();
+                            });
+                        }
+                        if (quickNoteModal) {
+                            quickNoteModal.addEventListener('click', event => {
+                                if (event.target === quickNoteModal) {
+                                    closeQuickNoteComposer();
+                                }
+                            });
+                        }
+                        document.addEventListener('keydown', event => {
+                            if (event.key === 'Escape' && quickNoteModal && quickNoteModal.classList.contains('visible')) {
+                                closeQuickNoteComposer();
+                            }
+                        });
+                        if (quickNoteForm && quickNoteContentInput) {
+                            quickNoteForm.addEventListener('submit', async event => {
+                                event.preventDefault();
+                                if (!quickNoteState.activeUpdateId) {
+                                    showToast('Select an update before saving a quick note.', 'error');
+                                    return;
+                                }
+                                const content = cleanText(quickNoteContentInput.value);
+                                if (!content) {
+                                    showToast('Add some content to the quick note.', 'error');
+                                    return;
+                                }
+                                syncQuickNoteDefaultsFromInputs();
+                                const recipient = quickNoteState.defaults.recipient;
+                                const firm = quickNoteState.defaults.firm;
+                                const sender = quickNoteState.defaults.sender || 'Horizon Scanner Team';
+                                const linkedResources = quickNoteState.base && quickNoteState.base.url ? [quickNoteState.base.url] : [];
+                                const payload = {
+                                    update_id: quickNoteState.activeUpdateId,
+                                    visibility: 'team',
+                                    status: 'reviewed',
+                                    content,
+                                    origin_page: 'weekly-briefing',
+                                    action_type: 'quick-note',
+                                    annotation_type: 'quick-note',
+                                    tags: ['quick-note'],
+                                    linked_resources: linkedResources,
+                                    context: {
+                                        type: 'quick-note',
+                                        recipient,
+                                        firm,
+                                        sender,
+                                        generated_at: new Date().toISOString(),
+                                        impact: quickNoteState.base?.impact || '',
+                                        urgency: quickNoteState.base?.urgency || '',
+                                        regulatory_area: quickNoteState.base?.regulatoryArea || ''
+                                    }
+                                };
+                                if (sender) {
+                                    payload.author = sender;
+                                }
+                                let buttonDisabled = false;
+                                if (quickNoteSaveBtn) {
+                                    quickNoteSaveBtn.disabled = true;
+                                    quickNoteSaveBtn.textContent = 'Saving...';
+                                    buttonDisabled = true;
+                                }
+                                try {
+                                    const response = await fetch('/api/annotations', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(payload)
+                                    });
+                                    if (!response.ok) {
+                                        throw new Error('Failed to save quick note');
+                                    }
+                                    const result = await response.json();
+                                    if (!result.success) {
+                                        throw new Error(result.error || 'Failed to save quick note');
+                                    }
+                                    saveQuickNoteDefaults(quickNoteState.defaults);
+                                    closeQuickNoteComposer();
+                                    showToast('Quick note saved to annotations.', 'success');
+                                    try {
+                                        await refreshAnnotationsFromServer();
+                                    } catch (error) {
+                                        console.warn('Unable to refresh annotations:', error);
+                                    }
+                                } catch (error) {
+                                    console.error('Quick note save failed:', error);
+                                    showToast(error.message || 'Unable to save quick note.', 'error', false);
+                                } finally {
+                                    if (buttonDisabled && quickNoteSaveBtn) {
+                                        quickNoteSaveBtn.disabled = false;
+                                        quickNoteSaveBtn.textContent = 'Save Quick Note';
+                                    }
+                                }
+                            });
                         }
                     }
 
@@ -1119,13 +2598,129 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         });
                     }
 
+                    const ONE_PAGER_ICON_SVGS = {
+                        radar: '<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="14" cy="14" r="11" opacity="0.2"></circle><circle cx="14" cy="14" r="7" opacity="0.35"></circle><circle cx="14" cy="14" r="3"></circle><path d="M14 3v4"></path><path d="M20.5 7.5l-2.8 2.8"></path><path d="M24 14h-4"></path></g></svg>',
+                        alert: '<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 4l10 18H4z" opacity="0.25"></path><path d="M14 10v6" stroke-linecap="round"></path><circle cx="14" cy="19.5" r="1.2" fill="currentColor" stroke="none"></circle></g></svg>',
+                        clock: '<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="14" cy="14" r="10" opacity="0.25"></circle><path d="M14 8v6l4 2" stroke-linecap="round"></path></g></svg>',
+                        building: '<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="9" width="16" height="14" rx="1.6" opacity="0.25"></rect><path d="M10 9V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4" opacity="0.4"></path><path d="M10 14.5h2m4 0h2m-8 4h2m4 0h2" stroke-linecap="round"></path></g></svg>'
+                    };
+
+                    function getOnePagerIconSvg(key) {
+                        return ONE_PAGER_ICON_SVGS[key] || '';
+                    }
+
+                    function collectOnePagerUpdates(briefing) {
+                        if (!briefing || !briefing.dataset) return [];
+                        if (Array.isArray(briefing.dataset.highlightUpdates) && briefing.dataset.highlightUpdates.length > 0) {
+                            return briefing.dataset.highlightUpdates.slice();
+                        }
+                        if (Array.isArray(briefing.dataset.currentUpdates)) {
+                            return briefing.dataset.currentUpdates.slice();
+                        }
+                        return [];
+                    }
+
+                    function buildOnePagerMetricsClient(briefing) {
+                        const stats = briefing?.dataset?.stats || {};
+                        const impact = stats.byImpact || {};
+                        const updates = collectOnePagerUpdates(briefing);
+                        const urgentCount = updates.filter(update => {
+                            const urgency = String(update?.urgency || '').toLowerCase();
+                            return urgency.includes('high') || urgency.includes('urgent');
+                        }).length;
+                        const authorities = Array.from(new Set(updates.map(update => update?.authority).filter(Boolean))).length;
+
+                        return [
+                            { icon: 'radar', value: stats.totalUpdates ?? 0, label: 'Updates monitored', helper: 'Tracked this cycle' },
+                            { icon: 'alert', value: impact.Significant ?? 0, label: 'High-impact notices', helper: 'Require immediate review' },
+                            { icon: 'clock', value: urgentCount, label: 'Urgent signals', helper: 'Flagged for rapid follow-up' },
+                            { icon: 'building', value: authorities, label: 'Active authorities', helper: 'Issuing updates this week' }
+                        ];
+                    }
+
+                    function stylizeOnePagerBodyClient(html) {
+                        if (!html) return '';
+                        return html.replace(/<h4>/g, '<h3 class="one-pager__heading">').replace(/<\\/h4>/g, '</h3>');
+                    }
+
+                    function buildOnePagerSpotlightsClient(briefing) {
+                        const updates = collectOnePagerUpdates(briefing);
+                        if (!updates.length) return '';
+                        const highlightItems = updates.slice(0, 3).map(item => {
+                            const authority = escapeHtml(item?.authority || 'Unknown authority');
+                            const headline = escapeHtml(item?.title || 'No headline provided');
+                            const date = escapeHtml(formatDate(item?.published_date));
+                            return [
+                                '<li class="executive-highlight">',
+                                '<span class="executive-highlight__authority">' + authority + '</span>',
+                                '<span class="executive-highlight__title">' + headline + '</span>',
+                                '<span class="executive-highlight__meta">' + date + '</span>',
+                                '</li>'
+                            ].join('');
+                        }).join('');
+
+                        return [
+                            '<section class="executive-sheet__spotlights">',
+                            '<h3 class="executive-sheet__section-title">Spotlight Briefings</h3>',
+                            '<ul class="executive-highlight-list">' + highlightItems + '</ul>',
+                            '</section>'
+                        ].join('');
+                    }
+
+                    function buildExecutiveOnePagerHtmlClient(briefing) {
+                        if (!briefing || !briefing.artifacts || !briefing.artifacts.onePager) {
+                            return '<div class="empty-state">Generate a briefing to view the one-pager.</div>';
+                        }
+
+                        const coverage = briefing.dateRange
+                            ? escapeHtml(formatDate(briefing.dateRange.start) + ' — ' + formatDate(briefing.dateRange.end))
+                            : 'Period unavailable';
+                        const generated = escapeHtml(formatDateTime(briefing.generatedAt));
+                        const metrics = buildOnePagerMetricsClient(briefing).map(metric => [
+                            '<div class="executive-metric">',
+                                '<div class="executive-metric__icon">' + getOnePagerIconSvg(metric.icon) + '</div>',
+                                '<div class="executive-metric__content">',
+                                    '<span class="executive-metric__value">' + escapeHtml(String(metric.value ?? '—')) + '</span>',
+                                    '<span class="executive-metric__label">' + escapeHtml(metric.label) + '</span>',
+                                    metric.helper ? '<span class="executive-metric__helper">' + escapeHtml(metric.helper) + '</span>' : '',
+                                '</div>',
+                            '</div>'
+                        ].join('')).join('');
+                        const spotlights = buildOnePagerSpotlightsClient(briefing);
+                        const body = stylizeOnePagerBodyClient(briefing.artifacts.onePager);
+
+                        return [
+                            '<article class="executive-sheet">',
+                                '<header class="executive-sheet__masthead">',
+                                    '<div class="executive-sheet__brand">',
+                                        '<div class="executive-sheet__mark">HS</div>',
+                                        '<div>',
+                                            '<div class="executive-sheet__brand-name">Horizon Scanner</div>',
+                                            '<div class="executive-sheet__brand-subtitle">Weekly Smart Brief</div>',
+                                        '</div>',
+                                    '</div>',
+                                    '<div class="executive-sheet__meta">',
+                                        '<div class="executive-sheet__meta-item">',
+                                            '<span class="executive-sheet__meta-label">Coverage</span>',
+                                            '<span class="executive-sheet__meta-value">' + coverage + '</span>',
+                                        '</div>',
+                                        '<div class="executive-sheet__meta-item">',
+                                            '<span class="executive-sheet__meta-label">Published</span>',
+                                            '<span class="executive-sheet__meta-value">' + generated + '</span>',
+                                        '</div>',
+                                    '</div>',
+                                '</header>',
+                                '<section class="executive-sheet__metrics">' + metrics + '</section>',
+                                spotlights,
+                                '<section class="executive-sheet__body">' + body + '</section>',
+                            '</article>'
+                        ].join('');
+                    }
+
                     function renderOnePager(briefing) {
                         const container = document.getElementById('onePagerContent');
-                        if (!briefing || !briefing.artifacts || !briefing.artifacts.onePager) {
-                            container.innerHTML = '<div class="empty-state">Generate a briefing to view the one-pager.</div>';
-                            return;
-                        }
-                        container.innerHTML = formatRichTextClient(briefing.artifacts.onePager, '<div class="empty-state">Generate a briefing to view the one-pager.</div>');
+                        if (!container) return;
+                        container.innerHTML = buildExecutiveOnePagerHtmlClient(briefing);
                     }
 
                     function renderTeamBriefing(briefing) {
@@ -1168,7 +2763,7 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                             html += '<span class="' + statusClass(status) + '">' + statusLabel(status) + '</span>';
                             html += '</div>';
 
-                            const body = escapeHtml(annotation.content || '').replace(/\n/g, '<br>');
+                            const body = escapeHtml(annotation.content || '').replace(/\\n/g, '<br>');
                             html += '<div class="annotation-body">' + body + '</div>';
                             html += '<div class="annotation-meta">' + visibilityLabel(annotation.visibility) + ' · ' + escapeHtml(author) + ' · ' + escapeHtml(formatDateTime(timestamp)) + '</div>';
 
@@ -1373,7 +2968,12 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         });
 
                         if (typeof applyCurrentFilters === 'function') {
-                            applyCurrentFilters();
+                            Promise.resolve(applyCurrentFilters()).catch(error => {
+                                console.warn('applyCurrentFilters failed:', error);
+                                if (typeof renderUpdatesList === 'function') {
+                                    renderUpdatesList(window.filteredUpdates || currentUpdates);
+                                }
+                            });
                         } else if (typeof renderUpdatesList === 'function') {
                             renderUpdatesList(window.filteredUpdates || currentUpdates);
                         }
@@ -1398,43 +2998,77 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                         modal.classList.add('visible');
                     }
 
-                    async function loadPreview() {
+                    async function loadPreview(range) {
                         try {
-                            previewContent.innerHTML = '<div class="empty-state">Loading weekly snapshot…</div>';
-                            const response = await fetch('/api/weekly-roundup/preview');
+                            if (previewSummaryEl) {
+                                previewSummaryEl.innerHTML = '<div class="empty-state">Loading weekly snapshot…</div>';
+                            }
+                            const params = new URLSearchParams();
+                            const desiredStart = range?.start || (previewStartInput && previewStartInput.value);
+                            const desiredEnd = range?.end || (previewEndInput && previewEndInput.value);
+                            if (desiredStart) params.set('start', desiredStart);
+                            if (desiredEnd) params.set('end', desiredEnd);
+                            const response = await fetch('/api/weekly-roundup/preview' + (params.size ? ('?' + params.toString()) : ''));
                             if (!response.ok) throw new Error('Failed to load preview');
                             const data = await response.json();
                             if (!data.success || !data.preview) throw new Error('No preview data available');
                             state.previewRange = { start: data.preview.weekStart, end: data.preview.weekEnd };
+                            if (previewStartInput) previewStartInput.value = data.preview.weekStart;
+                            if (previewEndInput) previewEndInput.value = data.preview.weekEnd;
+
                             const impact = data.preview.impactSummary || {};
-                            previewContent.innerHTML = [
-                                '<div class="preview-grid">',
-                                '    <div class="preview-card">',
-                                '        <h3>Coverage</h3>',
-                                '        <p>' + escapeHtml(formatDate(data.preview.weekStart)) + ' to ' + escapeHtml(formatDate(data.preview.weekEnd)) + '</p>',
-                                '    </div>',
-                                '    <div class="preview-card">',
-                                '        <h3>Total Updates</h3>',
-                                '        <p><strong>' + escapeHtml(String(data.preview.totalUpdates)) + '</strong> collected across the period.</p>',
-                                '    </div>',
-                                '    <div class="preview-card">',
-                                '        <h3>Impact Mix</h3>',
-                                '        <p>' + escapeHtml(String(impact.significant || 0)) + ' significant, ' + escapeHtml(String(impact.moderate || 0)) + ' moderate.</p>',
-                                '    </div>',
-                                '</div>',
-                                '<p style="margin-top:18px;color:#4b5563;">Generation will reuse cached outputs when inputs match. You can proceed to trigger the Smart Briefing or cancel to adjust data first.</p>'
-                            ].join('');
+                            const authorities = Array.isArray(data.preview.topAuthorities) ? data.preview.topAuthorities : [];
+                            const highlights = authorities.length
+                                ? '<ul class="preview-highlight-list">' + authorities.map(item => {
+                                    return '<li><span class="preview-highlight-authority">' + escapeHtml(item.authority || 'Unknown') + '</span><span class="preview-highlight-meta">' + escapeHtml(String(item.count || 0)) + ' updates</span></li>';
+                                  }).join('') + '</ul>'
+                                : '<p style="margin:0;color:#64748b;">No authority breakdown available.</p>';
+
+                            if (previewSummaryEl) {
+                                previewSummaryEl.innerHTML = [
+                                    '<div class="preview-grid">',
+                                    '  <div class="preview-stat">',
+                                    '    <span class="preview-stat__label">Coverage</span>',
+                                    '    <span class="preview-stat__value">' + escapeHtml(formatDate(data.preview.weekStart)) + ' — ' + escapeHtml(formatDate(data.preview.weekEnd)) + '</span>',
+                                    '  </div>',
+                                    '  <div class="preview-stat">',
+                                    '    <span class="preview-stat__label">Total updates</span>',
+                                    '    <span class="preview-stat__value">' + escapeHtml(String(data.preview.totalUpdates)) + '</span>',
+                                    '  </div>',
+                                    '  <div class="preview-stat">',
+                                    '    <span class="preview-stat__label">High impact</span>',
+                                    '    <span class="preview-stat__value">' + escapeHtml(String(impact.significant || 0)) + '</span>',
+                                    '  </div>',
+                                    '  <div class="preview-stat">',
+                                    '    <span class="preview-stat__label">Moderate</span>',
+                                    '    <span class="preview-stat__value">' + escapeHtml(String(impact.moderate || 0)) + '</span>',
+                                    '  </div>',
+                                    '</div>',
+                                    '<div>',
+                                    '  <span class="preview-stat__label" style="display:block;margin:12px 0 6px;">Top authorities</span>',
+                                    highlights,
+                                    '</div>',
+                                    '<p class="preview-note">Generation will reuse cached outputs unless force regenerate stays on.</p>'
+                                ].join('');
+                            }
                         } catch (error) {
                             console.error(error);
-                            previewContent.innerHTML = '<div class="empty-state">Unable to load preview: ' + escapeHtml(error.message) + '</div>';
+                            if (previewSummaryEl) {
+                                previewSummaryEl.innerHTML = '<div class="empty-state">Unable to load preview: ' + escapeHtml(error.message) + '</div>';
+                            }
                         }
                     }
 
                     async function triggerRun() {
-                        if (!state.previewRange) {
-                            showToast('Preview missing. Please reopen the Assemble flow.', 'error');
+                        const startValue = previewStartInput ? previewStartInput.value : '';
+                        const endValue = previewEndInput ? previewEndInput.value : '';
+                        if (!startValue || !endValue) {
+                            showToast('Select a date range before generating.', 'error');
+                            confirmBtn.disabled = false;
+                            assembleBtn.disabled = false;
                             return;
                         }
+                        state.previewRange = { start: startValue, end: endValue };
                         confirmBtn.disabled = true;
                         assembleBtn.disabled = true;
                         showToast('Smart Briefing generation started…', 'info');
@@ -1448,7 +3082,7 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                                     include_annotations: true,
                                     annotation_visibility: ['team', 'all'],
                                     prompt_version: 'smart-briefing-v1',
-                                    force_regenerate: true
+                                    force_regenerate: previewForceCheckbox ? previewForceCheckbox.checked : true
                                 })
                             });
                             if (!response.ok) throw new Error('Failed to trigger run');
@@ -1549,6 +3183,7 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
 
                     assembleBtn.addEventListener('click', async () => {
                         showModal();
+                        if (previewForceCheckbox) previewForceCheckbox.checked = true;
                         await loadPreview();
                     });
 

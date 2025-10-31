@@ -66,6 +66,217 @@
   const delegated = loadSet(delegatedKey);
   const delegationNotes = loadMap(delegationNotesKey);
 
+  const summaryTiles = Array.isArray(payload.summary) ? payload.summary : [];
+  const laneLabels = {
+    act_now: 'Act Now (≤14 days)',
+    prepare_next: 'Prepare Next (15-45 days)',
+    plan_horizon: 'Plan Horizon (45-90 days)'
+  };
+
+  const parseTimestamp = value => {
+    if (!value) return new Date();
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  const formatDisplayDate = date => date.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const formatFileDate = date => {
+    const safeDate = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+    return safeDate.toISOString().split('T')[0];
+  };
+
+  const buildSummaryCards = () => summaryTiles.map(tile => `
+        <div class="summary-card">
+          <div class="summary-value">${escapeHTML(tile.value || '0')}</div>
+          <div class="summary-label">${escapeHTML(tile.label || '')}</div>
+          ${tile.helper ? `<p class="summary-helper">${escapeHTML(tile.helper)}</p>` : ''}
+        </div>
+      `).join('');
+
+  const buildLaneSection = (laneKey, list) => {
+    const label = laneLabels[laneKey] || laneKey;
+    const entries = Array.isArray(list) ? list.slice(0, 3) : [];
+    if (!entries.length) {
+      return `
+        <section class="lane">
+          <h2>${escapeHTML(label)}</h2>
+          <p class="muted">No live insights in this lane.</p>
+        </section>
+      `;
+    }
+
+    const items = entries.map(prediction => {
+      const metaParts = [];
+      if (prediction.timeframe) metaParts.push(prediction.timeframe);
+      const authorities = Array.isArray(prediction.context?.authorities) && prediction.context.authorities.length
+        ? prediction.context.authorities
+        : Array.isArray(prediction.authorities) ? prediction.authorities : [];
+      if (authorities.length) metaParts.push(authorities.join(', '));
+      if (typeof prediction.confidence === 'number' && !Number.isNaN(prediction.confidence)) {
+        metaParts.push(`${Math.round(prediction.confidence)}% confidence`);
+      } else if (prediction.confidence_bucket) {
+        metaParts.push(`${prediction.confidence_bucket} confidence`);
+      }
+      const metaLine = metaParts.length
+        ? `<div class="lane-meta">${escapeHTML(metaParts.join(' • '))}</div>`
+        : '';
+      const summary = prediction.why_this_matters || prediction.context?.why || '';
+      const action = Array.isArray(prediction.recommended_actions) && prediction.recommended_actions.length
+        ? `<div class="lane-action">Next: ${escapeHTML(prediction.recommended_actions[0])}</div>`
+        : '';
+      return `<li>
+          <strong>${escapeHTML(prediction.prediction_title || 'Insight')}</strong>
+          ${metaLine}
+          <p>${escapeHTML(summary || 'Summary pending additional detail.')}</p>
+          ${action}
+        </li>`;
+    }).join('');
+
+    return `
+      <section class="lane">
+        <h2>${escapeHTML(label)}</h2>
+        <ul>
+          ${items}
+        </ul>
+      </section>
+    `;
+  };
+
+  const buildHotspotsSection = () => {
+    const hotspots = Array.isArray(payload.momentum?.sectors) ? payload.momentum.sectors.slice(0, 5) : [];
+    if (!hotspots.length) {
+      return '<p class="muted">No sector hotspots flagged this cycle.</p>';
+    }
+    const items = hotspots.map(item => {
+      const signals = [];
+      if (typeof item.changePercent === 'number' && !Number.isNaN(item.changePercent)) {
+        signals.push(`${item.changePercent}% change`);
+      }
+      if (typeof item.recent === 'number' && !Number.isNaN(item.recent)) {
+        signals.push(`${item.recent} recent updates`);
+      }
+      const suffix = signals.length ? ` – ${escapeHTML(signals.join(' • '))}` : '';
+      return `<li><strong>${escapeHTML(item.sector || item.name || 'Sector')}</strong>${suffix}</li>`;
+    }).join('');
+    return `<ul>${items}</ul>`;
+  };
+
+  const buildAlertsSection = () => {
+    const items = Array.isArray(payload.alerts) ? payload.alerts.slice(0, 5) : [];
+    if (!items.length) {
+      return '<p class="muted">No pattern alerts triggered.</p>';
+    }
+    const list = items.map(alert => {
+      const severity = alert.severity ? alert.severity.toUpperCase() : 'INFO';
+      return `<li><strong>${escapeHTML(severity)}</strong> – ${escapeHTML(alert.message || 'Alert message unavailable.')}</li>`;
+    }).join('');
+    return `<ul>${list}</ul>`;
+  };
+
+  const buildOnePagerHtml = () => {
+    const generatedDate = parseTimestamp(payload.generatedAt);
+    const generatedLabel = formatDisplayDate(generatedDate);
+    const summaryMarkup = summaryTiles.length
+      ? `<div class="summary-grid">
+          ${buildSummaryCards()}
+        </div>`
+      : '<p class="muted">No snapshot metrics available.</p>';
+    const laneSections = ['act_now', 'prepare_next', 'plan_horizon']
+      .map(key => buildLaneSection(key, payload.lanes?.[key] || []))
+      .join('');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Horizon Scanner One-Pager</title>
+<style>
+  body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 32px; color: #0f172a; background: #ffffff; line-height: 1.5; }
+  header, section { margin-bottom: 24px; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  h2 { font-size: 1.2rem; margin: 0 0 12px; color: #1d4ed8; }
+  .generated { color: #475569; margin: 0; font-size: 0.95rem; }
+  .summary-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .summary-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
+  .summary-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
+  .summary-label { margin-top: 4px; font-size: 0.9rem; color: #475569; }
+  .summary-helper { margin-top: 6px; font-size: 0.8rem; color: #64748b; }
+  .lane-wrapper { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .lane { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #ffffff; box-shadow: 0 8px 24px -22px rgba(15, 23, 42, 0.45); }
+  .lane ul { margin: 0; padding-left: 18px; }
+  .lane li { margin-bottom: 12px; }
+  .lane-meta { font-size: 0.8rem; color: #64748b; margin: 4px 0; }
+  .lane-action { font-size: 0.85rem; color: #1d4ed8; margin-top: 6px; }
+  .muted { color: #64748b; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin-bottom: 8px; }
+  footer { margin-top: 28px; font-size: 0.85rem; color: #94a3b8; }
+  @media print {
+    body { margin: 0; }
+    .lane { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Predictive Intelligence One-Pager</h1>
+  <p class="generated">Issued ${escapeHTML(generatedLabel)}</p>
+</header>
+<section>
+  <h2>Snapshot</h2>
+  ${summaryMarkup}
+</section>
+<section class="lane-wrapper">
+  ${laneSections}
+</section>
+<section>
+  <h2>Sectors Heating Up</h2>
+  ${buildHotspotsSection()}
+</section>
+<section>
+  <h2>Alerts to Brief</h2>
+  ${buildAlertsSection()}
+</section>
+<footer>
+  Prepared with Horizon Scanner predictive analytics.
+</footer>
+</body>
+</html>`;
+  };
+
+  const triggerOnePagerDownload = () => {
+    const html = buildOnePagerHtml();
+    const fileDate = formatFileDate(parseTimestamp(payload.generatedAt));
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `horizon-one-pager-${fileDate}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+
+  const downloadButton = document.getElementById('downloadOnePager');
+  if (downloadButton) {
+    downloadButton.addEventListener('click', () => {
+      try {
+        triggerOnePagerDownload();
+      } catch (error) {
+        console.error('Predictive dashboard: one-pager export failed', error);
+        window.alert('Unable to export the one-pager right now. Please try again.');
+      }
+    });
+  }
+
   const predictionIndex = new Map();
   Object.values(payload.lanes || {}).forEach(list => {
     (list || []).forEach(prediction => {

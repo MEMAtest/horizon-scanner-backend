@@ -100,6 +100,9 @@ class AnnotationService {
       linked_resources: Array.isArray(note.linked_resources) ? note.linked_resources : [],
       origin_page: note.origin_page || null,
       action_type: note.action_type || null,
+      annotation_type: typeof note.annotation_type === 'string' && note.annotation_type.trim()
+        ? note.annotation_type.trim()
+        : 'general',
       priority: note.priority || null,
       persona: note.persona || null,
       report_included: typeof note.report_included === 'boolean' ? note.report_included : false,
@@ -140,6 +143,11 @@ class AnnotationService {
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'report_included')) {
       updated.report_included = Boolean(updates.report_included)
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'annotation_type')) {
+      updated.annotation_type = typeof updates.annotation_type === 'string' && updates.annotation_type.trim()
+        ? updates.annotation_type.trim()
+        : (existing.annotation_type || 'general')
     }
 
     annotations[index] = updated

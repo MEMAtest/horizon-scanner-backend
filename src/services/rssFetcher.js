@@ -268,7 +268,7 @@ class EnhancedRSSFetcher {
   }
 
   async fetchAllFeeds(options = {}) {
-    const { fastMode = false, timeout = null } = options
+    const { fastMode = false } = options
 
     if (!this.isInitialized) {
       await this.initialize()

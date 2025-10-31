@@ -1,27 +1,87 @@
 {
   "totals": {
-    "runs": 8,
-    "cacheHits": 1,
-    "totalTokens": 0
+    "runs": 11,
+    "cacheHits": 2,
+    "totalTokens": 77800
   },
   "lastRun": {
-    "runId": "c288002c-d405-42eb-9b8c-964f5fb90191",
-    "briefingId": "a689c957-ab98-42c5-9657-170cfe648f62",
-    "datasetHash": "6fcc177d235d2988254d8ad79d1072f723a588c7951981d6e346489a407c330b",
-    "cacheHit": false,
-    "startedAt": "2025-10-10T22:19:11.378Z",
-    "completedAt": "2025-10-10T22:19:11.613Z",
-    "durationMs": 235,
+    "runId": "cb979f94-7e8d-4894-a930-e9e15c5a1bf8",
+    "briefingId": "a9dfd432-0254-4ad0-93dc-3ef61897d7fa",
+    "datasetHash": "55969f722dc5683328a31f33ac6a418388660193beda45a3e00e20ed52e469c4",
+    "cacheHit": true,
+    "startedAt": "2025-10-25T20:57:32.974Z",
+    "completedAt": "2025-10-25T20:57:33.206Z",
+    "durationMs": 232,
     "usage": {
       "totalTokens": 0,
       "requests": []
     },
     "totals": {
-      "currentUpdates": 382,
+      "currentUpdates": 97,
       "annotations": 0
     }
   },
   "history": [
+    {
+      "runId": "cb979f94-7e8d-4894-a930-e9e15c5a1bf8",
+      "briefingId": "a9dfd432-0254-4ad0-93dc-3ef61897d7fa",
+      "datasetHash": "55969f722dc5683328a31f33ac6a418388660193beda45a3e00e20ed52e469c4",
+      "cacheHit": true,
+      "startedAt": "2025-10-25T20:57:32.974Z",
+      "completedAt": "2025-10-25T20:57:33.206Z",
+      "durationMs": 232,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 97,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "6ab250ec-9da1-4a8f-8498-87204124e285",
+      "briefingId": "a9dfd432-0254-4ad0-93dc-3ef61897d7fa",
+      "datasetHash": "55969f722dc5683328a31f33ac6a418388660193beda45a3e00e20ed52e469c4",
+      "cacheHit": false,
+      "startedAt": "2025-10-25T20:37:02.030Z",
+      "completedAt": "2025-10-25T20:37:04.435Z",
+      "durationMs": 2405,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 97,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "e371ee0b-47b1-4c3b-a190-3c8ce38bdd39",
+      "briefingId": "85050f48-f0dc-444b-bfa1-7d3d328c16b1",
+      "datasetHash": "53d33633d73340683c0eec1f79ac29fedc16c36d8f84eb85fc088d3286b5896b",
+      "cacheHit": false,
+      "startedAt": "2025-10-24T21:03:04.455Z",
+      "completedAt": "2025-10-24T21:03:18.610Z",
+      "durationMs": 14155,
+      "usage": {
+        "totalTokens": 77800,
+        "requests": [
+          {
+            "model": "anthropic/claude-3-haiku",
+            "usage": {
+              "prompt_tokens": 76894,
+              "completion_tokens": 906,
+              "total_tokens": 77800
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 65,
+        "annotations": 0
+      }
+    },
     {
       "runId": "c288002c-d405-42eb-9b8c-964f5fb90191",
       "briefingId": "a689c957-ab98-42c5-9657-170cfe648f62",
