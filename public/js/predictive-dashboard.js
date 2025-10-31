@@ -207,14 +207,14 @@
   .summary-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; }
   .summary-value { font-size: 1.4rem; font-weight: 700; color: #0f172a; }
   .summary-label { margin-top: 4px; font-size: 0.9rem; color: #475569; }
-  .summary-helper { margin-top: 6px; font-size: 0.8rem; color: #64748b; }
+  .summary-helper { margin-top: 6px; font-size: 0.8rem; color: #475569; }
   .lane-wrapper { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
   .lane { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #ffffff; box-shadow: 0 8px 24px -22px rgba(15, 23, 42, 0.45); }
   .lane ul { margin: 0; padding-left: 18px; }
   .lane li { margin-bottom: 12px; }
-  .lane-meta { font-size: 0.8rem; color: #64748b; margin: 4px 0; }
+  .lane-meta { font-size: 0.8rem; color: #334155; margin: 4px 0; }
   .lane-action { font-size: 0.85rem; color: #1d4ed8; margin-top: 6px; }
-  .muted { color: #64748b; }
+  .muted { color: #475569; }
   ul { margin: 0; padding-left: 18px; }
   li { margin-bottom: 8px; }
   footer { margin-top: 28px; font-size: 0.85rem; color: #94a3b8; }

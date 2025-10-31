@@ -1928,6 +1928,36 @@ router.get('/export', async (req, res) => {
   }
 })
 
+// Dashboard Report Export with Summary Statistics
+router.get('/export/dashboard-report', async (req, res) => {
+  try {
+    console.log('[Dashboard Export] Generating report with filters:', req.query)
+
+    const reportType = req.query.report_type || 'intelligence_center'
+    const options = {
+      limit: parseInt(req.query.limit, 10) || 100,
+      authority: req.query.authority || null,
+      sector: req.query.sector || null,
+      annotation_status: req.query.annotation_status ? req.query.annotation_status.split(',') : [],
+      annotation_visibility: req.query.annotation_visibility ? req.query.annotation_visibility.split(',') : []
+    }
+
+    const report = await reportExportService.generateReport(reportType, options)
+
+    // Return HTML for download
+    res.setHeader('Content-Type', 'text/html')
+    res.setHeader('Content-Disposition', `attachment; filename="dashboard-report-${new Date().toISOString().split('T')[0]}.html"`)
+    res.send(report.html)
+  } catch (error) {
+    console.error('[Dashboard Export] Failed:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate dashboard report',
+      details: error.message
+    })
+  }
+})
+
 router.post('/alerts', async (req, res) => {
   try {
     const alertData = req.body

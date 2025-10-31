@@ -123,7 +123,9 @@ class SmartBriefingService {
   async listBriefings(limit = 10) {
     await this.ensureStorage()
 
+    console.log('[SmartBriefing] Listing briefings from:', this.storageDir)
     const files = await fs.readdir(this.storageDir)
+    console.log('[SmartBriefing] Found files:', files.length)
     const briefings = []
 
     for (const file of files) {
@@ -140,7 +142,7 @@ class SmartBriefingService {
           metadata: data.metadata || {}
         })
       } catch (error) {
-        console.warn('Failed to read briefing snapshot:', file, error.message)
+        console.warn('[SmartBriefing] Failed to read briefing snapshot:', file, error.message)
       }
     }
 

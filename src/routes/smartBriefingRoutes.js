@@ -31,14 +31,21 @@ router.get('/weekly-briefings/run/:runId', (req, res) => {
 // Retrieve the latest published briefing
 router.get('/weekly-briefings/latest', async (req, res) => {
   try {
+    console.log('[SmartBriefing] Fetching latest briefing...')
     const briefing = await smartBriefingService.getLatestBriefing()
     if (!briefing) {
-      return res.status(404).json({ success: false, error: 'No briefings available' })
+      console.log('[SmartBriefing] No briefings found in storage')
+      return res.status(404).json({
+        success: false,
+        error: 'No briefings available',
+        message: 'Please generate a briefing using the "Assemble This Week" button'
+      })
     }
 
+    console.log('[SmartBriefing] Latest briefing found:', briefing.id)
     res.json({ success: true, briefing })
   } catch (error) {
-    console.error('SmartBriefing latest retrieval failed:', error)
+    console.error('[SmartBriefing] Latest retrieval failed:', error)
     res.status(500).json({ success: false, error: error.message })
   }
 })

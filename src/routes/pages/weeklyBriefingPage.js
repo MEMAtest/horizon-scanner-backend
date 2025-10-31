@@ -1584,6 +1584,13 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
 
                     <div id="statusToast" class="status-banner"></div>
 
+                    <section class="card" id="onePagerCard" style="margin-bottom:24px;">
+                        <h2>Executive One-Pager</h2>
+                        <div class="narrative-content" id="onePagerContent">
+                            ${initialOnePagerHtml}
+                        </div>
+                    </section>
+
                     <div class="briefing-layout">
                         <section class="card" id="narrativeCard">
                             <h2>Week's Story</h2>
@@ -1663,20 +1670,12 @@ module.exports = async function renderWeeklyBriefingPage(req, res) {
                             </div>
                         </section>
                     </div>
-                    <div class="briefing-layout" style="margin-top:24px;">
-                        <section class="card" id="onePagerCard">
-                            <h2>Executive One-Pager</h2>
-                            <div class="narrative-content" id="onePagerContent">
-                                ${initialOnePagerHtml}
-                            </div>
-                        </section>
-                        <section class="card">
-                            <h2>Team Briefing</h2>
-                            <div class="narrative-content" id="teamBriefingContent">
-                                ${initialTeamBriefingHtml}
-                            </div>
-                        </section>
-                    </div>
+                    <section class="card" style="margin-top:24px;">
+                        <h2>Team Briefing</h2>
+                        <div class="narrative-content" id="teamBriefingContent">
+                            ${initialTeamBriefingHtml}
+                        </div>
+                    </section>
                 </main>
             </div>
 
