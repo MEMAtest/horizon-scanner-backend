@@ -142,10 +142,10 @@ function buildUpdateCardHtml(update) {
       </div>
       <footer class="update-card__footer">
         <div class="update-card__actions">
-          <button class="action-btn update-action-btn bookmark-btn" data-update-id="${idAttr}" title="Bookmark">Star</button>
-          <button class="action-btn update-action-btn share-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Share">Share</button>
-          <button class="action-btn update-action-btn details-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Details">View</button>
-          <button class="action-btn update-action-btn quick-note-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Quick note">Quick Note</button>
+          <button class="action-btn update-action-btn bookmark-btn" data-update-id="${idAttr}" title="Bookmark" aria-label="Bookmark"><svg width="16" height="16" fill="currentColor"><path d="M3 3a2 2 0 012-2h6a2 2 0 012 2v11l-5-3-5 3V3z"/></svg></button>
+          <button class="action-btn update-action-btn share-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Share" aria-label="Share"><svg width="16" height="16" fill="currentColor"><path d="M11 2.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm-9 9a2.5 2.5 0 115 0 2.5 2.5 0 01-5 0zm9 0a2.5 2.5 0 115 0 2.5 2.5 0 01-5 0z"/></svg></button>
+          <button class="action-btn update-action-btn details-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="View details" aria-label="View details"><svg width="16" height="16" fill="currentColor"><path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path fill-rule="evenodd" d="M1.38 8C2.77 5.44 5.23 3.5 8 3.5c2.77 0 5.23 1.94 6.62 4.5-1.39 2.56-3.85 4.5-6.62 4.5-2.77 0-5.23-1.94-6.62-4.5zm9.12 0a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></button>
+          <button class="action-btn update-action-btn quick-note-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Create quick note" aria-label="Create quick note"><svg width="16" height="16" fill="currentColor"><path d="M4 1.5H3a2 2 0 00-2 2V14a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/><path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/></svg></button>
         </div>
         ${linkHtml}
       </footer>

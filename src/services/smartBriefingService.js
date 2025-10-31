@@ -11,7 +11,11 @@ const path = require('path')
 const dbService = require('./dbService')
 const annotationService = require('./annotationService')
 
-const metricsFile = path.join(process.cwd(), 'data', 'weekly_briefing_metrics.json')
+// Use /tmp for Vercel serverless compatibility
+const isVercel = process.env.VERCEL || process.env.NOW_REGION
+const metricsFile = isVercel
+  ? path.join('/tmp', 'weekly_briefing_metrics.json')
+  : path.join(process.cwd(), 'data', 'weekly_briefing_metrics.json')
 
 const DEFAULT_DAYS = 7
 const HISTORY_WINDOW_DAYS = 28
@@ -61,15 +65,25 @@ class SmartBriefingService {
     this.model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-opus'
     this.apiKey = process.env.OPENROUTER_API_KEY
 
-    this.storageDir = path.join(process.cwd(), 'data', 'weekly_briefings')
+    // Use /tmp for Vercel serverless compatibility (read-only file system otherwise)
+    const isVercel = process.env.VERCEL || process.env.NOW_REGION
+    this.storageDir = isVercel
+      ? path.join('/tmp', 'weekly_briefings')
+      : path.join(process.cwd(), 'data', 'weekly_briefings')
     this.statusStore = new Map()
     this.initialized = false
   }
 
   async ensureStorage() {
     if (this.initialized) return
-    await fs.mkdir(this.storageDir, { recursive: true })
-    this.initialized = true
+    try {
+      await fs.mkdir(this.storageDir, { recursive: true })
+      this.initialized = true
+    } catch (error) {
+      console.warn('Failed to create storage directory:', error.message)
+      // Still set initialized to true to prevent retries
+      this.initialized = true
+    }
   }
 
   async startRun(options = {}) {

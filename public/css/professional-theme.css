@@ -451,6 +451,75 @@ input[type="radio"]:checked + .filter-option-checkmark {
     margin-bottom: 4px !important;
 }
 
+/* ========================================
+   UPDATE CARD ACTION BUTTONS
+   ======================================== */
+
+.update-card__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: transparent;
+    border: 1px solid var(--neutral-border);
+    border-radius: 4px;
+    color: var(--neutral-grey);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0;
+}
+
+.action-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.action-btn:hover {
+    background: var(--neutral-light);
+    color: var(--primary-navy);
+    border-color: var(--primary-navy);
+}
+
+.action-btn:active {
+    transform: scale(0.95);
+}
+
+.bookmark-btn:hover {
+    color: #d97706;
+    border-color: #d97706;
+}
+
+.share-btn:hover {
+    color: #059669;
+    border-color: #059669;
+}
+
+.details-btn:hover {
+    color: var(--primary-navy);
+    border-color: var(--primary-navy);
+}
+
+.quick-note-btn:hover {
+    color: #7c3aed;
+    border-color: #7c3aed;
+}
+
+.update-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--neutral-border);
+}
+
 @media print {
     body {
         background: white !important;
