@@ -172,12 +172,52 @@ function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel 
           <td align="center">
             <table class="container" width="640" cellpadding="0" cellspacing="0" role="presentation" style="background: white; border: 3px solid #1E3A8A; border-radius: 0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); overflow: hidden;">
 
-              <!-- Header with navy background -->
+              <!-- Header with RegCanary branding (navy background) -->
               <tr>
-                <td style="background: #1E3A8A; padding: 50px 40px; text-align: center; border-bottom: 4px solid #D97706;">
-                  <h1 style="margin: 0 0 12px 0; font-family: 'Merriweather', Georgia, serif; font-size: 32px; font-weight: 700; color: white; letter-spacing: 0.02em;">
+                <td style="background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%); padding: 40px 40px 50px; text-align: center; border-bottom: 4px solid #F59E0B;">
+                  <!-- RegCanary Logo & Brand -->
+                  <div style="margin-bottom: 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <!-- RegCanary Icon (Built-in SVG Canary) -->
+                          <div style="margin-bottom: 16px;">
+                            <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;">
+                              <!-- Canary body -->
+                              <ellipse cx="50" cy="55" rx="20" ry="25" fill="#FCD34D"/>
+                              <!-- Canary head -->
+                              <circle cx="50" cy="35" r="12" fill="#FCD34D"/>
+                              <!-- Eye -->
+                              <circle cx="53" cy="33" r="2" fill="#1E3A8A"/>
+                              <!-- Beak -->
+                              <polygon points="58,35 65,35 61,37" fill="#F59E0B"/>
+                              <!-- Wing -->
+                              <ellipse cx="45" cy="55" rx="8" ry="15" fill="#F59E0B" opacity="0.7" transform="rotate(-20 45 55)"/>
+                              <!-- Tail feathers -->
+                              <ellipse cx="35" cy="70" rx="6" ry="12" fill="#F59E0B" opacity="0.6" transform="rotate(-30 35 70)"/>
+                              <!-- Legs -->
+                              <line x1="48" y1="78" x2="48" y2="88" stroke="#F59E0B" stroke-width="2"/>
+                              <line x1="52" y1="78" x2="52" y2="88" stroke="#F59E0B" stroke-width="2"/>
+                              <!-- Feet -->
+                              <line x1="45" y1="88" x2="51" y2="88" stroke="#F59E0B" stroke-width="2"/>
+                              <line x1="49" y1="88" x2="55" y2="88" stroke="#F59E0B" stroke-width="2"/>
+                            </svg>
+                          </div>
+                          <h1 style="margin: 0 0 8px 0; font-family: 'Merriweather', Georgia, serif; font-size: 32px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.02em;">
+                            RegCanary
+                          </h1>
+                          <div style="font-size: 12px; color: #FCD34D; font-weight: 600; letter-spacing: 0.15em;">
+                            REGULATORY INTELLIGENCE
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <!-- Report Title -->
+                  <h2 style="margin: 0 0 12px 0; font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 600; color: #E0E7FF; letter-spacing: 0.01em;">
                     ${heroTitle}
-                  </h1>
+                  </h2>
                   <div style="font-size: 14px; color: #93C5FD; font-weight: 500; letter-spacing: 0.05em;">
                     ${formattedDate}
                   </div>
@@ -248,14 +288,17 @@ function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel 
                 </td>
               </tr>
 
-              <!-- Footer -->
+              <!-- Footer with RegCanary branding -->
               <tr>
-                <td style="background: #F9FAFB; padding: 32px 40px;">
+                <td style="background: #F9FAFB; padding: 32px 40px; border-top: 1px solid #E5E7EB;">
                   <p style="margin: 0 0 16px 0; font-size: 13px; color: #6B7280; line-height: 1.7; text-align: center;">
                     Your comprehensive intelligence briefing, curated from real-time regulatory movements across all major financial authorities. Stay informed, stay compliant, stay ahead.
                   </p>
-                  <p style="margin: 0; font-size: 12px; color: #6B7280; text-align: center; font-weight: 500;">
-                    © ${new Date().getFullYear()} MEMA Financial Services
+                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280; text-align: center; font-weight: 600;">
+                    ${brand.footer || 'Sent for QA – not for redistribution.'}
+                  </p>
+                  <p style="margin: 0; font-size: 11px; color: #9CA3AF; text-align: center;">
+                    © ${new Date().getFullYear()} RegCanary • Powered by MEMA Consultants
                   </p>
                 </td>
               </tr>

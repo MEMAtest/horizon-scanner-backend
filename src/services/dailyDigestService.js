@@ -107,11 +107,11 @@ function formatSummary({ highCount, mediumCount, uniqueAuthorities, topSectors, 
     return 'No significant regulatory movements were recorded in the last cycle. Monitoring continues across all configured authorities.'
   }
 
-  // Count items in THIS digest
-  const digestHighCount = insights.filter(i => (i.relevanceScore || 0) >= 80).length
+  // Count items in THIS digest (aligned with relevanceService thresholds)
+  const digestHighCount = insights.filter(i => (i.relevanceScore || 0) >= 70).length
   const digestMediumCount = insights.filter(i => {
     const score = i.relevanceScore || 0
-    return score >= 70 && score < 80
+    return score >= 40 && score < 70
   }).length
   const digestLowCount = insights.length - digestHighCount - digestMediumCount
 
@@ -284,7 +284,56 @@ async function buildDigestPayload(options = {}) {
     return true
   })
 
-  const insights = filtered.slice(0, 10).map(update => {
+  // Implement balanced selection to ensure diversity across authorities and sectors
+  const balancedSelection = []
+  const authorityCount = {}
+  const sectorCount = {}
+  const MAX_PER_AUTHORITY = 3 // Maximum items from same authority
+  const MAX_PER_SECTOR = 4 // Maximum items from same sector
+
+  // First pass: prioritize high-impact items
+  for (const update of filtered) {
+    if (balancedSelection.length >= 10) break
+    if (update.relevanceScore >= 80) {
+      balancedSelection.push(update)
+      const authority = update.authority || 'Unknown'
+      const sector = update.sector || 'Unknown'
+      authorityCount[authority] = (authorityCount[authority] || 0) + 1
+      sectorCount[sector] = (sectorCount[sector] || 0) + 1
+    }
+  }
+
+  // Second pass: add diverse content respecting limits
+  for (const update of filtered) {
+    if (balancedSelection.length >= 10) break
+    if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
+      continue // Already selected
+    }
+
+    const authority = update.authority || 'Unknown'
+    const sector = update.sector || 'Unknown'
+
+    // Check if adding this would exceed diversity limits
+    if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
+    if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
+
+    // Exclude low-value AQUIS announcements (AGMs, stock updates)
+    if (authority === 'AQUIS') {
+      const headline = (update.headline || '').toLowerCase()
+      if (headline.includes('agm') ||
+          headline.includes('shares in issue') ||
+          headline.includes('subscription agreement') ||
+          headline.includes('notice of')) {
+        continue
+      }
+    }
+
+    balancedSelection.push(update)
+    authorityCount[authority] = (authorityCount[authority] || 0) + 1
+    sectorCount[sector] = (sectorCount[sector] || 0) + 1
+  }
+
+  const insights = balancedSelection.map(update => {
     const identifierSource = update.id || update.update_id || update.url
     const identifier = identifierSource != null ? String(identifierSource) : null
     const sectors = Array.isArray(update.sectors) && update.sectors.length
@@ -311,7 +360,10 @@ async function buildDigestPayload(options = {}) {
     }
   })
 
-  // Calculate metrics based on items IN THIS DIGEST (not database totals)
+  // Calculate metrics based on items IN THIS DIGEST (aligned with email template labels)
+  // HIGH IMPACT: score >= 80
+  // ENFORCEMENT: score 70-79
+  // MONITOR: score < 70
   const highCount = insights.filter(item => (item.relevanceScore || 0) >= 80).length
   const mediumCount = insights.filter(item => {
     const score = item.relevanceScore || 0
