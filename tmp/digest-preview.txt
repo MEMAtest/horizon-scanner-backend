@@ -1,0 +1,39 @@
+Regulatory Horizon Scanner — Executive Intelligence Digest
+Monday, 3 November 2025
+
+Executive Summary: This digest presents 1 critical alert, 7 enforcement updates from 4 authorities. Primary sectors: Banking, Capital Markets, Investment Management. Focus areas: enforcement and guidance. Priority review recommended for compliance and risk assessment.
+
+1. £1.1 million compound settlement for sanctions breach
+   Authority: HMRC | Sector: Banking
+   Reason: Enforcement action requiring immediate attention
+   Link: https://www.gov.uk/government/case-studies/11-million-compound-settlement-for-sanctions-breach
+2. Guidance: List of Individual Savings Account (ISA) managers approved by HMRC
+   Authority: HMRC | Sector: Banking
+   Reason: Regulatory guidance for compliance planning
+   Link: https://www.gov.uk/government/publications/list-of-individual-savings-account-isa-managers-approved-by-hmrc
+3. Guidance: Business Asset Roll-over Relief (Self Assessment helpsheet HS290)
+   Authority: HMRC | Sector: Banking
+   Reason: Policy update for monitoring
+   Link: https://www.gov.uk/government/publications/business-asset-roll-over-relief-hs290-self-assessment-helpsheet
+4. Defence Housing Strategy: A £9bn ‘generational renewal' for forces family housing and 100,000 new homes on MOD land to drive growth
+   Authority: HM Government | Sector: Real Estate Finance, Construction, Infrastructure
+   Reason: Relevance score: 64%
+   Link: https://www.gov.uk/government/news/defence-housing-strategy-a-9bn-generational-renewal-for-forces-family-housing-and-100000-new-homes-on-mod-land-to-drive-growth
+5. Major change for rare disease treatments on way, signals MHRA
+   Authority: HM Government | Sector: Pharmaceuticals, Biotechnology, Healthcare
+   Reason: Relevance score: 64%
+   Link: https://www.gov.uk/government/news/major-change-for-rare-disease-treatments-on-way-signals-mhra
+6. PRA Regulatory Digest - October 2025
+   Authority: PRA | Sector: Banking
+   Reason: Relevance score: 55%
+   Link: https://www.bankofengland.co.uk/prudential-regulation/regulatory-digest/2025/october-2025
+7. Smarter Web Company - Holding(s) in Company
+   Authority: AQUIS | Sector: Capital Markets, Investment Management, Corporate Finance
+   Reason: Relevance score: 54%
+   Link: https://www.aquis.eu/stock-exchange/announcements/5438263
+8. Adnams PLC - Director/PDMR Shareholding
+   Authority: AQUIS | Sector: Capital Markets, Investment Management, Corporate Finance
+   Reason: Relevance score: 44%
+   Link: https://www.aquis.eu/stock-exchange/announcements/5438267
+
+You can adjust digest preferences inside the Intelligence Workspace.

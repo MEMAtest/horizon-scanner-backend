@@ -15,8 +15,13 @@ function render(options = {}) {
   return `
         <div class="header">
             <div class="header-content">
-                <h1 class="title">${title}</h1>
-                <p class="subtitle">${subtitle}</p>
+                <div class="header-branding">
+                    <img src="/images/regcanary-logo.png" alt="RegCanary" class="header-logo" />
+                    <div class="header-text">
+                        <h1 class="title">${title}</h1>
+                        <p class="subtitle">${subtitle}</p>
+                    </div>
+                </div>
 
                 ${showStatus
 ? `

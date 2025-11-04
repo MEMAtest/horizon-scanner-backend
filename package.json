@@ -68,6 +68,7 @@
     "morgan": "^1.10.0",
     "node-cron": "^3.0.3",
     "pg": "^8.11.3",
+    "pdfkit": "^0.13.0",
     "puppeteer": "^24.21.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",

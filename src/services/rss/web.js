@@ -1,0 +1,169 @@
+function applyWebMethods(ServiceClass, {
+  axios,
+  cheerio,
+  scrapeFATF,
+  scrapeFCA,
+  scrapeSFO,
+  scrapePensionRegulator,
+  scrapeICO,
+  scrapeFRC,
+  scrapeFOS,
+  scrapeJMLSG,
+  scrapeBoE,
+  scrapePRA,
+  scrapeEBA,
+  normalizeAuthority
+}) {
+  ServiceClass.prototype.fetchWebScraping = async function fetchWebScraping(source) {
+    try {
+      console.log(`🌐 Web scraping for ${source.name} (${source.authority})...`)
+
+      let scraperResults = []
+
+      switch (source.authority) {
+        case 'FATF':
+          scraperResults = await scrapeFATF()
+          break
+            case 'FCA':
+          scraperResults = await scrapeFCA()
+          break
+        case 'SFO':
+        case 'Serious Fraud Office':
+          scraperResults = await scrapeSFO()
+          break
+        case 'TPR':
+        case 'The Pensions Regulator':
+          scraperResults = await scrapePensionRegulator()
+          break
+        case 'ICO':
+        case 'Information Commissioner\'s Office':
+          scraperResults = await scrapeICO()
+          break
+        case 'FRC':
+        case 'Financial Reporting Council':
+          scraperResults = await scrapeFRC()
+          break
+        case 'FOS':
+        case 'Financial Ombudsman Service':
+          scraperResults = await scrapeFOS()
+          break
+        case 'JMLSG':
+        case 'Joint Money Laundering Steering Group':
+          scraperResults = await scrapeJMLSG()
+          break
+        case 'BoE':
+        case 'Bank of England':
+          scraperResults = await scrapeBoE('BoE')
+          break
+        case 'PRA':
+        case 'Prudential Regulation Authority':
+          scraperResults = await scrapePRA()
+          break
+        case 'EBA':
+        case 'European Banking Authority':
+          scraperResults = await scrapeEBA()
+          break
+        default:
+          console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`)
+          return await this.genericWebScraping(source)
+      }
+
+      if (scraperResults && scraperResults.length > 0) {
+        console.log(`✅ ${source.name}: ${scraperResults.length} items via dedicated scraper`)
+
+        return scraperResults.map(item => ({
+          headline: item.title || item.headline,
+          summary: item.summary || `${source.authority} update: ${item.title}`,
+          url: item.url || item.link,
+          authority: normalizeAuthority(item.authority || source.authority),
+          publishedDate: item.publishedDate || new Date(item.pubDate),
+          source: source.name,
+          feedType: 'web_scraping',
+          sectors: source.sectors || []
+        }))
+      }
+
+      console.log(`⚠️ No results from dedicated scraper for ${source.name}`)
+      return []
+    } catch (error) {
+      console.error(`❌ Web scraping failed for ${source.name}:`, error.message)
+
+      try {
+        return await this.genericWebScraping(source)
+      } catch (fallbackError) {
+        console.error(`❌ Generic scraping also failed for ${source.name}:`, fallbackError.message)
+        return []
+      }
+    }
+  }
+
+  ServiceClass.prototype.genericWebScraping = async function genericWebScraping(source) {
+    try {
+      const response = await axios.get(source.url, {
+        timeout: this.fetchTimeout || 15000,
+        headers: {
+          'User-Agent': this.userAgent,
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          Connection: 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        }
+      })
+
+      const $ = cheerio.load(response.data)
+      return this.parseWebScrapingContent($, source)
+    } catch (error) {
+      console.error('❌ Generic web scraping failed:', error.message)
+      throw error
+    }
+  }
+
+  ServiceClass.prototype.parseWebScrapingContent = function parseWebScrapingContent($, source) {
+    const updates = []
+
+    $(source.selector).each((index, element) => {
+      try {
+        if (index >= 20) return false
+
+        const $item = $(element)
+
+        const title = $item.find(source.titleSelector).text().trim() ||
+          $item.find(source.titleSelector).attr('title') || ''
+
+        const link = $item.find(source.linkSelector).attr('href') || ''
+
+        const summary = source.summarySelector
+          ? $item.find(source.summarySelector).text().trim()
+          : ''
+
+        const date = source.dateSelector
+          ? $item.find(source.dateSelector).text().trim()
+          : ''
+
+        if (title && link) {
+          const parsedDate = this.parseDate(date)
+
+          if (this.isRecent(parsedDate, source.recencyDays || 30)) {
+            updates.push({
+              headline: this.cleanText(title),
+              summary: this.cleanText(summary),
+              url: this.normalizeUrl(link, source.url),
+              authority: source.authority,
+              publishedDate: parsedDate,
+              source: source.name,
+              feedType: 'web_scraping',
+              sectors: source.sectors || []
+            })
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️ Error parsing web scraping item from ${source.name}:`, error.message)
+      }
+    })
+
+    return updates
+  }
+}
+
+module.exports = applyWebMethods

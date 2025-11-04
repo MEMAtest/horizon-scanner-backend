@@ -1,0 +1,281 @@
+.quick-note-modal {
+display: flex;
+flex-direction: column;
+gap: 16px;
+}
+
+.quick-note-grid {
+display: grid;
+gap: 12px;
+grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.quick-note-grid label {
+display: flex;
+flex-direction: column;
+gap: 6px;
+font-size: 0.85rem;
+color: #475569;
+}
+
+.quick-note-grid input {
+border: 1px solid #cbd5e1;
+border-radius: 8px;
+padding: 8px 10px;
+font-size: 0.9rem;
+color: #0f172a;
+background: #ffffff;
+}
+
+.quick-note-actions {
+display: flex;
+justify-content: flex-end;
+gap: 12px;
+flex-wrap: wrap;
+width: 100%;
+}
+
+.quick-note-actions .btn-secondary {
+background: #f1f5f9;
+color: #1f2937;
+border: 1px solid #cbd5e1;
+}
+
+.quick-note-actions .btn-secondary:hover {
+background: #e2e8f0;
+}
+
+.preview-note {
+margin: 0;
+font-size: 0.85rem;
+color: #475569;
+}
+
+.preview-empty {
+margin: 0;
+color: #64748b;
+font-size: 0.9rem;
+}
+
+.preview-modal {
+display: flex;
+flex-direction: column;
+gap: 18px;
+}
+
+.preview-controls {
+display: flex;
+flex-wrap: wrap;
+gap: 16px;
+align-items: flex-end;
+border-bottom: 1px solid #e2e8f0;
+padding-bottom: 18px;
+}
+
+.preview-field {
+display: flex;
+flex-direction: column;
+gap: 6px;
+font-size: 0.85rem;
+color: #475569;
+}
+
+.preview-field input {
+border: 1px solid #cbd5e1;
+border-radius: 8px;
+padding: 8px 10px;
+font-size: 0.9rem;
+color: #0f172a;
+background: #ffffff;
+}
+
+.preview-quick {
+display: flex;
+gap: 8px;
+flex-wrap: wrap;
+}
+
+.preview-quick-btn {
+border: 1px solid #cbd5e1;
+border-radius: 10px;
+padding: 6px 12px;
+background: #ffffff;
+font-size: 0.8rem;
+font-weight: 600;
+color: #1f2937;
+cursor: pointer;
+transition: all 0.18s ease;
+}
+
+.preview-quick-btn:hover {
+background: #e0e7ff;
+border-color: #1d4ed8;
+color: #1d4ed8;
+}
+
+.preview-options {
+display: flex;
+gap: 12px;
+align-items: center;
+flex-wrap: wrap;
+margin-left: auto;
+}
+
+.preview-checkbox {
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 0.85rem;
+color: #475569;
+}
+
+.preview-checkbox input {
+width: 16px;
+height: 16px;
+}
+
+.preview-refresh {
+margin-left: auto;
+}
+
+.preview-summary {
+display: grid;
+gap: 14px;
+}
+
+.preview-grid {
+display: grid;
+gap: 12px;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.preview-stat {
+border: 1px solid #e2e8f0;
+border-radius: 12px;
+padding: 16px;
+background: #f8fafc;
+}
+
+.preview-stat__label {
+display: block;
+font-size: 0.78rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+color: #64748b;
+margin-bottom: 6px;
+}
+
+.preview-stat__value {
+display: block;
+font-size: 1.15rem;
+font-weight: 700;
+color: #1f2937;
+}
+
+.preview-highlight-list {
+list-style: none;
+padding: 0;
+margin: 0;
+display: grid;
+gap: 10px;
+}
+
+.preview-highlight-list li {
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 12px;
+padding-bottom: 8px;
+border-bottom: 1px solid #e2e8f0;
+font-size: 0.9rem;
+color: #334155;
+}
+
+.preview-highlight-list li:last-child {
+border-bottom: none;
+padding-bottom: 0;
+}
+
+.preview-highlight-authority {
+font-weight: 600;
+color: #1d4ed8;
+}
+
+.preview-highlight-meta {
+font-size: 0.8rem;
+color: #94a3b8;
+}
+
+.preview-note {
+margin: 0;
+font-size: 0.85rem;
+color: #475569;
+}
+
+.modal-backdrop {
+position: fixed;
+inset: 0;
+background: rgba(15, 23, 42, 0.55);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 50;
+}
+
+.modal-backdrop.visible { display: flex; }
+
+.modal {
+background: white;
+border-radius: 16px;
+width: min(720px, 94vw);
+max-height: 88vh;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+}
+
+.modal header {
+padding: 20px 24px;
+border-bottom: 1px solid #e5e7eb;
+}
+
+.modal header h2 {
+margin: 0;
+font-size: 1.25rem;
+}
+
+.modal .modal-body {
+padding: 20px 24px;
+overflow-y: auto;
+}
+
+.modal footer {
+padding: 20px 24px;
+border-top: 1px solid #f1f5f9;
+display: flex;
+justify-content: flex-end;
+gap: 12px;
+}
+
+.preview-grid {
+display: grid;
+gap: 16px;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.preview-card {
+padding: 16px;
+border-radius: 10px;
+border: 1px solid #e5e7eb;
+background: #f9fafb;
+}
+
+.preview-card h3 {
+margin-top: 0;
+margin-bottom: 10px;
+font-size: 1rem;
+color: #0f172a;
+}
+
+.preview-card p { margin: 0; color: #4b5563; font-size: 0.95rem; }

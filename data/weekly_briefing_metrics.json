@@ -1,27 +1,686 @@
 {
   "totals": {
-    "runs": 11,
-    "cacheHits": 2,
-    "totalTokens": 77800
+    "runs": 30,
+    "cacheHits": 7,
+    "totalTokens": 186228
   },
   "lastRun": {
-    "runId": "cb979f94-7e8d-4894-a930-e9e15c5a1bf8",
-    "briefingId": "a9dfd432-0254-4ad0-93dc-3ef61897d7fa",
-    "datasetHash": "55969f722dc5683328a31f33ac6a418388660193beda45a3e00e20ed52e469c4",
-    "cacheHit": true,
-    "startedAt": "2025-10-25T20:57:32.974Z",
-    "completedAt": "2025-10-25T20:57:33.206Z",
-    "durationMs": 232,
+    "runId": "1e0b83c9-b085-40a5-b6d4-da3a0f5d1c97",
+    "briefingId": "1eda17c1-74eb-42ad-ae14-381b49980a43",
+    "datasetHash": "42578fcb921ff0bc44bf7085cae8b1601926e63aebf829b6d2168a43ac9a30b1",
+    "cacheHit": false,
+    "startedAt": "2025-11-03T19:39:53.625Z",
+    "completedAt": "2025-11-03T19:40:12.403Z",
+    "durationMs": 18778,
     "usage": {
-      "totalTokens": 0,
-      "requests": []
+      "totalTokens": 16036,
+      "requests": [
+        {
+          "artifact": "narrative",
+          "usage": {
+            "prompt_tokens": 3687,
+            "completion_tokens": 472,
+            "total_tokens": 4159,
+            "prompt_tokens_details": null,
+            "completion_tokens_details": null
+          },
+          "model": "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          "artifact": "changeDetection",
+          "usage": {
+            "prompt_tokens": 2058,
+            "completion_tokens": 743,
+            "total_tokens": 2801,
+            "prompt_tokens_details": null
+          },
+          "model": "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          "artifact": "onePager",
+          "usage": {
+            "prompt_tokens": 3855,
+            "completion_tokens": 566,
+            "total_tokens": 4421,
+            "prompt_tokens_details": null
+          },
+          "model": "meta-llama/llama-3-8b-instruct"
+        },
+        {
+          "artifact": "teamBriefing",
+          "usage": {
+            "prompt_tokens": 3836,
+            "completion_tokens": 819,
+            "total_tokens": 4655,
+            "prompt_tokens_details": null
+          },
+          "model": "meta-llama/llama-3-8b-instruct"
+        }
+      ]
     },
     "totals": {
-      "currentUpdates": 97,
+      "currentUpdates": 154,
       "annotations": 0
     }
   },
   "history": [
+    {
+      "runId": "1e0b83c9-b085-40a5-b6d4-da3a0f5d1c97",
+      "briefingId": "1eda17c1-74eb-42ad-ae14-381b49980a43",
+      "datasetHash": "42578fcb921ff0bc44bf7085cae8b1601926e63aebf829b6d2168a43ac9a30b1",
+      "cacheHit": false,
+      "startedAt": "2025-11-03T19:39:53.625Z",
+      "completedAt": "2025-11-03T19:40:12.403Z",
+      "durationMs": 18778,
+      "usage": {
+        "totalTokens": 16036,
+        "requests": [
+          {
+            "artifact": "narrative",
+            "usage": {
+              "prompt_tokens": 3687,
+              "completion_tokens": 472,
+              "total_tokens": 4159,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "changeDetection",
+            "usage": {
+              "prompt_tokens": 2058,
+              "completion_tokens": 743,
+              "total_tokens": 2801,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "onePager",
+            "usage": {
+              "prompt_tokens": 3855,
+              "completion_tokens": 566,
+              "total_tokens": 4421,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "teamBriefing",
+            "usage": {
+              "prompt_tokens": 3836,
+              "completion_tokens": 819,
+              "total_tokens": 4655,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 154,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "3dd6b016-fecb-4d6d-86f5-1c6522a1026b",
+      "briefingId": "bb68eb95-7af6-4240-b367-ec74ef3d2094",
+      "datasetHash": "e92c8476bcf918987e52a91e4ded4bd92c2b10640eca9578993b6eeba28586f1",
+      "cacheHit": true,
+      "startedAt": "2025-11-03T17:32:50.099Z",
+      "completedAt": "2025-11-03T17:32:50.268Z",
+      "durationMs": 169,
+      "usage": {
+        "totalTokens": 15867,
+        "requests": [
+          {
+            "artifact": "narrative",
+            "usage": {
+              "prompt_tokens": 3705,
+              "completion_tokens": 437,
+              "total_tokens": 4142,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "changeDetection",
+            "usage": {
+              "prompt_tokens": 2025,
+              "completion_tokens": 803,
+              "total_tokens": 2828,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "onePager",
+            "usage": {
+              "prompt_tokens": 3871,
+              "completion_tokens": 524,
+              "total_tokens": 4395,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "teamBriefing",
+            "usage": {
+              "prompt_tokens": 3843,
+              "completion_tokens": 659,
+              "total_tokens": 4502
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 152,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "8d52743f-fb12-405c-94c2-9bd8b54c8451",
+      "briefingId": "bb68eb95-7af6-4240-b367-ec74ef3d2094",
+      "datasetHash": "e92c8476bcf918987e52a91e4ded4bd92c2b10640eca9578993b6eeba28586f1",
+      "cacheHit": true,
+      "startedAt": "2025-11-03T17:28:03.490Z",
+      "completedAt": "2025-11-03T17:28:03.815Z",
+      "durationMs": 325,
+      "usage": {
+        "totalTokens": 15867,
+        "requests": [
+          {
+            "artifact": "narrative",
+            "usage": {
+              "prompt_tokens": 3705,
+              "completion_tokens": 437,
+              "total_tokens": 4142,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "changeDetection",
+            "usage": {
+              "prompt_tokens": 2025,
+              "completion_tokens": 803,
+              "total_tokens": 2828,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "onePager",
+            "usage": {
+              "prompt_tokens": 3871,
+              "completion_tokens": 524,
+              "total_tokens": 4395,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "teamBriefing",
+            "usage": {
+              "prompt_tokens": 3843,
+              "completion_tokens": 659,
+              "total_tokens": 4502
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 152,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "c2a83fce-9e85-47e0-ac2e-c17069bd5f03",
+      "briefingId": "bb68eb95-7af6-4240-b367-ec74ef3d2094",
+      "datasetHash": "e92c8476bcf918987e52a91e4ded4bd92c2b10640eca9578993b6eeba28586f1",
+      "cacheHit": false,
+      "startedAt": "2025-11-03T16:47:46.127Z",
+      "completedAt": "2025-11-03T16:48:05.772Z",
+      "durationMs": 19645,
+      "usage": {
+        "totalTokens": 15867,
+        "requests": [
+          {
+            "artifact": "narrative",
+            "usage": {
+              "prompt_tokens": 3705,
+              "completion_tokens": 437,
+              "total_tokens": 4142,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "changeDetection",
+            "usage": {
+              "prompt_tokens": 2025,
+              "completion_tokens": 803,
+              "total_tokens": 2828,
+              "prompt_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "onePager",
+            "usage": {
+              "prompt_tokens": 3871,
+              "completion_tokens": 524,
+              "total_tokens": 4395,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          },
+          {
+            "artifact": "teamBriefing",
+            "usage": {
+              "prompt_tokens": 3843,
+              "completion_tokens": 659,
+              "total_tokens": 4502
+            },
+            "model": "meta-llama/llama-3-8b-instruct"
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 152,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "c5c6fcd1-33c8-483c-a2b1-1c5adec66c13",
+      "briefingId": "830bcfa3-f713-4bd6-9772-8e999c1a91f1",
+      "datasetHash": "5e17efba8b44c58ff0c44e0271be8a1183dfc79f35a72b898d72b221172c1380",
+      "cacheHit": true,
+      "startedAt": "2025-11-01T21:28:02.301Z",
+      "completedAt": "2025-11-01T21:28:02.628Z",
+      "durationMs": 327,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 0,
+        "annotations": 7
+      }
+    },
+    {
+      "runId": "a34a35e5-66ef-483f-a523-a0cc40f3345c",
+      "briefingId": "c2db28c5-6804-4761-bb45-912d0140d709",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:18:44.686Z",
+      "completedAt": "2025-11-01T21:19:04.632Z",
+      "durationMs": 19946,
+      "usage": {
+        "totalTokens": 16869,
+        "requests": [
+          {
+            "model": "meta-llama/llama-3-8b-instruct",
+            "usage": {
+              "prompt_tokens": 3400,
+              "completion_tokens": 521,
+              "total_tokens": 3921,
+              "prompt_tokens_details": null
+            }
+          },
+          {
+            "model": "meta-llama/llama-3-8b-instruct",
+            "usage": {
+              "prompt_tokens": 3569,
+              "completion_tokens": 1236,
+              "total_tokens": 4805,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            }
+          },
+          {
+            "model": "meta-llama/llama-3-8b-instruct",
+            "usage": {
+              "prompt_tokens": 3568,
+              "completion_tokens": 484,
+              "total_tokens": 4052,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            }
+          },
+          {
+            "model": "meta-llama/llama-3-8b-instruct",
+            "usage": {
+              "prompt_tokens": 3553,
+              "completion_tokens": 538,
+              "total_tokens": 4091,
+              "prompt_tokens_details": null,
+              "completion_tokens_details": null
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "947f5922-b7ec-4938-b920-739a16be0985",
+      "briefingId": "463ed389-f38b-4aba-a5f3-1bfd7f0f21a1",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:18:28.054Z",
+      "completedAt": "2025-11-01T21:18:30.705Z",
+      "durationMs": 2651,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "1bca5bec-473e-483d-844a-92307aaba561",
+      "briefingId": "f842c9ac-42a8-4dd7-bd83-ca306c040954",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:18:11.344Z",
+      "completedAt": "2025-11-01T21:18:14.043Z",
+      "durationMs": 2699,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "56821574-0a66-49b2-8489-4ddc7a943680",
+      "briefingId": "6ed7ee37-b902-4a73-b85c-b8fd9eb1d360",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:17:36.118Z",
+      "completedAt": "2025-11-01T21:17:38.764Z",
+      "durationMs": 2646,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "2442ae95-0d24-43e5-a871-f3e291246c0d",
+      "briefingId": "0ef56d45-2e60-4b5a-8620-bc6c52ea1fae",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:13:48.609Z",
+      "completedAt": "2025-11-01T21:14:10.305Z",
+      "durationMs": 21696,
+      "usage": {
+        "totalTokens": 3807,
+        "requests": [
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.090342102,
+              "prompt_tokens": 3208,
+              "prompt_time": 0.178335384,
+              "completion_tokens": 599,
+              "completion_time": 0.950678729,
+              "total_tokens": 3807,
+              "total_time": 1.129014113
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "dd302a4e-bbd8-4397-8cca-0c5caa759bd4",
+      "briefingId": "f8e3b833-08cc-478c-8153-18a385e325c6",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:12:46.358Z",
+      "completedAt": "2025-11-01T21:13:27.710Z",
+      "durationMs": 41352,
+      "usage": {
+        "totalTokens": 4143,
+        "requests": [
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.08879363,
+              "prompt_tokens": 3483,
+              "prompt_time": 0.193301492,
+              "completion_tokens": 660,
+              "completion_time": 1.011831802,
+              "total_tokens": 4143,
+              "total_time": 1.205133294
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "8b8d791c-c1cd-4ea4-bf28-13eaa6a847a5",
+      "briefingId": "3882209f-1b4f-4898-956b-2720806063c1",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:11:41.394Z",
+      "completedAt": "2025-11-01T21:12:22.754Z",
+      "durationMs": 41360,
+      "usage": {
+        "totalTokens": 8101,
+        "requests": [
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.089141977,
+              "prompt_tokens": 3208,
+              "prompt_time": 0.180037087,
+              "completion_tokens": 630,
+              "completion_time": 0.913736435,
+              "total_tokens": 3838,
+              "total_time": 1.093773522
+            }
+          },
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.090835914,
+              "prompt_tokens": 3528,
+              "prompt_time": 0.197124556,
+              "completion_tokens": 735,
+              "completion_time": 0.963862726,
+              "total_tokens": 4263,
+              "total_time": 1.160987282
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "08ce1ca7-18f1-4b81-b495-590685571368",
+      "briefingId": "34ce074f-956e-4485-9008-513e109dfd9a",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:10:47.601Z",
+      "completedAt": "2025-11-01T21:11:33.267Z",
+      "durationMs": 45666,
+      "usage": {
+        "totalTokens": 8099,
+        "requests": [
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.088129716,
+              "prompt_tokens": 3208,
+              "prompt_time": 0.180275104,
+              "completion_tokens": 746,
+              "completion_time": 1.290003936,
+              "total_tokens": 3954,
+              "total_time": 1.4702790399999999
+            }
+          },
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.088923641,
+              "prompt_tokens": 3483,
+              "prompt_time": 0.200302639,
+              "completion_tokens": 662,
+              "completion_time": 0.925163434,
+              "total_tokens": 4145,
+              "total_time": 1.1254660730000001
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "eae2540a-abfb-41c0-a0f7-dc157bb23016",
+      "briefingId": "2c41dc43-7deb-41ed-afd8-c3780fdc9ec2",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:10:10.608Z",
+      "completedAt": "2025-11-01T21:10:17.160Z",
+      "durationMs": 6552,
+      "usage": {
+        "totalTokens": 3772,
+        "requests": [
+          {
+            "model": "llama-3.1-8b-instant",
+            "usage": {
+              "queue_time": 0.090030913,
+              "prompt_tokens": 3208,
+              "prompt_time": 0.183501642,
+              "completion_tokens": 564,
+              "completion_time": 0.771020349,
+              "total_tokens": 3772,
+              "total_time": 0.954521991
+            }
+          }
+        ]
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "93b68aaa-0de1-4451-aaa9-1acadb820fb2",
+      "briefingId": "503885c9-1ac5-4b07-aac1-05fc62e7e82a",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T21:09:30.758Z",
+      "completedAt": "2025-11-01T21:09:34.654Z",
+      "durationMs": 3896,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "6dc3e06a-9d52-4aab-b442-f36bd3a598d2",
+      "briefingId": "e142103f-9fc0-4486-a902-1f11d5ed2b48",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": true,
+      "startedAt": "2025-11-01T21:03:18.618Z",
+      "completedAt": "2025-11-01T21:03:19.074Z",
+      "durationMs": 456,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "9409e4bc-de35-4369-8ecf-5a92367c3f8d",
+      "briefingId": "e142103f-9fc0-4486-a902-1f11d5ed2b48",
+      "datasetHash": "68885689ad63069b82f32e447c29c42d6bb8999dd736e4c2fddd439498421de5",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T20:54:25.165Z",
+      "completedAt": "2025-11-01T20:54:28.582Z",
+      "durationMs": 3417,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 27,
+        "annotations": 0
+      }
+    },
+    {
+      "runId": "8f1bf26f-ac2c-4e77-aeb8-066da397ceab",
+      "briefingId": "830bcfa3-f713-4bd6-9772-8e999c1a91f1",
+      "datasetHash": "5e17efba8b44c58ff0c44e0271be8a1183dfc79f35a72b898d72b221172c1380",
+      "cacheHit": true,
+      "startedAt": "2025-11-01T20:52:45.879Z",
+      "completedAt": "2025-11-01T20:52:46.117Z",
+      "durationMs": 238,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 0,
+        "annotations": 7
+      }
+    },
+    {
+      "runId": "736cca73-4b64-45e7-9b03-7be9fcff1795",
+      "briefingId": "830bcfa3-f713-4bd6-9772-8e999c1a91f1",
+      "datasetHash": "5e17efba8b44c58ff0c44e0271be8a1183dfc79f35a72b898d72b221172c1380",
+      "cacheHit": false,
+      "startedAt": "2025-11-01T16:47:11.745Z",
+      "completedAt": "2025-11-01T16:47:14.183Z",
+      "durationMs": 2438,
+      "usage": {
+        "totalTokens": 0,
+        "requests": []
+      },
+      "totals": {
+        "currentUpdates": 0,
+        "annotations": 7
+      }
+    },
     {
       "runId": "cb979f94-7e8d-4894-a930-e9e15c5a1bf8",
       "briefingId": "a9dfd432-0254-4ad0-93dc-3ef61897d7fa",

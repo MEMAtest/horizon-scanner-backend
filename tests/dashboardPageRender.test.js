@@ -57,10 +57,10 @@ describe('renderDashboardPage inline script safety', () => {
     expect(send).toHaveBeenCalled()
     const html = send.mock.calls[0][0]
 
-    expect(html).toContain('window.initialUpdates = ')
-    expect(html).toContain('window.currentFilters = ')
+    expect(html).toContain('window.dashboardInitialState = ')
+    expect(html).toContain('window.initialUpdates = window.dashboardInitialState.updates')
 
-    const inlineScriptMatch = html.match(/window\.initialUpdates = ([\s\S]*?)\s*window\.dashboardStats/)
+    const inlineScriptMatch = html.match(/window\.dashboardInitialState = ([\s\S]*?);\s*window\.initialUpdates/)
     expect(inlineScriptMatch).toBeTruthy()
     const inlineScript = inlineScriptMatch[1]
 

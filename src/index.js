@@ -206,9 +206,9 @@ class AIRegulatoryIntelligenceServer {
       }
     })
 
-    // Lightweight favicon handler to avoid 404 noise in browsers
+    // Serve favicon for browsers looking at /favicon.ico
     this.app.get('/favicon.ico', (req, res) => {
-      res.status(204).end()
+      res.sendFile(path.join(__dirname, '../public/favicon.ico'))
     })
 
     // API routes

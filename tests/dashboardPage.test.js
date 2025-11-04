@@ -16,7 +16,7 @@ jest.mock('../src/services/dbService', () => ({
   getFilterOptions: jest.fn()
 }))
 
-const { serializeForScript } = require('../src/routes/pages/dashboardPage')
+const { serializeForScript } = require('../src/views/dashboard/helpers')
 
 describe('serializeForScript', () => {
   it('serializes objects into safe JSON strings', () => {

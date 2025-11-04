@@ -53,6 +53,15 @@ body {
 .sidebar-header-clean {
     background: var(--neutral-light) !important;
     border-bottom: 1px solid var(--neutral-border) !important;
+    padding: 20px;
+}
+
+.sidebar-logo {
+    width: 100%;
+    height: auto;
+    max-height: 80px;
+    object-fit: contain;
+    margin-bottom: 16px;
 }
 
 .sidebar-header-clean h2 {

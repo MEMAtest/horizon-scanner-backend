@@ -1,0 +1,775 @@
+============================================================
+Re-scraping All FCA Fines Data (2013-2025)
+============================================================
+
+Will scrape years: 2013 to 2025
+Total years: 13
+
+⚠️  This will take approximately 1-2 hours to complete.
+
+🕷️ Starting FCA fines scraping from 2013 to 2025...
+📅 Scraping year 2013...
+   📋 Attempting structured scraping for 2013...
+   📋 Trying FCA enforcement actions page for 2013...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2013-fines
+   📊 Extracted 47 entries from table
+Parsed UK date: 19/12/2013 → 2013-12-19
+   ✅ Processed: JLT Specialty Limited - 19/12/2013
+Parsed UK date: 17/12/2013 → 2013-12-17
+   ✅ Processed: Westwood Independent Financial Planners - 17/12/2013
+Parsed UK date: 11/12/2013 → 2013-12-11
+   ✅ Processed: Christopher Willford - 11/12/2013
+Parsed UK date: 11/12/2013 → 2013-12-11
+   ✅ Processed: Lloyds TSB Bank plc
+			Bank of Scotland plc - 11/12/2013
+Parsed UK date: 25/11/2013 → 2013-11-25
+   ✅ Processed: SEI Investments (Europe) Limited - 25/11/2013
+Parsed UK date: 29/10/2013 → 2013-10-29
+   ✅ Processed: Coöperatieve Centrale Raiffeisen-Boerenleenbank B.A. (Rabobank) - 29/10/2013
+Parsed UK date: 24/10/2013 → 2013-10-24
+   ✅ Processed: Porta Verde Financial Services Limited - 24/10/2013
+Parsed UK date: 18/10/2013 → 2013-10-18
+   ✅ Processed: Mark Bentley-Leek - 18/10/2013
+Parsed UK date: 18/10/2013 → 2013-10-18
+   ✅ Processed: Mustafa Dervish - 18/10/2013
+Parsed UK date: 30/09/2013 → 2013-09-30
+   ✅ Processed: Alison Moran - 30/09/2013
+Parsed UK date: 25/09/2013 → 2013-09-25
+   ✅ Processed: ICAP Europe Limited - 25/09/2013
+Parsed UK date: 24/09/2013 → 2013-09-24
+   ✅ Processed: Clydesdale Bank PLC - 24/09/2013
+Parsed UK date: 23/08/2013 → 2013-08-23
+   ✅ Processed: Mr Andrew Jeffery - 23/08/2013
+Parsed UK date: 18/09/2013 → 2013-09-18
+   ✅ Processed: JP Morgan Chase Bank NA - 18/09/2013
+Parsed UK date: 12/09/2013 → 2013-09-12
+   ✅ Processed: AXA Wealth Services Ltd - 12/09/2013
+Parsed UK date: 02/09/2013 → 2013-09-02
+   ✅ Processed: Aberdeen Asset Managers Limited and
+			Aberdeen Fund Management Limited - 02/09/2013
+Parsed UK date: 08/08/2013 → 2013-08-08
+   ✅ Processed: Guaranty Trust Bank (UK) Limited - 08/08/2013
+Parsed UK date: 06/08/2013 → 2013-08-06
+   ✅ Processed: Vandana Madhukar Parikh - 06/08/2013
+Parsed UK date: 26/07/2013 → 2013-07-26
+   ✅ Processed: John Douglas Leslie - 26/07/2013
+Parsed UK date: 19/07/2013 → 2013-07-19
+   ✅ Processed: Paul David Cable - 19/07/2013
+Parsed UK date: 16/07/2013 → 2013-07-16
+   ✅ Processed: Swinton Group Limited - 16/07/2013
+Parsed UK date: 16/07/2013 → 2013-07-16
+   ✅ Processed: The Royal Bank of Scotland plc and The Royal Bank of Scotland N.V - 16/07/2013
+Parsed UK date: 12/07/2013 → 2013-07-12
+   ✅ Processed: Jeffrey Simon Bennett - 12/07/2013
+Parsed UK date: 03/07/2013 → 2013-07-03
+   ✅ Processed: Michael Coscia - 03/07/2013
+Parsed UK date: 05/07/2013 → 2013-07-05
+   ✅ Processed: David Thomas Davis - 05/07/2013
+Parsed UK date: 01/07/2013 → 2013-07-01
+   ✅ Processed: Policy Administration Services Limited - 01/07/2013
+Parsed UK date: 19/06/2013 → 2013-06-19
+   ✅ Processed: Gurpreet Singh Chadda - 19/06/2013
+Parsed UK date: 05/06/2013 → 2013-06-05
+   ✅ Processed: Sesame Limited - 05/06/2013
+Parsed UK date: 05/06/2013 → 2013-06-05
+   ✅ Processed: Christopher John Riches - 05/06/2013
+Parsed UK date: 31/05/2013 → 2013-05-31
+   ✅ Processed: Xcap Securities Plc - 31/05/2013
+Parsed UK date: 10/05/2013 → 2013-05-10
+   ✅ Processed: J.P. Morgan International Bank Limited - 10/05/2013
+Parsed UK date: 29/04/2013 → 2013-04-29
+   ✅ Processed: Douglas Jones - 29/04/2013
+Parsed UK date: 28/03/2013 → 2013-03-28
+   ✅ Processed: EFG Private Bank - 28/03/2013
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: Care Asset Management Limited - 27/03/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: The Prudential Assurance Company Limited - 27/03/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: Prudential plc - 27/03/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: Lamprell plc - 18/03/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: Lloyds TSB Bank Plc, Lloyds TSB Scotland Plc, and Bank of Scotland plc - 15/02/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: Nestor Healthcare Group Limited - 14/02/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: UBS AG - 08/02/13
+No date text provided, using fallback: 2013-01-01
+   ✅ Processed: The Royal Bank of Scotland plc - 06/02/13
+Parsed UK date: 24/01/2013 → 2013-01-24
+   ✅ Processed: Stefan Chaligne - 24/01/2013
+Parsed UK date: 24/01/2013 → 2013-01-24
+   ✅ Processed: Patrick Sejean - 24/01/2013
+Parsed UK date: 15/01/2013 → 2013-01-15
+   ✅ Processed: Harbinder Panesar - 15/01/2013
+Parsed UK date: 07/01/2013 → 2013-01-07
+   ✅ Processed: Thomas Reeh - 07/01/2013
+Parsed UK date: 07/01/2013 → 2013-01-07
+   ✅ Processed: Christopher Ollerenshaw - 07/01/2013
+Parsed UK date: 04/01/2013 → 2013-01-04
+   ✅ Processed: Co-operative Bank plc - 04/01/2013
+   📋 Found 47 fines via structured page for 2013
+Error saving fine: error: null value in column "date_issued" of relation "fca_fines" violates not-null constraint
+    at /Users/adeomosanya/Documents/horizon-scanner-backend/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ServiceClass.saveFine (/Users/adeomosanya/Documents/horizon-scanner-backend/src/services/fcaFines/database.js:58:22)
+    at async ServiceClass.scrapeYear (/Users/adeomosanya/Documents/horizon-scanner-backend/src/services/fcaFines/orchestrator.js:83:25)
+    at async ServiceClass.startScraping (/Users/adeomosanya/Documents/horizon-scanner-backend/src/services/fcaFines/orchestrator.js:25:31)
+    at async rescrapeAll (/Users/adeomosanya/Documents/horizon-scanner-backend/rescrape-all-fca-data.js:32:20) {
+  length: 726,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (420, FCA-2013-034, null, Care Asset Management Limited, 27.00, 27/03/13, GBP, For breach of rules in relation to its sale of products provided..., null, null, null, "[\\"Regulatory Breach\\"]", null, null, https://www.fca.org.uk/your-fca/documents/final-notices/2013/fsa..., null, null, 2013, 6, 2, null, null, f, f, f, null, null, {"firm":"Care Asset Management Limited","dateText":"","amountTex..., https://www.fca.org.uk/news/news-stories/2013-fines, 2025-11-03 13:22:18.644525, 2025-11-03 13:22:18.644525, f, pending).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'fca_fines',
+  column: 'date_issued',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '1997',
+  routine: 'ExecConstraints'
+}
+❌ Error scraping year 2013: null value in column "date_issued" of relation "fca_fines" violates not-null constraint
+📅 Scraping year 2014...
+   📋 Attempting structured scraping for 2014...
+   📋 Trying FCA enforcement actions page for 2014...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2014-fines
+   📊 Extracted 40 entries from table
+Parsed UK date: 20/11/2014 → 2014-11-20
+   ✅ Processed: Royal Bank of Scotland Plc, National Westminster Bank Plc and Ulster Bank Ltd - 20/11/2014
+Parsed UK date: 17/11/2014 → 2014-11-17
+   ✅ Processed: Chase de Vere Independent Financial Adviser Limited (Formerly AWD Chase de Vere Limited) - 17/11/2014
+Parsed UK date: 11/11/2014 → 2014-11-11
+   ✅ Processed: Citibank N.A. - 11/11/2014
+Parsed UK date: 11/11/2014 → 2014-11-11
+   ✅ Processed: HSBC Bank Plc - 11/11/2014
+Parsed UK date: 11/11/2014 → 2014-11-11
+   ✅ Processed: JPMorgan Chase Bank - 11/11/2014
+Parsed UK date: 11/11/2014 → 2014-11-11
+   ✅ Processed: The Royal Bank of Scotland Plc - 11/11/2014
+Parsed UK date: 11/11/2014 → 2014-11-11
+   ✅ Processed: UBS AG - 11/11/2014
+Parsed UK date: 05/11/2014 → 2014-11-05
+   ✅ Processed: Anthony Peter Clare - 05/11/2014
+Parsed UK date: 05/11/2014 → 2014-11-05
+   ✅ Processed: Nicholas Bowyer - 05/11/2014
+Parsed UK date: 05/11/2014 → 2014-11-05
+   ✅ Processed: Peter Joseph Halpin - 05/11/2014
+Parsed UK date: 29/10/2014 → 2014-10-29
+   ✅ Processed: Sesame Limited - 29/10/2014
+Parsed UK date: 28/10/2014 → 2014-10-28
+   ✅ Processed: Yorkshire Building Society - 28/10/2014
+Parsed UK date: 09/10/2014 → 2014-10-09
+   ✅ Processed: David Gillespie - 09/10/2014
+Parsed UK date: 09/10/2014 → 2014-10-09
+   ✅ Processed: David Welsby - 09/10/2014
+Parsed UK date: 23/09/2014 → 2014-09-23
+   ✅ Processed: Barclays Bank Plc - 23/09/2014
+Parsed UK date: 16/09/2014 → 2014-09-16
+   ✅ Processed: Peter Thomas Carron - 16/09/2014
+Parsed UK date: 29/08/2014 → 2014-08-29
+   ✅ Processed: Craig Stuart Cameron - 29/08/2014
+Parsed UK date: 27/08/2014 → 2014-08-27
+   ✅ Processed: The Royal Bank of Scotland plc and National Westminster Bank plc - 27/08/2014
+Parsed UK date: 21/08/2014 → 2014-08-21
+   ✅ Processed: Deutsche Bank AG - 21/08/2014
+Parsed UK date: 07/08/2014 → 2014-08-07
+   ✅ Processed: Stonebridge International Insurance Limited - 07/08/2014
+Parsed UK date: 28/07/2014 → 2014-07-28
+   ✅ Processed: Lloyds Bank plc and Bank of Scotland plc - 28/07/2014
+Parsed UK date: 22/07/2014 → 2014-07-22
+   ✅ Processed: Ian Charles Hannam - 22/07/2014
+Parsed UK date: 16/06/2014 → 2014-06-16
+   ✅ Processed: Credit Suisse International - 16/06/2014
+Parsed UK date: 16/06/2014 → 2014-06-16
+   ✅ Processed: Yorkshire Building Society - 16/06/2014
+Parsed UK date: 23/05/2014 → 2014-05-23
+   ✅ Processed: Barclays Bank PLC - 23/05/2014
+Parsed UK date: 23/05/2014 → 2014-05-23
+   ✅ Processed: Daniel James Plunkett - 23/05/2014
+Parsed UK date: 15/05/2014 → 2014-05-15
+   ✅ Processed: Martin Brokers (UK) Ltd (Martins) - 15/05/2014
+Parsed UK date: 28/04/2014 → 2014-04-28
+   ✅ Processed: Invesco Asset Management Limited Invesco Fund Managers Limited - 28/04/2014
+Parsed UK date: 31/03/2014 → 2014-03-31
+   ✅ Processed: David Lloyd Wren - 31/03/2014
+Parsed UK date: 27/03/2014 → 2014-03-27
+   ✅ Processed: Philip Eley - 27/03/2014
+Parsed UK date: 26/03/2014 → 2014-03-26
+   ✅ Processed: Santander plc - 26/03/2014
+Parsed UK date: 20/03/2014 → 2014-03-20
+   ✅ Processed: Mark Stevenson - 20/03/2014
+Parsed UK date: 19/03/2014 → 2014-03-19
+   ✅ Processed: Besso Limited - 19/03/2014
+Parsed UK date: 13/03/2014 → 2014-03-13
+   ✅ Processed: City & Provincial - 13/03/2014
+Parsed UK date: 26/02/2014 → 2014-02-26
+   ✅ Processed: Forex Capital Markets Limited (“FXCM Ltd”) & FXCM Securities Limited (“FXCM Securities”) (together “FXCM UK”) - 26/02/2014
+Parsed UK date: 12/02/2014 → 2014-02-12
+   ✅ Processed: HomeServe Membership Limited - 12/02/2014
+Parsed UK date: 30/01/2014 → 2014-01-30
+   ✅ Processed: State Street Bank Europe Ltd; and State Street Global Markets International Ltd - 30/01/2014
+Parsed UK date: 30/01/2014 → 2014-01-30
+   ✅ Processed: Ewan King - 30/01/2014
+Parsed UK date: 24/01/2014 → 2014-01-24
+   ✅ Processed: 7722656 Canada Inc formerly trading as Swift Trade Inc - 24/01/2014
+Parsed UK date: 23/01/2014 → 2014-01-23
+   ✅ Processed: Standard Bank PLC - 23/01/2014
+   📋 Found 40 fines via structured page for 2014
+✅ Year 2014 completed: 40 fines found, 40 new
+📅 Scraping year 2015...
+   📋 Attempting structured scraping for 2015...
+   📋 Trying FCA enforcement actions page for 2015...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2015-fines
+   📊 Extracted 40 entries from table
+Parsed UK date: 17/12/2015 → 2015-12-17
+   ✅ Processed: Vroni Mavis O'Brien - 17/12/2015
+Parsed UK date: 15/12/2015 → 2015-12-15
+   ✅ Processed: Threadneedle Asset Management Limited - 15/12/2015
+Parsed UK date: 11/12/2015 → 2015-12-11
+   ✅ Processed: Paivi Katriina Grigg - 11/12/2015
+Parsed UK date: 26/11/2015 → 2015-11-26
+   ✅ Processed: Barclays Bank plc - 26/11/2015
+Parsed UK date: 17/11/2015 → 2015-11-17
+   ✅ Processed: Mothahir Miah - 17/11/2015
+Parsed UK date: 27/10/2015 → 2015-10-27
+   ✅ Processed: Andrew Peter Wilkins - 27/10/2015
+Parsed UK date: 23/10/2015 → 2015-10-23
+   ✅ Processed: Quick Purchase - 23/10/2015
+Parsed UK date: 30/09/2015 → 2015-09-30
+   ✅ Processed: John Joseph Financial Services Limited - 30/09/2015
+Parsed UK date: 22/09/2015 → 2015-09-22
+   ✅ Processed: Craig McNeil - 22/09/2015
+Parsed UK date: 10/09/2015 → 2015-09-10
+   ✅ Processed: Ralph Paul Whittington - 10/09/2015
+Parsed UK date: 13/08/2015 → 2015-08-13
+   ✅ Processed: Robert Ian Shaw - 13/08/2015
+Parsed UK date: 12/08/2015 → 2015-08-12
+   ✅ Processed: Da Vinci Invest Ltd - 12/08/2015
+Parsed UK date: 12/08/2015 → 2015-08-12
+   ✅ Processed: Mineworld Ltd - 12/08/2015
+Parsed UK date: 12/08/2015 → 2015-08-12
+   ✅ Processed: Gyorgy Szabolcs Brad - 12/08/2015
+Parsed UK date: 12/08/2015 → 2015-08-12
+   ✅ Processed: Szabolcs Banya - 12/08/2015
+Parsed UK date: 12/08/2015 → 2015-08-12
+   ✅ Processed: Tamas Pornye - 12/08/2015
+Parsed UK date: 17/06/2015 → 2015-06-17
+   ✅ Processed: Asia Resource Minerals plc (formerly Bumi plc) - 17/06/2015
+Parsed UK date: 05/06/2015 → 2015-06-05
+   ✅ Processed: Lloyds Bank plc, Bank of Scotland plc and Black Horse Limited (together Lloyds Banking Group "LBG") - 05/06/2015
+Parsed UK date: 20/05/2015 → 2015-05-20
+   ✅ Processed: Barclays Bank Plc - 20/05/2015
+Parsed UK date: 20/05/2015 → 2015-05-20
+   ✅ Processed: Paul Reynolds (formally known as Paul Brian Reynolds) - 20/05/2015
+Parsed UK date: 23/04/2015 → 2015-04-23
+   ✅ Processed: Deutsche Bank AG - 23/04/2015
+Parsed UK date: 23/04/2015 → 2015-04-23
+   ✅ Processed: Moorhouse Group Limited - 23/04/2015
+Parsed UK date: 22/04/2015 → 2015-04-22
+   ✅ Processed: Merrill Lynch International - 22/04/2015
+Parsed UK date: 15/04/2015 → 2015-04-15
+   ✅ Processed: The Bank of New York Mellon London Branch & The Bank of New York Mellon International Limited - 15/04/2015
+Parsed UK date: 14/04/2015 → 2015-04-14
+   ✅ Processed: Clydesdale Bank Plc - 14/04/2015
+Parsed UK date: 31/03/2015 → 2015-03-31
+   ✅ Processed: Robin Farrell - 31/03/2015
+Parsed UK date: 31/03/2015 → 2015-03-31
+   ✅ Processed: Robert Addison - 31/03/2015
+Parsed UK date: 30/03/2015 → 2015-03-30
+   ✅ Processed: Kenneth George Carver - 30/03/2015
+Parsed UK date: 20/03/2015 → 2015-03-20
+   ✅ Processed: Lloyd Arnold Pope - 20/03/2015
+Parsed UK date: 18/03/2015 → 2015-03-18
+   ✅ Processed: Alberto Micalizzi - 18/03/2015
+Parsed UK date: 13/03/2015 → 2015-03-13
+   ✅ Processed: Sam Thomas Kenny - 13/03/2015
+Parsed UK date: 13/03/2015 → 2015-03-13
+   ✅ Processed: Stephen Edward Bell - 13/03/2015
+Parsed UK date: 05/03/2015 → 2015-03-05
+   ✅ Processed: Bank of Beirut (UK) Ltd - 05/03/2015
+Parsed UK date: 05/03/2015 → 2015-03-05
+   ✅ Processed: Anthony Rendell Boyd Wills - 05/03/2015
+Parsed UK date: 05/03/2015 → 2015-03-05
+   ✅ Processed: Michael John Allin - 05/03/2015
+Parsed UK date: 24/02/2015 → 2015-02-24
+   ✅ Processed: Aviva Investors Global Services Limited - 24/02/2015
+Parsed UK date: 22/01/2015 → 2015-01-22
+   ✅ Processed: David Caplin - 22/01/2015
+Parsed UK date: 22/01/2015 → 2015-01-22
+   ✅ Processed: Jeremy Kraft - 22/01/2015
+Parsed UK date: 20/01/2015 → 2015-01-20
+   ✅ Processed: Reckitt Benckiser Group Plc - 20/01/2015
+Parsed UK date: 06/01/2015 → 2015-01-06
+   ✅ Processed: Execution Noble & Company Limited (ENCL) - 06/01/2015
+   📋 Found 40 fines via structured page for 2015
+✅ Year 2015 completed: 40 fines found, 40 new
+📅 Scraping year 2016...
+   📋 Attempting structured scraping for 2016...
+   📋 Trying FCA enforcement actions page for 2016...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2016-fines
+   📊 Extracted 23 entries from table
+Parsed UK date: 28/11/2016 → 2016-11-28
+   ✅ Processed: Tariq Carrimjee - 28/11/2016
+Parsed UK date: 12/10/2016 → 2016-10-12
+   ✅ Processed: Steven Smith - 12/10/2016
+Parsed UK date: 12/10/2016 → 2016-10-12
+   ✅ Processed: Sonali Bank (UK) Limited - 12/10/2016
+Parsed UK date: 05/10/2016 → 2016-10-05
+   ✅ Processed: Aviva Pension Trustees UK Limited and Aviva Wrap UK Limited - 05/10/2016
+Parsed UK date: 01/09/2016 → 2016-09-01
+   ✅ Processed: Elizabeth Anne Parry - 01/09/2016
+Parsed UK date: 09/08/2016 → 2016-08-09
+   ✅ Processed: Cenkos Securities Plc - 09/08/2016
+Parsed UK date: 15/07/2016 → 2016-07-15
+   ✅ Processed: Gavin Duncan Paul Breeze - 15/07/2016
+Parsed UK date: 13/07/2016 → 2016-07-13
+   ✅ Processed: Timothy Duncan Philip - 13/07/2016
+Parsed UK date: 13/07/2016 → 2016-07-13
+   ✅ Processed: Towergate Underwriting Group Limited - 13/07/2016
+Parsed UK date: 01/06/2016 → 2016-06-01
+   ✅ Processed: CT Capital Limited - 01/06/2016
+Parsed UK date: 13/05/2016 → 2016-05-13
+   ✅ Processed: Mark Samuel Taylor - 13/05/2016
+Parsed UK date: 09/05/2016 → 2016-05-09
+   ✅ Processed: Terence Andrew Joint - 09/05/2016
+Parsed UK date: 08/04/2016 → 2016-04-08
+   ✅ Processed: Timothy Alan Roberts - 08/04/2016
+Parsed UK date: 23/02/2016 → 2016-02-23
+   ✅ Processed: W H Ireland Limited - 23/02/2016
+Parsed UK date: 09/02/2016 → 2016-02-09
+   ✅ Processed: Achilles Othon Macris - 09/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Shay Jacob Reches - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Shay Jacob Reches (additional penalty) - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Colin J McIntosh - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Robert John Bygrave - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Andrea Christine Sadler - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Wayne Anthony Redgrave - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Millburn Insurance Company Limited (in administration) - 01/02/2016
+Parsed UK date: 01/02/2016 → 2016-02-01
+   ✅ Processed: Coverall Worldwide Ltd - 01/02/2016
+   📋 Found 23 fines via structured page for 2016
+✅ Year 2016 completed: 23 fines found, 23 new
+📅 Scraping year 2017...
+   📋 Attempting structured scraping for 2017...
+   📋 Trying FCA enforcement actions page for 2017...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2017-fines
+   📊 Extracted 13 entries from table
+Parsed UK date: 14/12/2017 → 2017-12-14
+   ✅ Processed: Tejoori Limited - 14/12/2017
+Parsed UK date: 6/12/2017 → 2017-12-06
+   ✅ Processed: Bluefin Insurance Services - 6/12/2017
+Parsed UK date: 22/11/2017 → 2017-11-22
+   ✅ Processed: Paul Axel Walter - 22/11/2017
+Parsed UK date: 23/10/2017 → 2017-10-23
+   ✅ Processed: Merrill Lynch International - 23/10/2017
+Parsed UK date: 17/10/2017 → 2017-10-17
+   ✅ Processed: Rio Tinto Plc - 17/10/2017
+Parsed UK date: 12/10/2017 → 2017-10-12
+   ✅ Processed: Mrs Colette Chiesa - 12/10/2017
+Parsed UK date: 05/10/2017 → 2017-10-05
+   ✅ Processed: Clive John Rosier - 05/10/2017
+Parsed UK date: 19/09/2017 → 2017-09-19
+   ✅ Processed: Charles Palmer - 19/09/2017
+Parsed UK date: 14/07/2017 → 2017-07-14
+   ✅ Processed: David Samuel Watters - 14/07/2017
+Parsed UK date: 07/04/2017 → 2017-04-07
+   ✅ Processed: Lukhvir Thind - 07/04/2017
+Parsed UK date: 07/04/2017 → 2017-04-07
+   ✅ Processed: Niall O’Kelly - 07/04/2017
+Parsed UK date: 30/3/2017 → 2017-03-30
+   ✅ Processed: Christopher Niehaus - 30/3/2017
+Parsed UK date: 31/1/2017 → 2017-01-31
+   ✅ Processed: Deutsche Bank AG - 31/1/2017
+   📋 Found 13 fines via structured page for 2017
+✅ Year 2017 completed: 13 fines found, 13 new
+📅 Scraping year 2018...
+   📋 Attempting structured scraping for 2018...
+   📋 Trying FCA enforcement actions page for 2018...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2018-fines
+   📊 Extracted 15 entries from table
+Parsed UK date: 19/12/2018 → 2018-12-19
+   ✅ Processed: Santander UK plc - 19/12/2018
+Parsed UK date: 14/12/2018 → 2018-12-14
+   ✅ Processed: Angela Burns - 14/12/2018
+Parsed UK date: 30/10/2018 → 2018-10-30
+   ✅ Processed: Liberty Mutual Insurance Europe SE - 30/10/2018
+Parsed UK date: 01/10/2018 → 2018-10-01
+   ✅ Processed: Tesco Personal Finance plc - 01/10/2018
+Parsed UK date: 20/09/2018 → 2018-09-20
+   ✅ Processed: Alistair Rae Burns - 20/09/2018
+Parsed UK date: 30/08/2018 → 2018-08-30
+   ✅ Processed: John Lawrence Radford - 30/08/2018
+Parsed UK date: 30/08/2018 → 2018-08-30
+   ✅ Processed: One Call Insurance Services Limited - 30/08/2018
+Parsed UK date: 08/06/2018 → 2018-06-08
+   ✅ Processed: Darren Colvin Cummings - 08/06/2018
+Parsed UK date: 06/06/2018 → 2018-06-06
+   ✅ Processed: Canara Bank - 06/06/2018
+Parsed UK date: 11/05/2018 → 2018-05-11
+   ✅ Processed: James Edward Staley - 11/05/2018
+Parsed UK date: 26/03/2018 → 2018-03-26
+   ✅ Processed: Alexander David Osborne Stuart - 26/03/2018
+Parsed UK date: 05/03/2018 → 2018-03-05
+   ✅ Processed: Guillaume Adolph - 05/03/2018
+Parsed UK date: 27/02/2018 → 2018-02-27
+   ✅ Processed: Vanquis Bank Limited - 27/02/2018
+Parsed UK date: 25/01/2018 → 2018-01-25
+   ✅ Processed: Interactive Brokers (UK) Limited - 25/01/2018
+Parsed UK date: 08/01/2018 → 2018-01-08
+   ✅ Processed: Neil Danziger - 08/01/2018
+   📋 Found 15 fines via structured page for 2018
+✅ Year 2018 completed: 15 fines found, 15 new
+📅 Scraping year 2019...
+   📋 Attempting structured scraping for 2019...
+   📋 Trying FCA enforcement actions page for 2019...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2019-fines
+   📊 Extracted 21 entries from table
+Parsed UK date: 20/12/2019 → 2019-12-20
+   ✅ Processed: Kevin Gorman - 20/12/2019
+Parsed UK date: 17/12/2019 → 2019-12-17
+   ✅ Processed: Professional Personal Claims Limited - 17/12/2019
+Parsed UK date: 18/11/2019 → 2019-11-18
+   ✅ Processed: Henderson Investment Funds Limited - 18/11/2019
+Parsed UK date: 11/10/2019 → 2019-10-11
+   ✅ Processed: Tullet Prebon (Europe) Limited - 11/10/2019
+Parsed UK date: 30/09/2019 → 2019-09-30
+   ✅ Processed: The Prudential Assurance Company Limited - 30/09/2019
+Parsed UK date: 25/07/2019 → 2019-07-25
+   ✅ Processed: Cathay International Holding Limited - 25/07/2019
+Parsed UK date: 25/07/2019 → 2019-07-25
+   ✅ Processed: Jin-Yi Lee - 25/07/2019
+Parsed UK date: 25/07/2019 → 2019-07-25
+   ✅ Processed: Eric Ka Chi Siu - 25/07/2019
+Parsed UK date: 23/07/2019 → 2019-07-23
+   ✅ Processed: Standard Life Assurance Limited - 23/07/2019
+Parsed UK date: 21/06/2019 → 2019-06-21
+   ✅ Processed: Bank of Scotland plc - 21/06/2019
+Parsed UK date: 30/05/2019 → 2019-05-30
+   ✅ Processed: R.Raphael & Sons plc - 30/05/2019
+Parsed UK date: 29/04/2019 → 2019-04-29
+   ✅ Processed: Linear Investments Limited - 29/04/2019
+Parsed UK date: 09/04/2019 → 2019-04-09
+   ✅ Processed: Standard Chartered Bank - 09/04/2019
+Parsed UK date: 28/03/2019 → 2019-03-28
+   ✅ Processed: Goldman Sachs International - 28/03/2019
+Parsed UK date: 19/03/2019 → 2019-03-19
+   ✅ Processed: UBS AG - 19/03/2019
+Parsed UK date: 13/03/2019 → 2019-03-13
+   ✅ Processed: The Carphone Warehouse - 13/03/2019
+Parsed UK date: 21/02/2019 → 2019-02-21
+   ✅ Processed: Hargreave Hale Limited - 21/02/2019
+Parsed UK date: 21/02/2019 → 2019-02-21
+   ✅ Processed: River & Mercantile Asset Management LLP - 21/02/2019
+Parsed UK date: 05/02/2019 → 2019-02-05
+   ✅ Processed: Paul Stephany - 05/02/2019
+Parsed UK date: 16/01/2019 → 2019-01-16
+   ✅ Processed: Stewart Owen Ford - 16/01/2019
+Parsed UK date: 16/01/2019 → 2019-01-16
+   ✅ Processed: Mark John Owen - 16/01/2019
+   📋 Found 21 fines via structured page for 2019
+✅ Year 2019 completed: 21 fines found, 21 new
+📅 Scraping year 2020...
+   📋 Attempting structured scraping for 2020...
+   📋 Trying FCA enforcement actions page for 2020...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2020-fines
+   📊 Extracted 11 entries from table
+Parsed UK date: 21/12/2020 → 2020-12-21
+   ✅ Processed: Charles Schwab UK Limited - 21/12/2020
+Parsed UK date: 15/12/2020 → 2020-12-15
+   ✅ Processed: Corrado Abbattista - 15/12/2020
+Parsed UK date: 15/12/2020 → 2020-12-15
+   ✅ Processed: Barclays Bank UK PLC, Barclays Bank PLC, Clydesdale Financial Services Limited - 15/12/2020
+Parsed UK date: 10/12/2020 → 2020-12-10
+   ✅ Processed: LJ Financial Planning Ltd - 10/12/2020
+Parsed UK date: 23/11/2020 → 2020-11-23
+   ✅ Processed: TFS-ICAP Limited - 23/11/2020
+Parsed UK date: 22/10/2020 → 2020-10-22
+   ✅ Processed: Goldman Sachs International - 22/10/2020
+Parsed UK date: 14/10/2020 → 2020-10-14
+   ✅ Processed: Asia Research and Capital Management Ltd - 14/10/2020
+Parsed UK date: 17/06/2020 → 2020-06-17
+   ✅ Processed: Commerzbank AG - 17/06/2020
+Parsed UK date: 11/06/2020 → 2020-06-11
+   ✅ Processed: Lloyds Bank Plc, Bank of Scotland Plc and The Mortgage Business Plc - 11/06/2020
+Parsed UK date: 17/02/2020 → 2020-02-17
+   ✅ Processed: Moneybarn Limited - 17/02/2020
+Parsed UK date: 21/01/2020 → 2020-01-21
+   ✅ Processed: Hall and Hanley Limited (HHL) - 21/01/2020
+   📋 Found 11 fines via structured page for 2020
+✅ Year 2020 completed: 11 fines found, 11 new
+📅 Scraping year 2021...
+   📋 Attempting structured scraping for 2021...
+   📋 Trying FCA enforcement actions page for 2021...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2021-fines
+   📊 Extracted 10 entries from table
+Parsed UK date: 17/12/2021 → 2021-12-17
+   ✅ Processed: HSBC Bank plc - 17/12/2021
+Parsed UK date: 13/12/2021 → 2021-12-13
+   ✅ Processed: National Westminster Bank Plc - 13/12/2021
+Parsed UK date: 12/11/2021 → 2021-11-12
+   ✅ Processed: Sunrise Brokers LLP - 12/11/2021
+Parsed UK date: 19/10/2021 → 2021-10-19
+   ✅ Processed: Credit Suisse International, Credit Suisse Securities (Europe) Ltd, and Credit Suisse AG - 19/10/2021
+Parsed UK date: 11/10/2021 → 2021-10-11
+   ✅ Processed: Omar Hussein - 11/10/2021
+Parsed UK date: 08/07/2021 → 2021-07-08
+   ✅ Processed: Lloyds Bank General Insurance Limited, St Andrew’s Insurance Plc, Lloyds Bank Insurance Services Limited and Halifax General Insurance Services Limited - 08/07/2021
+Parsed UK date: 28/06/2021 → 2021-06-28
+   ✅ Processed: Crosfill and Archer Claims Limited - 28/06/2021
+Parsed UK date: 06/05/2021 → 2021-05-06
+   ✅ Processed: Sapien Capital Limited - 06/05/2021
+Parsed UK date: 15/04/2021 → 2021-04-15
+   ✅ Processed: Simon John Varley - 15/04/2021
+Parsed UK date: 04/03/2021 → 2021-03-04
+   ✅ Processed: Adrian Horn - 04/03/2021
+   📋 Found 10 fines via structured page for 2021
+✅ Year 2021 completed: 10 fines found, 10 new
+📅 Scraping year 2022...
+   📋 Attempting structured scraping for 2022...
+   📋 Trying FCA enforcement actions page for 2022...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2022-fines
+   📊 Extracted 26 entries from table
+Parsed UK date: 20/12/2022 → 2022-12-20
+   ✅ Processed: TSB Bank Plc - 20/12/2022
+Parsed UK date: 12/12/2022 → 2022-12-12
+   ✅ Processed: Metro Bank Plc - 12/12/2022
+Parsed UK date: 08/12/2022 → 2022-12-08
+   ✅ Processed: Santander UK Plc - 08/12/2022
+Parsed UK date: 07/12/2022 → 2022-12-07
+   ✅ Processed: BGC Brokers LP, GFI Securities Limited and GFI Brokers Limited - 07/12/2022
+Parsed UK date: 01/12/2022 → 2022-12-01
+   ✅ Processed: Pembrokeshire Mortgage Centre Limited - 01/12/2022
+No date text provided, using fallback: 2022-01-01
+   ✅ Processed: Gatehouse Bank plc - 12/10/22
+Parsed UK date: 04/10/2022 → 2022-10-04
+   ✅ Processed: Sigma Broking Limited - 04/10/2022
+Parsed UK date: 04/10/2022 → 2022-10-04
+   ✅ Processed: Matthew Kent - 04/10/2022
+Parsed UK date: 04/10/2022 → 2022-10-04
+   ✅ Processed: Stephen Tomlin - 04/10/2022
+Parsed UK date: 04/10/2022 → 2022-10-04
+   ✅ Processed: Simon Tyson - 04/10/2022
+Parsed UK date: 19/08/2022 → 2022-08-19
+   ✅ Processed: Citigroup Global Markets Limited - 19/08/2022
+Parsed UK date: 05/08/2022 → 2022-08-05
+   ✅ Processed: Sir Christopher Gent - 05/08/2022
+Parsed UK date: 15/07/2022 → 2022-07-15
+   ✅ Processed: The TJM Partnership Limited (Formerly known as Neovision Global Capital Limited) (In Liquidation) - 15/07/2022
+Parsed UK date: 23/06/2022 → 2022-06-23
+   ✅ Processed: Ghana International Bank Plc - 23/06/2022
+Parsed UK date: 16/06/2022 → 2022-06-16
+   ✅ Processed: JLT Specialty Limited - 16/06/2022
+Parsed UK date: 09/06/2022 → 2022-06-09
+   ✅ Processed: TFS Loans Limited (in administration) - 09/06/2022
+Parsed UK date: 16/05/2022 → 2022-05-16
+   ✅ Processed: Andrew Mark Thomas Page - 16/05/2022
+Parsed UK date: 16/05/2022 → 2022-05-16
+   ✅ Processed: Aiden Henderson - 16/05/2022
+Parsed UK date: 16/05/2022 → 2022-05-16
+   ✅ Processed: Thomas Henry Ward - 16/05/2022
+Parsed UK date: 16/05/2022 → 2022-05-16
+   ✅ Processed: Robert Ward - 16/05/2022
+Parsed UK date: 16/05/2022 → 2022-05-16
+   ✅ Processed: William Mark Tristan Freer (Tristan Freer) - 16/05/2022
+Parsed UK date: 16/05/2022 → 2022-05-16
+   ✅ Processed: Bank House Investment Management Limited (in liquidation) - 16/05/2022
+Parsed UK date: 29/03/2022 → 2022-03-29
+   ✅ Processed: Timothy Haywood - 29/03/2022
+Parsed UK date: 29/03/2022 → 2022-03-29
+   ✅ Processed: GAM International - 29/03/2022
+Parsed UK date: 28/02/2022 → 2022-02-28
+   ✅ Processed: Barclays Bank plc - 28/02/2022
+Parsed UK date: 10/02/2022 → 2022-02-10
+   ✅ Processed: Julius Baer International Limited - 10/02/2022
+   📋 Found 26 fines via structured page for 2022
+Error saving fine: error: null value in column "date_issued" of relation "fca_fines" violates not-null constraint
+    at /Users/adeomosanya/Documents/horizon-scanner-backend/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async ServiceClass.saveFine (/Users/adeomosanya/Documents/horizon-scanner-backend/src/services/fcaFines/database.js:58:22)
+    at async ServiceClass.scrapeYear (/Users/adeomosanya/Documents/horizon-scanner-backend/src/services/fcaFines/orchestrator.js:83:25)
+    at async ServiceClass.startScraping (/Users/adeomosanya/Documents/horizon-scanner-backend/src/services/fcaFines/orchestrator.js:25:31)
+    at async rescrapeAll (/Users/adeomosanya/Documents/horizon-scanner-backend/rescrape-all-fca-data.js:32:20) {
+  length: 739,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (599, FCA-2022-006, null, Gatehouse Bank plc, 12.00, 12/10/22, GBP, This Decision Notice refers to breaches of the Money Laundering ..., null, null, null, "[\\"Anti-Money Laundering\\",\\"Financial Crime\\"]", null, null, https://www.fca.org.uk/publication/decision-notices/gatehouse-ba..., null, null, 2022, 6, 2, null, null, f, f, f, null, null, {"firm":"Gatehouse Bank plc","dateText":"","amountText":"12/10/2..., https://www.fca.org.uk/news/news-stories/2022-fines, 2025-11-03 13:23:14.912836, 2025-11-03 13:23:14.912836, f, pending).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'fca_fines',
+  column: 'date_issued',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '1997',
+  routine: 'ExecConstraints'
+}
+❌ Error scraping year 2022: null value in column "date_issued" of relation "fca_fines" violates not-null constraint
+📅 Scraping year 2023...
+   📋 Attempting structured scraping for 2023...
+   📋 Trying FCA enforcement actions page for 2023...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2023-fines
+   📊 Extracted 12 entries from table
+Parsed UK date: 30/11/2023 → 2023-11-30
+   ✅ Processed: Dollar East (International Travel & Money Transfer) Ltd - 30/11/2023
+Parsed UK date: 30/11/2023 → 2023-11-30
+   ✅ Processed: Hafiz Bros Travel & Money Transfer Limited - 30/11/2023
+Parsed UK date: 30/11/2023 → 2023-11-30
+   ✅ Processed: LCC Trans-Sending Limited - 30/11/2023
+Parsed UK date: 13/10/2023 → 2023-10-13
+   ✅ Processed: Equifax Limited - 13/10/2023
+Parsed UK date: 02/10/2023 → 2023-10-02
+   ✅ Processed: ADM Investor Services International Limited - 02/10/2023
+Parsed UK date: 28/09/2023 → 2023-09-28
+   ✅ Processed: Andrew John Deeney - 28/09/2023
+Parsed UK date: 13/07/2023 → 2023-07-13
+   ✅ Processed: Bastion Capital London Limited - 13/07/2023
+Parsed UK date: 04/07/2023 → 2023-07-04
+   ✅ Processed: Paul Steel - 04/07/2023
+Parsed UK date: 26/06/2023 → 2023-06-26
+   ✅ Processed: Mark Antony Abley - 26/06/2023
+Parsed UK date: 05/06/2023 → 2023-06-05
+   ✅ Processed: ED&F Man Capital Markets Ltd - 05/06/2023
+Parsed UK date: 11/01/2023 → 2023-01-11
+   ✅ Processed: Al Rayan Bank PLC - 11/01/2023
+Parsed UK date: 10/01/2023 → 2023-01-10
+   ✅ Processed: Guaranty Trust Bank (UK) Limited (GT Bank) - 10/01/2023
+   📋 Found 12 fines via structured page for 2023
+✅ Year 2023 completed: 12 fines found, 12 new
+📅 Scraping year 2024...
+   📋 Attempting structured scraping for 2024...
+   📋 Trying FCA enforcement actions page for 2024...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2024-fines
+   📊 Extracted 27 entries from table
+Parsed UK date: 28/11/2024 → 2024-11-28
+   ✅ Processed: Philip Pryke - 28/11/2024
+Parsed UK date: 26/11/2024 → 2024-11-26
+   ✅ Processed: András Sebők - 26/11/2024
+Parsed UK date: 25/11/2024 → 2024-11-25
+   ✅ Processed: Barclays Bank plc - 25/11/2024
+Parsed UK date: 25/11/2024 → 2024-11-25
+   ✅ Processed: Barclays plc - 25/11/2024
+Parsed UK date: 18/11/2024 → 2024-11-18
+   ✅ Processed: Macquarie Bank Limited - London Branch - 18/11/2024
+Parsed UK date: 14/11/2024 → 2024-11-14
+   ✅ Processed: Craig Buchan - 14/11/2024
+Parsed UK date: 14/11/2024 → 2024-11-14
+   ✅ Processed: Martin Paul Cooke - 14/11/2024
+Parsed UK date: 12/11/2024 → 2024-11-12
+   ✅ Processed: Metro Bank plc - 12/11/2024
+Parsed UK date: 11/11/2024 → 2024-11-11
+   ✅ Processed: Leigh Mackey - 11/11/2024
+Parsed UK date: 27/10/2024 → 2024-10-27
+   ✅ Processed: Kristo Käärmann - 27/10/2024
+Parsed UK date: 21/10/2024 → 2024-10-21
+   ✅ Processed: Volkswagen Financial Services (UK) Limited - 21/10/2024
+Parsed UK date: 9/10/2024 → 2024-10-09
+   ✅ Processed: TSB Bank plc - 9/10/2024
+Parsed UK date: 27/09/2024 → 2024-09-27
+   ✅ Processed: Starling Bank Limited - 27/09/2024
+Parsed UK date: 30/08/2024 → 2024-08-30
+   ✅ Processed: Alec John Cuthbert - 30/08/2024
+Parsed UK date: 16/08/2024 → 2024-08-16
+   ✅ Processed: PricewaterhouseCoopers LLP - 16/08/2024
+Parsed UK date: 14/08/2024 → 2024-08-14
+   ✅ Processed: Martin Christopher Sarl - 14/08/2024
+Parsed UK date: 9/08/2024 → 2024-08-09
+   ✅ Processed: Forex TB Limited - 9/08/2024
+Parsed UK date: 26/07/2024 → 2024-07-26
+   ✅ Processed: Anthony Dale Cuming - 26/07/2024
+Parsed UK date: 26/07/2024 → 2024-07-26
+   ✅ Processed: Steven Harbinder Singh Sahota - 26/07/2024
+Parsed UK date: 26/07/2024 → 2024-07-26
+   ✅ Processed: Kyle Anthony Jones - 26/07/2024
+Parsed UK date: 23/07/2024 → 2024-07-23
+   ✅ Processed: CB Payments Limited - 23/07/2024
+Parsed UK date: 19/06/2024 → 2024-06-19
+   ✅ Processed: Kulvir Virk - 19/06/2024
+Parsed UK date: 23/05/2024 → 2024-05-23
+   ✅ Processed: HSBC UK Bank plc, HSBC Bank plc, and Marks and Spencer Financial Services plc - 23/05/2024
+Parsed UK date: 17/05/2024 → 2024-05-17
+   ✅ Processed: Citigroup Global Markets Ltd - 17/05/2024
+Parsed UK date: 22/04/2024 → 2024-04-22
+   ✅ Processed: James William Edward Lewis - 22/04/2024
+Parsed UK date: 11/03/2024 → 2024-03-11
+   ✅ Processed: Inspirational Financial Management Ltd (in administration) - 11/03/2024
+Parsed UK date: 13/02/2024 → 2024-02-13
+   ✅ Processed: Floris Jakobus Huisamen - 13/02/2024
+   📋 Found 27 fines via structured page for 2024
+✅ Year 2024 completed: 27 fines found, 27 new
+📅 Scraping year 2025...
+   📋 Attempting structured scraping for 2025...
+   📋 Trying FCA enforcement actions page for 2025...
+   🔍 Accessing enforcement actions: https://www.fca.org.uk/news/news-stories/2025-fines
+   📊 Extracted 18 entries from table
+Parsed UK date: 5/08/2025 → 2025-08-05
+   ✅ Processed: Poojan Sheth - 5/08/2025
+Parsed UK date: 5/08/2025 → 2025-08-05
+   ✅ Processed: Jorge Lopez Gonzalez - 5/08/2025
+Parsed UK date: 5/08/2025 → 2025-08-05
+   ✅ Processed: Diego Urra - 5/08/2025
+Parsed UK date: 29/07/2025 → 2025-07-29
+   ✅ Processed: Sigma Broking Limited - 29/07/2025
+Parsed UK date: 25/07/2025 → 2025-07-25
+   ✅ Processed: Jean-Noel Alba - 25/07/2025
+Parsed UK date: 23/07/2025 → 2025-07-23
+   ✅ Processed: James Edward Staley - 23/07/2025
+Parsed UK date: 14/07/2025 → 2025-07-14
+   ✅ Processed: Barclays Bank UK plc - 14/07/2025
+Parsed UK date: 14/07/2025 → 2025-07-14
+   ✅ Processed: Barclays Bank plc - 14/07/2025
+Parsed UK date: 10/07/2025 → 2025-07-10
+   ✅ Processed: Markos Theodosi Markou - 10/07/2025
+Parsed UK date: 8/07/2025 → 2025-07-08
+   ✅ Processed: Monzo Bank Limited - 8/07/2025
+Parsed UK date: 2/07/2025 → 2025-07-02
+   ✅ Processed: Craig Donaldson - 2/07/2025
+Parsed UK date: 2/07/2025 → 2025-07-02
+   ✅ Processed: David Arden - 2/07/2025
+Parsed UK date: 30/05/2025 → 2025-05-30
+   ✅ Processed: Toni Fox - 30/05/2025
+Parsed UK date: 30/05/2025 → 2025-05-30
+   ✅ Processed: David Brian Price - 30/05/2025
+Parsed UK date: 20/03/2025 → 2025-03-20
+   ✅ Processed: The London Metal Exchange (RIE) - 20/03/2025
+Parsed UK date: 17/02/2025 → 2025-02-17
+   ✅ Processed: Mako Financial Markets Partnership LLP - 17/02/2025
+Parsed UK date: 27/01/2025 → 2025-01-27
+   ✅ Processed: Infinox Capital Limited - 27/01/2025
+Parsed UK date: 9/01/2025 → 2025-01-09
+   ✅ Processed: Arian Financial LLP - 9/01/2025
+   📋 Found 18 fines via structured page for 2025
+✅ Year 2025 completed: 18 fines found, 18 new
+🎉 FCA fines scraping completed!
+   📊 Total fines processed: 230
+   🆕 New fines added: 230
+   ⚠️ Errors encountered: 2
+
+============================================================
+✅ Re-scraping Complete!
+============================================================
+
+Next steps:
+1. Verify data quality by checking sample records
+2. Update trends table (may happen automatically)
+3. Test the FCA Enforcement Widget on your website
+
+
+Process completed.

@@ -1,0 +1,789 @@
+{
+  "timestamp": "2025-11-02T21:26:56.382Z",
+  "tests": [
+    {
+      "name": "Database Connection",
+      "status": "passed",
+      "details": {
+        "message": "Retrieved 1210 updates",
+        "totalCount": 1210
+      },
+      "timestamp": "2025-11-02T21:26:56.955Z"
+    },
+    {
+      "name": "Database Statistics",
+      "status": "passed",
+      "details": {
+        "message": "Successfully retrieved statistics",
+        "totalUpdates": 1210
+      },
+      "timestamp": "2025-11-02T21:26:56.986Z"
+    },
+    {
+      "name": "RSS Pipeline",
+      "status": "passed",
+      "details": {
+        "message": "Fetched from 13/13 sources, 0 new updates",
+        "successful": 13,
+        "failed": 0,
+        "newUpdates": 0
+      },
+      "timestamp": "2025-11-02T21:27:24.001Z"
+    },
+    {
+      "name": "RSS Persistence",
+      "status": "passed",
+      "details": {
+        "message": "10 recent updates found in database"
+      },
+      "timestamp": "2025-11-02T21:27:24.060Z"
+    },
+    {
+      "name": "AI Analyzer",
+      "status": "failed",
+      "details": {
+        "message": "Invalid analysis response",
+        "analysis": {
+          "success": true,
+          "fallback": false,
+          "data": {
+            "headline": "FCA publishes new guidance on consumer duty",
+            "authority": "FCA",
+            "publishedDate": "2025-11-02T21:27:24.060Z",
+            "area": "Consumer Duty",
+            "category": "Consumer Duty",
+            "sector": "Banking",
+            "primarySectors": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "primary_sectors": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "ai_summary": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+            "impact": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+            "impactLevel": "Significant",
+            "impact_level": "Significant",
+            "urgency": "High",
+            "keyDates": "No specific dates mentioned, but firms are expected to implement the guidance as soon as possible",
+            "key_dates": "No specific dates mentioned, but firms are expected to implement the guidance as soon as possible",
+            "complianceActions": "Firms should review and update their product design, distribution, and sales practices to ensure they meet the Consumer Duty requirements. They should also establish effective governance, risk management, and monitoring processes to ensure compliance.",
+            "businessOpportunities": "Firms that prioritize consumer outcomes and design products and services that meet consumer needs may gain a competitive advantage and improve customer loyalty.",
+            "implementationComplexity": "Medium",
+            "riskLevel": "Medium",
+            "affectedFirmSizes": [
+              "small",
+              "medium",
+              "large"
+            ],
+            "firmTypesAffected": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "firm_types_affected": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "businessImpactScore": 10,
+            "business_impact_score": 10,
+            "ai_tags": [
+              "impact:significant",
+              "urgency:high",
+              "sector:banking",
+              "sector:investment-management",
+              "sector:insurance",
+              "sector:payment-services",
+              "sector:fintech",
+              "sector:wealth-management",
+              "type:guidance",
+              "area:consumer-duty"
+            ],
+            "aiTags": [
+              "impact:significant",
+              "urgency:high",
+              "sector:banking",
+              "sector:investment-management",
+              "sector:insurance",
+              "sector:payment-services",
+              "sector:fintech",
+              "sector:wealth-management",
+              "type:guidance",
+              "area:consumer-duty"
+            ],
+            "ai_confidence_score": 0.9000000000000001,
+            "aiConfidenceScore": 0.9000000000000001,
+            "sectorRelevanceScores": {
+              "Banking": 85,
+              "Investment Management": 70,
+              "Insurance": 60,
+              "Payment Services": 50,
+              "Fintech": 40,
+              "Wealth Management": 30
+            },
+            "sector_relevance_scores": {
+              "Banking": 85,
+              "Investment Management": 70,
+              "Insurance": 60,
+              "Payment Services": 50,
+              "Fintech": 40,
+              "Wealth Management": 30
+            },
+            "implementationPhases": [
+              {
+                "phase": "Initial Analysis",
+                "duration": "1-2 weeks",
+                "description": "Review requirements and assess current compliance state",
+                "priority": "High",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Policy Development",
+                "duration": "4-6 weeks",
+                "description": "Develop or update policies and procedures",
+                "priority": "High",
+                "effort": "High"
+              },
+              {
+                "phase": "Training & Implementation",
+                "duration": "2-4 weeks",
+                "description": "Staff training and go-live activities",
+                "priority": "Medium",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Monitoring & Review",
+                "duration": "Ongoing",
+                "description": "Monitor compliance and effectiveness",
+                "priority": "Low",
+                "effort": "Low"
+              }
+            ],
+            "implementation_phases": [
+              {
+                "phase": "Initial Analysis",
+                "duration": "1-2 weeks",
+                "description": "Review requirements and assess current compliance state",
+                "priority": "High",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Policy Development",
+                "duration": "4-6 weeks",
+                "description": "Develop or update policies and procedures",
+                "priority": "High",
+                "effort": "High"
+              },
+              {
+                "phase": "Training & Implementation",
+                "duration": "2-4 weeks",
+                "description": "Staff training and go-live activities",
+                "priority": "Medium",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Monitoring & Review",
+                "duration": "Ongoing",
+                "description": "Monitor compliance and effectiveness",
+                "priority": "Low",
+                "effort": "Low"
+              }
+            ],
+            "requiredResources": {
+              "totalEffortDays": 80,
+              "estimatedCost": {
+                "internal": "£114,800",
+                "external": "£5,000 - £15,000",
+                "total": "£124,800"
+              },
+              "roleBreakdown": [
+                {
+                  "role": "Compliance Officer",
+                  "effort": "40 days",
+                  "skills": [
+                    "Regulatory analysis",
+                    "Policy development",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Legal Counsel",
+                  "effort": "24 days",
+                  "skills": [
+                    "Regulatory law",
+                    "Legal interpretation",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Business Analyst",
+                  "effort": "32 days",
+                  "skills": [
+                    "Process analysis",
+                    "Requirements gathering",
+                    "Implementation planning"
+                  ]
+                },
+                {
+                  "role": "Project Manager",
+                  "effort": "24 days",
+                  "skills": [
+                    "Project coordination",
+                    "Stakeholder management",
+                    "Implementation oversight"
+                  ]
+                }
+              ],
+              "externalConsulting": true,
+              "trainingRequired": true,
+              "systemChanges": false
+            },
+            "required_resources": {
+              "totalEffortDays": 80,
+              "estimatedCost": {
+                "internal": "£114,800",
+                "external": "£5,000 - £15,000",
+                "total": "£124,800"
+              },
+              "roleBreakdown": [
+                {
+                  "role": "Compliance Officer",
+                  "effort": "40 days",
+                  "skills": [
+                    "Regulatory analysis",
+                    "Policy development",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Legal Counsel",
+                  "effort": "24 days",
+                  "skills": [
+                    "Regulatory law",
+                    "Legal interpretation",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Business Analyst",
+                  "effort": "32 days",
+                  "skills": [
+                    "Process analysis",
+                    "Requirements gathering",
+                    "Implementation planning"
+                  ]
+                },
+                {
+                  "role": "Project Manager",
+                  "effort": "24 days",
+                  "skills": [
+                    "Project coordination",
+                    "Stakeholder management",
+                    "Implementation oversight"
+                  ]
+                }
+              ],
+              "externalConsulting": true,
+              "trainingRequired": true,
+              "systemChanges": false
+            },
+            "complianceDeadline": null,
+            "compliance_deadline": null,
+            "aiModelUsed": "llama-3.1-8b-instant",
+            "fallbackAnalysis": false,
+            "enhancedAt": "2025-11-02T21:27:24.920Z",
+            "analysisTimestamp": "2025-11-02T21:27:24.920Z",
+            "content_type": "OTHER",
+            "contentType": "OTHER"
+          },
+          "analysis": {
+            "headline": "FCA publishes new guidance on consumer duty",
+            "authority": "FCA",
+            "publishedDate": "2025-11-02T21:27:24.060Z",
+            "area": "Consumer Duty",
+            "category": "Consumer Duty",
+            "sector": "Banking",
+            "primarySectors": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "primary_sectors": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "ai_summary": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+            "impact": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+            "impactLevel": "Significant",
+            "impact_level": "Significant",
+            "urgency": "High",
+            "keyDates": "No specific dates mentioned, but firms are expected to implement the guidance as soon as possible",
+            "key_dates": "No specific dates mentioned, but firms are expected to implement the guidance as soon as possible",
+            "complianceActions": "Firms should review and update their product design, distribution, and sales practices to ensure they meet the Consumer Duty requirements. They should also establish effective governance, risk management, and monitoring processes to ensure compliance.",
+            "businessOpportunities": "Firms that prioritize consumer outcomes and design products and services that meet consumer needs may gain a competitive advantage and improve customer loyalty.",
+            "implementationComplexity": "Medium",
+            "riskLevel": "Medium",
+            "affectedFirmSizes": [
+              "small",
+              "medium",
+              "large"
+            ],
+            "firmTypesAffected": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "firm_types_affected": [
+              "Banking",
+              "Investment Management",
+              "Insurance",
+              "Payment Services",
+              "Fintech",
+              "Wealth Management"
+            ],
+            "businessImpactScore": 10,
+            "business_impact_score": 10,
+            "ai_tags": [
+              "impact:significant",
+              "urgency:high",
+              "sector:banking",
+              "sector:investment-management",
+              "sector:insurance",
+              "sector:payment-services",
+              "sector:fintech",
+              "sector:wealth-management",
+              "type:guidance",
+              "area:consumer-duty"
+            ],
+            "aiTags": [
+              "impact:significant",
+              "urgency:high",
+              "sector:banking",
+              "sector:investment-management",
+              "sector:insurance",
+              "sector:payment-services",
+              "sector:fintech",
+              "sector:wealth-management",
+              "type:guidance",
+              "area:consumer-duty"
+            ],
+            "ai_confidence_score": 0.9000000000000001,
+            "aiConfidenceScore": 0.9000000000000001,
+            "sectorRelevanceScores": {
+              "Banking": 85,
+              "Investment Management": 70,
+              "Insurance": 60,
+              "Payment Services": 50,
+              "Fintech": 40,
+              "Wealth Management": 30
+            },
+            "sector_relevance_scores": {
+              "Banking": 85,
+              "Investment Management": 70,
+              "Insurance": 60,
+              "Payment Services": 50,
+              "Fintech": 40,
+              "Wealth Management": 30
+            },
+            "implementationPhases": [
+              {
+                "phase": "Initial Analysis",
+                "duration": "1-2 weeks",
+                "description": "Review requirements and assess current compliance state",
+                "priority": "High",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Policy Development",
+                "duration": "4-6 weeks",
+                "description": "Develop or update policies and procedures",
+                "priority": "High",
+                "effort": "High"
+              },
+              {
+                "phase": "Training & Implementation",
+                "duration": "2-4 weeks",
+                "description": "Staff training and go-live activities",
+                "priority": "Medium",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Monitoring & Review",
+                "duration": "Ongoing",
+                "description": "Monitor compliance and effectiveness",
+                "priority": "Low",
+                "effort": "Low"
+              }
+            ],
+            "implementation_phases": [
+              {
+                "phase": "Initial Analysis",
+                "duration": "1-2 weeks",
+                "description": "Review requirements and assess current compliance state",
+                "priority": "High",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Policy Development",
+                "duration": "4-6 weeks",
+                "description": "Develop or update policies and procedures",
+                "priority": "High",
+                "effort": "High"
+              },
+              {
+                "phase": "Training & Implementation",
+                "duration": "2-4 weeks",
+                "description": "Staff training and go-live activities",
+                "priority": "Medium",
+                "effort": "Medium"
+              },
+              {
+                "phase": "Monitoring & Review",
+                "duration": "Ongoing",
+                "description": "Monitor compliance and effectiveness",
+                "priority": "Low",
+                "effort": "Low"
+              }
+            ],
+            "requiredResources": {
+              "totalEffortDays": 80,
+              "estimatedCost": {
+                "internal": "£114,800",
+                "external": "£5,000 - £15,000",
+                "total": "£124,800"
+              },
+              "roleBreakdown": [
+                {
+                  "role": "Compliance Officer",
+                  "effort": "40 days",
+                  "skills": [
+                    "Regulatory analysis",
+                    "Policy development",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Legal Counsel",
+                  "effort": "24 days",
+                  "skills": [
+                    "Regulatory law",
+                    "Legal interpretation",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Business Analyst",
+                  "effort": "32 days",
+                  "skills": [
+                    "Process analysis",
+                    "Requirements gathering",
+                    "Implementation planning"
+                  ]
+                },
+                {
+                  "role": "Project Manager",
+                  "effort": "24 days",
+                  "skills": [
+                    "Project coordination",
+                    "Stakeholder management",
+                    "Implementation oversight"
+                  ]
+                }
+              ],
+              "externalConsulting": true,
+              "trainingRequired": true,
+              "systemChanges": false
+            },
+            "required_resources": {
+              "totalEffortDays": 80,
+              "estimatedCost": {
+                "internal": "£114,800",
+                "external": "£5,000 - £15,000",
+                "total": "£124,800"
+              },
+              "roleBreakdown": [
+                {
+                  "role": "Compliance Officer",
+                  "effort": "40 days",
+                  "skills": [
+                    "Regulatory analysis",
+                    "Policy development",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Legal Counsel",
+                  "effort": "24 days",
+                  "skills": [
+                    "Regulatory law",
+                    "Legal interpretation",
+                    "Risk assessment"
+                  ]
+                },
+                {
+                  "role": "Business Analyst",
+                  "effort": "32 days",
+                  "skills": [
+                    "Process analysis",
+                    "Requirements gathering",
+                    "Implementation planning"
+                  ]
+                },
+                {
+                  "role": "Project Manager",
+                  "effort": "24 days",
+                  "skills": [
+                    "Project coordination",
+                    "Stakeholder management",
+                    "Implementation oversight"
+                  ]
+                }
+              ],
+              "externalConsulting": true,
+              "trainingRequired": true,
+              "systemChanges": false
+            },
+            "complianceDeadline": null,
+            "compliance_deadline": null,
+            "aiModelUsed": "llama-3.1-8b-instant",
+            "fallbackAnalysis": false,
+            "enhancedAt": "2025-11-02T21:27:24.920Z",
+            "analysisTimestamp": "2025-11-02T21:27:24.920Z",
+            "content_type": "OTHER",
+            "contentType": "OTHER"
+          },
+          "ai_summary": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+          "impact": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+          "impactLevel": "Significant",
+          "urgency": "High",
+          "sector": "Banking",
+          "primarySectors": [
+            "Banking",
+            "Investment Management",
+            "Insurance",
+            "Payment Services",
+            "Fintech",
+            "Wealth Management"
+          ],
+          "ai_tags": [
+            "impact:significant",
+            "urgency:high",
+            "sector:banking",
+            "sector:investment-management",
+            "sector:insurance",
+            "sector:payment-services",
+            "sector:fintech",
+            "sector:wealth-management",
+            "type:guidance",
+            "area:consumer-duty"
+          ],
+          "aiTags": [
+            "impact:significant",
+            "urgency:high",
+            "sector:banking",
+            "sector:investment-management",
+            "sector:insurance",
+            "sector:payment-services",
+            "sector:fintech",
+            "sector:wealth-management",
+            "type:guidance",
+            "area:consumer-duty"
+          ],
+          "businessImpactScore": 10,
+          "businessImpact": "The FCA's new guidance on the Consumer Duty framework is a significant development for financial services firms, particularly those in Banking and Investment Management. The guidance provides clarity on the practical implications of the Consumer Duty, including the need for firms to prioritize consumer outcomes and ensure that their products and services meet consumer needs. This will require firms to review and update their product design, distribution, and sales practices to ensure they are consumer-focused. The guidance also emphasizes the importance of effective governance, risk management, and monitoring to ensure compliance with the Consumer Duty.",
+          "confidence": 0.9000000000000001,
+          "ai_confidence_score": 0.9000000000000001,
+          "category": "Consumer Duty",
+          "area": "Consumer Duty",
+          "key_dates": "No specific dates mentioned, but firms are expected to implement the guidance as soon as possible",
+          "keyDates": "No specific dates mentioned, but firms are expected to implement the guidance as soon as possible",
+          "complianceActions": "Firms should review and update their product design, distribution, and sales practices to ensure they meet the Consumer Duty requirements. They should also establish effective governance, risk management, and monitoring processes to ensure compliance.",
+          "compliance_deadline": null,
+          "complianceDeadline": null,
+          "sectorRelevanceScores": {
+            "Banking": 85,
+            "Investment Management": 70,
+            "Insurance": 60,
+            "Payment Services": 50,
+            "Fintech": 40,
+            "Wealth Management": 30
+          },
+          "implementationPhases": [
+            {
+              "phase": "Initial Analysis",
+              "duration": "1-2 weeks",
+              "description": "Review requirements and assess current compliance state",
+              "priority": "High",
+              "effort": "Medium"
+            },
+            {
+              "phase": "Policy Development",
+              "duration": "4-6 weeks",
+              "description": "Develop or update policies and procedures",
+              "priority": "High",
+              "effort": "High"
+            },
+            {
+              "phase": "Training & Implementation",
+              "duration": "2-4 weeks",
+              "description": "Staff training and go-live activities",
+              "priority": "Medium",
+              "effort": "Medium"
+            },
+            {
+              "phase": "Monitoring & Review",
+              "duration": "Ongoing",
+              "description": "Monitor compliance and effectiveness",
+              "priority": "Low",
+              "effort": "Low"
+            }
+          ],
+          "requiredResources": {
+            "totalEffortDays": 80,
+            "estimatedCost": {
+              "internal": "£114,800",
+              "external": "£5,000 - £15,000",
+              "total": "£124,800"
+            },
+            "roleBreakdown": [
+              {
+                "role": "Compliance Officer",
+                "effort": "40 days",
+                "skills": [
+                  "Regulatory analysis",
+                  "Policy development",
+                  "Risk assessment"
+                ]
+              },
+              {
+                "role": "Legal Counsel",
+                "effort": "24 days",
+                "skills": [
+                  "Regulatory law",
+                  "Legal interpretation",
+                  "Risk assessment"
+                ]
+              },
+              {
+                "role": "Business Analyst",
+                "effort": "32 days",
+                "skills": [
+                  "Process analysis",
+                  "Requirements gathering",
+                  "Implementation planning"
+                ]
+              },
+              {
+                "role": "Project Manager",
+                "effort": "24 days",
+                "skills": [
+                  "Project coordination",
+                  "Stakeholder management",
+                  "Implementation oversight"
+                ]
+              }
+            ],
+            "externalConsulting": true,
+            "trainingRequired": true,
+            "systemChanges": false
+          },
+          "firmTypesAffected": [
+            "Banking",
+            "Investment Management",
+            "Insurance",
+            "Payment Services",
+            "Fintech",
+            "Wealth Management"
+          ],
+          "affectedFirmSizes": [
+            "small",
+            "medium",
+            "large"
+          ],
+          "aiModelUsed": "llama-3.1-8b-instant"
+        }
+      },
+      "timestamp": "2025-11-02T21:27:24.921Z"
+    },
+    {
+      "name": "Predictive Intelligence",
+      "status": "passed",
+      "details": {
+        "message": "Found 5 imminent predictions",
+        "imminentCount": 5,
+        "nearTermCount": 5
+      },
+      "timestamp": "2025-11-02T21:27:25.462Z"
+    },
+    {
+      "name": "Frontend: Dashboard",
+      "status": "skipped",
+      "details": {
+        "message": "Page structure may have changed"
+      },
+      "timestamp": "2025-11-02T21:27:25.473Z"
+    },
+    {
+      "name": "Frontend: Enforcement",
+      "status": "passed",
+      "details": {
+        "message": "Rendered 201432 bytes of HTML",
+        "hasTitle": true,
+        "hasRegCanary": true
+      },
+      "timestamp": "2025-11-02T21:27:25.535Z"
+    },
+    {
+      "name": "Frontend: Weekly Briefing",
+      "status": "passed",
+      "details": {
+        "message": "Rendered 859021 bytes of HTML",
+        "hasTitle": true,
+        "hasRegCanary": true
+      },
+      "timestamp": "2025-11-02T21:27:25.784Z"
+    },
+    {
+      "name": "Frontend: Analytics",
+      "status": "passed",
+      "details": {
+        "message": "Rendered 350155 bytes of HTML",
+        "hasTitle": true,
+        "hasRegCanary": true
+      },
+      "timestamp": "2025-11-02T21:27:25.842Z"
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 1,
+    "skipped": 1
+  }
+}

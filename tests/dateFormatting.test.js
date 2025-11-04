@@ -14,7 +14,7 @@ beforeAll(() => {
     jest.setSystemTime(new Date('2025-10-01T00:00:00Z'));
     global.__consoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
     global.__consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    ({ formatDate, getDateValue, truncateText, isFallbackSummary } = require('../src/routes/pages/dashboardPage'));
+    ({ formatDate, getDateValue, truncateText, isFallbackSummary } = require('../src/views/dashboard/helpers'));
 });
 
 afterAll(() => {

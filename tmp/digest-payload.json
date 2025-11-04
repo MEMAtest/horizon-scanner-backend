@@ -1,0 +1,134 @@
+{
+  "personaLabel": "Executive",
+  "summary": "This digest presents 1 critical alert, 7 enforcement updates from 4 authorities. Primary sectors: Banking, Capital Markets, Investment Management. Focus areas: enforcement and guidance. Priority review recommended for compliance and risk assessment.",
+  "insights": [
+    {
+      "id": "2626",
+      "headline": "£1.1 million compound settlement for sanctions breach",
+      "summary": "Significant regulatory development requiring attention: 1. 1 million compound settlement for sanctions breach The breach was in relation to a UK exporter that made goods available to Russia, prohibited under the Russia Sanctions Regulations",
+      "authority": "HMRC",
+      "sectors": [
+        "Banking"
+      ],
+      "sector": "Banking",
+      "relevanceScore": 100,
+      "priorityReason": "Enforcement action requiring immediate attention",
+      "published": "2025-11-03T13:24:45.000Z",
+      "url": "https://www.gov.uk/government/case-studies/11-million-compound-settlement-for-sanctions-breach"
+    },
+    {
+      "id": "2612",
+      "headline": "Guidance: List of Individual Savings Account (ISA) managers approved by HMRC",
+      "summary": "Regulatory update impacting business operations: Guidance: List of Individual Savings Account ISA managers approved by HMRC Find ISA managers approved by HMRC from October 2014",
+      "authority": "HMRC",
+      "sectors": [
+        "Banking"
+      ],
+      "sector": "Banking",
+      "relevanceScore": 61,
+      "priorityReason": "Regulatory guidance for compliance planning",
+      "published": "2025-11-03T09:00:03.000Z",
+      "url": "https://www.gov.uk/government/publications/list-of-individual-savings-account-isa-managers-approved-by-hmrc"
+    },
+    {
+      "id": "2633",
+      "headline": "Guidance: Business Asset Roll-over Relief (Self Assessment helpsheet HS290)",
+      "summary": "Regulatory update impacting business operations: Guidance: Business Asset Roll-over Relief Self Assessment helpsheet HS290 Find out how to claim Business Asset Roll-over Relief",
+      "authority": "HMRC",
+      "sectors": [
+        "Banking"
+      ],
+      "sector": "Banking",
+      "relevanceScore": 58,
+      "priorityReason": "Policy update for monitoring",
+      "published": "2025-11-03T15:17:12.000Z",
+      "url": "https://www.gov.uk/government/publications/business-asset-roll-over-relief-hs290-self-assessment-helpsheet"
+    },
+    {
+      "id": "2499",
+      "headline": "Defence Housing Strategy: A £9bn ‘generational renewal' for forces family housing and 100,000 new homes on MOD land to drive growth",
+      "summary": "The MOD's new Defence Housing Strategy will have a significant impact on the UK's housing market, with £9bn invested in improving over 40,000 military homes and 100,000 new homes on MOD land. This will drive growth and create new opportunities for developers and investors. However, it may also lead to increased competition for land and resources, potentially affecting prices and availability.",
+      "authority": "HM Government",
+      "sectors": [
+        "Real Estate Finance",
+        "Construction",
+        "Infrastructure"
+      ],
+      "sector": "Real Estate Finance",
+      "relevanceScore": 64,
+      "priorityReason": "Relevance score: 64%",
+      "published": "2025-11-02T00:30:06.000Z",
+      "url": "https://www.gov.uk/government/news/defence-housing-strategy-a-9bn-generational-renewal-for-forces-family-housing-and-100000-new-homes-on-mod-land-to-drive-growth"
+    },
+    {
+      "id": "2500",
+      "headline": "Major change for rare disease treatments on way, signals MHRA",
+      "summary": "The proposed changes to the rulebook for rare disease therapies in the UK will have significant implications for pharmaceutical companies, biotech firms, and healthcare providers. They will need to adapt to new regulations, potentially impacting product development, clinical trials, and market access. This may lead to increased costs, delays, or changes in business strategies. Companies should closely monitor the developments and prepare for potential changes.",
+      "authority": "HM Government",
+      "sectors": [
+        "Pharmaceuticals",
+        "Biotechnology",
+        "Healthcare"
+      ],
+      "sector": "Pharmaceuticals",
+      "relevanceScore": 64,
+      "priorityReason": "Relevance score: 64%",
+      "published": "2025-11-02T00:00:00.000Z",
+      "url": "https://www.gov.uk/government/news/major-change-for-rare-disease-treatments-on-way-signals-mhra"
+    },
+    {
+      "id": "2599",
+      "headline": "PRA Regulatory Digest - October 2025",
+      "summary": "Informational regulatory update: PRA Regulatory Digest - October 2025 The PRA Regulatory Digest is for people working in the UK financial services industry and highlights key regulatory news and publications delivered for the month",
+      "authority": "PRA",
+      "sectors": [
+        "Banking"
+      ],
+      "sector": "Banking",
+      "relevanceScore": 55,
+      "priorityReason": "Relevance score: 55%",
+      "published": "2025-11-03T10:00:00.000Z",
+      "url": "https://www.bankofengland.co.uk/prudential-regulation/regulatory-digest/2025/october-2025"
+    },
+    {
+      "id": "2498",
+      "headline": "Smarter Web Company - Holding(s) in Company",
+      "summary": "The announcement by Smarter Web Company Plc regarding holding(s) in company may trigger a review of existing shareholdings and potential changes in company control. This may lead to increased scrutiny from regulatory bodies and investors, potentially impacting the company's reputation and market value.",
+      "authority": "AQUIS",
+      "sectors": [
+        "Capital Markets",
+        "Investment Management",
+        "Corporate Finance"
+      ],
+      "sector": "Capital Markets",
+      "relevanceScore": 54,
+      "priorityReason": "Relevance score: 54%",
+      "published": "2025-11-01T22:57:08.222Z",
+      "url": "https://www.aquis.eu/stock-exchange/announcements/5438263"
+    },
+    {
+      "id": "2497",
+      "headline": "Adnams PLC - Director/PDMR Shareholding",
+      "summary": "Adnams PLC has made a director/PDMR shareholding announcement, which may impact investor confidence and market sentiment. This announcement may require companies to review their own shareholding disclosure practices and ensure compliance with relevant regulations.",
+      "authority": "AQUIS",
+      "sectors": [
+        "Capital Markets",
+        "Investment Management",
+        "Corporate Finance"
+      ],
+      "sector": "Capital Markets",
+      "relevanceScore": 44,
+      "priorityReason": "Relevance score: 44%",
+      "published": "2025-11-01T22:27:06.584Z",
+      "url": "https://www.aquis.eu/stock-exchange/announcements/5438267"
+    }
+  ],
+  "metrics": {
+    "highCount": 1,
+    "mediumCount": 0,
+    "lowCount": 7,
+    "uniqueAuthorities": 4,
+    "deadlineCount": 1
+  },
+  "generatedAt": "2025-11-03T23:26:06.447Z"
+}

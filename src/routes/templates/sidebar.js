@@ -26,7 +26,9 @@ async function getSidebar(currentPage = '') {
         <div class="sidebar" id="sidebar">
             <!-- Clean Header with Light Background -->
             <div class="sidebar-header-clean">
-                <h2>Regulatory Horizon Scanner</h2>
+                <a href="/" style="display: block; margin-bottom: 0.75rem; transition: opacity 0.2s ease;">
+                    <img src="/images/logo.png" alt="MEMA Consultants" class="sidebar-logo" style="width: 100%; height: auto;" />
+                </a>
                 <div class="sidebar-status">
                     <span class="status-indicator online" title="System Online"></span>
                     <span class="last-update">Last sync: ${formatRelativeTime(new Date())}</span>
@@ -146,7 +148,23 @@ async function getSidebar(currentPage = '') {
                 background: #f8f9fa;
                 border-bottom: 1px solid #e5e7eb;
             }
-            
+
+            .sidebar-logo-link {
+                display: block;
+                margin-bottom: 0.75rem;
+                transition: opacity 0.2s ease;
+            }
+
+            .sidebar-logo-link:hover {
+                opacity: 0.8;
+            }
+
+            .sidebar-logo {
+                width: 100%;
+                height: auto;
+                display: block;
+            }
+
             .sidebar-header-clean h2 {
                 font-size: 1.1rem;
                 font-weight: 700;

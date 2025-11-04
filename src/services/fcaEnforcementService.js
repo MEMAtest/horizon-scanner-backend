@@ -221,7 +221,21 @@ class FCAEnforcementService {
                         ) AS category,
                         f.amount
                     FROM fca_fines f
-                    LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) AS bc(category) ON true
+                    LEFT JOIN LATERAL (
+                        SELECT value::text as category
+                        FROM jsonb_array_elements_text(
+                            CASE
+                                WHEN jsonb_typeof(f.breach_categories) = 'array' THEN f.breach_categories
+                                WHEN jsonb_typeof(f.breach_categories) = 'string' THEN
+                                    CASE
+                                        WHEN f.breach_categories::text ~ '^"\\[.*\\]"$' THEN
+                                            (f.breach_categories #>> '{}')::jsonb
+                                        ELSE to_jsonb(ARRAY[f.breach_categories::text])
+                                    END
+                                ELSE '[]'::jsonb
+                            END
+                        ) as value
+                    ) AS bc(category) ON true
                 )
                 SELECT
                     category,
@@ -243,7 +257,21 @@ class FCAEnforcementService {
                         ) AS sector,
                         f.amount
                     FROM fca_fines f
-                    LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.affected_sectors, '[]'::jsonb)) AS s(sector) ON true
+                    LEFT JOIN LATERAL (
+                        SELECT value::text as sector
+                        FROM jsonb_array_elements_text(
+                            CASE
+                                WHEN jsonb_typeof(f.affected_sectors) = 'array' THEN f.affected_sectors
+                                WHEN jsonb_typeof(f.affected_sectors) = 'string' THEN
+                                    CASE
+                                        WHEN f.affected_sectors::text ~ '^"\\[.*\\]"$' THEN
+                                            (f.affected_sectors #>> '{}')::jsonb
+                                        ELSE to_jsonb(ARRAY[f.affected_sectors::text])
+                                    END
+                                ELSE '[]'::jsonb
+                            END
+                        ) as value
+                    ) AS s(sector) ON true
                 )
                 SELECT
                     sector,
@@ -263,10 +291,24 @@ class FCAEnforcementService {
             `)
 
       const categoriesResult = await this.db.query(`
-                SELECT DISTINCT TRIM(value) as category
+                SELECT DISTINCT TRIM(value::text) as category
                 FROM fca_fines f
-                CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) as value
-                WHERE value IS NOT NULL AND TRIM(value) <> ''
+                CROSS JOIN LATERAL (
+                    SELECT value
+                    FROM jsonb_array_elements_text(
+                        CASE
+                            WHEN jsonb_typeof(f.breach_categories) = 'array' THEN f.breach_categories
+                            WHEN jsonb_typeof(f.breach_categories) = 'string' THEN
+                                CASE
+                                    WHEN f.breach_categories::text ~ '^"\\[.*\\]"$' THEN
+                                        (f.breach_categories #>> '{}')::jsonb
+                                    ELSE to_jsonb(ARRAY[f.breach_categories::text])
+                                END
+                            ELSE '[]'::jsonb
+                        END
+                    ) as value
+                ) as val
+                WHERE val.value IS NOT NULL AND TRIM(val.value::text) <> ''
                 ORDER BY category ASC
             `)
 
@@ -303,7 +345,21 @@ class FCAEnforcementService {
                             ) AS category,
                             f.amount
                         FROM fca_fines f
-                        LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) AS bc(category) ON true
+                        LEFT JOIN LATERAL (
+                            SELECT value::text as category
+                            FROM jsonb_array_elements_text(
+                                CASE
+                                    WHEN jsonb_typeof(f.breach_categories) = 'array' THEN f.breach_categories
+                                    WHEN jsonb_typeof(f.breach_categories) = 'string' THEN
+                                        CASE
+                                            WHEN f.breach_categories::text ~ '^"\\[.*\\]"$' THEN
+                                                (f.breach_categories #>> '{}')::jsonb
+                                            ELSE to_jsonb(ARRAY[f.breach_categories::text])
+                                        END
+                                    ELSE '[]'::jsonb
+                                END
+                            ) as value
+                        ) AS bc(category) ON true
                     ) data
                     GROUP BY data.year_issued, data.category
                 ),
@@ -327,7 +383,21 @@ class FCAEnforcementService {
                             ) AS sector,
                             f.amount
                         FROM fca_fines f
-                        LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.affected_sectors, '[]'::jsonb)) AS s(sector) ON true
+                        LEFT JOIN LATERAL (
+                            SELECT value::text as sector
+                            FROM jsonb_array_elements_text(
+                                CASE
+                                    WHEN jsonb_typeof(f.affected_sectors) = 'array' THEN f.affected_sectors
+                                    WHEN jsonb_typeof(f.affected_sectors) = 'string' THEN
+                                        CASE
+                                            WHEN f.affected_sectors::text ~ '^"\\[.*\\]"$' THEN
+                                                (f.affected_sectors #>> '{}')::jsonb
+                                            ELSE to_jsonb(ARRAY[f.affected_sectors::text])
+                                        END
+                                    ELSE '[]'::jsonb
+                                END
+                            ) as value
+                        ) AS s(sector) ON true
                     ) data
                     GROUP BY data.year_issued, data.sector
                 )
@@ -358,7 +428,21 @@ class FCAEnforcementService {
                         ) AS category,
                         f.amount
                     FROM fca_fines f
-                    LEFT JOIN LATERAL jsonb_array_elements_text(COALESCE(f.breach_categories, '[]'::jsonb)) AS bc(category) ON true
+                    LEFT JOIN LATERAL (
+                        SELECT value::text as category
+                        FROM jsonb_array_elements_text(
+                            CASE
+                                WHEN jsonb_typeof(f.breach_categories) = 'array' THEN f.breach_categories
+                                WHEN jsonb_typeof(f.breach_categories) = 'string' THEN
+                                    CASE
+                                        WHEN f.breach_categories::text ~ '^"\\[.*\\]"$' THEN
+                                            (f.breach_categories #>> '{}')::jsonb
+                                        ELSE to_jsonb(ARRAY[f.breach_categories::text])
+                                    END
+                                ELSE '[]'::jsonb
+                            END
+                        ) as value
+                    ) AS bc(category) ON true
                 ),
                 top_categories AS (
                     SELECT category
