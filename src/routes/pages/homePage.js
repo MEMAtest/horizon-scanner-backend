@@ -30,7 +30,7 @@ async function renderHomePage(req, res) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Regulatory Horizon Scanner</title>
+            <title>RegCanary - Regulatory Intelligence Platform</title>
             ${getCommonStyles()}
             <style>
                 .home-dashboard { background: #f5f7fb; min-height: 100vh; padding: 32px 40px; }
@@ -334,7 +334,7 @@ async function renderHomePage(req, res) {
                             <div class="status-title">
                                 <div class="status-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="5" y="10" width="3" height="8" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="10.5" y="7" width="3" height="11" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="16" y="4" width="3" height="14" rx="0.8" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg></div>
                                 <div class="status-info">
-                                    <h1>Regulatory Horizon Scanner</h1>
+                                    <h1>RegCanary</h1>
                                     <p class="status-subtitle">Prioritised regulatory intelligence and actions for financial services teams.</p>
                                 </div>
                             </div>
