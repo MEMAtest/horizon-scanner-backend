@@ -27,7 +27,7 @@ async function getSidebar(currentPage = '') {
             <!-- Clean Header with Light Background -->
             <div class="sidebar-header-clean">
                 <a href="/" style="display: block; margin-bottom: 0.75rem; transition: opacity 0.2s ease;">
-                    <img src="/images/logo.png" alt="MEMA Consultants" class="sidebar-logo" style="width: 100%; height: auto;" />
+                    <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="sidebar-logo" style="width: 100%; height: auto;" />
                 </a>
                 <div class="sidebar-status">
                     <span class="status-indicator online" title="System Online"></span>
