@@ -513,7 +513,7 @@ function scheduleDailyDigest() {
     return null
   }
 
-  const cronExpression = process.env.DAILY_DIGEST_CRON || '0 6 * * *'
+  const cronExpression = process.env.DAILY_DIGEST_CRON || '0 8 * * *'
   const timezone = process.env.DAILY_DIGEST_TIMEZONE || 'Europe/London'
   const recipients = parseRecipients(process.env.DAILY_DIGEST_RECIPIENTS)
 
