@@ -20,10 +20,10 @@ function getAiIntelligenceStyles() {
       }
 
       .main-content {
-        padding: 36px 48px 64px;
+        padding: 36px 64px 80px;
         background: linear-gradient(180deg, #f8fafc 0%, #eef2f9 100%);
-        max-width: 1320px;
-        width: calc(100% - 64px);
+        max-width: 1540px;
+        width: calc(100% - 80px);
         margin: 0 auto;
       }
 

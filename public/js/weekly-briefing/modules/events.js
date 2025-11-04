@@ -30,11 +30,24 @@ function applyEventsMixin(klass) {
 
       this.registerQuickNoteGlobal()
 
+      const triggerAssemble = async () => {
+        this.showModal()
+        await this.loadPreview()
+      }
+
       if (assembleBtn) {
-        assembleBtn.addEventListener('click', async () => {
-          this.showModal()
-          await this.loadPreview()
-        })
+        assembleBtn.addEventListener('click', triggerAssemble)
+      }
+
+      if (typeof window !== 'undefined') {
+        window.assembleBriefing = async () => {
+          try {
+            await triggerAssemble()
+          } catch (error) {
+            console.error('assembleBriefing failed:', error)
+            this.showToast('Unable to open assemble workflow. Please try again.', 'error')
+          }
+        }
       }
 
       if (confirmBtn) {
@@ -61,24 +74,33 @@ function applyEventsMixin(klass) {
         })
       }
 
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-          if (assembleBtn) assembleBtn.disabled = true
+      const runRefresh = async () => {
+        if (assembleBtn) assembleBtn.disabled = true
+        try {
+          await this.loadLatestBriefing()
           try {
-            await this.loadLatestBriefing()
-            try {
-              await this.refreshAnnotationsFromServer()
-            } catch (error) {
-              console.warn('Annotation refresh failed:', error.message)
-            }
-            await this.loadMetrics()
-            this.showToast('Latest briefing refreshed.', 'success')
+            await this.refreshAnnotationsFromServer()
           } catch (error) {
-            console.error(error)
-          } finally {
-            if (assembleBtn) assembleBtn.disabled = false
+            console.warn('Annotation refresh failed:', error.message)
           }
-        })
+          await this.loadMetrics()
+          this.showToast('Latest briefing refreshed.', 'success')
+        } catch (error) {
+          console.error(error)
+          this.showToast('Refresh failed. Please retry shortly.', 'error')
+        } finally {
+          if (assembleBtn) assembleBtn.disabled = false
+        }
+      }
+
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', runRefresh)
+      }
+
+      if (typeof window !== 'undefined') {
+        window.refreshData = async () => {
+          await runRefresh()
+        }
       }
 
       if (refreshPreviewBtn) {

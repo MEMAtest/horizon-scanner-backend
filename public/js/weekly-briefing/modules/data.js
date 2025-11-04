@@ -64,8 +64,8 @@ function applyDataMixin(klass) {
       }
 
       try {
-        this.dom.confirmBtn.disabled = true
-        this.dom.assembleBtn.disabled = true
+        if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = true
+        if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = true
         this.updateRunStatus({ message: 'Submitting request…' })
         const response = await fetch('/api/weekly-briefings/run', {
           method: 'POST',
@@ -94,8 +94,8 @@ function applyDataMixin(klass) {
           this.hideModal()
           this.updateRunStatus({ message: notice })
           this.showToast(notice, 'info')
-          this.dom.confirmBtn.disabled = false
-          this.dom.assembleBtn.disabled = false
+          if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = false
+          if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
           return
         }
 
@@ -104,8 +104,8 @@ function applyDataMixin(klass) {
         this.pollRun(runId)
       } catch (error) {
         console.error(error)
-        this.dom.confirmBtn.disabled = false
-        this.dom.assembleBtn.disabled = false
+        if (this.dom.confirmBtn) this.dom.confirmBtn.disabled = false
+        if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
         this.showToast(error.message || 'Unable to start briefing generation', 'error', false)
       }
     },
@@ -124,7 +124,7 @@ function applyDataMixin(klass) {
           if (!payload.status) return
           if (payload.status.state === 'completed') {
             clearInterval(this.state.polling)
-            this.dom.assembleBtn.disabled = false
+            if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
             await this.loadLatestBriefing(payload.status.briefingId)
             try {
               await this.refreshAnnotationsFromServer()
@@ -135,14 +135,19 @@ function applyDataMixin(klass) {
             this.showToast(payload.status.cacheHit ? 'Loaded cached briefing.' : 'Smart Briefing generated successfully.', 'success')
           } else if (payload.status.state === 'failed') {
             clearInterval(this.state.polling)
-            this.dom.assembleBtn.disabled = false
+            if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
             this.showToast(payload.status.error || 'Briefing generation failed.', 'error', false)
           }
         } catch (error) {
           console.error(error)
           clearInterval(this.state.polling)
-          this.dom.assembleBtn.disabled = false
-          this.showToast(error.message || 'Status check failed', 'error', false)
+          if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
+          const message = (error && error.message) || 'Status check failed'
+          const friendly = /failed to fetch|network/i.test(message)
+            ? 'Unable to reach the briefing service. Please confirm the API is running and try again.'
+            : message
+          this.updateRunStatus({ state: 'failed', message: friendly })
+          this.showToast(friendly, 'error', false)
         }
       }, 3000)
     },
