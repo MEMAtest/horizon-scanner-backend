@@ -240,11 +240,6 @@ async function buildDigestPayload(options = {}) {
 
     if (isJobPosting) return false
 
-    // Temporarily exclude FATF content (poor quality summaries)
-    if (authority.includes('fatf')) {
-      return false
-    }
-
     // Exclude low-quality summaries
     // Check for repetitive text (same word/phrase repeated)
     const words = summary.split(/\s+/)
@@ -288,12 +283,14 @@ async function buildDigestPayload(options = {}) {
   const balancedSelection = []
   const authorityCount = {}
   const sectorCount = {}
-  const MAX_PER_AUTHORITY = 3 // Maximum items from same authority
-  const MAX_PER_SECTOR = 4 // Maximum items from same sector
+  const TARGET_MIN = 10 // Minimum items we want to include
+  const TARGET_MAX = 15 // Maximum items to include
+  const MAX_PER_AUTHORITY = 3 // Maximum items from same authority (relaxed if needed)
+  const MAX_PER_SECTOR = 5 // Maximum items from same sector
 
-  // First pass: prioritize high-impact items
+  // First pass: prioritize high-impact items (score >= 80)
   for (const update of filtered) {
-    if (balancedSelection.length >= 10) break
+    if (balancedSelection.length >= TARGET_MAX) break
     if (update.relevanceScore >= 80) {
       balancedSelection.push(update)
       const authority = update.authority || 'Unknown'
@@ -305,7 +302,7 @@ async function buildDigestPayload(options = {}) {
 
   // Second pass: add diverse content respecting limits
   for (const update of filtered) {
-    if (balancedSelection.length >= 10) break
+    if (balancedSelection.length >= TARGET_MAX) break
     if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
       continue // Already selected
     }
@@ -331,6 +328,37 @@ async function buildDigestPayload(options = {}) {
     balancedSelection.push(update)
     authorityCount[authority] = (authorityCount[authority] || 0) + 1
     sectorCount[sector] = (sectorCount[sector] || 0) + 1
+  }
+
+  // Third pass: if we don't have enough items, relax authority limits
+  if (balancedSelection.length < TARGET_MIN) {
+    for (const update of filtered) {
+      if (balancedSelection.length >= TARGET_MAX) break
+      if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
+        continue
+      }
+
+      const authority = update.authority || 'Unknown'
+      const sector = update.sector || 'Unknown'
+
+      // Relaxed limit: allow up to 5 per authority if we're short on content
+      if ((authorityCount[authority] || 0) >= 5) continue
+      if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
+
+      // Still exclude obvious low-value AQUIS content
+      if (authority === 'AQUIS') {
+        const headline = (update.headline || '').toLowerCase()
+        if (headline.includes('agm') ||
+            headline.includes('shares in issue') ||
+            headline.includes('subscription agreement')) {
+          continue
+        }
+      }
+
+      balancedSelection.push(update)
+      authorityCount[authority] = (authorityCount[authority] || 0) + 1
+      sectorCount[sector] = (sectorCount[sector] || 0) + 1
+    }
   }
 
   const insights = balancedSelection.map(update => {
