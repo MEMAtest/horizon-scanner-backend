@@ -3,7 +3,7 @@ function renderHeaderSection(metaHtml) {
     <header class="report-header">
       <div class="report-header-content">
         <div class="report-title-section">
-          <h1 class="report-title">Weekly Regulatory Roundup</h1>
+          <span class="report-badge">Weekly Briefing</span>
           <div class="report-meta" id="briefingMeta">
             ${metaHtml}
           </div>

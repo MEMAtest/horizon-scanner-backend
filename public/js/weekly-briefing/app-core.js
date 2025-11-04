@@ -1,13 +1,3 @@
-import { applyUtilsMixin } from './modules/utils.js'
-import { applyHighlightsMixin } from './modules/highlights.js'
-import { applyQuickNoteMixin } from './modules/quickNote.js'
-import { applyRenderMixin } from './modules/renderers.js'
-import { applyAnnotationsMixin } from './modules/annotations.js'
-import { applyMetricsMixin } from './modules/metrics.js'
-import { applyDataMixin } from './modules/data.js'
-import { applyModalsMixin } from './modules/modals.js'
-import { applyEventsMixin } from './modules/events.js'
-
 class WeeklyBriefingApp {
   constructor() {
     this.state = {
@@ -58,6 +48,8 @@ class WeeklyBriefingApp {
       quickNoteCancelBtn: document.getElementById('cancelQuickNote'),
       quickNoteSaveBtn: document.getElementById('saveQuickNote')
     }
+
+    this._fallbackAttempts = new Set()
 
     const config = window.__SMART_BRIEFING_CONFIG__ || {}
     this.MAX_HIGHLIGHT_UPDATES = Number(config.maxHighlightUpdates) || 10
@@ -110,14 +102,54 @@ class WeeklyBriefingApp {
   }
 }
 
-applyUtilsMixin(WeeklyBriefingApp)
-applyHighlightsMixin(WeeklyBriefingApp)
-applyQuickNoteMixin(WeeklyBriefingApp)
-applyRenderMixin(WeeklyBriefingApp)
-applyAnnotationsMixin(WeeklyBriefingApp)
-applyMetricsMixin(WeeklyBriefingApp)
-applyDataMixin(WeeklyBriefingApp)
-applyModalsMixin(WeeklyBriefingApp)
-applyEventsMixin(WeeklyBriefingApp)
+async function applyMixins(target) {
+  const resolveMixin = async (path, exportName) => {
+    const mod = await import(path)
+    if (exportName && typeof mod[exportName] === 'function') return mod[exportName]
+    if (mod?.default) {
+      const candidate = mod.default
+      if (typeof candidate === 'function') return candidate
+      if (exportName && typeof candidate[exportName] === 'function') {
+        return candidate[exportName]
+      }
+    }
+    throw new Error(`Mixin ${exportName || 'default'} missing in ${path}`)
+  }
 
-export { WeeklyBriefingApp }
+  const [
+    applyUtilsMixin,
+    applyHighlightsMixin,
+    applyQuickNoteMixin,
+    applyRenderMixin,
+    applyAnnotationsMixin,
+    applyMetricsMixin,
+    applyDataMixin,
+    applyModalsMixin,
+    applyEventsMixin
+  ] = await Promise.all([
+    resolveMixin('./modules/utils.js', 'applyUtilsMixin'),
+    resolveMixin('./modules/highlights.js', 'applyHighlightsMixin'),
+    resolveMixin('./modules/quickNote.js', 'applyQuickNoteMixin'),
+    resolveMixin('./modules/renderers.js', 'applyRenderMixin'),
+    resolveMixin('./modules/annotations.js', 'applyAnnotationsMixin'),
+    resolveMixin('./modules/metrics.js', 'applyMetricsMixin'),
+    resolveMixin('./modules/data.js', 'applyDataMixin'),
+    resolveMixin('./modules/modals.js', 'applyModalsMixin'),
+    resolveMixin('./modules/events.js', 'applyEventsMixin')
+  ])
+
+  applyUtilsMixin(target)
+  applyHighlightsMixin(target)
+  applyQuickNoteMixin(target)
+  applyRenderMixin(target)
+  applyAnnotationsMixin(target)
+  applyMetricsMixin(target)
+  applyDataMixin(target)
+  applyModalsMixin(target)
+  applyEventsMixin(target)
+}
+
+export async function loadWeeklyBriefingApp() {
+  await applyMixins(WeeklyBriefingApp)
+  return WeeklyBriefingApp
+}

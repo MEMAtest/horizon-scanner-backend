@@ -186,8 +186,14 @@ function renderStreamCard(update) {
 
 function renderStreamColumn(title, stream = [], key = '') {
   if (!stream.length) return ''
+  const classes = ['stream-column']
+  if (key === 'medium') {
+    classes.push('medium-relevance')
+  } else if (key === 'low') {
+    classes.push('background-relevance')
+  }
   return `
-    <section class="stream-column" data-stream-key="${escapeHtml(key)}">
+    <section class="${classes.join(' ')}" data-stream-key="${escapeHtml(key)}">
       <header class="stream-header">
         <h3>${escapeHtml(title)}</h3>
         <span class="stream-count">${stream.length} updates</span>

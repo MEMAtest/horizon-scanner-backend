@@ -3,6 +3,9 @@ const annotationService = require('./annotationService')
 const workspaceService = require('./workspaceService')
 const relevanceService = require('./relevanceService')
 
+const DAILY_AUTHORITY_CAP = 10
+const RISK_PULSE_FLOOR = 1.5
+
 // Helper utilities ---------------------------------------------------------
 
 function startOfDay(date) {
@@ -661,6 +664,52 @@ function groupUpdatesByDay(updates) {
   return groups
 }
 
+function enforceDailyAuthorityCap(updates, limitPerDay = DAILY_AUTHORITY_CAP) {
+  if (!Array.isArray(updates)) return []
+  if (!Number.isFinite(limitPerDay) || limitPerDay <= 0) {
+    return [...updates]
+  }
+
+  const sortByPublishedDesc = (a, b) => toTimestamp(
+    b.publishedAt ||
+    b.published_at ||
+    b.publishedDate ||
+    b.published_date ||
+    b.createdAt ||
+    b.fetchedDate
+  ) - toTimestamp(
+    a.publishedAt ||
+    a.published_at ||
+    a.publishedDate ||
+    a.published_date ||
+    a.createdAt ||
+    a.fetchedDate
+  )
+
+  const ordered = [...updates].sort(sortByPublishedDesc)
+  if (ordered.length <= limitPerDay) {
+    return ordered
+  }
+
+  const usage = new Map()
+  const capped = []
+
+  ordered.forEach(update => {
+    const publishedDate = extractUpdateDate(update)
+    const dayKey = publishedDate ? publishedDate.toISOString().slice(0, 10) : 'undated'
+    const authority = (update.authority || 'other').trim().toLowerCase() || 'other'
+    const key = `${authority}::${dayKey}`
+    const current = usage.get(key) || 0
+    if (current >= limitPerDay) {
+      return
+    }
+    usage.set(key, current + 1)
+    capped.push(update)
+  })
+
+  return capped.sort(sortByPublishedDesc)
+}
+
 // Main service ----------------------------------------------------------------
 
 async function getDailySnapshot(options = {}) {
@@ -706,6 +755,7 @@ async function getDailySnapshot(options = {}) {
   if (!recentPool.length) {
     recentPool = await dbService.getEnhancedUpdates({ limit: options.recentLimit || 1000 }).catch(() => [])
   }
+  recentPool = enforceDailyAuthorityCap(recentPool, DAILY_AUTHORITY_CAP)
 
   let referenceDate = now
   let windowStart = todayStart
@@ -737,6 +787,8 @@ async function getDailySnapshot(options = {}) {
     }
     primaryUpdates = recentPool.slice(0, Math.min(40, recentPool.length))
   }
+
+  primaryUpdates = enforceDailyAuthorityCap(primaryUpdates, DAILY_AUTHORITY_CAP)
 
   const highImpactToday = primaryUpdates.filter(isHighImpact)
   const highImpactCount = highImpactToday.length
@@ -771,21 +823,66 @@ async function getDailySnapshot(options = {}) {
   const outstandingTasks = countOutstandingTasks(annotations)
   const taskScore = computeTaskScore(outstandingTasks)
 
-  const riskPulseScoreRaw =
-    (0.35 * highImpactScore) +
-    (0.20 * urgencyScore) +
-    (0.15 * authorityScore) +
-    (0.15 * deadlineScore) +
-    (0.15 * taskScore)
-
-  const riskPulseScore = parseFloat(riskPulseScoreRaw.toFixed(1))
-  const riskComponents = buildRiskComponents({
+  let riskComponentInputs = {
     highImpactScore,
     urgencyScore,
     authorityScore,
     deadlineScore,
     taskScore
-  })
+  }
+
+  let riskPulseScoreRaw =
+    (0.35 * riskComponentInputs.highImpactScore) +
+    (0.20 * riskComponentInputs.urgencyScore) +
+    (0.15 * riskComponentInputs.authorityScore) +
+    (0.15 * riskComponentInputs.deadlineScore) +
+    (0.15 * riskComponentInputs.taskScore)
+
+  let riskPulseScore = Number.isFinite(riskPulseScoreRaw) ? parseFloat(riskPulseScoreRaw.toFixed(1)) : NaN
+
+  if ((!Number.isFinite(riskPulseScore) || riskPulseScore <= 0) && groups.size) {
+    const fallbackEntry = Array.from(groups.entries())
+      .sort((a, b) => Date.parse(b[0]) - Date.parse(a[0]))[0]
+    const fallbackUpdates = fallbackEntry ? fallbackEntry[1] : null
+    if (fallbackUpdates && fallbackUpdates.length) {
+      const fallbackHighImpactScore = computeHighImpactScore(
+        fallbackUpdates.filter(isHighImpact).length,
+        averageHighImpact
+      )
+      const fallbackAuthorityScore = computeAuthorityScore(
+        new Set(fallbackUpdates.map(update => update.authority).filter(Boolean)).size,
+        averageAuthorities
+      )
+      const fallbackDeadlineScore = computeDeadlineScore(
+        fallbackUpdates.filter(update => getUpcomingDeadline(update, referenceDate)).length
+      )
+      const fallbackUrgencyScore = computeUrgencyScore(fallbackUpdates)
+      riskComponentInputs = {
+        highImpactScore: fallbackHighImpactScore,
+        urgencyScore: fallbackUrgencyScore,
+        authorityScore: fallbackAuthorityScore,
+        deadlineScore: fallbackDeadlineScore,
+        taskScore
+      }
+      riskPulseScoreRaw =
+        (0.35 * riskComponentInputs.highImpactScore) +
+        (0.20 * riskComponentInputs.urgencyScore) +
+        (0.15 * riskComponentInputs.authorityScore) +
+        (0.15 * riskComponentInputs.deadlineScore) +
+        (0.15 * riskComponentInputs.taskScore)
+      const fallbackRounded = Number.isFinite(riskPulseScoreRaw) ? parseFloat(riskPulseScoreRaw.toFixed(1)) : NaN
+      if (Number.isFinite(fallbackRounded)) {
+        riskPulseScore = fallbackRounded
+      }
+    }
+  }
+
+  if (!Number.isFinite(riskPulseScore)) {
+    riskPulseScore = RISK_PULSE_FLOOR
+  }
+
+  riskPulseScore = Math.max(RISK_PULSE_FLOOR, riskPulseScore)
+  const riskComponents = buildRiskComponents(riskComponentInputs)
 
   const baselineUrgency = computeUrgencyScore(recentPool)
   const baselineScore =
@@ -914,33 +1011,179 @@ function buildPersonaBriefings(personaSnapshot, streams) {
     nextSteps: []
   }
 
-  const result = {}
+  if (!personaSnapshot || typeof personaSnapshot !== 'object') {
+    return {}
+  }
+
   const buckets = streams || { high: [], medium: [], low: [] }
+  const canonicalUpdates = new Map()
+  Object.values(buckets).forEach(list => {
+    if (!Array.isArray(list)) return
+    list.forEach(update => {
+      if (!update) return
+      const key = update.updateId || update.id || update.url
+      if (!key || canonicalUpdates.has(key)) return
+      canonicalUpdates.set(key, update)
+    })
+  })
+
+  const joinAuthorities = authorities => {
+    if (!authorities.length) return ''
+    if (authorities.length === 1) return authorities[0]
+    if (authorities.length === 2) return `${authorities[0]} and ${authorities[1]}`
+    const remaining = authorities.length - 2
+    return `${authorities[0]}, ${authorities[1]}${remaining > 0 ? ` and ${remaining} other${remaining > 1 ? 's' : ''}` : ''}`
+  }
+
+  const personaConfigs = {
+    executive: {
+      maxItems: 3,
+      verbs: {
+        High: 'Escalate with ExCo',
+        Medium: 'Brief leadership',
+        Low: 'Monitor in daily huddle',
+        default: 'Monitor'
+      },
+      buildSummary: ({ authorities, metrics }) => {
+        if (authorities.length) {
+          const focusLabel = joinAuthorities(authorities)
+          const tasksNote = metrics.openTasks > 0
+            ? ` ${metrics.openTasks} action${metrics.openTasks === 1 ? '' : 's'} awaiting sign-off.`
+            : ''
+          return `Leadership focus on ${focusLabel}.${tasksNote}`.trim()
+        }
+        if (metrics.pins > 0) {
+          return `No fresh escalations — review ${metrics.pins} pinned update${metrics.pins === 1 ? '' : 's'} for next steps.`
+        }
+        return ''
+      },
+      fallbackSteps: metrics => {
+        if (metrics.pins > 0) {
+          return [`Confirm ownership of ${metrics.pins === 1 ? 'the pinned item' : `${metrics.pins} pinned items`} before day end.`]
+        }
+        return ['Hold a quick sync with the compliance lead to confirm no executive escalations are pending.']
+      }
+    },
+    analyst: {
+      maxItems: 4,
+      verbs: {
+        High: 'Draft impact briefing',
+        Medium: 'Deep-dive analysis',
+        Low: 'Tag for monitoring',
+        default: 'Monitor'
+      },
+      buildSummary: ({ authorities, metrics }) => {
+        if (authorities.length) {
+          const focusLabel = joinAuthorities(authorities)
+          return `Research queue prioritises developments from ${focusLabel}.`
+        }
+        if (metrics.openTasks > 0) {
+          return `Close out ${metrics.openTasks} outstanding analysis task${metrics.openTasks === 1 ? '' : 's'} today.`
+        }
+        return ''
+      },
+      fallbackSteps: metrics => {
+        if (metrics.pins > 0) {
+          return [`Refresh summaries for ${metrics.pins === 1 ? 'the pinned brief' : `${metrics.pins} pinned briefs`}.`]
+        }
+        return ['Refresh saved searches and capture any new emerging topics for tomorrow’s sweep.']
+      }
+    },
+    operations: {
+      maxItems: 3,
+      verbs: {
+        High: 'Coordinate response',
+        Medium: 'Update playbooks',
+        Low: 'Track readiness',
+        default: 'Monitor'
+      },
+      buildSummary: ({ authorities, metrics }) => {
+        if (authorities.length) {
+          const focusLabel = joinAuthorities(authorities)
+          return `Operational readiness: align procedures for ${focusLabel}.`
+        }
+        if (metrics.openTasks > 0) {
+          return `Progress ${metrics.openTasks} operational follow-up${metrics.openTasks === 1 ? '' : 's'} still open.`
+        }
+        return ''
+      },
+      fallbackSteps: metrics => {
+        if (metrics.pins > 0) {
+          return [`Confirm implementation owners for ${metrics.pins === 1 ? 'the pinned mandate' : `${metrics.pins} pinned mandates`}.`]
+        }
+        return ['Verify run-books and ensure monitoring alerts remain active for overnight changes.']
+      }
+    },
+    default: {
+      maxItems: 3,
+      verbs: {
+        High: 'Escalate',
+        Medium: 'Review',
+        Low: 'Monitor',
+        default: 'Monitor'
+      },
+      buildSummary: ({ authorities }) => {
+        if (authorities.length) {
+          return `Focus on developments from ${joinAuthorities(authorities)}.`
+        }
+        return ''
+      },
+      fallbackSteps: () => ['Monitor the regulatory feed for new developments throughout the day.']
+    }
+  }
+
+  const result = {}
 
   Object.entries(personaSnapshot).forEach(([persona, data]) => {
-    const entries = []
-    const pool = Array.isArray(data.updates) ? data.updates.slice(0, 3) : []
-
-    pool.forEach(update => {
-      if (!update || !update.headline) return
-      const urgency = normalizeUrgency(update.urgency)
-      const verb = urgency === 'High' ? 'Escalate' : urgency === 'Medium' ? 'Review' : 'Monitor'
-      entries.push(`${verb}: ${update.headline} (${update.authority || 'Regulator'})`)
-    })
-
-    if (!entries.length) {
-      const firstAvailable = (buckets.high || []).concat(buckets.medium || []).find(update => Array.isArray(update.personas) && update.personas.includes(persona))
-      if (firstAvailable) {
-        const verb = normalizeUrgency(firstAvailable.urgency) === 'High' ? 'Escalate' : 'Review'
-        entries.push(`${verb}: ${firstAvailable.headline} (${firstAvailable.authority || 'Regulator'})`)
-      }
+    const config = personaConfigs[persona] || personaConfigs.default
+    const metrics = {
+      pins: data?.pins || 0,
+      openTasks: data?.openTasks || 0,
+      total: data?.count || 0
     }
 
+    const updates = Array.isArray(data?.updates) ? data.updates : []
+    const hydrated = updates
+      .map(update => {
+        if (!update) return null
+        const key = update.updateId || update.id || update.url
+        const canonical = key ? canonicalUpdates.get(key) : null
+        const merged = { ...(canonical || update) }
+        merged.personas = Array.isArray(merged.personas) ? merged.personas : []
+        merged.bucket = update.bucket || merged.bucket || 'medium'
+        return merged
+      })
+      .filter(Boolean)
+
+    const personaKey = String(persona || '').toLowerCase()
+    const targeted = hydrated.filter(update => {
+      if (!update.personas.length) return personaKey === 'analyst'
+      return update.personas.map(value => String(value || '').trim().toLowerCase()).includes(personaKey)
+    })
+
+    const prioritized = (targeted.length ? targeted : hydrated).slice(0, config.maxItems)
+    const authorities = Array.from(new Set(prioritized.map(update => update.authority).filter(Boolean)))
+
+    const summary = config.buildSummary({
+      entries: prioritized,
+      authorities,
+      metrics
+    })
+
+    const nextSteps = prioritized.map(update => {
+      const urgency = normalizeUrgency(update.urgency)
+      const verb = config.verbs[urgency] || config.verbs.default
+      const authorityLabel = update.authority || 'Regulator'
+      const headline = update.headline || 'Untitled insight'
+      const action = update.nextStep || deriveNextStep(update)
+      return `${verb}: ${headline} (${authorityLabel}) — ${action}`
+    })
+
+    const fallbackSteps = config.fallbackSteps(metrics)
+
     result[persona] = {
-      summary: entries.length
-        ? `Based on today’s signals, focus on ${entries.length === 1 ? 'this item' : 'these priorities'}:`
-        : template.summary,
-      nextSteps: entries.length ? entries : template.nextSteps
+      summary: summary || template.summary,
+      nextSteps: nextSteps.length ? nextSteps : fallbackSteps
     }
   })
 

@@ -82,13 +82,13 @@ body {
 .main-content {
     flex: 1;
     margin-left: 280px;
-    padding: clamp(3rem, 5vw, 4.5rem) clamp(3rem, 6vw, 5rem) clamp(4rem, 6vw, 5.5rem);
+    padding: clamp(3.5rem, 5.5vw, 5rem) clamp(3.5rem, 7vw, 5.75rem) clamp(4.5rem, 7vw, 6rem);
     background: transparent;
 }
 
 .briefing-shell {
-    width: min(1220px, calc(100vw - 280px - clamp(3rem, 6vw, 5rem) - clamp(3rem, 6vw, 5rem)));
-    max-width: 1220px;
+    width: min(1360px, calc(100vw - 280px - clamp(3.5rem, 7vw, 5.75rem) - clamp(3.5rem, 7vw, 5.75rem)));
+    max-width: 1360px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -114,20 +114,36 @@ body {
     flex: 1;
 }
 
-.report-title {
-    font-size: clamp(2.75rem, 5vw, 3.5rem);
-    font-weight: 600;
-    color: var(--ink-primary);
-    margin-bottom: var(--space-xs);
-    letter-spacing: -0.04em;
+.report-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    color: var(--accent-rose-strong);
+    background: rgba(240, 68, 56, 0.12);
+    margin-bottom: var(--space-sm);
 }
 
 .report-meta {
     display: flex;
-    gap: var(--space-md);
     flex-wrap: wrap;
-    font-size: 0.95rem;
-    color: var(--ink-tertiary);
+    gap: var(--space-sm);
+}
+
+.report-meta span {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    background: var(--surface-soft);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    font-size: 0.85rem;
+    color: var(--ink-secondary);
+    letter-spacing: 0.02em;
 }
 
 .report-actions {
@@ -571,10 +587,6 @@ body {
 
     .briefing-shell {
         width: 100%;
-    }
-
-    .report-title {
-        font-size: 1.75rem;
     }
 
     .report-section {

@@ -377,7 +377,7 @@ function getAiIntelligenceStyles() {
 
       .streams-split {
         display: grid;
-        grid-template-columns: minmax(360px, 1.35fr) minmax(300px, 0.75fr);
+        grid-template-columns: minmax(420px, 1.55fr) minmax(320px, 0.65fr);
         gap: 28px;
         align-items: start;
         margin-bottom: 36px;
@@ -439,6 +439,21 @@ function getAiIntelligenceStyles() {
 
       .action-sidebar .stream-list::-webkit-scrollbar-thumb {
         background: rgba(15, 23, 42, 0.15);
+        border-radius: 999px;
+      }
+
+      .action-sidebar .medium-relevance .stream-list {
+        max-height: 520px;
+        overflow-y: auto;
+        padding-right: 6px;
+      }
+
+      .action-sidebar .medium-relevance .stream-list::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .action-sidebar .medium-relevance .stream-list::-webkit-scrollbar-thumb {
+        background: rgba(15, 23, 42, 0.16);
         border-radius: 999px;
       }
 

@@ -159,19 +159,43 @@ function applyRenderMixin(klass) {
       container.innerHTML = this.formatRichTextClient(narrative, '<div class="empty-state">Run “Assemble This Week” to generate the narrative briefing.</div>')
     },
 
+    deriveStats(briefing) {
+      const stats = briefing?.dataset?.stats
+      if (stats && typeof stats.totalUpdates === 'number') {
+        const impact = stats.byImpact || {}
+        return {
+          totalUpdates: stats.totalUpdates,
+          byImpact: {
+            Significant: impact.Significant || 0,
+            Moderate: impact.Moderate || 0,
+            Informational: impact.Informational || 0
+          }
+        }
+      }
+
+      const updates = Array.isArray(briefing?.dataset?.currentUpdates) ? briefing.dataset.currentUpdates : []
+      const derivedImpact = updates.reduce((acc, update) => {
+        const raw = (update?.impact_level || update?.impact || '').toString().toLowerCase()
+        if (raw.includes('significant') || raw.includes('high')) {
+          acc.Significant += 1
+        } else if (raw.includes('moderate')) {
+          acc.Moderate += 1
+        } else {
+          acc.Informational += 1
+        }
+        return acc
+      }, { Significant: 0, Moderate: 0, Informational: 0 })
+
+      return {
+        totalUpdates: updates.length,
+        byImpact: derivedImpact
+      }
+    },
+
     renderStats(briefing) {
       const container = document.getElementById('statsList')
       if (!container) return
-      const stats = briefing?.dataset?.stats
-      if (!stats) {
-        container.innerHTML = [
-          '<li class="stat-item"><span>Total updates</span><strong>0</strong></li>',
-          '<li class="stat-item"><span>High impact</span><strong>0</strong></li>',
-          '<li class="stat-item"><span>Moderate</span><strong>0</strong></li>',
-          '<li class="stat-item"><span>Informational</span><strong>0</strong></li>'
-        ].join('')
-        return
-      }
+      const stats = this.deriveStats(briefing)
       const impact = stats.byImpact || { Significant: 0, Moderate: 0, Informational: 0 }
       container.innerHTML = [
         `<li class="stat-item"><span>Total updates</span><strong>${this.escapeHtml(String(stats.totalUpdates || 0))}</strong></li>`,
@@ -179,6 +203,28 @@ function applyRenderMixin(klass) {
         `<li class="stat-item"><span>Moderate</span><strong>${this.escapeHtml(String(impact.Moderate || 0))}</strong></li>`,
         `<li class="stat-item"><span>Informational</span><strong>${this.escapeHtml(String(impact.Informational || 0))}</strong></li>`
       ].join('')
+    },
+
+    findFallbackBriefingId(currentId) {
+      const list = Array.isArray(this.state.recent) ? this.state.recent : []
+      for (const entry of list) {
+        if (!entry || !entry.id) continue
+        if (entry.id === currentId) continue
+        this._fallbackAttempts = this._fallbackAttempts || new Set()
+        if (this._fallbackAttempts.has(entry.id)) continue
+        return entry.id
+      }
+      return null
+    },
+
+    queueFallbackLoad(id) {
+      if (!id) return
+      this._fallbackAttempts = this._fallbackAttempts || new Set()
+      if (this._fallbackAttempts.has(id)) return
+      this._fallbackAttempts.add(id)
+      Promise.resolve()
+        .then(() => this.loadLatestBriefing(id))
+        .catch(error => console.error('Fallback briefing load failed:', error))
     },
 
     renderTimeline(briefing) {
@@ -226,7 +272,7 @@ function applyRenderMixin(klass) {
     },
 
     buildOnePagerMetricsClient(briefing) {
-      const stats = briefing?.dataset?.stats || {}
+      const stats = this.deriveStats(briefing)
       const impact = stats.byImpact || {}
       const updatesPool = this.collectOnePagerUpdates(briefing)
       const urgentCount = updatesPool.filter(update => {
@@ -296,8 +342,7 @@ function applyRenderMixin(klass) {
       if (!briefing?.artifacts?.onePager) {
         return '<div class="empty-state">Generate a briefing to view the one-pager.</div>'
       }
-      const stats = briefing?.dataset?.stats || {}
-      const impact = stats.byImpact || {}
+      const stats = this.deriveStats(briefing)
       const metrics = this.buildOnePagerMetricsClient(briefing)
       const metricCards = metrics.map((metric, index) => `
         <article class="executive-panel" data-index="${index}">
@@ -315,7 +360,7 @@ function applyRenderMixin(klass) {
       const spotlights = this.buildOnePagerSpotlightsClient(briefing)
       const heroTagline = [
         stats.totalUpdates != null ? `${stats.totalUpdates} regulatory developments analysed` : '',
-        impact.Significant != null ? `${impact.Significant} flagged high-impact` : ''
+        stats.byImpact?.Significant != null ? `${stats.byImpact.Significant} flagged high-impact` : ''
       ].filter(Boolean).join(' · ') || 'Curated regulatory intelligence for your leadership team.'
 
       return `
@@ -474,6 +519,14 @@ function applyRenderMixin(klass) {
     },
 
     renderBriefing(briefing) {
+      const stats = this.deriveStats(briefing)
+      if ((stats.totalUpdates || 0) === 0) {
+        const fallbackId = this.findFallbackBriefingId(briefing?.id)
+        if (fallbackId) {
+          this.queueFallbackLoad(fallbackId)
+          return
+        }
+      }
       this.state.current = briefing
       if (Array.isArray(briefing?.dataset?.currentUpdates)) {
         window.initialUpdates = briefing.dataset.currentUpdates.map(update => ({ ...update }))

@@ -40,13 +40,24 @@ function applyEventsMixin(klass) {
       }
 
       if (typeof window !== 'undefined') {
-        window.assembleBriefing = async () => {
+        window.assembleBriefing = async (...args) => {
           try {
-            await triggerAssemble()
+            await triggerAssemble(...args)
           } catch (error) {
             console.error('assembleBriefing failed:', error)
             this.showToast('Unable to open assemble workflow. Please try again.', 'error')
           }
+        }
+        const assembleQueue = window.__weeklyBriefingQueues?.assembleBriefing
+        if (Array.isArray(assembleQueue) && assembleQueue.length) {
+          const pending = assembleQueue.splice(0)
+          pending.forEach(args => {
+            try {
+              window.assembleBriefing(...args)
+            } catch (error) {
+              console.warn('Flushing queued assembleBriefing call failed:', error)
+            }
+          })
         }
       }
 
@@ -98,8 +109,19 @@ function applyEventsMixin(klass) {
       }
 
       if (typeof window !== 'undefined') {
-        window.refreshData = async () => {
-          await runRefresh()
+        window.refreshData = async (...args) => {
+          await runRefresh(...args)
+        }
+        const refreshQueue = window.__weeklyBriefingQueues?.refreshData
+        if (Array.isArray(refreshQueue) && refreshQueue.length) {
+          const pending = refreshQueue.splice(0)
+          pending.forEach(args => {
+            try {
+              window.refreshData(...args)
+            } catch (error) {
+              console.warn('Flushing queued refreshData call failed:', error)
+            }
+          })
         }
       }
 
@@ -188,44 +210,22 @@ function applyEventsMixin(klass) {
             })
             if (!response.ok) throw new Error('Failed to save annotation')
             const payload = await response.json()
-            if (!payload.success) throw new Error(payload.error || 'Failed to save annotation')
+            if (!payload.success) throw new Error(payload.error || 'Unable to save annotation')
+            this.showToast('Annotation captured.', 'success')
             this.closeAnnotationModal()
-            this.showToast('Annotation saved.', 'success')
-            try {
-              await this.refreshAnnotationsFromServer()
-            } catch (error) {
-              console.warn('Annotation refresh failed:', error.message)
-            }
+            await this.refreshAnnotationsFromServer()
           } catch (error) {
             console.error(error)
-            this.showToast(error.message || 'Failed to save annotation', 'error', false)
+            this.showToast(error.message || 'Unable to save annotation', 'error', false)
           }
         })
       }
 
-      if (quickNoteContentInput) {
-        quickNoteContentInput.addEventListener('input', () => {
-          this.quickNoteState.userEdited = true
-        })
-      }
-
-      const quickNoteInputs = [quickNoteRecipientInput, quickNoteFirmInput, quickNoteSenderInput].filter(Boolean)
-      quickNoteInputs.forEach(input => {
-        input.addEventListener('input', () => {
-          this.syncQuickNoteDefaultsFromInputs()
-          this.updateQuickNotePreview()
-        })
-        input.addEventListener('blur', () => {
-          this.syncQuickNoteDefaultsFromInputs()
-          this.saveQuickNoteDefaults(this.quickNoteState.defaults)
-        })
-      })
-
       if (quickNoteCopyBtn && quickNoteContentInput) {
         quickNoteCopyBtn.addEventListener('click', async () => {
-          const text = quickNoteContentInput.value
+          const text = this.cleanText(quickNoteContentInput.value)
           if (!text) {
-            this.showToast('Nothing to copy yet.', 'warning')
+            this.showToast('Nothing to copy yet.', 'error')
             return
           }
           try {

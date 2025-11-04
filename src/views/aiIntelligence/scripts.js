@@ -204,10 +204,10 @@ function getAiIntelligenceScripts(snapshot) {
 
           const sidebarBlocks = [];
           if (Array.isArray(streams?.medium) && streams.medium.length) {
-            sidebarBlocks.push(renderStreamCollection('Medium relevance', streams.medium));
+            sidebarBlocks.push(renderStreamCollection('Medium relevance', streams.medium, 'medium'));
           }
           if (Array.isArray(streams?.low) && streams.low.length) {
-            sidebarBlocks.push(renderStreamCollection('Background intelligence', streams.low));
+            sidebarBlocks.push(renderStreamCollection('Background intelligence', streams.low, 'low'));
           }
           sidebarBlocks.push(renderWorkspaceHTML(workspace));
           sidebarBlocks.push(renderTimelineHTML(timeline));
@@ -230,10 +230,16 @@ function getAiIntelligenceScripts(snapshot) {
           ].join('');
         }
 
-        function renderStreamCollection(title, list) {
+        function renderStreamCollection(title, list, key = '') {
           if (!Array.isArray(list) || !list.length) return '';
+          const classes = ['stream-column'];
+          if (key === 'medium') {
+            classes.push('medium-relevance');
+          } else if (key === 'low') {
+            classes.push('background-relevance');
+          }
           return [
-            '<section class="stream-column">',
+            '<section class="' + classes.join(' ') + '">',
             '  <header class="stream-header">',
             '    <h3>' + escapeHtml(title) + '</h3>',
             '    <span class="stream-count">' + list.length + ' updates</span>',

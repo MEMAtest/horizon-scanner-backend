@@ -302,8 +302,41 @@ function buildUpdateCardHtml(update) {
   `
 }
 
+function deriveStats(briefing) {
+  const stats = briefing?.dataset?.stats
+  if (stats && typeof stats.totalUpdates === 'number') {
+    const withImpact = stats.byImpact || {}
+    return {
+      totalUpdates: stats.totalUpdates,
+      byImpact: {
+        Significant: withImpact.Significant ?? 0,
+        Moderate: withImpact.Moderate ?? 0,
+        Informational: withImpact.Informational ?? 0
+      }
+    }
+  }
+
+  const updates = Array.isArray(briefing?.dataset?.currentUpdates) ? briefing.dataset.currentUpdates : []
+  const byImpact = updates.reduce((acc, update) => {
+    const impact = (update?.impact_level || update?.impact || 'Informational').toString().toLowerCase()
+    if (impact.includes('significant') || impact.includes('high')) {
+      acc.Significant += 1
+    } else if (impact.includes('moderate')) {
+      acc.Moderate += 1
+    } else {
+      acc.Informational += 1
+    }
+    return acc
+  }, { Significant: 0, Moderate: 0, Informational: 0 })
+
+  return {
+    totalUpdates: updates.length,
+    byImpact
+  }
+}
+
 function buildOnePagerMetrics(briefing) {
-  const stats = briefing?.dataset?.stats || {}
+  const stats = deriveStats(briefing)
   const impact = stats.byImpact || {}
   const updatesPool = Array.isArray(briefing?.dataset?.highlightUpdates) && briefing.dataset.highlightUpdates.length > 0
     ? briefing.dataset.highlightUpdates
@@ -410,7 +443,7 @@ function buildExecutiveOnePager(briefing) {
     return '<div class="empty-state">Generate a briefing to view the one-pager.</div>'
   }
 
-  const stats = briefing?.dataset?.stats || {}
+  const stats = deriveStats(briefing)
   const impact = stats.byImpact || {}
   const metrics = buildOnePagerMetrics(briefing)
   const metricCards = metrics.map((metric, index) => `
@@ -479,8 +512,8 @@ function buildInitialTeamBriefingHtml(briefing) {
 }
 
 function buildInitialStatsHtml(briefing) {
-  const stats = briefing?.dataset?.stats
-  if (!stats) {
+  const stats = deriveStats(briefing)
+  if (!stats || typeof stats.totalUpdates !== 'number') {
     return [
       '<li class="stat-item"><span>Total updates</span><strong>0</strong></li>',
       '<li class="stat-item"><span>High impact</span><strong>0</strong></li>',
