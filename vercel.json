@@ -20,6 +20,26 @@
     { "src": "/api/cron/daily-digest", "dest": "/api/cron/daily-digest.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ],
+  "headers": [
+    {
+      "source": "/js/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/css/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/daily-digest",
