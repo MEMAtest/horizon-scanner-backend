@@ -26,7 +26,17 @@ async function sendEmail({ from, to, subject, html, text }) {
       to,
       subject,
       html,
-      text
+      text,
+      headers: {
+        'X-Entity-Ref-ID': `digest-${Date.now()}`,
+        'List-Unsubscribe': '<mailto:unsubscribe@regcanary.com>'
+      },
+      tags: [
+        {
+          name: 'category',
+          value: 'daily-digest'
+        }
+      ]
     })
   })
 
