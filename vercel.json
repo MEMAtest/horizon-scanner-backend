@@ -16,9 +16,9 @@
       }
     }
   ],
-  "routes": [
-    { "src": "/api/cron/daily-digest", "dest": "/api/cron/daily-digest.js" },
-    { "src": "/(.*)", "dest": "/api/index.js" }
+  "rewrites": [
+    { "source": "/api/cron/daily-digest", "destination": "/api/cron/daily-digest.js" },
+    { "source": "/(.*)", "destination": "/api/index.js" }
   ],
   "headers": [
     {
