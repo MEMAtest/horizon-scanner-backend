@@ -153,7 +153,7 @@ function renderUpdateItem(update, pinnedItems = [], personaMap = {}, velocityLoo
     update.impact ||
     update.description ||
     ''
-  const summaryText = summarySource.length > 260 ? `${summarySource.slice(0, 257).trim()}...` : summarySource.trim()
+  const summaryText = summarySource.length > 800 ? `${summarySource.slice(0, 797).trim()}...` : summarySource.trim()
   const published = update.publishedDate || update.published_date || update.fetchedDate || update.createdAt
   const deadline = update.compliance_deadline || update.complianceDeadline || null
   const impactLevel = update.impactLevel || update.impact_level || 'Informational'

@@ -49,7 +49,7 @@ function applyFinesMixin(klass) {
             ).join('');
     
             const aiSummaryHtml = fine.ai_summary ?
-                '<br><small style="color: #6b7280;">' + fine.ai_summary.substring(0, 100) + '...</small>' : '';
+                '<br><small style="color: #6b7280;">' + fine.ai_summary.substring(0, 400) + (fine.ai_summary.length > 400 ? '...' : '') + '</small>' : '';
     
             const noticeActionHtml = fine.final_notice_url ?
                 '<a href="' + fine.final_notice_url + '" target="_blank" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.75rem;">View Notice</a>' :

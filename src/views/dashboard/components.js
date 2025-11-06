@@ -205,7 +205,7 @@ function renderUpdateCard(update) {
   const impactLevel = update.impactLevel || update.impact_level || 'Informational'
   const urgency = update.urgency || 'Low'
   const publishedDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
-  const summaryText = truncateText(selectSummary(update), 260) || 'No summary available'
+  const summaryText = truncateText(selectSummary(update), 800) || 'No summary available'
   const details = buildDetailItems(update)
   const features = computeAIFeatures(update)
   const riskBadge = renderRiskScoreBadge(update, impactLevel)
