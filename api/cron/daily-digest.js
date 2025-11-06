@@ -42,45 +42,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // STEP 1: Fetch fresh regulatory data (optimized for 30s Vercel timeout)
-    console.log('📡 DailyDigest: Starting data refresh before digest generation...')
-    const refreshStartTime = Date.now()
-
-    try {
-      const rssFetcher = require('../../src/services/rssFetcher')
-      dataRefreshResults.attempted = true
-
-      // Use fast-mode with timeout protection for Vercel limits
-      const fetchResults = await Promise.race([
-        rssFetcher.fetchAllFeeds({
-          fastMode: true,      // Skip slow Puppeteer scrapers
-          timeout: 18000       // 18 second timeout (leave 12s for digest)
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Data refresh timeout after 18s')), 18000)
-        )
-      ])
-
-      dataRefreshResults.success = true
-      dataRefreshResults.newUpdates = fetchResults.newUpdates || 0
-      dataRefreshResults.totalProcessed = fetchResults.total || 0
-      dataRefreshResults.duration = Date.now() - refreshStartTime
-
-      console.log(`✅ DailyDigest: Data refresh completed in ${dataRefreshResults.duration}ms`)
-      console.log(`   📊 New updates: ${dataRefreshResults.newUpdates}`)
-      console.log(`   📊 Sources processed: ${dataRefreshResults.totalProcessed}`)
-    } catch (refreshError) {
-      // Log error but continue with digest using existing data
-      dataRefreshResults.error = refreshError.message
-      dataRefreshResults.duration = Date.now() - refreshStartTime
-
-      console.error('⚠️ DailyDigest: Data refresh failed, proceeding with existing data')
-      console.error(`   Error: ${refreshError.message}`)
-      console.error(`   Duration before failure: ${dataRefreshResults.duration}ms`)
-    }
-
-    // STEP 2: Build and send digest with fresh (or existing) data
-    console.log('📧 DailyDigest: Building and sending digest email...')
+    // Skip data refresh on Vercel cron (causes timeout, rely on scheduled RSS fetcher)
+    console.log('📧 DailyDigest: Building and sending digest email from existing database...')
     const digestStartTime = Date.now()
 
     const result = await sendDailyDigest({
