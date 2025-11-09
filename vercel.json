@@ -14,18 +14,10 @@
       "config": {
         "maxDuration": 30
       }
-    },
-    {
-      "src": "api/cron/rss-refresh.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30
-      }
     }
   ],
   "rewrites": [
     { "source": "/api/cron/daily-digest", "destination": "/api/cron/daily-digest.js" },
-    { "source": "/api/cron/rss-refresh", "destination": "/api/cron/rss-refresh.js" },
     { "source": "/(.*)", "destination": "/api/index.js" }
   ],
   "headers": [
@@ -49,10 +41,6 @@
     }
   ],
   "crons": [
-    {
-      "path": "/api/cron/rss-refresh",
-      "schedule": "0 7 * * *"
-    },
     {
       "path": "/api/cron/daily-digest",
       "schedule": "30 7 * * *"

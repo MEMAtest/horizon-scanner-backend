@@ -42,8 +42,38 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Skip data refresh on Vercel cron (causes timeout, rely on scheduled RSS fetcher)
-    console.log('📧 DailyDigest: Building and sending digest email from existing database...')
+    // STEP 1: Fetch fresh RSS data first
+    console.log('🔄 DailyDigest: Fetching fresh regulatory updates before building digest...')
+    const rssFetchStart = Date.now()
+
+    try {
+      const rssFetcher = require('../../src/services/rssFetcher')
+      const rssResults = await rssFetcher.fetchAllFeeds({ fastMode: true })
+
+      dataRefreshResults = {
+        attempted: true,
+        success: true,
+        newUpdates: rssResults.newUpdates || 0,
+        totalProcessed: rssResults.total || 0,
+        duration: Date.now() - rssFetchStart,
+        error: null
+      }
+
+      console.log(`✅ DailyDigest: RSS refresh complete - ${rssResults.newUpdates} new updates in ${dataRefreshResults.duration}ms`)
+    } catch (rssError) {
+      dataRefreshResults = {
+        attempted: true,
+        success: false,
+        newUpdates: 0,
+        totalProcessed: 0,
+        duration: Date.now() - rssFetchStart,
+        error: rssError.message
+      }
+      console.error(`⚠️ DailyDigest: RSS refresh failed - ${rssError.message}, continuing with existing data...`)
+    }
+
+    // STEP 2: Build and send digest email
+    console.log('📧 DailyDigest: Building and sending digest email...')
     const digestStartTime = Date.now()
 
     const result = await sendDailyDigest({
