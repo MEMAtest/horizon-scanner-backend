@@ -1,6 +1,5 @@
 // api/cron/daily-digest.js
 // Serverless trigger for the daily digest email, intended for Vercel Cron.
-// ENHANCED: Fetches fresh regulatory data before building and sending digest
 
 const { sendDailyDigest, parseRecipients } = require('../../src/services/dailyDigestService')
 
@@ -31,50 +30,8 @@ module.exports = async (req, res) => {
     return res.status(500).json({ success: false, error: 'DAILY_DIGEST_RECIPIENTS not configured' })
   }
 
-  // Track data refresh results
-  let dataRefreshResults = {
-    attempted: false,
-    success: false,
-    newUpdates: 0,
-    totalProcessed: 0,
-    duration: 0,
-    error: null
-  }
-
   try {
-    // STEP 1: Fetch fresh RSS data first
-    console.log('🔄 DailyDigest: Fetching fresh regulatory updates before building digest...')
-    const rssFetchStart = Date.now()
-
-    try {
-      const rssFetcher = require('../../src/services/rssFetcher')
-      const rssResults = await rssFetcher.fetchAllFeeds({ fastMode: true })
-
-      dataRefreshResults = {
-        attempted: true,
-        success: true,
-        newUpdates: rssResults.newUpdates || 0,
-        totalProcessed: rssResults.total || 0,
-        duration: Date.now() - rssFetchStart,
-        error: null
-      }
-
-      console.log(`✅ DailyDigest: RSS refresh complete - ${rssResults.newUpdates} new updates in ${dataRefreshResults.duration}ms`)
-    } catch (rssError) {
-      dataRefreshResults = {
-        attempted: true,
-        success: false,
-        newUpdates: 0,
-        totalProcessed: 0,
-        duration: Date.now() - rssFetchStart,
-        error: rssError.message
-      }
-      console.error(`⚠️ DailyDigest: RSS refresh failed - ${rssError.message}, continuing with existing data...`)
-    }
-
-    // STEP 2: Build and send digest email
     console.log('📧 DailyDigest: Building and sending digest email...')
-    const digestStartTime = Date.now()
 
     const result = await sendDailyDigest({
       recipients,
@@ -85,37 +42,31 @@ module.exports = async (req, res) => {
       }
     })
 
-    const digestDuration = Date.now() - digestStartTime
-    const totalDuration = Date.now() - startTime
+    const duration = Date.now() - startTime
 
-    console.log(`✅ DailyDigest: Email sent successfully in ${digestDuration}ms`)
-    console.log(`⏱️ DailyDigest: Total execution time: ${totalDuration}ms`)
+    console.log(`✅ DailyDigest: Email sent successfully in ${duration}ms`)
 
     return res.status(200).json({
       success: true,
       dispatchedAt: new Date().toISOString(),
       insightCount: result.insightCount || 0,
       recipients: result.recipients,
-      dataRefresh: dataRefreshResults,
       performance: {
-        dataRefreshMs: dataRefreshResults.duration,
-        digestBuildMs: digestDuration,
-        totalMs: totalDuration
+        totalMs: duration
       }
     })
   } catch (error) {
-    const totalDuration = Date.now() - startTime
+    const duration = Date.now() - startTime
 
     console.error('❌ DailyDigest: Cron handler failed')
     console.error(`   Error: ${error.message}`)
-    console.error(`   Duration: ${totalDuration}ms`)
+    console.error(`   Duration: ${duration}ms`)
 
     return res.status(500).json({
       success: false,
       error: error.message,
-      dataRefresh: dataRefreshResults,
       performance: {
-        totalMs: totalDuration
+        totalMs: duration
       }
     })
   }
