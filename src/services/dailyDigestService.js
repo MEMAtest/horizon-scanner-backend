@@ -10,6 +10,8 @@ const { sendEmail } = require('./email/resendClient')
 const DEFAULT_HISTORY_WINDOW_DAYS = 45
 // const DEFAULT_DIGEST_TIMEZONE = 'Europe/London'
 const DEFAULT_DIGEST_ROLLING_WINDOW_HOURS = 24
+const DEFAULT_DIGEST_MAX_ROLLING_WINDOW_HOURS = 24 * 14 // two weeks
+const DEFAULT_DIGEST_MIN_ITEMS = 6
 
 function resolveHistoryWindowDays() {
   const envValue = parseInt(process.env.DIGEST_HISTORY_WINDOW_DAYS, 10)
@@ -45,6 +47,25 @@ function resolveRollingWindowHours(preferred) {
     return envValue
   }
   return DEFAULT_DIGEST_ROLLING_WINDOW_HOURS
+}
+
+function resolveMaxRollingWindowHours(baseHours) {
+  const envValue = parseInt(process.env.DIGEST_MAX_ROLLING_WINDOW_HOURS, 10)
+  const baseline = Number.isFinite(baseHours) && baseHours > 0
+    ? baseHours
+    : DEFAULT_DIGEST_ROLLING_WINDOW_HOURS
+  if (Number.isFinite(envValue) && envValue >= baseline) {
+    return envValue
+  }
+  return Math.max(DEFAULT_DIGEST_MAX_ROLLING_WINDOW_HOURS, baseline)
+}
+
+function resolveMinDigestItems() {
+  const envValue = parseInt(process.env.DIGEST_MIN_ITEMS, 10)
+  if (Number.isFinite(envValue) && envValue > 0) {
+    return envValue
+  }
+  return DEFAULT_DIGEST_MIN_ITEMS
 }
 
 // function formatDateKey(value, timeZone) {
@@ -189,20 +210,70 @@ async function buildDigestPayload(options = {}) {
   // const digestDateKey = formatDateKey(digestDate, timeZone)
   // const timeZone = resolveDigestTimezone()
   const rollingWindowHours = resolveRollingWindowHours(rollingWindowPreferred)
+  const maxRollingWindowHours = resolveMaxRollingWindowHours(rollingWindowHours)
+  const minDigestItems = resolveMinDigestItems()
+  const allowStaleFallback = process.env.DIGEST_ALLOW_STALE_FALLBACK !== 'false'
 
-  // Use a rolling window (default 24 hours) to ensure consistent volume
-  // This captures updates from the past X hours leading up to the digest time
-  // Duplicates are filtered out via digest history tracking
-  const rollingWindowStart = new Date(digestDate)
-  rollingWindowStart.setHours(rollingWindowStart.getHours() - rollingWindowHours)
+  const fetchUpdatesForWindow = async (windowHours) => {
+    const windowStart = new Date(digestDate)
+    windowStart.setHours(windowStart.getHours() - windowHours)
+    const records = await dbService.getEnhancedUpdates({
+      limit,
+      sort: 'newest',
+      startDate: windowStart.toISOString(),
+      endDate: digestDate.toISOString()
+    })
+    return records
+  }
+
+  let effectiveWindowHours = rollingWindowHours
+  let updates = await fetchUpdatesForWindow(effectiveWindowHours)
+  let usedStaleFallback = false
+
+  const MAX_EXPANSION_STEPS = 5
+  let expansionAttempts = 0
+
+  while (updates.length < minDigestItems && effectiveWindowHours < maxRollingWindowHours) {
+    const expandedWindow = Math.min(
+      maxRollingWindowHours,
+      Math.max(effectiveWindowHours + 24, Math.round(effectiveWindowHours * 1.5))
+    )
+    if (expandedWindow === effectiveWindowHours) break
+
+    console.warn(
+      `[DailyDigest] Only ${updates.length} updates found in ${effectiveWindowHours}h window. ` +
+      `Expanding to ${expandedWindow}h.`
+    )
+
+    effectiveWindowHours = expandedWindow
+    updates = await fetchUpdatesForWindow(effectiveWindowHours)
+    expansionAttempts++
+
+    if (expansionAttempts >= MAX_EXPANSION_STEPS) {
+      break
+    }
+  }
+
+  if (updates.length < minDigestItems) {
+    if (allowStaleFallback) {
+      console.warn(
+        `[DailyDigest] Still only ${updates.length} updates after expanding to ` +
+        `${effectiveWindowHours}h. Falling back to latest stored updates.`
+      )
+      updates = await dbService.getEnhancedUpdates({
+        limit,
+        sort: 'newest'
+      })
+      usedStaleFallback = true
+    } else {
+      console.warn(
+        `[DailyDigest] ${updates.length} updates found after expanding to ${effectiveWindowHours}h ` +
+        'and stale fallback disabled. Digest may be empty.'
+      )
+    }
+  }
 
   const firmProfile = await dbService.getFirmProfile().catch(() => null)
-  const updates = await dbService.getEnhancedUpdates({
-    limit,
-    sort: 'newest',
-    startDate: rollingWindowStart.toISOString(),
-    endDate: digestDate.toISOString()
-  })
   const categorized = relevanceService.categorizeByRelevance(updates, firmProfile)
 
   const ranked = [
@@ -284,19 +355,52 @@ async function buildDigestPayload(options = {}) {
   const authorityCount = {}
   const sectorCount = {}
   const TARGET_MIN = 10 // Minimum items we want to include
-  const TARGET_MAX = 15 // Maximum items to include
+  const TARGET_MAX = 10 // Maximum (and now exact) items to include
   const MAX_PER_AUTHORITY = 3 // Maximum items from same authority (relaxed if needed)
   const MAX_PER_SECTOR = 5 // Maximum items from same sector
+  const HM_AUTHORITY_KEYWORDS = ['hmrc', 'hm treasury', 'hm government', 'hm govt', 'hm r c', 'his majesty']
+  const MAX_HM_TOTAL = 3
+
+  const isHmAuthority = (authority = '') => {
+    const normalized = authority.toLowerCase()
+    return HM_AUTHORITY_KEYWORDS.some(keyword => normalized.includes(keyword))
+  }
+
+  // Ensure we reserve a slot for HM authority updates
+  let hmAuthorityIncluded = false
+  let hmAuthorityCount = 0
+  for (const update of filtered) {
+    if (balancedSelection.length >= TARGET_MAX) break
+    if (!isHmAuthority(update.authority)) continue
+    if (hmAuthorityIncluded) break
+    balancedSelection.push(update)
+    const authority = update.authority || 'Unknown'
+    const sector = update.sector || 'Unknown'
+    authorityCount[authority] = (authorityCount[authority] || 0) + 1
+    sectorCount[sector] = (sectorCount[sector] || 0) + 1
+    hmAuthorityIncluded = true
+    hmAuthorityCount = 1
+  }
 
   // First pass: prioritize high-impact items (score >= 80)
   for (const update of filtered) {
     if (balancedSelection.length >= TARGET_MAX) break
+    if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
+      continue
+    }
     if (update.relevanceScore >= 80) {
-      balancedSelection.push(update)
       const authority = update.authority || 'Unknown'
       const sector = update.sector || 'Unknown'
+      if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
+      if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
+      if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
+      balancedSelection.push(update)
       authorityCount[authority] = (authorityCount[authority] || 0) + 1
       sectorCount[sector] = (sectorCount[sector] || 0) + 1
+      if (isHmAuthority(authority)) {
+        hmAuthorityIncluded = true
+        hmAuthorityCount++
+      }
     }
   }
 
@@ -312,6 +416,7 @@ async function buildDigestPayload(options = {}) {
 
     // Check if adding this would exceed diversity limits
     if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
+    if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
     if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
 
     // Exclude low-value AQUIS announcements (AGMs, stock updates)
@@ -328,9 +433,13 @@ async function buildDigestPayload(options = {}) {
     balancedSelection.push(update)
     authorityCount[authority] = (authorityCount[authority] || 0) + 1
     sectorCount[sector] = (sectorCount[sector] || 0) + 1
+    if (isHmAuthority(authority)) {
+      hmAuthorityIncluded = true
+      hmAuthorityCount++
+    }
   }
 
-  // Third pass: if we don't have enough items, relax authority limits
+  // Third pass: if we don't have enough items, try to backfill without breaking per-authority caps
   if (balancedSelection.length < TARGET_MIN) {
     for (const update of filtered) {
       if (balancedSelection.length >= TARGET_MAX) break
@@ -341,8 +450,9 @@ async function buildDigestPayload(options = {}) {
       const authority = update.authority || 'Unknown'
       const sector = update.sector || 'Unknown'
 
-      // Relaxed limit: allow up to 5 per authority if we're short on content
-      if ((authorityCount[authority] || 0) >= 5) continue
+      // Keep strict max per authority even when backfilling
+      if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
+      if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
       if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
 
       // Still exclude obvious low-value AQUIS content
@@ -358,10 +468,14 @@ async function buildDigestPayload(options = {}) {
       balancedSelection.push(update)
       authorityCount[authority] = (authorityCount[authority] || 0) + 1
       sectorCount[sector] = (sectorCount[sector] || 0) + 1
+      if (isHmAuthority(authority)) {
+        hmAuthorityIncluded = true
+        hmAuthorityCount++
+      }
     }
   }
 
-  const insights = balancedSelection.map(update => {
+  const rawInsights = balancedSelection.map(update => {
     const identifierSource = update.id || update.update_id || update.url
     const identifier = identifierSource != null ? String(identifierSource) : null
     const sectors = Array.isArray(update.sectors) && update.sectors.length
@@ -387,6 +501,87 @@ async function buildDigestPayload(options = {}) {
       url: update.url
     }
   })
+
+  const authorityCaps = {}
+  const insights = []
+  let hmInsightIncluded = false
+  for (const insight of rawInsights) {
+    if (insights.length >= TARGET_MAX) break
+    const key = insight.authority || 'Unknown'
+    const isHm = isHmAuthority(key)
+    authorityCaps[key] = (authorityCaps[key] || 0) + 1
+    const cap = isHm ? MAX_PER_AUTHORITY : MAX_PER_AUTHORITY
+    if (authorityCaps[key] <= cap) {
+      insights.push(insight)
+      if (isHm) hmInsightIncluded = true
+    }
+  }
+  if (!hmInsightIncluded) {
+    const hmFallback = rawInsights.find(item => isHmAuthority(item.authority))
+    if (hmFallback) {
+      // Remove the lowest priority non-HM insight to make room
+      for (let i = insights.length - 1; i >= 0; i--) {
+        if (!isHmAuthority(insights[i].authority)) {
+          insights.splice(i, 1)
+          break
+        }
+      }
+      insights.push(hmFallback)
+    }
+  }
+
+  // Ensure exactly TARGET_MAX insights (pad or trim using remaining ranked updates)
+  const remainingCandidates = rawInsights.filter(candidate =>
+    !insights.some(existing => existing.id === candidate.id)
+  )
+  while (insights.length < TARGET_MAX && remainingCandidates.length) {
+    const next = remainingCandidates.shift()
+    const key = next.authority || 'Unknown'
+    const isHm = isHmAuthority(key)
+    authorityCaps[key] = (authorityCaps[key] || 0) + 1
+    const cap = isHm ? MAX_PER_AUTHORITY : MAX_PER_AUTHORITY
+    if ((isHm && hmAuthorityCount >= MAX_HM_TOTAL) || authorityCaps[key] > cap) {
+      continue
+    }
+    if (isHm) hmAuthorityCount++
+    insights.push(next)
+  }
+
+  // If still short, pull from latest updates regardless of original filters (respect authority caps)
+  if (insights.length < TARGET_MAX) {
+    const supplemental = await dbService.getEnhancedUpdates({ limit: 50, sort: 'newest' }).catch(() => [])
+    for (const update of supplemental) {
+      if (insights.length >= TARGET_MAX) break
+      if (rawInsights.some(item => item.id === update.id)) continue
+      const authority = update.authority || 'Unknown'
+      if ((authorityCaps[authority] || 0) >= MAX_PER_AUTHORITY) continue
+      if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
+      const identifier = update.id || update.update_id || update.url
+      if (!identifier) continue
+      const insight = {
+        id: String(identifier),
+        headline: update.headline,
+        summary: update.ai_summary || update.summary,
+        authority: update.authority,
+        sectors: update.sectors || [],
+        sector: update.sector,
+        relevanceScore: update.relevanceScore || 40,
+        priorityReason: update.priorityReason,
+        published: extractPublishedDate(update),
+        url: update.url
+      }
+      insights.push(insight)
+      authorityCaps[authority] = (authorityCaps[authority] || 0) + 1
+      if (isHmAuthority(authority)) {
+        hmAuthorityIncluded = true
+        hmAuthorityCount++
+      }
+    }
+  }
+
+  if (insights.length > TARGET_MAX) {
+    insights.splice(TARGET_MAX)
+  }
 
   // Calculate metrics based on items IN THIS DIGEST (aligned with email template labels)
   // HIGH IMPACT: score >= 80
@@ -429,10 +624,12 @@ async function buildDigestPayload(options = {}) {
     mediumCount,
     lowCount,
     uniqueAuthorities,
-    deadlineCount
+    deadlineCount,
+    windowHoursUsed: usedStaleFallback ? null : effectiveWindowHours,
+    staleFallbackUsed: usedStaleFallback
   }
 
-  const summary = formatSummary({
+  const baseSummary = formatSummary({
     highCount,
     mediumCount,
     uniqueAuthorities,
@@ -440,6 +637,9 @@ async function buildDigestPayload(options = {}) {
     insights,
     insightCount: insights.length
   })
+  const summary = usedStaleFallback
+    ? `${baseSummary} Latest available insights are shown because no new updates were detected in the recent monitoring window.`
+    : baseSummary
 
   return {
     personaLabel: persona,

@@ -13,6 +13,8 @@ const registerAiRoutes = require('./api/ai')
 const registerSystemRoutes = require('./api/system')
 const registerMiscRoutes = require('./api/misc')
 const registerIntelligenceRoutes = require('./api/intelligence')
+const registerProfileRoutes = require('./api/profile')
+const registerWorkflowRoutes = require('./api/workflows')
 
 const router = express.Router()
 
@@ -29,5 +31,7 @@ registerAiRoutes(router)
 registerSystemRoutes(router)
 registerMiscRoutes(router)
 registerIntelligenceRoutes(router)
+registerProfileRoutes(router)
+registerWorkflowRoutes(router)
 
 module.exports = router

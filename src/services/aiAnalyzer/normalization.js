@@ -70,8 +70,9 @@ function applyNormalizationMethods(ServiceClass) {
       analysisTimestamp: new Date().toISOString()
     }
 
-    normalized.content_type = analysis.content_type || analysis.contentType || update.contentType || 'OTHER'
-    normalized.contentType = normalized.content_type
+    // Normalize content type
+    normalized.contentType = analysis.contentType || analysis.content_type || update.contentType || 'Other'
+    normalized.content_type = normalized.contentType
 
     return normalized
   }

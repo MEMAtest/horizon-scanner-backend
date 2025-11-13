@@ -1,0 +1,44 @@
+[
+  {
+    "id": "9f70f2cc-2e34-4f29-b833-12d3199854a3",
+    "userId": "default",
+    "serviceType": "consumer_credit",
+    "secondaryServiceTypes": [
+      "payments"
+    ],
+    "companySize": "Small",
+    "regions": [],
+    "regulatoryPosture": null,
+    "personas": [],
+    "goals": [],
+    "preferences": {
+      "firmName": "Test99",
+      "legacyFirmSize": "Small"
+    },
+    "isActive": false,
+    "createdAt": "2025-11-06T18:38:20.735Z",
+    "updatedAt": "2025-11-06T22:51:46.278Z"
+  },
+  {
+    "id": "41ba708e-91c4-492c-86fa-504242892a75",
+    "userId": "default",
+    "serviceType": "payments",
+    "secondaryServiceTypes": [],
+    "companySize": "micro",
+    "regions": [
+      "UK"
+    ],
+    "regulatoryPosture": null,
+    "personas": [
+      "executive",
+      "analyst"
+    ],
+    "goals": [
+      "stay_ahead_of_mandates"
+    ],
+    "preferences": {},
+    "isActive": true,
+    "createdAt": "2025-11-06T22:51:46.278Z",
+    "updatedAt": "2025-11-06T22:51:46.278Z"
+  }
+]

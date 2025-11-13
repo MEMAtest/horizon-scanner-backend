@@ -125,6 +125,96 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
           ON daily_digest_history (digest_sent_at DESC)
       `)
 
+        await client.query(`
+        CREATE TABLE IF NOT EXISTS user_profiles (
+          id BIGSERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          service_type TEXT NOT NULL,
+          secondary_service_types TEXT[] DEFAULT ARRAY[]::TEXT[],
+          company_size TEXT,
+          regions TEXT[] DEFAULT ARRAY[]::TEXT[],
+          regulatory_posture TEXT,
+          personas TEXT[] DEFAULT ARRAY[]::TEXT[],
+          goals TEXT[] DEFAULT ARRAY[]::TEXT[],
+          preferences JSONB DEFAULT '{}'::JSONB,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+        )
+      `)
+
+        await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_user_profiles_user_active
+          ON user_profiles (user_id, is_active, updated_at DESC)
+      `)
+
+        await client.query(`
+        CREATE TABLE IF NOT EXISTS intelligence_events (
+          id BIGSERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          profile_id TEXT,
+          event_type TEXT NOT NULL,
+          update_id TEXT,
+          workflow_template_id TEXT,
+          payload JSONB DEFAULT '{}'::JSONB,
+          created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+        )
+      `)
+
+        await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_intelligence_events_profile
+          ON intelligence_events (profile_id, created_at DESC)
+      `)
+
+        await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_intelligence_events_type
+          ON intelligence_events (event_type, created_at DESC)
+      `)
+
+        await client.query(`
+        CREATE TABLE IF NOT EXISTS profile_feedback_scores (
+          id BIGSERIAL PRIMARY KEY,
+          profile_id TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          entity_id TEXT NOT NULL,
+          weight NUMERIC DEFAULT 0,
+          last_event_at TIMESTAMP WITHOUT TIME ZONE,
+          window_counts JSONB DEFAULT '{}'::JSONB,
+          updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+          UNIQUE (profile_id, entity_type, entity_id)
+        )
+      `)
+
+        await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_profile_feedback_profile_entity
+          ON profile_feedback_scores (profile_id, entity_type)
+      `)
+
+        await client.query(`
+        CREATE TABLE IF NOT EXISTS profile_workflows (
+          id BIGSERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          profile_id TEXT,
+          title TEXT NOT NULL,
+          summary TEXT,
+          sources JSONB DEFAULT '[]'::JSONB,
+          rating INTEGER,
+          personas TEXT[] DEFAULT ARRAY[]::TEXT[],
+          needs_review BOOLEAN DEFAULT FALSE,
+          aligns_policy BOOLEAN DEFAULT FALSE,
+          policy_reference TEXT,
+          status TEXT DEFAULT 'open',
+          metadata JSONB DEFAULT '{}'::JSONB,
+          created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+        )
+      `)
+
+        await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_profile_workflows_user
+          ON profile_workflows (user_id, status, created_at DESC)
+      `)
+
         client.release()
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
@@ -187,6 +277,10 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
             }
           },
           { path: this.profilesFile, defaultContent: [] },
+          { path: this.userProfilesFile, defaultContent: [] },
+          { path: path.join(this.jsonDataPath, 'intelligence_events.json'), defaultContent: [] },
+          { path: path.join(this.jsonDataPath, 'profile_feedback_scores.json'), defaultContent: [] },
+          { path: path.join(this.jsonDataPath, 'profile_workflows.json'), defaultContent: [] },
           { path: this.digestHistoryFile, defaultContent: [] }
         ]
 

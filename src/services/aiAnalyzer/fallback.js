@@ -64,6 +64,7 @@ function applyFallbackMethods(ServiceClass) {
       implementationPhases: this.generateImplementationPhases({ impactLevel, area: this.detectRegulatoryArea(content || '') }),
       requiredResources: this.calculateRequiredResources({ impactLevel }, businessImpactScore),
       firmTypesAffected: detectedSectors,
+      contentType: this.detectContentType(content || '', url || '', metadata),
       fallbackAnalysis: true,
       enhancedAt: new Date().toISOString()
     }
@@ -170,6 +171,84 @@ function applyFallbackMethods(ServiceClass) {
     }
 
     return actions.join('; ')
+  }
+
+  ServiceClass.prototype.detectContentType = function(content, url, metadata = {}) {
+    const text = (content || '').toLowerCase()
+    const urlLower = (url || '').toLowerCase()
+    const headline = ((content || '').split('\n')[0] || '').toLowerCase()
+
+    // Check URL patterns first (most reliable)
+    if (urlLower.includes('/speech') || urlLower.includes('/speeches')) {
+      return 'Speech'
+    }
+    if (urlLower.includes('/consultation') || urlLower.includes('/cp')) {
+      return 'Consultation'
+    }
+    if (urlLower.includes('/press-release') || urlLower.includes('/news')) {
+      return 'Press Release'
+    }
+    if (urlLower.includes('/guidance')) {
+      return 'Guidance'
+    }
+    if (urlLower.includes('/enforcement') || urlLower.includes('/enforcement-action')) {
+      return 'Enforcement Action'
+    }
+    if (urlLower.includes('/statistics') || urlLower.includes('/data')) {
+      return 'Statistical Report'
+    }
+    if (urlLower.includes('/publication')) {
+      return 'Research Paper'
+    }
+
+    // Check headline keywords
+    if (headline.includes(' speech') || headline.includes('remarks by') || headline.includes('keynote')) {
+      return 'Speech'
+    }
+    if (headline.includes('consultation') || headline.includes('discussion paper')) {
+      return 'Consultation'
+    }
+    if (headline.includes('final rule') || headline.includes('policy statement')) {
+      return 'Final Rule'
+    }
+    if (headline.includes('guidance') || headline.includes('supervisory statement')) {
+      return 'Guidance'
+    }
+    if (headline.includes('enforcement') || headline.includes('fine') || headline.includes('penalty')) {
+      return 'Enforcement Action'
+    }
+    if (headline.includes('press release') || headline.includes('announcement')) {
+      return 'Press Release'
+    }
+    if (headline.includes('statistics') || headline.includes('quarterly data') || headline.includes('annual report')) {
+      return 'Statistical Report'
+    }
+    if (headline.includes('research') || headline.includes('working paper') || headline.includes('report')) {
+      return 'Research Paper'
+    }
+    if (headline.includes('market notice')) {
+      return 'Market Notice'
+    }
+    if (headline.includes('event') || headline.includes('webinar') || headline.includes('conference')) {
+      return 'Event'
+    }
+
+    // Check content keywords
+    if (text.includes('consultation paper') || text.includes('feedback requested')) {
+      return 'Consultation'
+    }
+    if (text.includes('final rule') || text.includes('statutory instrument')) {
+      return 'Final Rule'
+    }
+    if (text.includes('supervisory guidance') || text.includes('best practice')) {
+      return 'Guidance'
+    }
+    if (text.includes('enforcement action') || text.includes('disciplinary action')) {
+      return 'Enforcement Action'
+    }
+
+    // Default to Other if no pattern matches
+    return 'Other'
   }
 }
 

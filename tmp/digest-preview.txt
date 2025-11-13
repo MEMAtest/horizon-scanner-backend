@@ -1,39 +1,47 @@
 Regulatory Horizon Scanner — Executive Intelligence Digest
-Monday, 3 November 2025
+Tuesday, 11 November 2025
 
-Executive Summary: This digest presents 1 critical alert, 7 enforcement updates from 4 authorities. Primary sectors: Banking, Capital Markets, Investment Management. Focus areas: enforcement and guidance. Priority review recommended for compliance and risk assessment.
+Executive Summary: This digest presents 7 critical alerts, 3 enforcement updates from 6 authorities. Primary sectors: Banking, Investment Management, Capital Markets. Focus areas: enforcement and consultations. Priority review recommended for compliance and risk assessment. Latest available insights are shown because no new updates were detected in the recent monitoring window.
 
-1. £1.1 million compound settlement for sanctions breach
-   Authority: HMRC | Sector: Banking
+1. UK reimposes UN sanctions on Iran
+   Authority: HM Government | Sector: Banking, Investment Management, Payment Services, Fintech, Wealth Management
    Reason: Enforcement action requiring immediate attention
-   Link: https://www.gov.uk/government/case-studies/11-million-compound-settlement-for-sanctions-breach
-2. Guidance: List of Individual Savings Account (ISA) managers approved by HMRC
-   Authority: HMRC | Sector: Banking
+   Link: https://www.gov.uk/government/news/uk-reimposes-un-sanctions-on-iran
+2. UK applies sanctions on links to Iran’s nuclear programme
+   Authority: HM Government | Sector: Banking, Investment Management, Payment Services, Fintech, Capital Markets
+   Reason: Enforcement action requiring immediate attention
+   Link: https://www.gov.uk/government/news/uk-applies-sanctions-on-links-to-irans-nuclear-programme
+3. FRC launches consultation on enhanced auditing standards to strengthen fraud detection and evaluation of going concern
+   Authority: FRC | Sector: Capital Markets, Banking, Investment Management, Insurance
+   Reason: Consultation with approaching deadline
+   Link: https://www.frc.org.uk/news-and-events/news/2025/10/frc-launches-consultation-on-enhanced-auditing-standards-to-strengthen-fraud-detection-and-evaluation-of-going-concern/
+4. Regulatory perspective and priorities for 2025
+   Authority: FCA | Sector: Investment Management, Banking, Wealth Management
+   Reason: Relevance score: 95%
+   Link: https://www.fca.org.uk/news/speeches/regulatory-perspective-and-priorities-2025
+5. What’s Past is Prologue: Building Resilience in Nonbank Financial Intermediation
+   Authority: FSB | Sector: Banking, Investment Management, Insurance, Payment Services, Fintech, Real Estate Finance, Consumer Credit, Capital Markets, Private Equity, Hedge Funds
+   Reason: Relevance score: 84%
+   Link: https://www.fsb.org/2025/10/whats-past-is-prologue-building-resilience-in-nonbank-financial-intermediation/
+6. FRC Launches Consultation on Enhanced Enforcement Procedures as part of its end to end enforcement review
+   Authority: FRC | Sector: Corporate Finance, Investment Management, Banking
+   Reason: Consultation with approaching deadline
+   Link: https://www.frc.org.uk/news-and-events/news/2025/10/frc-launches-consultation-on-enhanced-enforcement-procedures-as-part-of-its-end-to-end-enforcement-review/
+7. FRC issues October consultations
+   Authority: FRC | Sector: Capital Markets, Investment Management, Banking
+   Reason: Consultation with approaching deadline
+   Link: https://www.frc.org.uk/news-and-events/news/2025/10/frc-issues-october-consultations/
+8. Guidance: Maritime ports and wharves location codes for Data Element 5/23 of the Customs Declaration Service
+   Authority: HMRC | Sector: Payment Services, Fintech, Banking, Investment Management
    Reason: Regulatory guidance for compliance planning
-   Link: https://www.gov.uk/government/publications/list-of-individual-savings-account-isa-managers-approved-by-hmrc
-3. Guidance: Business Asset Roll-over Relief (Self Assessment helpsheet HS290)
-   Authority: HMRC | Sector: Banking
-   Reason: Policy update for monitoring
-   Link: https://www.gov.uk/government/publications/business-asset-roll-over-relief-hs290-self-assessment-helpsheet
-4. Defence Housing Strategy: A £9bn ‘generational renewal' for forces family housing and 100,000 new homes on MOD land to drive growth
-   Authority: HM Government | Sector: Real Estate Finance, Construction, Infrastructure
-   Reason: Relevance score: 64%
-   Link: https://www.gov.uk/government/news/defence-housing-strategy-a-9bn-generational-renewal-for-forces-family-housing-and-100000-new-homes-on-mod-land-to-drive-growth
-5. Major change for rare disease treatments on way, signals MHRA
-   Authority: HM Government | Sector: Pharmaceuticals, Biotechnology, Healthcare
-   Reason: Relevance score: 64%
-   Link: https://www.gov.uk/government/news/major-change-for-rare-disease-treatments-on-way-signals-mhra
-6. PRA Regulatory Digest - October 2025
-   Authority: PRA | Sector: Banking
-   Reason: Relevance score: 55%
-   Link: https://www.bankofengland.co.uk/prudential-regulation/regulatory-digest/2025/october-2025
-7. Smarter Web Company - Holding(s) in Company
-   Authority: AQUIS | Sector: Capital Markets, Investment Management, Corporate Finance
+   Link: https://www.gov.uk/government/publications/maritime-ports-and-wharves-location-codes-for-data-element-523-of-the-customs-declaration-service
+9. BIS Triennial Survey of Foreign Exchange and Over-The-Counter Interest Rate Derivatives Markets in April 2025 – UK Data
+   Authority: Bank of England | Sector: Banking, Investment Management, Capital Markets
    Reason: Relevance score: 54%
-   Link: https://www.aquis.eu/stock-exchange/announcements/5438263
-8. Adnams PLC - Director/PDMR Shareholding
-   Authority: AQUIS | Sector: Capital Markets, Investment Management, Corporate Finance
-   Reason: Relevance score: 44%
-   Link: https://www.aquis.eu/stock-exchange/announcements/5438267
+   Link: https://www.bankofengland.co.uk/news/2025/september/bis-triennial-survey-of-foreign-exchange-and-over-the-counter-interest-rate-derivatives-markets
+10. What’s Past is Prologue: Building Resilience in Nonbank Financial Intermediation
+   Authority: FSB | Sector: Banking, Investment Management, Insurance, Payment Services, Fintech, Real Estate Finance, Consumer Credit, Capital Markets, Private Equity, Hedge Funds
+   Reason: Relevance score 40%
+   Link: https://www.fsb.org/2025/10/whats-past-is-prologue-building-resilience-in-nonbank-financial-intermediation/
 
 You can adjust digest preferences inside the Intelligence Workspace.

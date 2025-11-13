@@ -36,6 +36,10 @@ function applyParserMethods(ServiceClass) {
 
       const validImpactLevels = ['Significant', 'Moderate', 'Informational']
       const validUrgencyLevels = ['High', 'Medium', 'Low']
+      const validContentTypes = [
+        'Speech', 'Consultation', 'Final Rule', 'Guidance', 'Enforcement Action',
+        'Statistical Report', 'Market Notice', 'Press Release', 'Research Paper', 'Event', 'Other'
+      ]
 
       if (!validImpactLevels.includes(parsed.impactLevel)) {
         parsed.impactLevel = 'Moderate'
@@ -43,6 +47,14 @@ function applyParserMethods(ServiceClass) {
 
       if (!validUrgencyLevels.includes(parsed.urgency)) {
         parsed.urgency = 'Medium'
+      }
+
+      // Validate and normalize contentType
+      if (parsed.contentType && !validContentTypes.includes(parsed.contentType)) {
+        console.warn(`⚠️ Invalid contentType '${parsed.contentType}', setting to 'Other'`)
+        parsed.contentType = 'Other'
+      } else if (!parsed.contentType) {
+        parsed.contentType = 'Other'
       }
 
       return parsed

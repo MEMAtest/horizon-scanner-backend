@@ -1,5 +1,7 @@
 (function bootstrapWeeklyBriefing() {
   const queues = window.__weeklyBriefingQueues = window.__weeklyBriefingQueues || {}
+  const versionSuffix = window.__WB_VERSION__ || ''
+  const withVersion = (path) => `${path}${versionSuffix}`
 
   const ensureGlobal = (name) => {
     if (typeof window[name] === 'function') return
@@ -32,12 +34,13 @@
     })
   }
 
-  import('/js/weekly-briefing/app-core.js')
+  const loadEsm = () => import(withVersion('/js/weekly-briefing/app-core.js'))
+
+  loadEsm()
     .then(module => {
       if (typeof module?.loadWeeklyBriefingApp === 'function') {
         startApp(module.loadWeeklyBriefingApp)
       } else if (module?.WeeklyBriefingApp) {
-        // Legacy fallback
         startApp(async () => module.WeeklyBriefingApp)
       } else if (module?.default) {
         startApp(async () => module.default)

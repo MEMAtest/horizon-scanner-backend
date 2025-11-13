@@ -87,6 +87,7 @@ function applyEventsMixin(klass) {
 
       const runRefresh = async () => {
         if (assembleBtn) assembleBtn.disabled = true
+        if (refreshBtn) refreshBtn.disabled = true
         try {
           await this.loadLatestBriefing()
           try {
@@ -101,6 +102,7 @@ function applyEventsMixin(klass) {
           this.showToast('Refresh failed. Please retry shortly.', 'error')
         } finally {
           if (assembleBtn) assembleBtn.disabled = false
+          if (refreshBtn) refreshBtn.disabled = false
         }
       }
 

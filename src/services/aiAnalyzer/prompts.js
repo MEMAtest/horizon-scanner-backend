@@ -5,7 +5,7 @@ function applyPromptMethods(ServiceClass) {
     const authorityContext = metadata.authority ? `Authority: ${metadata.authority}\n` : ''
     const dateContext = metadata.publishedDate ? `Published: ${metadata.publishedDate}\n` : ''
 
-    return `You are an expert regulatory intelligence analyst specializing in UK and international financial services regulation. 
+    return `You are an expert regulatory intelligence analyst for RegCanary, a UK financial services regulatory intelligence platform.
 
 Analyze this regulatory content and provide a comprehensive structured response:
 
@@ -17,24 +17,30 @@ URL SOURCE: ${url}
 
 ANALYSIS REQUIREMENTS:
 1. Create a clear, professional headline (max 120 characters)
-2. Provide a concise business impact summary (max 300 words) focusing on practical implications
+2. Provide a RegCanary-branded business impact summary (max 300 words):
+   - Write in a balanced professional tone for financial services executives
+   - Highlight key business impacts and actionable insights
+   - DO NOT copy text verbatim from the source - rewrite and synthesize for RegCanary audience
+   - Focus on "what this means for compliance teams" and "what actions are needed"
 3. Identify the specific regulatory area/topic
 4. Determine impact level: Significant, Moderate, or Informational
 5. Assess urgency: High, Medium, or Low
-6. Identify ALL relevant industry sectors from this list: ${INDUSTRY_SECTORS.join(', ')}
-7. Provide sector-specific relevance scores (0-100) for each identified sector
-8. Extract any key dates, deadlines, or implementation timeframes
-9. Identify specific compliance requirements or actions needed
-10. Assess potential business risks and opportunities
-11. Determine affected firm sizes: small, medium, large, all
+6. Categorize the content type from: Speech, Consultation, Final Rule, Guidance, Enforcement Action, Statistical Report, Market Notice, Press Release, Research Paper, Event, or Other
+7. Identify ALL relevant industry sectors from this list: ${INDUSTRY_SECTORS.join(', ')}
+8. Provide sector-specific relevance scores (0-100) for each identified sector
+9. Extract any key dates, deadlines, or implementation timeframes
+10. Identify specific compliance requirements or actions needed
+11. Assess potential business risks and opportunities
+12. Determine affected firm sizes: small, medium, large, all
 
 CRITICAL: Respond ONLY with valid JSON in this exact format:
 {
   "headline": "Clear, professional headline under 120 chars",
-  "impact": "Concise business impact summary focusing on practical implications",
+  "impact": "RegCanary-branded business impact summary - rewritten for financial services professionals, NOT verbatim from source",
+  "contentType": "Speech|Consultation|Final Rule|Guidance|Enforcement Action|Statistical Report|Market Notice|Press Release|Research Paper|Event|Other",
   "area": "Specific regulatory area or topic",
   "impactLevel": "Significant|Moderate|Informational",
-  "urgency": "High|Medium|Low", 
+  "urgency": "High|Medium|Low",
   "sector": "Primary sector most affected",
   "primarySectors": ["Array", "of", "affected", "sectors"],
   "sectorRelevanceScores": {
@@ -50,7 +56,7 @@ CRITICAL: Respond ONLY with valid JSON in this exact format:
   "crossReferences": ["Related regulatory topics or requirements"]
 }
 
-Ensure accuracy, professionalism, and focus on actionable business intelligence.`
+Ensure accuracy, professionalism, RegCanary brand voice, and focus on actionable business intelligence.`
   }
 }
 

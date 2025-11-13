@@ -1,0 +1,12 @@
+[
+  {
+    "id": "evt-1762469538857-7ca6666c922bc",
+    "userId": "default",
+    "profileId": "41ba708e-91c4-492c-86fa-504242892a75",
+    "eventType": "workflow_start",
+    "updateId": null,
+    "workflowTemplateId": "consumer-duty-gap-analysis",
+    "payload": {},
+    "createdAt": "2025-11-06T22:52:18.743Z"
+  }
+]

@@ -37,7 +37,7 @@ describe('weeklyBriefingPage render', () => {
     const html = send.mock.calls[0][0]
     const $ = cheerio.load(html)
 
-    const styles = $('link[rel="stylesheet"]').map((_, el) => $(el).attr('href')).get()
+    const styles = $('link[rel="stylesheet"]').map((_, el) => $(el).attr('href').replace(/\?.*$/, '')).get()
     expect(styles).toEqual(expect.arrayContaining([
       '/css/weekly-briefing/layout.css',
       '/css/weekly-briefing/components.css',
@@ -45,14 +45,14 @@ describe('weeklyBriefingPage render', () => {
       '/css/weekly-briefing/widgets.css'
     ]))
 
-    const scripts = $('script').map((_, el) => ({ src: $(el).attr('src'), type: $(el).attr('type') })).get()
-    expect(scripts).toEqual(expect.arrayContaining([
-      { src: '/js/weekly-briefing/index.js', type: 'module' }
+    const moduleScripts = $('script[type="module"]').map((_, el) => $(el).attr('src') && $(el).attr('src').replace(/\?.*$/, '')).get()
+    expect(moduleScripts).toEqual(expect.arrayContaining([
+      '/js/weekly-briefing/index.js'
     ]))
 
     expect($('#narrativeContent').length).toBe(1)
     expect($('#updates-container').length).toBe(1)
-    expect($('#metricsGrid').length).toBe(1)
+    expect($('.metrics-grid').length).toBeGreaterThan(0)
     expect($('#assembleModal').length).toBe(1)
   })
 })

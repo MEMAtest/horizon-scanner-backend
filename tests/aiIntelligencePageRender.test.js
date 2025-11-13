@@ -100,7 +100,16 @@ const baseSnapshot = {
   },
   timeline: [],
   themes: [],
-  personaBriefings: {}
+  personaBriefings: {},
+  profile: {
+    id: 'profile-1',
+    serviceType: 'payments',
+    companySize: 'mid',
+    regions: ['UK'],
+    personas: ['executive'],
+    source: 'persisted'
+  },
+  profileBehaviour: []
 }
 
 function cloneSnapshot(overrides = {}) {
@@ -113,7 +122,7 @@ function flushTimers(window) {
 
 describe('renderAiIntelligencePage', () => {
   it('renders the intelligence page without throwing', async () => {
-    const req = {}
+    const req = { headers: {} }
     const result = {}
 
     const res = {
@@ -137,6 +146,8 @@ describe('renderAiIntelligencePage', () => {
     expect(result.html).toBeDefined()
     expect(result.html).toContain('AI Intelligence Brief')
     expect(result.html).toContain('risk-pulse')
+    expect(result.html).toContain('profile-banner')
+    expect(result.html).toContain('data-onboarding-root')
   })
 
   it('handles pin refresh and persona switching interactions', async () => {
@@ -210,5 +221,8 @@ describe('renderAiIntelligencePage', () => {
     expect(togglePinMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith('/api/intelligence/daily', expect.objectContaining({ headers: { Accept: 'application/json' } }))
     expect(document.querySelector('.hero-date').textContent).toContain('4 Nov 2025')
+    const onboardingRoot = document.querySelector('[data-onboarding-root]')
+    expect(onboardingRoot).not.toBeNull()
+    expect(onboardingRoot.classList.contains('is-visible')).toBe(false)
   })
 })

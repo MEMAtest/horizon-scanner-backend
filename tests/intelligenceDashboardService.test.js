@@ -1,6 +1,6 @@
 jest.mock('../src/services/dbService', () => ({
   getEnhancedUpdates: jest.fn(),
-  getFirmProfile: jest.fn(),
+  listFeedbackScores: jest.fn(),
   getPinnedItems: jest.fn(),
   getSavedSearches: jest.fn(),
   getCustomAlerts: jest.fn()
@@ -14,18 +14,44 @@ jest.mock('../src/services/workspaceService', () => ({
   getWorkspaceStats: jest.fn()
 }))
 
+jest.mock('../src/services/profileService', () => ({
+  getActiveProfile: jest.fn()
+}))
+
+jest.mock('../src/services/workflowRecommendationService', () => ({
+  buildRecommendations: jest.fn(() => [
+    { id: 'demo', title: 'Demo workflow', description: 'A test workflow', actions: [], reasons: ['Sample'], score: 42 }
+  ])
+}))
+
 jest.mock('../src/services/relevanceService', () => ({
   calculateRelevanceScore: jest.fn(() => 85)
+}))
+
+jest.mock('../src/services/workflowService', () => ({
+  listWorkflows: jest.fn(async () => []),
+  createWorkflow: jest.fn()
 }))
 
 const dbService = require('../src/services/dbService')
 const annotationService = require('../src/services/annotationService')
 const workspaceService = require('../src/services/workspaceService')
+const profileService = require('../src/services/profileService')
+const workflowService = require('../src/services/workflowService')
 const intelligenceDashboardService = require('../src/services/intelligenceDashboardService')
 
 describe('intelligenceDashboardService.getDailySnapshot', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    profileService.getActiveProfile = jest.fn().mockResolvedValue({
+      id: 'profile-1',
+      serviceType: 'payments',
+      secondaryServiceTypes: [],
+      regions: ['UK'],
+      personas: ['executive']
+    })
+    dbService.listFeedbackScores.mockResolvedValue([])
+    workflowService.listWorkflows.mockResolvedValue([])
   })
 
   it('normalises published timestamps and sorts streams without throwing', async () => {
@@ -56,7 +82,6 @@ describe('intelligenceDashboardService.getDailySnapshot', () => {
       .mockResolvedValueOnce([updateWithDateInstance, updateWithIsoString]) // today
       .mockResolvedValueOnce([updateWithDateInstance, updateWithIsoString]) // recent
 
-    dbService.getFirmProfile.mockResolvedValue({})
     dbService.getPinnedItems.mockResolvedValue({ items: [] })
     dbService.getSavedSearches.mockResolvedValue({ searches: [] })
     dbService.getCustomAlerts.mockResolvedValue({ alerts: [] })
@@ -76,6 +101,9 @@ describe('intelligenceDashboardService.getDailySnapshot', () => {
 
     expect(snapshot.timeline).toHaveLength(2)
     expect(snapshot.timeline[0].date <= snapshot.timeline[1].date).toBe(true)
+    expect(Array.isArray(snapshot.recommendedWorkflows)).toBe(true)
+    expect(snapshot.recommendedWorkflows[0].id).toBe('demo')
+    expect(Array.isArray(snapshot.savedWorkflows)).toBe(true)
   })
 
   it('marks pinned updates and surfaces persona metrics', async () => {
@@ -96,7 +124,6 @@ describe('intelligenceDashboardService.getDailySnapshot', () => {
       .mockResolvedValueOnce([pinnedUpdate])
       .mockResolvedValueOnce([pinnedUpdate])
 
-    dbService.getFirmProfile.mockResolvedValue({})
     dbService.getPinnedItems.mockResolvedValue({ items: [{ update_url: pinnedUpdate.url }] })
     dbService.getSavedSearches.mockResolvedValue({ searches: [] })
     dbService.getCustomAlerts.mockResolvedValue({ alerts: [] })
@@ -113,5 +140,6 @@ describe('intelligenceDashboardService.getDailySnapshot', () => {
     expect(executivePersona.pins).toBeGreaterThanOrEqual(1)
     expect(executivePersona.openTasks).toBeGreaterThanOrEqual(1)
     expect(executivePersona.updates[0].isPinned).toBe(true)
+    expect(snapshot.recommendedWorkflows).toBeDefined()
   })
 })

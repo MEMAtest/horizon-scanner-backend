@@ -86,6 +86,15 @@ function getAiIntelligenceScripts(snapshot) {
             .replace(/'/g, '&#039;');
         }
 
+        function safeParse(value) {
+          if (!value) return null;
+          try {
+            return JSON.parse(value);
+          } catch (error) {
+            return null;
+          }
+        }
+
         function coerceNumber(value) {
           const num = Number(value);
           return Number.isFinite(num) ? num : 0;
@@ -161,12 +170,25 @@ function getAiIntelligenceScripts(snapshot) {
           const isPinned = update.isPinned ? 'true' : 'false';
           const pinClass = update.isPinned ? ' is-pinned' : '';
           const pinSymbol = update.isPinned ? '★' : '☆';
+          const profileRelevance = update.profileRelevance || 'general';
+          const profileLabels = {
+            core: 'Core profile focus',
+            related: 'Related to profile',
+            broader: 'Outside profile focus'
+          };
+          const profileBadge = profileRelevance !== 'general'
+            ? '<span class="profile-tag profile-tag-' + escapeHtml(profileRelevance) + '">' + escapeHtml(profileLabels[profileRelevance] || 'Profile context') + '</span>'
+            : '';
+          const relevanceBadge = typeof update.relevanceScore === 'number'
+            ? '<span class="profile-tag profile-tag-score">' + escapeHtml(String(Math.round(update.relevanceScore))) + ' pts</span>'
+            : '';
 
           return [
             '<article class="stream-card" data-update-id="' + escapeHtml(update.updateId || '') + '" data-url="' + escapeHtml(update.url || '') + '" data-pinned="' + isPinned + '">',
             '  <header>',
             '    <span class="card-authority">' + escapeHtml(update.authority || 'Unknown') + '</span>',
             '    <span class="card-urgency urgency-' + urgency + '">' + escapeHtml(update.urgency || 'Low') + '</span>',
+            '    <span class="card-meta-tags">' + profileBadge + relevanceBadge + '</span>',
             '  </header>',
             '  <h3><a href="' + escapeHtml(update.url || '#') + '" target="_blank" rel="noopener">' + escapeHtml(update.headline || 'Untitled update') + '</a></h3>',
             '  <p class="card-summary">' + escapeHtml(update.summary || 'Summary not available.') + '</p>',
@@ -189,7 +211,7 @@ function getAiIntelligenceScripts(snapshot) {
           ].join('');
         }
 
-        function renderStreamsHTML(streams, workspace, timeline, themes) {
+        function renderStreamsHTML(streams, workspace, timeline, themes, workflows) {
           const priorityFeed = [];
           (streams?.high || []).forEach(update => priorityFeed.push(update));
           (streams?.medium || []).forEach(update => priorityFeed.push({ ...update, bucketOverride: 'medium' }));
@@ -203,6 +225,9 @@ function getAiIntelligenceScripts(snapshot) {
           });
 
           const sidebarBlocks = [];
+          if (Array.isArray(workflows) && workflows.length) {
+            sidebarBlocks.push(renderWorkflowSpotlightHTML(workflows));
+          }
           if (Array.isArray(streams?.medium) && streams.medium.length) {
             sidebarBlocks.push(renderStreamCollection('Medium relevance', streams.medium, 'medium'));
           }
@@ -246,6 +271,40 @@ function getAiIntelligenceScripts(snapshot) {
             '  </header>',
             '  <div class="stream-list">',
             list.map(buildStreamCardHTML).join(''),
+            '  </div>',
+            '</section>'
+          ].join('');
+        }
+
+        function renderWorkflowSpotlightHTML(workflows) {
+          if (!Array.isArray(workflows) || !workflows.length) return '';
+          return [
+            '<section class="workflow-spotlight">',
+            '  <header class="stream-header">',
+            '    <h3>Suggested workflows</h3>',
+            '    <span class="stream-count">' + workflows.length + '</span>',
+            '  </header>',
+            '  <div class="workflow-list">',
+            workflows.map(workflow => {
+              const reasons = Array.isArray(workflow.reasons) && workflow.reasons.length
+                ? '<ul class="workflow-reasons">' + workflow.reasons.map(reason => '<li>' + escapeHtml(reason) + '</li>').join('') + '</ul>'
+                : '';
+              const actions = Array.isArray(workflow.actions) && workflow.actions.length
+                ? '<ol class="workflow-actions">' + workflow.actions.map(action => '<li>' + escapeHtml(action) + '</li>').join('') + '</ol>'
+                : '';
+              return [
+                '<article class="workflow-card" data-workflow-id="' + escapeHtml(workflow.id || '') + '">',
+                '  <h4>' + escapeHtml(workflow.title || 'Recommended workflow') + '</h4>',
+                '  <p class="workflow-summary">' + escapeHtml(workflow.description || '') + '</p>',
+                reasons,
+                actions,
+                '  <footer class="workflow-footer">',
+                '    <button type="button" class="workflow-btn workflow-btn-start" data-action="start-workflow" data-workflow-id="' + escapeHtml(workflow.id || '') + '">Launch workflow</button>',
+                '    <button type="button" class="workflow-btn" data-action="complete-workflow" data-workflow-id="' + escapeHtml(workflow.id || '') + '">Mark complete</button>',
+                '  </footer>',
+                '</article>'
+              ].join('');
+            }).join(''),
             '  </div>',
             '</section>'
           ].join('');
@@ -415,7 +474,8 @@ function getAiIntelligenceScripts(snapshot) {
               newSnapshot.streams || {},
               newSnapshot.workspace || {},
               newSnapshot.timeline || [],
-              newSnapshot.layoutConfig && newSnapshot.layoutConfig.showThemes === false ? [] : newSnapshot.themes || []
+              newSnapshot.layoutConfig && newSnapshot.layoutConfig.showThemes === false ? [] : newSnapshot.themes || [],
+              newSnapshot.recommendedWorkflows || []
             );
           }
 
@@ -443,6 +503,7 @@ function getAiIntelligenceScripts(snapshot) {
           initialisePinnedStates();
           initialisePersonaTabs(state.activePersona);
           attachCardActions();
+          attachWorkflowActions();
         }
 
         function setActivePersona(persona) {
@@ -682,12 +743,238 @@ function getAiIntelligenceScripts(snapshot) {
           }, 3200);
         }
 
+        async function recordTelemetryEvent(payload) {
+          try {
+            const response = await fetch('/api/intelligence/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Telemetry error');
+            return response.json();
+          } catch (error) {
+            console.warn('Telemetry dispatch failed:', error);
+            throw error;
+          }
+        }
+
+        async function createWorkflow(payload) {
+          const response = await fetch('/api/workflows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Unable to create workflow');
+          }
+          return response.json();
+        }
+
+        async function updateWorkflowStatus(workflowId, status) {
+          const response = await fetch('/api/workflows/' + workflowId + '/status', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Unable to update workflow');
+          }
+          return response.json();
+        }
+
+        const workflowBuilder = initWorkflowBuilder();
+
+        function initWorkflowBuilder() {
+          const root = document.querySelector('[data-workflow-builder]');
+          if (!root) return null;
+          const form = root.querySelector('[data-workflow-form]');
+          const sourceList = root.querySelector('[data-workflow-source-list]');
+          const ratingInput = form.querySelector('input[name="rating"]');
+          const ratingLabel = form.querySelector('[data-workflow-rating-value]');
+          const personaContainer = form.querySelector('[data-workflow-personas]');
+          const policyToggle = form.querySelector('[data-policy-toggle]');
+          const policyField = root.querySelector('[data-policy-reference-field]');
+          const streamsData = safeParse(root.getAttribute('data-streams')) || {};
+          const knownUpdates = [].concat(streamsData.high || [], streamsData.medium || []);
+
+          function populateSources() {
+            if (!sourceList) return;
+            sourceList.innerHTML = '';
+            knownUpdates.slice(0, 8).forEach(update => {
+              const label = document.createElement('label');
+              label.className = 'workflow-source-option';
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.value = update.updateId || update.id || update.headline || update.authority || '';
+              checkbox.dataset.label = update.headline || update.authority || 'Regulatory update';
+              if (update.url) checkbox.dataset.url = update.url;
+              const text = document.createElement('span');
+              text.textContent = (update.authority ? update.authority + ' — ' : '') + (update.headline || 'Untitled update');
+              label.appendChild(checkbox);
+              label.appendChild(text);
+              sourceList.appendChild(label);
+            });
+          }
+
+          populateSources();
+
+          ratingInput.addEventListener('input', () => (ratingLabel.textContent = ratingInput.value));
+          policyToggle.addEventListener('change', () => {
+            policyField.style.display = policyToggle.checked ? 'block' : 'none';
+          });
+          policyField.style.display = 'none';
+
+          root.addEventListener('click', event => {
+            if (event.target.matches('[data-workflow-builder-close]')) {
+              close();
+            }
+          });
+
+          document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && root.classList.contains('is-visible')) {
+              close();
+            }
+          });
+
+          form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const payload = gatherPayload(new FormData(form));
+            try {
+              await createWorkflow(payload);
+              showToast('Workflow saved', 'success');
+              close();
+              window.RegCanaryIntelligence?.refreshSnapshot?.();
+            } catch (error) {
+              showToast(error.message || 'Unable to save workflow', 'error');
+            }
+          });
+
+          function gatherPayload(formData) {
+            const sources = [];
+            sourceList.querySelectorAll('input[type="checkbox"]').forEach(input => {
+              if (input.checked && input.dataset.label) {
+                sources.push({ label: input.dataset.label, url: input.dataset.url || null });
+              }
+            });
+            const extraLines = (formData.get('extraSources') || '').split(/\n+/).map(line => line.trim()).filter(Boolean);
+            extraLines.forEach(label => sources.push({ label, url: null }));
+
+            const personas = Array.from(personaContainer.querySelectorAll('input[type="checkbox"]:checked')).map(input => input.value);
+
+            return {
+              title: formData.get('title') || '',
+              summary: formData.get('summary') || '',
+              rating: Number(formData.get('rating')) || 3,
+              sources,
+              personas,
+              needsReview: formData.get('needsReview') === 'on',
+              alignsPolicy: formData.get('alignsPolicy') === 'on',
+              policyReference: formData.get('alignsPolicy') === 'on' ? (formData.get('policyReference') || '') : null
+            };
+          }
+
+          function open(prefill = {}) {
+            form.reset();
+            ratingInput.value = prefill.rating || 3;
+            ratingLabel.textContent = ratingInput.value;
+            policyToggle.checked = Boolean(prefill.alignsPolicy);
+            policyField.style.display = policyToggle.checked ? 'block' : 'none';
+            personaContainer.querySelectorAll('input[type="checkbox"]').forEach(input => {
+              input.checked = Array.isArray(prefill.personas) ? prefill.personas.includes(input.value) : false;
+            });
+            sourceList.querySelectorAll('input[type="checkbox"]').forEach(input => {
+              input.checked = false;
+            });
+            if (Array.isArray(prefill.sources)) {
+              sourceList.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                const label = input.dataset.label;
+                if (prefill.sources.some(source => (source.label || '').trim() === label)) {
+                  input.checked = true;
+                }
+              });
+            }
+            if (prefill.title) form.elements.title.value = prefill.title;
+            if (prefill.description || prefill.summary) {
+              form.elements.summary.value = prefill.description || prefill.summary;
+            }
+            root.classList.add('is-visible');
+            document.body.classList.add('workflow-builder-open');
+          }
+
+          function close() {
+            root.classList.remove('is-visible');
+            document.body.classList.remove('workflow-builder-open');
+          }
+
+          return { open, close };
+        }
+
+        function openWorkflowBuilderModal(prefill) {
+          if (!workflowBuilder) {
+            showToast('Workflow builder unavailable', 'error');
+            return;
+          }
+          workflowBuilder.open(prefill || {});
+        }
+
+        function attachWorkflowActions() {
+          document.querySelectorAll('[data-action="start-workflow"]').forEach(button => {
+            button.addEventListener('click', () => {
+              const workflowId = button.dataset.workflowId;
+              window.RegCanaryIntelligence?.startWorkflow(workflowId);
+            });
+          });
+
+          document.querySelectorAll('[data-action="complete-workflow"]').forEach(button => {
+            button.addEventListener('click', () => {
+              const workflowId = button.dataset.workflowId;
+              window.RegCanaryIntelligence?.completeWorkflow(workflowId);
+            });
+          });
+        }
+
+        document.addEventListener('click', event => {
+          const builderBtn = event.target.closest('[data-action="open-workflow-builder"]');
+          if (builderBtn) {
+            const prefill = safeParse(builderBtn.getAttribute('data-workflow-prefill')) || {};
+            openWorkflowBuilderModal(prefill);
+            event.preventDefault();
+            return;
+          }
+
+          const savedCompleteBtn = event.target.closest('[data-action="complete-saved-workflow"]');
+          if (savedCompleteBtn) {
+            const workflowId = savedCompleteBtn.dataset.workflowId;
+            if (!workflowId) return;
+            savedCompleteBtn.disabled = true;
+            updateWorkflowStatus(workflowId, 'closed')
+              .then(() => {
+                showToast('Workflow closed', 'success');
+                window.RegCanaryIntelligence?.refreshSnapshot?.();
+              })
+              .catch(error => {
+                showToast(error.message || 'Unable to close workflow', 'error');
+              })
+              .finally(() => {
+                savedCompleteBtn.disabled = false;
+              });
+          }
+        });
+
         window.RegCanaryIntelligence = {
           regenerateSummary() {
             showToast('Regeneration is coming soon – using latest summary for now.', 'info');
           },
           exportOnePager() {
             window.open('/ai-intelligence/export/one-pager.pdf', '_blank', 'noopener');
+          },
+          openWorkflowBuilder(prefill) {
+            openWorkflowBuilderModal(prefill || {});
+          },
+          refreshSnapshot() {
+            refreshAfterPinToggle();
           },
           showRiskExplain() {
             const components = Array.isArray(snapshot?.riskPulse?.components)
@@ -699,8 +986,32 @@ function getAiIntelligenceScripts(snapshot) {
             }
             const lines = components
               .map(component => component.label + ': ' + Number(component.score || 0).toFixed(1) + ' (' + Math.round((component.weight || 0) * 100) + '%)')
-              .join('\n');
-            alert('Signal score components:\n' + lines);
+              .join('\\n');
+            alert('Signal score components:\\n' + lines);
+          },
+          startWorkflow(workflowId) {
+            if (!workflowId) {
+              showToast('Missing workflow identifier', 'error');
+              return;
+            }
+            recordTelemetryEvent({
+              eventType: 'workflow_start',
+              workflowTemplateId: workflowId
+            })
+              .then(() => showToast('Workflow launched', 'success'))
+              .catch(() => showToast('Unable to launch workflow', 'error'));
+          },
+          completeWorkflow(workflowId) {
+            if (!workflowId) {
+              showToast('Missing workflow identifier', 'error');
+              return;
+            }
+            recordTelemetryEvent({
+              eventType: 'workflow_complete',
+              workflowTemplateId: workflowId
+            })
+              .then(() => showToast('Workflow marked complete', 'success'))
+              .catch(() => showToast('Unable to record completion', 'error'));
           },
           createAnnotation(update) {
             if (!update) return;
@@ -737,6 +1048,7 @@ function getAiIntelligenceScripts(snapshot) {
           initialisePersonaTabs(state.activePersona);
           initialisePinnedStates();
           attachCardActions();
+          attachWorkflowActions();
         });
       })();
     </script>

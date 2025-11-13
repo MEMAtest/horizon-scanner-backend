@@ -1,9 +1,6 @@
 function renderOnePagerSection(contentHtml) {
   return `
     <section class="report-section executive-summary" id="onePagerCard">
-      <div class="section-header">
-        <h2 class="section-title">Executive Summary</h2>
-      </div>
       <div class="executive-content" id="onePagerContent">
         ${contentHtml}
       </div>

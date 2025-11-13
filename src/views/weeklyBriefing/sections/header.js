@@ -9,8 +9,17 @@ function renderHeaderSection(metaHtml) {
           </div>
         </div>
         <div class="report-actions">
-          <button class="btn btn-secondary btn-sm" id="printBtn" onclick="window.print()">
-            <span>🖨️</span> Print Report
+          <button class="btn btn-pill btn-primary" id="assembleBtn" type="button">
+            <span class="btn-icon" aria-hidden="true">⚡</span>
+            <span class="btn-label">Assemble Briefing</span>
+          </button>
+          <button class="btn btn-pill btn-soft" id="refreshBtn" type="button">
+            <span class="btn-icon" aria-hidden="true">🔄</span>
+            <span class="btn-label">Refresh Data</span>
+          </button>
+          <button class="btn btn-pill btn-ghost" id="printBtn" type="button">
+            <span class="btn-icon" aria-hidden="true">🖨️</span>
+            <span class="btn-label">Print Report</span>
           </button>
         </div>
       </div>

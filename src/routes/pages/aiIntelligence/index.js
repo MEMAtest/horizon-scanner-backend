@@ -7,7 +7,8 @@ const intelligenceDashboardService = require('../../../services/intelligenceDash
 async function renderAiIntelligencePage(req, res) {
   try {
     const sidebarPromise = getSidebar('ai-intelligence')
-    const snapshotPromise = intelligenceDashboardService.getDailySnapshot()
+    const userId = (req.headers['x-user-id'] && String(req.headers['x-user-id']).trim()) || 'default'
+    const snapshotPromise = intelligenceDashboardService.getDailySnapshot({ userId })
 
     const [sidebar, snapshot] = await Promise.all([sidebarPromise, snapshotPromise])
     const commonStyles = getCommonStyles()

@@ -1,3 +1,6 @@
+const VERSION_SUFFIX = globalThis.__WB_VERSION__ || ''
+const withVersion = (path) => `${path}${VERSION_SUFFIX}`
+
 class WeeklyBriefingApp {
   constructor() {
     this.state = {
@@ -104,7 +107,7 @@ class WeeklyBriefingApp {
 
 async function applyMixins(target) {
   const resolveMixin = async (path, exportName) => {
-    const mod = await import(path)
+    const mod = await import(withVersion(path))
     if (exportName && typeof mod[exportName] === 'function') return mod[exportName]
     if (mod?.default) {
       const candidate = mod.default

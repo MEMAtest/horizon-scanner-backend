@@ -2,6 +2,9 @@ const dbService = require('./dbService')
 const annotationService = require('./annotationService')
 const workspaceService = require('./workspaceService')
 const relevanceService = require('./relevanceService')
+const profileService = require('./profileService')
+const workflowRecommendationService = require('./workflowRecommendationService')
+const workflowService = require('./workflowService')
 
 const DAILY_AUTHORITY_CAP = 10
 const RISK_PULSE_FLOOR = 1.5
@@ -269,7 +272,15 @@ function computeThemes(updates, max = 5) {
     }))
 }
 
-function ensureUpdatesContainer(updates, firmProfile) {
+function buildBehaviourContext(scores = []) {
+  return Array.isArray(scores) ? scores.map(score => ({
+    entityType: score.entityType || score.entity_type,
+    entityId: score.entityId || score.entity_id,
+    weight: Number(score.weight || 0)
+  })) : []
+}
+
+function ensureUpdatesContainer(updates, profileContext) {
   const buckets = {
     high: [],
     medium: [],
@@ -277,7 +288,7 @@ function ensureUpdatesContainer(updates, firmProfile) {
   }
 
   updates.forEach(update => {
-    const score = relevanceService.calculateRelevanceScore(update, firmProfile)
+    const score = relevanceService.calculateRelevanceScore(update, profileContext)
     const personas = derivePersonas(update)
     const publishedDate = extractUpdateDate(update)
     const publishedAt = publishedDate ? publishedDate.toISOString() : ''
@@ -285,6 +296,12 @@ function ensureUpdatesContainer(updates, firmProfile) {
       score >= 70 ? 'high' :
       score >= 40 ? 'medium' :
       'low'
+
+    const hasProfile = Boolean(profileContext && profileContext.profile)
+    const profileRelevance = hasProfile
+      ? (bucket === 'high' ? 'core' : bucket === 'medium' ? 'related' : 'broader')
+      : 'general'
+    const profileMatch = hasProfile && bucket === 'high'
 
     buckets[bucket].push({
       updateId: update.id,
@@ -297,7 +314,10 @@ function ensureUpdatesContainer(updates, firmProfile) {
       personas,
       nextStep: deriveNextStep(update),
       url: update.url,
-      primarySector: (update.area || update.sector || '').trim()
+      primarySector: (update.area || update.sector || '').trim(),
+      relevanceScore: score,
+      profileRelevance,
+      profileMatch
     })
   })
 
@@ -558,6 +578,8 @@ function buildClientSnapshot(snapshot) {
       ])
     ),
     personaBriefings: snapshot.personaBriefings,
+    recommendedWorkflows: snapshot.recommendedWorkflows,
+    savedWorkflows: snapshot.savedWorkflows,
     workspace: {
       stats: snapshot.workspace.stats,
       tasks: snapshot.workspace.tasks,
@@ -572,7 +594,9 @@ function buildClientSnapshot(snapshot) {
       annotationSummary: snapshot.workspace.annotationSummary
     },
     timeline: snapshot.timeline,
-    themes: snapshot.themes
+    themes: snapshot.themes,
+    profile: snapshot.profile,
+    profileBehaviour: snapshot.profileBehaviour
   }
 }
 
@@ -725,15 +749,21 @@ async function getDailySnapshot(options = {}) {
     ...options.filters
   }
 
+  const userId = options.userId || 'default'
+  const activeProfile = await profileService.getActiveProfile(userId).catch(() => null)
+  const behaviourScores = activeProfile
+    ? await dbService.listFeedbackScores(activeProfile.id).catch(() => [])
+    : []
+
   const [
     todayUpdates,
     recentUpdates,
-    firmProfile,
     workspaceStatsResult,
     pinnedItemsResult,
     savedSearchesResult,
     customAlertsResult,
-    annotations
+    annotations,
+    savedWorkflows
   ] = await Promise.all([
     dbService.getEnhancedUpdates(filters),
     dbService.getEnhancedUpdates({
@@ -741,14 +771,14 @@ async function getDailySnapshot(options = {}) {
       endDate: toISO(todayEnd),
       limit: options.recentLimit || 1000
     }),
-    dbService.getFirmProfile().catch(() => null),
     workspaceService.getWorkspaceStats().catch(() => ({ stats: {} })),
     dbService.getPinnedItems().catch(() => ({ items: [] })),
     dbService.getSavedSearches().catch(() => ({ searches: [] })),
     dbService.getCustomAlerts().catch(() => ({ alerts: [] })),
     annotationService.listAnnotations({
       status: ['flagged', 'action_required', 'assigned', 'note', 'triage']
-    }).catch(() => [])
+    }).catch(() => []),
+    workflowService.listWorkflows(userId, { limit: 20 }).catch(() => [])
   ])
 
   let recentPool = recentUpdates
@@ -898,7 +928,12 @@ async function getDailySnapshot(options = {}) {
   const savedSearches = Array.isArray(savedSearchesResult) ? savedSearchesResult : (savedSearchesResult && savedSearchesResult.searches) || []
   const customAlerts = Array.isArray(customAlertsResult) ? customAlertsResult : (customAlertsResult && customAlertsResult.alerts) || []
 
-  const streams = ensureUpdatesContainer(primaryUpdates, firmProfile)
+  const profileContext = {
+    profile: activeProfile,
+    behaviourWeights: buildBehaviourContext(behaviourScores)
+  }
+
+  const streams = ensureUpdatesContainer(primaryUpdates, profileContext)
   applyPinnedStateToStreams(streams, pinnedItems)
   const personaSnapshot = buildPersonaSnapshot(streams, annotations)
   const personaBriefings = buildPersonaBriefings(personaSnapshot, streams)
@@ -935,6 +970,12 @@ async function getDailySnapshot(options = {}) {
 
   const annotationSummary = summarizeAnnotationsList(annotations)
 
+  const recommendedWorkflows = workflowRecommendationService.buildRecommendations({
+    profile: activeProfile,
+    behaviourScores,
+    streams
+  })
+
   return {
     generatedAt: new Date().toISOString(),
     snapshotDate: referenceDate.toISOString(),
@@ -951,6 +992,8 @@ async function getDailySnapshot(options = {}) {
     streams,
     personas: personaSnapshot,
     personaBriefings,
+    recommendedWorkflows,
+    savedWorkflows,
     workspace: {
       stats: (workspaceStatsResult && workspaceStatsResult.stats) || {},
       tasks: outstandingTasks,
@@ -961,6 +1004,10 @@ async function getDailySnapshot(options = {}) {
     },
     timeline,
     themes,
+    profile: activeProfile,
+    profileBehaviour: behaviourScores,
+    profile: activeProfile,
+    profileBehaviour: behaviourScores,
     layoutConfig: {
       showThemes: true,
       showAuthoritySpotlight: true,
