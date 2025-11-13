@@ -4,8 +4,8 @@
 
 function render(options = {}) {
   const {
-    title = 'Regulatory Horizon Scanner',
-    subtitle = 'UK Financial Regulatory Updates',
+    title = 'RegCanary',
+    subtitle = 'UK Financial Regulatory Intelligence',
     showStats = false,
     showStatus = false,
     totalUpdates = 0,

@@ -28,7 +28,7 @@ function renderEnforcementPage({
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>FCA Enforcement Dashboard - Regulatory Intelligence Platform</title>
+        <title>FCA Enforcement Dashboard - RegCanary</title>
         ${commonStyles}
         ${getEnforcementStyles()}
         ${getEnforcementHeadScripts()}

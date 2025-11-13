@@ -1,7 +1,7 @@
 {
-  "name": "regulatory-horizon-scanner",
+  "name": "regcanary",
   "version": "2.0.0",
-  "description": "Enterprise Regulatory Intelligence Platform - Comprehensive monitoring of UK and international financial regulatory authorities",
+  "description": "RegCanary - Enterprise Regulatory Intelligence Platform - Comprehensive monitoring of UK and international financial regulatory authorities",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -36,18 +36,18 @@
     "regtech"
   ],
   "author": {
-    "name": "Regulatory Intelligence Team",
-    "email": "contact@regulatory-intelligence.com"
+    "name": "RegCanary",
+    "email": "contact@regcanary.com"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/regulatory-horizon-scanner.git"
+    "url": "https://github.com/MEMAtest/horizon-scanner-backend.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/regulatory-horizon-scanner/issues"
+    "url": "https://github.com/MEMAtest/horizon-scanner-backend/issues"
   },
-  "homepage": "https://github.com/your-org/regulatory-horizon-scanner#readme",
+  "homepage": "https://regcanary.com",
   "engines": {
     "node": ">=16.0.0",
     "npm": ">=8.0.0"
