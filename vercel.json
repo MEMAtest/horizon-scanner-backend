@@ -1,32 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30
-      }
-    },
-    {
-      "src": "api/cron/daily-digest.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30
-      }
-    },
-    {
-      "src": "api/cron/rss-refresh.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30
-      }
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
   "rewrites": [
     { "source": "/api/cron/daily-digest", "destination": "/api/cron/daily-digest.js" },
     { "source": "/api/cron/rss-refresh", "destination": "/api/cron/rss-refresh.js" },
