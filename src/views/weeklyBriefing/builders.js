@@ -245,7 +245,7 @@ function buildUpdateCardHtml(update) {
   const headline = (update.title || update.headline || '').trim()
   const aiSummary = (update.ai_summary || '').trim()
   const summarySource = (aiSummary || update.summary || '').replace(/\s+/g, ' ').trim()
-  const summary = truncateText(summarySource, 320) || 'Summary not available.'
+  const summary = truncateText(summarySource, 520) || 'Summary not available.'
   const impactLevel = update.impact_level || 'Informational'
   const urgency = update.urgency || 'Low'
   const impactKey = slugify(impactLevel)

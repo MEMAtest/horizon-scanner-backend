@@ -17,7 +17,7 @@ function formatDate(value, options) {
   }
 }
 
-function truncate(text, length = 200) {
+function truncate(text, length = 360) {
   if (!text) return ''
   const cleaned = String(text).replace(/\s+/g, ' ').trim()
   return cleaned.length > length ? `${cleaned.slice(0, length).trim()}…` : cleaned
