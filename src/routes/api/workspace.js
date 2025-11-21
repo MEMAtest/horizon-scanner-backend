@@ -12,12 +12,30 @@ function registerWorkspaceRoutes(router) {
     console.log('Firm API: Getting firm profile')
 
     const profile = await dbService.getFirmProfile()
+
+    // Handle both camelCase (JSON) and snake_case (PostgreSQL) field names
+    const rawSectors = profile
+      ? (profile.primarySectors || profile.primary_sectors)
+      : null
+
+    // Parse sectors if stored as JSON string
+    let parsedSectors = []
+    if (rawSectors) {
+      if (typeof rawSectors === 'string') {
+        try {
+          parsedSectors = JSON.parse(rawSectors)
+        } catch {
+          parsedSectors = []
+        }
+      } else if (Array.isArray(rawSectors)) {
+        parsedSectors = rawSectors
+      }
+    }
+
     const normalizedProfile = profile
       ? {
           ...profile,
-          primarySectors: Array.isArray(profile.primarySectors)
-            ? profile.primarySectors.map(normalizeSectorName).filter(Boolean)
-            : []
+          primarySectors: parsedSectors.map(normalizeSectorName).filter(Boolean)
         }
       : null
 
