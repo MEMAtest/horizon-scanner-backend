@@ -115,14 +115,43 @@ function applyDataMixin(klass) {
       if (this.state.polling) {
         clearInterval(this.state.polling)
       }
+
+      // Initialize progress tracking
+      let pollCount = 0
+      const startTime = Date.now()
+
       this.state.polling = setInterval(async () => {
         try {
+          pollCount++
+          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000)
+
           const response = await fetch(`/api/weekly-briefings/run/${encodeURIComponent(runId)}`)
           if (!response.ok) throw new Error('Failed to check status')
           const payload = await response.json()
-          this.updateRunStatus(payload.status)
+
+          // Calculate progress based on elapsed time and poll count
+          // Assume typical generation takes 30-90 seconds
+          let estimatedProgress = Math.min(95, Math.floor((elapsedSeconds / 60) * 100))
+
+          // Add incremental progress per poll
+          estimatedProgress = Math.min(95, estimatedProgress + (pollCount * 5))
+
+          // Override with server-provided progress if available
+          const serverProgress = payload.status?.progress
+          const progress = serverProgress !== undefined ? serverProgress : estimatedProgress
+
+          const statusWithProgress = {
+            ...payload.status,
+            progress: progress
+          }
+
+          this.updateRunStatus(statusWithProgress)
+
           if (!payload.status) return
           if (payload.status.state === 'completed') {
+            // Show 100% completion
+            this.updateRunStatus({ ...payload.status, progress: 100 })
+
             clearInterval(this.state.polling)
             if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
             await this.loadLatestBriefing(payload.status.briefingId)
@@ -146,7 +175,7 @@ function applyDataMixin(klass) {
           const friendly = /failed to fetch|network/i.test(message)
             ? 'Unable to reach the briefing service. Please confirm the API is running and try again.'
             : message
-          this.updateRunStatus({ state: 'failed', message: friendly })
+          this.updateRunStatus({ state: 'failed', message: friendly, progress: 0 })
           this.showToast(friendly, 'error', false)
         }
       }, 3000)

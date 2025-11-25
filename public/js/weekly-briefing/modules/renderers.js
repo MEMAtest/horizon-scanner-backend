@@ -120,15 +120,79 @@ function applyRenderMixin(klass) {
       if (!status) {
         runStatusEl.classList.remove('active')
         runStatusEl.style.display = 'none'
-        runStatusEl.textContent = ''
+        runStatusEl.innerHTML = ''
         return
       }
+
       runStatusEl.classList.add('active')
       runStatusEl.style.display = 'block'
-      const parts = [status.state ? status.state.toUpperCase() : 'IN PROGRESS']
-      if (status.message) parts.push(`– ${status.message}`)
-      if (status.cacheHit) parts.push('(cache hit)')
-      runStatusEl.textContent = parts.join(' ')
+
+      const state = status.state || 'processing'
+      const message = status.message || 'Processing your request...'
+      const progress = status.progress || 0
+      const isCompleted = state === 'completed'
+      const isFailed = state === 'failed'
+      const isProcessing = !isCompleted && !isFailed
+
+      // Beautiful loading UI with progress bar
+      runStatusEl.innerHTML = `
+        <div class="briefing-status-card ${isProcessing ? 'processing' : ''} ${isCompleted ? 'completed' : ''} ${isFailed ? 'failed' : ''}">
+          <div class="status-header">
+            <div class="status-icon">
+              ${isProcessing ? `
+                <svg class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" />
+                </svg>
+              ` : isCompleted ? `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" fill="#10b981" />
+                  <path d="M7 12l3 3 7-7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              ` : `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" fill="#ef4444" />
+                  <path d="M8 8l8 8M16 8l-8 8" stroke="white" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              `}
+            </div>
+            <div class="status-text">
+              <div class="status-title">${this.escapeHtml(state.toUpperCase())}</div>
+              <div class="status-message">${this.escapeHtml(message)}</div>
+            </div>
+          </div>
+          ${isProcessing ? `
+            <div class="progress-bar-container">
+              <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: ${progress}%"></div>
+              </div>
+              <div class="progress-text">${progress}%</div>
+            </div>
+            <div class="status-steps">
+              <div class="step ${progress >= 20 ? 'completed' : 'active'}">
+                <span class="step-dot"></span>
+                <span class="step-label">Fetching updates</span>
+              </div>
+              <div class="step ${progress >= 40 ? 'completed' : progress >= 20 ? 'active' : ''}">
+                <span class="step-dot"></span>
+                <span class="step-label">Analyzing content</span>
+              </div>
+              <div class="step ${progress >= 60 ? 'completed' : progress >= 40 ? 'active' : ''}">
+                <span class="step-dot"></span>
+                <span class="step-label">Generating insights</span>
+              </div>
+              <div class="step ${progress >= 80 ? 'completed' : progress >= 60 ? 'active' : ''}">
+                <span class="step-dot"></span>
+                <span class="step-label">Creating briefing</span>
+              </div>
+              <div class="step ${progress >= 100 ? 'completed' : progress >= 80 ? 'active' : ''}">
+                <span class="step-dot"></span>
+                <span class="step-label">Finalizing</span>
+              </div>
+            </div>
+          ` : ''}
+          ${status.cacheHit ? '<div class="status-badge">Using cached results</div>' : ''}
+        </div>
+      `
     },
 
     formatRichTextClient(text, fallbackHtml) {
