@@ -3,6 +3,8 @@ const withVersion = (path) => `${path}${VERSION_SUFFIX}`
 
 class WeeklyBriefingApp {
   constructor() {
+    console.log('[WeeklyBriefing] 🏗️ Constructor called')
+
     this.state = {
       current: window.__SMART_BRIEFING__ || null,
       recent: window.__SMART_BRIEFING_LIST__ || [],
@@ -13,6 +15,10 @@ class WeeklyBriefingApp {
       annotationVisibility: ['team', 'all'],
       metrics: null
     }
+    console.log('[WeeklyBriefing] ✓ State initialized:', {
+      hasCurrent: Boolean(this.state.current),
+      recentCount: this.state.recent.length
+    })
 
     this.dom = {
       assembleBtn: document.getElementById('assembleBtn'),
@@ -53,6 +59,12 @@ class WeeklyBriefingApp {
     }
 
     this._fallbackAttempts = new Set()
+    console.log('[WeeklyBriefing] ✓ DOM elements cached:', {
+      hasAssembleBtn: Boolean(this.dom.assembleBtn),
+      hasPrintBtn: Boolean(this.dom.printBtn),
+      hasRefreshBtn: Boolean(this.dom.refreshBtn),
+      hasModal: Boolean(this.dom.assembleModal)
+    })
 
     const config = window.__SMART_BRIEFING_CONFIG__ || {}
     this.MAX_HIGHLIGHT_UPDATES = Number(config.maxHighlightUpdates) || 10
@@ -82,43 +94,71 @@ class WeeklyBriefingApp {
       lastGeneratedContent: ''
     }
 
+    console.log('[WeeklyBriefing] ✓ Constructor complete, calling initialize()')
     this.initialize()
   }
 
   async initialize() {
+    console.log('[WeeklyBriefing] 🔄 Initialize method called')
     this.quickNoteState.defaults = this.loadQuickNoteDefaults()
+    console.log('[WeeklyBriefing] ✓ Quick note defaults loaded')
+
     this.attachEventListeners()
+    console.log('[WeeklyBriefing] ✓ Event listeners attached')
 
     if (this.state.current) {
+      console.log('[WeeklyBriefing] ℹ️ Current briefing exists, rendering...')
       this.renderBriefing(this.state.current)
       this.refreshAnnotationsFromServer().catch(error => {
-        console.warn('Annotation refresh failed:', error.message)
+        console.warn('[WeeklyBriefing] ⚠️ Annotation refresh failed:', error.message)
       })
     } else {
+      console.log('[WeeklyBriefing] ℹ️ No current briefing, attempting to load latest...')
       this.loadLatestBriefing().catch(error => {
-        console.warn('Initial briefing load failed:', error.message)
+        console.warn('[WeeklyBriefing] ⚠️ Initial briefing load failed:', error.message)
       })
     }
 
     this.renderRecentBriefings()
+    console.log('[WeeklyBriefing] ✓ Recent briefings rendered')
+
     this.loadMetrics()
+    console.log('[WeeklyBriefing] ✓ Metrics loading initiated')
+
+    console.log('[WeeklyBriefing] ✅ Initialize complete')
   }
 }
 
 async function applyMixins(target) {
+  console.log('[WeeklyBriefing] 🔌 Starting mixin loading...')
+
   const resolveMixin = async (path, exportName) => {
-    const mod = await import(withVersion(path))
-    if (exportName && typeof mod[exportName] === 'function') return mod[exportName]
-    if (mod?.default) {
-      const candidate = mod.default
-      if (typeof candidate === 'function') return candidate
-      if (exportName && typeof candidate[exportName] === 'function') {
-        return candidate[exportName]
+    console.log(`[WeeklyBriefing] 📥 Loading mixin: ${exportName} from ${path}`)
+    try {
+      const mod = await import(withVersion(path))
+      if (exportName && typeof mod[exportName] === 'function') {
+        console.log(`[WeeklyBriefing] ✓ Mixin loaded: ${exportName}`)
+        return mod[exportName]
       }
+      if (mod?.default) {
+        const candidate = mod.default
+        if (typeof candidate === 'function') {
+          console.log(`[WeeklyBriefing] ✓ Mixin loaded: ${exportName} (via default)`)
+          return candidate
+        }
+        if (exportName && typeof candidate[exportName] === 'function') {
+          console.log(`[WeeklyBriefing] ✓ Mixin loaded: ${exportName} (via default.${exportName})`)
+          return candidate[exportName]
+        }
+      }
+      throw new Error(`Mixin ${exportName || 'default'} missing in ${path}`)
+    } catch (error) {
+      console.error(`[WeeklyBriefing] ❌ Failed to load mixin ${exportName}:`, error)
+      throw error
     }
-    throw new Error(`Mixin ${exportName || 'default'} missing in ${path}`)
   }
 
+  console.log('[WeeklyBriefing] 📦 Loading all mixins in parallel...')
   const [
     applyUtilsMixin,
     applyHighlightsMixin,
@@ -140,19 +180,38 @@ async function applyMixins(target) {
     resolveMixin('./modules/modals.js', 'applyModalsMixin'),
     resolveMixin('./modules/events.js', 'applyEventsMixin')
   ])
+  console.log('[WeeklyBriefing] ✓ All mixins loaded successfully')
 
+  console.log('[WeeklyBriefing] 🔧 Applying mixins to class...')
   applyUtilsMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied utils mixin')
   applyHighlightsMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied highlights mixin')
   applyQuickNoteMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied quick note mixin')
   applyRenderMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied render mixin')
   applyAnnotationsMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied annotations mixin')
   applyMetricsMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied metrics mixin')
   applyDataMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied data mixin')
   applyModalsMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied modals mixin')
   applyEventsMixin(target)
+  console.log('[WeeklyBriefing] ✓ Applied events mixin')
+  console.log('[WeeklyBriefing] ✅ All mixins applied successfully')
 }
 
 export async function loadWeeklyBriefingApp() {
-  await applyMixins(WeeklyBriefingApp)
-  return WeeklyBriefingApp
+  console.log('[WeeklyBriefing] 🚀 loadWeeklyBriefingApp() called')
+  try {
+    await applyMixins(WeeklyBriefingApp)
+    console.log('[WeeklyBriefing] ✓ Mixins applied, returning class')
+    return WeeklyBriefingApp
+  } catch (error) {
+    console.error('[WeeklyBriefing] ❌ Failed to load app:', error)
+    throw error
+  }
 }
