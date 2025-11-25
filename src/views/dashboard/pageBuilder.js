@@ -1,6 +1,7 @@
 const { renderStatsGrid, renderFilters, renderUpdatesList } = require('./components')
 const { getDashboardStyles } = require('./styles')
 const { getDashboardScripts } = require('./scripts')
+const { formatCurrentDate } = require('./helpers')
 
 function buildDashboardPage({
   sidebar,
@@ -27,7 +28,13 @@ function buildDashboardPage({
         ${sidebar}
         <main class="main-content">
           <header class="dashboard-header">
-            <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="dashboard-logo" />
+            <div class="dashboard-header-top">
+              <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="dashboard-logo" />
+              <div class="dashboard-date">
+                <span class="date-label">Today</span>
+                <span class="date-value">${formatCurrentDate()}</span>
+              </div>
+            </div>
             <p class="dashboard-subtitle">
               Real-time regulatory monitoring with AI-powered analysis and business impact intelligence.
             </p>

@@ -40,6 +40,18 @@ class SmartBriefingService {
   async startRun(options = {}) {
     await this.ensureStorage()
 
+    // Map frontend payload format to backend expected format
+    // Frontend sends: { start, end, force }
+    // Backend expects: { date_range: { start, end }, force_regenerate }
+    const normalizedOptions = {
+      ...options,
+      date_range: options.date_range || (options.start || options.end ? {
+        start: options.start,
+        end: options.end
+      } : undefined),
+      force_regenerate: options.force_regenerate ?? options.force ?? false
+    }
+
     const runId = crypto.randomUUID()
     const createdAt = new Date().toISOString()
 
@@ -52,7 +64,7 @@ class SmartBriefingService {
     })
 
     setImmediate(() => {
-      this.processRun(runId, options).catch(error => {
+      this.processRun(runId, normalizedOptions).catch(error => {
         console.error('SmartBriefing run failed:', error)
         this.statusStore.set(runId, {
           runId,

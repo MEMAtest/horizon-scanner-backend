@@ -13,10 +13,39 @@ function getDashboardStyles() {
         gap: 16px;
       }
 
+      .dashboard-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+
       .dashboard-logo {
         max-width: 280px;
         height: auto;
         margin-bottom: 8px;
+      }
+
+      .dashboard-date {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .dashboard-date .date-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        margin-bottom: 2px;
+      }
+
+      .dashboard-date .date-value {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 16px;
       }
 
       .dashboard-title {
@@ -683,6 +712,16 @@ function getDashboardStyles() {
       @media (max-width: 768px) {
         .stats-grid {
           grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        }
+
+        .dashboard-header-top {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .dashboard-date {
+          align-items: flex-start;
         }
 
         .update-details {

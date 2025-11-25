@@ -81,7 +81,7 @@ function applyFiltersMixin(klass) {
 
     getYearFromPeriod(period) {
         if (!period) return null;
-        const match = String(period).match(/^(\\d{4})/);
+        const match = String(period).match(/^(\d{4})/);
         return match ? parseInt(match[1], 10) : null;
     },
 

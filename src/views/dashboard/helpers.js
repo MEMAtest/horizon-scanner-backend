@@ -83,6 +83,15 @@ function formatStatChange(delta = 0, percent = 0) {
   return `<div class="stat-change ${direction}">${arrow} ${absValue}${percentLabel} vs last week</div>`
 }
 
+function formatCurrentDate() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
 function formatDashboardStats(rawStats = {}) {
   return {
     totalUpdates: rawStats.totalUpdates || 0,
@@ -182,6 +191,7 @@ function computeAIFeatures(update) {
 
 module.exports = {
   computeAIFeatures,
+  formatCurrentDate,
   formatDashboardStats,
   formatDate,
   formatDateDisplay,
