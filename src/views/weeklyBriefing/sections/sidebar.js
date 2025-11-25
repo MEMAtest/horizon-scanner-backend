@@ -17,20 +17,26 @@ function renderSnapshotStats(stats = {}) {
     <div class="sidebar-card">
       <h3 class="sidebar-card-title">Snapshot Stats</h3>
       <div class="stats-list">
-        ${renderStatItem('Total Updates', stats.totalUpdates || 0)}
-        ${renderStatItem('High Impact', stats.highImpact || 0, 'accent')}
-        ${renderStatItem('Moderate', stats.moderate || 0)}
-        ${renderStatItem('Informational', stats.informational || 0)}
+        ${renderStatItem('Total Updates', stats.totalUpdates || 0, '', 'all')}
+        ${renderStatItem('High Impact', stats.highImpact || 0, 'accent', 'high-impact')}
+        ${renderStatItem('Moderate', stats.moderate || 0, '', 'moderate')}
+        ${renderStatItem('Informational', stats.informational || 0, '', 'informational')}
       </div>
     </div>
   `
 }
 
-function renderStatItem(label, value, variant = '') {
+function renderStatItem(label, value, variant = '', filter = '') {
+  const isClickable = filter && value > 0
+  const clickableClass = isClickable ? 'stat-item-clickable' : ''
+  const dataAttr = isClickable ? `data-filter="${filter}"` : ''
+  const role = isClickable ? 'role="button" tabindex="0"' : ''
+
   return `
-    <div class="stat-item ${variant ? `stat-item-${variant}` : ''}">
+    <div class="stat-item ${variant ? `stat-item-${variant}` : ''} ${clickableClass}" ${dataAttr} ${role}>
       <span class="stat-value">${sanitizeHtml(String(value))}</span>
       <span class="stat-label">${sanitizeHtml(label)}</span>
+      ${isClickable ? '<span class="stat-arrow">→</span>' : ''}
     </div>
   `
 }

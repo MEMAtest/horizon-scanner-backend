@@ -354,6 +354,9 @@ function applyEventsMixin(klass) {
 
       // Tab switching functionality
       this.initTabSwitching()
+
+      // Snapshot stats click handlers
+      this.initSnapshotStatsHandlers()
     },
 
     initTabSwitching() {
@@ -392,6 +395,149 @@ function applyEventsMixin(klass) {
           console.log(`[WeeklyBriefing] Switched to tab: ${targetTab}`)
         })
       })
+    },
+
+    initSnapshotStatsHandlers() {
+      const statItems = document.querySelectorAll('.stat-item-clickable')
+
+      if (!statItems.length) {
+        console.log('[WeeklyBriefing] No clickable stats found')
+        return
+      }
+
+      console.log(`[WeeklyBriefing] Initializing ${statItems.length} clickable stats`)
+
+      statItems.forEach(item => {
+        const clickHandler = () => {
+          const filter = item.getAttribute('data-filter')
+          if (filter) {
+            this.openUpdatesFilterModal(filter)
+          }
+        }
+
+        item.addEventListener('click', clickHandler)
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            clickHandler()
+          }
+        })
+      })
+    },
+
+    openUpdatesFilterModal(filter) {
+      console.log(`[WeeklyBriefing] Opening filtered updates modal: ${filter}`)
+
+      if (!this.state.current || !this.state.current.dataset) {
+        this.showToast('No briefing data available', 'warning')
+        return
+      }
+
+      const allUpdates = this.state.current.dataset.currentUpdates || []
+      const filteredUpdates = this.filterUpdatesByImpact(allUpdates, filter)
+
+      const filterLabels = {
+        'all': 'All Updates',
+        'high-impact': 'High Impact Updates',
+        'moderate': 'Moderate Impact Updates',
+        'informational': 'Informational Updates'
+      }
+
+      const title = filterLabels[filter] || 'Updates'
+
+      this.showUpdatesListModal(filteredUpdates, title)
+    },
+
+    filterUpdatesByImpact(updates, filter) {
+      if (!Array.isArray(updates)) return []
+      if (filter === 'all') return updates
+
+      return updates.filter(update => {
+        const impact = (update.impact_level || update.impact || '').toString().toLowerCase()
+
+        if (filter === 'high-impact') {
+          return impact.includes('significant') || impact.includes('high')
+        } else if (filter === 'moderate') {
+          return impact.includes('moderate') || impact.includes('medium')
+        } else if (filter === 'informational') {
+          return impact.includes('informational') || impact.includes('low') || !impact
+        }
+
+        return false
+      })
+    },
+
+    showUpdatesListModal(updates, title) {
+      // Create modal HTML
+      const modalHtml = `
+        <div class="modal-overlay" id="updatesListModal">
+          <div class="modal updates-list-modal">
+            <div class="modal-header">
+              <h2>${this.escapeHtml(title)}</h2>
+              <button class="modal-close" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+              ${updates.length === 0 ? `
+                <div class="empty-state">No updates found for this filter</div>
+              ` : `
+                <div class="updates-list">
+                  ${updates.map((update, index) => `
+                    <div class="update-list-item">
+                      <div class="update-list-number">${index + 1}</div>
+                      <div class="update-list-content">
+                        <div class="update-list-authority">${this.escapeHtml(update.authority || 'Unknown')}</div>
+                        <div class="update-list-title">${this.escapeHtml(update.title || 'Untitled')}</div>
+                        <div class="update-list-meta">
+                          <span>${this.escapeHtml(this.formatDate(update.published_date))}</span>
+                          ${update.impact_level ? `<span class="impact-badge">${this.escapeHtml(update.impact_level)}</span>` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary modal-close-btn">Close</button>
+            </div>
+          </div>
+        </div>
+      `
+
+      // Remove existing modal if any
+      const existingModal = document.getElementById('updatesListModal')
+      if (existingModal) {
+        existingModal.remove()
+      }
+
+      // Add to DOM
+      document.body.insertAdjacentHTML('beforeend', modalHtml)
+
+      // Add event listeners
+      const modal = document.getElementById('updatesListModal')
+      const closeButtons = modal.querySelectorAll('.modal-close, .modal-close-btn')
+
+      closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          modal.remove()
+        })
+      })
+
+      // Close on overlay click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove()
+        }
+      })
+
+      // Close on Escape key
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          modal.remove()
+          document.removeEventListener('keydown', escapeHandler)
+        }
+      }
+      document.addEventListener('keydown', escapeHandler)
     }
   })
 }
