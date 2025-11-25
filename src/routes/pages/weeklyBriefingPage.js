@@ -130,6 +130,47 @@ async function renderWeeklyBriefing(req, res) {
       ? activeBriefing.dataset.highlightUpdates
       : activeBriefing?.dataset?.currentUpdates || []
 
+    // Calculate real metrics
+    const allUpdates = activeBriefing?.dataset?.currentUpdates || []
+    const highImpactCount = statsSummary.byImpact.Significant
+    const weekStart = activeBriefing?.dateRange?.start
+    const weekEnd = activeBriefing?.dateRange?.end
+
+    // Calculate coverage percentage based on date range
+    let coveragePercent = '0%'
+    if (weekStart && weekEnd) {
+      const daysCovered = Math.ceil((new Date(weekEnd) - new Date(weekStart)) / (1000 * 60 * 60 * 24))
+      const expectedDays = 7
+      coveragePercent = Math.min(100, Math.round((daysCovered / expectedDays) * 100)) + '%'
+    } else if (statsSummary.totalUpdates > 0) {
+      coveragePercent = '100%' // If we have data, assume full coverage
+    }
+
+    // Calculate velocity (based on update frequency)
+    let velocity = 'Normal'
+    if (statsSummary.totalUpdates >= 200) {
+      velocity = 'High'
+    } else if (statsSummary.totalUpdates >= 100) {
+      velocity = 'Normal'
+    } else if (statsSummary.totalUpdates > 0) {
+      velocity = 'Low'
+    } else {
+      velocity = 'None'
+    }
+
+    // Alerts = high impact items
+    const alertsCount = highImpactCount
+
+    // Workspace/Annotations - use annotation data if available
+    const annotations = activeBriefing?.annotations || []
+    const annotationsTotal = Array.isArray(annotations) ? annotations.length : 0
+    const annotationsFlagged = Array.isArray(annotations)
+      ? annotations.filter(a => a.status === 'flagged' || a.priority === 'high').length
+      : 0
+    const annotationsActionRequired = Array.isArray(annotations)
+      ? annotations.filter(a => a.status === 'action_required' || a.requires_action).length
+      : 0
+
     const html = renderWeeklyBriefingPage({
       sidebar,
       commonStyles: getCommonStyles(),
@@ -153,14 +194,14 @@ async function renderWeeklyBriefing(req, res) {
           title: `Week ${b.week || 'N/A'}`
         })),
         metrics: {
-          coverage: '100%',
-          velocity: 'Normal',
-          alerts: 0
+          coverage: coveragePercent,
+          velocity: velocity,
+          alerts: alertsCount
         },
         annotations: {
-          total: 0,
-          flagged: 0,
-          actionRequired: 0
+          total: annotationsTotal,
+          flagged: annotationsFlagged,
+          actionRequired: annotationsActionRequired
         }
       },
       serialized: {
