@@ -126,6 +126,16 @@ function applyDataMixin(klass) {
           const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000)
 
           const response = await fetch(`/api/weekly-briefings/run/${encodeURIComponent(runId)}`)
+
+          // Handle 404 - run may have expired or been cleaned up
+          if (response.status === 404) {
+            console.warn('[WeeklyBriefing] ⚠️ Run status not found, stopping polling')
+            clearInterval(this.state.polling)
+            if (this.dom.assembleBtn) this.dom.assembleBtn.disabled = false
+            this.updateRunStatus({ state: 'failed', message: 'Generation status unavailable. The briefing may still be processing.', progress: 0 })
+            return
+          }
+
           if (!response.ok) throw new Error('Failed to check status')
           const payload = await response.json()
 
@@ -188,6 +198,13 @@ function applyDataMixin(klass) {
           url = `/api/weekly-briefings/${encodeURIComponent(briefingId)}`
         }
         const response = await fetch(url)
+
+        // 404 is expected when no briefing exists yet - don't treat as error
+        if (response.status === 404) {
+          console.log('[WeeklyBriefing] No briefing available yet')
+          return
+        }
+
         if (!response.ok) throw new Error('Failed to fetch latest briefing')
         const payload = await response.json()
         const briefing = payload.briefing || payload
@@ -197,13 +214,16 @@ function applyDataMixin(klass) {
         try {
           await this.refreshAnnotationsFromServer()
         } catch (error) {
-          console.warn('Annotation refresh failed:', error.message)
+          console.warn('[WeeklyBriefing] ⚠️ Annotation refresh failed:', error.message)
         }
         await this.refreshRecent()
         document.title = `Weekly Smart Briefing ${this.formatDate(briefing.dateRange?.start)} — ${this.formatDate(briefing.dateRange?.end)}`
       } catch (error) {
-        console.error(error)
-        this.showToast(error.message || 'Unable to load latest briefing', 'error')
+        console.error('[WeeklyBriefing] ❌ Failed to load briefing:', error)
+        // Don't show toast on page load, only when explicitly requested
+        if (briefingId) {
+          this.showToast(error.message || 'Unable to load briefing', 'error')
+        }
       }
     },
 

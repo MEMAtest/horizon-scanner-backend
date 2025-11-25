@@ -4,7 +4,6 @@ function renderSidebar({ stats, recentBriefings = [], metrics = {}, annotations 
   return `
     <aside class="report-sidebar">
       ${renderSnapshotStats(stats)}
-      ${renderQuickActions()}
       ${renderRecentBriefings(recentBriefings)}
       ${renderMetricsSummary(metrics)}
       ${renderAnnotationsSummary(annotations)}
