@@ -351,6 +351,47 @@ function applyEventsMixin(klass) {
           }
         })
       }
+
+      // Tab switching functionality
+      this.initTabSwitching()
+    },
+
+    initTabSwitching() {
+      const tabButtons = document.querySelectorAll('.tab-navigation .tab')
+      const tabPanes = document.querySelectorAll('.tab-pane')
+
+      if (!tabButtons.length || !tabPanes.length) {
+        console.log('[WeeklyBriefing] No tabs found, skipping tab initialization')
+        return
+      }
+
+      console.log('[WeeklyBriefing] Initializing tab switching')
+
+      tabButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+          e.preventDefault()
+          const targetTab = button.getAttribute('data-tab')
+
+          // Update buttons
+          tabButtons.forEach(btn => {
+            btn.classList.remove('active')
+            btn.setAttribute('aria-selected', 'false')
+          })
+          button.classList.add('active')
+          button.setAttribute('aria-selected', 'true')
+
+          // Update panes
+          tabPanes.forEach(pane => {
+            pane.classList.remove('active')
+          })
+          const targetPane = document.querySelector(`[data-tab="${targetTab}"].tab-pane`)
+          if (targetPane) {
+            targetPane.classList.add('active')
+          }
+
+          console.log(`[WeeklyBriefing] Switched to tab: ${targetTab}`)
+        })
+      })
     }
   })
 }
