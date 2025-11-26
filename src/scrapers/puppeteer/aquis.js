@@ -21,7 +21,7 @@ function applyAquisMethods(ServiceClass) {
         console.log(`📅 AQUIS: Scraping ${y}-${String(m).padStart(2, '0')}`)
         const monthItems = await this.scrapeAquisMonth(page, y, m)
         results.push(...monthItems)
-        await this.wait(2000)
+        await this.wait(5000)
       }
 
       await page.close()
@@ -136,7 +136,7 @@ function applyAquisMethods(ServiceClass) {
             }
           })
 
-          await this.wait(1500)
+          await this.wait(3000)
         } catch (error) {
           console.log(`⚠️ Failed to scrape announcement: ${announcement.title}`)
         }

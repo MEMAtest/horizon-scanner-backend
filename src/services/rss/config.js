@@ -186,16 +186,12 @@ const feedSources = [
   {
     name: 'SFO Press Releases',
     authority: 'Serious Fraud Office',
-    url: 'https://www.sfo.gov.uk/press-room/',
-    type: 'web_scraping',
-    selector: '.news-item',
-    titleSelector: '.news-item__title a',
-    linkSelector: '.news-item__title a',
-    dateSelector: '.news-item__date',
-    summarySelector: '.news-item__excerpt',
+    url: 'https://www.gov.uk/government/organisations/serious-fraud-office.atom',
+    type: 'rss',
+    description: 'Serious Fraud Office - Press Releases, Case Updates, Enforcement News',
     priority: 'medium',
     recencyDays: 30,
-    sectors: ['AML & Financial Crime', 'Banking']
+    sectors: ['AML & Financial Crime', 'Banking', 'Enforcement']
   },
   {
     name: 'CMA News',
@@ -228,7 +224,7 @@ const feedSources = [
   {
     name: 'FRC News',
     authority: 'FRC',
-    url: 'https://www.frc.org.uk/news-and-events/news',
+    url: 'https://www.frc.org.uk/news-and-events/news/',
     type: 'web_scraping',
     selector: '.news-listing__item',
     titleSelector: '.news-listing__title a',
@@ -239,11 +235,25 @@ const feedSources = [
     recencyDays: 14,
     sectors: ['Audit & Accounting', 'Professional Services']
   },
+  // NOTE: ARGA (Audit, Reporting and Governance Authority) delayed - no launch date
+  // Will replace FRC when established. Uncomment when available.
+  /*
+  {
+    name: 'ARGA News',
+    authority: 'ARGA',
+    url: 'https://www.arga.gov.uk/news/feed/', // URL TBD
+    type: 'rss',
+    description: 'Audit, Reporting and Governance Authority - Audit regulation, corporate governance, FRC successor',
+    priority: 'high',
+    recencyDays: 14,
+    sectors: ['Audit & Accounting', 'Corporate Governance', 'Professional Services']
+  },
+  */
   {
     name: 'JMLSG News',
     authority: 'JMLSG',
     url: 'https://www.jmlsg.org.uk/latest-news/',
-    type: 'web_scraping',
+    type: 'puppeteer',
     description: 'Joint Money Laundering Steering Group - Latest News',
     priority: 'high',
     recencyDays: 30,
@@ -274,11 +284,11 @@ const feedSources = [
   },
   */
   {
-    name: 'Financial Services Compensation Scheme RSS',
+    name: 'FSCS News',
     authority: 'FSCS',
-    url: 'https://www.fscs.org.uk/about-fscs/latest-news/feed/',
-    type: 'rss',
-    description: 'Financial Services Compensation Scheme - Firm failures, compensation triggers, levy guidance',
+    url: 'https://www.fscs.org.uk/about-us/',
+    type: 'web_scraping',
+    description: 'Financial Services Compensation Scheme - Firm failures, compensation, levy guidance',
     priority: 'high',
     recencyDays: 30,
     sectors: ['Consumer Protection', 'Banking', 'Insurance', 'Resolution']
@@ -302,6 +312,24 @@ const feedSources = [
     priority: 'high',
     recencyDays: 14,
     sectors: ['Policy', 'Banking', 'Sanctions', 'Financial Services']
+  },
+  {
+    name: 'Department for Business and Trade',
+    authority: 'DBT',
+    url: 'https://www.gov.uk/government/organisations/department-for-business-and-trade.atom',
+    type: 'rss',
+    description: 'Department for Business and Trade - Policy updates, consultations, trade regulations, business guidance',
+    priority: 'high',
+    recencyDays: 14,
+    sectors: [
+      'Trade Policy',
+      'Business Regulation',
+      'Export Control',
+      'Investment',
+      'Trade Negotiations',
+      'Corporate Governance',
+      'Intellectual Property'
+    ]
   },
   // NOTE: BoE does not have a dedicated FMI supervision RSS feed
   // FMI content is covered in the general Publications feed
@@ -334,8 +362,8 @@ const feedSources = [
   {
     name: 'National Crime Agency - Economic Crime',
     authority: 'NCA',
-    url: 'https://www.nationalcrimeagency.gov.uk/component/tags/tag/economic-crime?format=feed&type=rss',
-    type: 'rss',
+    url: 'https://www.nationalcrimeagency.gov.uk/news?tag=economic-crime',
+    type: 'web_scraping',
     description: 'National Crime Agency - Economic crime alerts, SAR guidance, AML intelligence',
     priority: 'medium',
     recencyDays: 30,

@@ -17,6 +17,12 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
         case 'London Stock Exchange':
           scraperResults = await puppeteerScraper.scrapeLSE()
           break
+        case 'Pay.UK':
+          scraperResults = await puppeteerScraper.scrapePayUK()
+          break
+        case 'JMLSG':
+          scraperResults = await puppeteerScraper.scrapeJMLSG()
+          break
         default:
           console.log(`⚠️ No Puppeteer scraper configured for ${source.authority}`)
           return []

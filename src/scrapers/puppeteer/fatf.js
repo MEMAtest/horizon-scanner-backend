@@ -42,7 +42,7 @@ function applyFatfMethods(ServiceClass) {
         timeout: 60000
       })
 
-      await this.wait(8000)
+      await this.wait(12000)
 
       const newsData = await page.evaluate(() => {
         const newsItems = []
