@@ -216,6 +216,16 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
       `)
 
         client.release()
+
+        // Create business line profiles table
+        if (typeof this.ensureBusinessLineProfilesTable === 'function') {
+          await this.ensureBusinessLineProfilesTable()
+        }
+
+        // Create regulatory changes workflow tables
+        if (typeof this.ensureRegulatoryChangesTables === 'function') {
+          await this.ensureRegulatoryChangesTables()
+        }
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
       }

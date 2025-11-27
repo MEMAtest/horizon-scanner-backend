@@ -15,6 +15,8 @@ const registerMiscRoutes = require('./api/misc')
 const registerIntelligenceRoutes = require('./api/intelligence')
 const registerProfileRoutes = require('./api/profile')
 const registerWorkflowRoutes = require('./api/workflows')
+const registerBusinessLineProfileRoutes = require('./api/businessLineProfiles')
+const registerRegulatoryChangeRoutes = require('./api/regulatoryChanges')
 
 const router = express.Router()
 
@@ -33,5 +35,7 @@ registerMiscRoutes(router)
 registerIntelligenceRoutes(router)
 registerProfileRoutes(router)
 registerWorkflowRoutes(router)
+registerBusinessLineProfileRoutes(router)
+registerRegulatoryChangeRoutes(router)
 
 module.exports = router

@@ -2,18 +2,47 @@ const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
+const businessLineProfileService = require('../../services/businessLineProfileService')
 const { buildDashboardPage } = require('../../views/dashboard/pageBuilder')
 const {
   formatDashboardStats,
   formatFilterOptions
 } = require('../../views/dashboard/helpers')
 
+function resolveUserId(req) {
+  const headerUser = req.headers['x-user-id']
+  if (headerUser && typeof headerUser === 'string' && headerUser.trim()) {
+    return headerUser.trim()
+  }
+  if (req.user && req.user.id) {
+    return req.user.id
+  }
+  return 'default'
+}
+
 async function renderDashboardPage(req, res) {
   try {
     console.log('Analytics Rendering enhanced dashboard page...')
 
+    const userId = resolveUserId(req)
     const filters = getCurrentFilters(req.query)
-    const updates = await loadUpdates(filters)
+
+    // Get business line profiles for the user
+    const businessLineProfiles = await businessLineProfileService.getProfiles(userId).catch(() => [])
+    const selectedProfileId = filters.profileId || null
+
+    // If a profile is selected, get filtered updates based on profile
+    let updates
+    if (selectedProfileId) {
+      try {
+        updates = await businessLineProfileService.getFilteredUpdates(selectedProfileId, userId, filters)
+      } catch {
+        updates = await loadUpdates(filters)
+      }
+    } else {
+      updates = await loadUpdates(filters)
+    }
+
     const [statsRaw, filterOptionsRaw, sidebar] = await Promise.all([
       dbService.getDashboardStatistics().catch(handleStatsFailure),
       dbService.getFilterOptions().catch(handleFilterOptionsFailure),
@@ -32,7 +61,9 @@ async function renderDashboardPage(req, res) {
       filterOptions,
       currentFilters: filters,
       clientScripts,
-      commonStyles
+      commonStyles,
+      businessLineProfiles,
+      selectedProfileId
     })
 
     res.send(html)
@@ -49,7 +80,8 @@ function getCurrentFilters(query = {}) {
     sector: query.sector || null,
     impact: query.impact || null,
     range: query.range || null,
-    search: query.search || null
+    search: query.search || null,
+    profileId: query.profileId || null
   }
 }
 

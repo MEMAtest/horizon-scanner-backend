@@ -64,6 +64,15 @@ function getDashboardScripts({ updates, stats, filterOptions, currentFilters }) 
               }
             });
             this.filterForm.submit();
+          },
+          changeProfile: function(profileId) {
+            const currentUrl = new URL(window.location.href);
+            if (profileId) {
+              currentUrl.searchParams.set('profileId', profileId);
+            } else {
+              currentUrl.searchParams.delete('profileId');
+            }
+            window.location.href = currentUrl.toString();
           }
         };
 

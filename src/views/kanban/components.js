@@ -1,0 +1,353 @@
+const { serializeForScript } = require('../dashboard/helpers')
+
+function renderStatsCards(statistics) {
+  const stats = statistics || {
+    total: 0,
+    overdue: 0,
+    dueSoon: 0,
+    completedThisMonth: 0
+  }
+
+  return `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Total Items</span>
+          <div class="stat-card-icon" style="background: #eff6ff;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 9h6M9 13h6M9 17h4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-card-value">${stats.total}</div>
+        <div class="stat-card-change neutral">Active change items</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Overdue</span>
+          <div class="stat-card-icon" style="background: #fef2f2;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12,6 12,12 16,14"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-card-value">${stats.overdue}</div>
+        <div class="stat-card-change ${stats.overdue > 0 ? 'negative' : 'positive'}">
+          ${stats.overdue > 0 ? 'Needs attention' : 'All on track'}
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Due Soon</span>
+          <div class="stat-card-icon" style="background: #fffbeb;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-card-value">${stats.dueSoon}</div>
+        <div class="stat-card-change neutral">Due within 7 days</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <span class="stat-card-label">Completed</span>
+          <div class="stat-card-icon" style="background: #f0fdf4;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-card-value">${stats.completedThisMonth}</div>
+        <div class="stat-card-change positive">This month</div>
+      </div>
+    </div>
+  `
+}
+
+function renderWorkflowSelector(templates, selectedId) {
+  const templateOptions = (templates || []).map(t =>
+    `<option value="${t.id}" ${t.id === selectedId ? 'selected' : ''}>${t.name}</option>`
+  ).join('')
+
+  return `
+    <div class="workflow-selector">
+      <label for="workflow-select">Workflow:</label>
+      <select id="workflow-select" onchange="KanbanPage.changeWorkflow(this.value)">
+        <option value="">All Workflows</option>
+        ${templateOptions}
+      </select>
+    </div>
+  `
+}
+
+function renderKanbanBoard(template, itemsByStage) {
+  if (!template || !template.stages || template.stages.length === 0) {
+    return renderNoTemplateState()
+  }
+
+  const sortedStages = [...template.stages].sort((a, b) => a.order - b.order)
+
+  const columns = sortedStages.map(stage => {
+    const stageItems = itemsByStage[stage.name] || []
+    return renderKanbanColumn(stage, stageItems)
+  }).join('')
+
+  return `
+    <div class="kanban-board" data-template-id="${template.id}">
+      ${columns}
+    </div>
+  `
+}
+
+function renderNoTemplateState() {
+  return `
+    <div class="no-template-state">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="9"/>
+        <rect x="14" y="3" width="7" height="5"/>
+        <rect x="14" y="12" width="7" height="9"/>
+        <rect x="3" y="16" width="7" height="5"/>
+      </svg>
+      <h3>No Workflow Selected</h3>
+      <p>Select a workflow template to view your Kanban board, or create a new one.</p>
+      <button class="btn btn-primary" onclick="KanbanPage.openCreateTemplateModal()">
+        Create Workflow Template
+      </button>
+    </div>
+  `
+}
+
+function renderKanbanColumn(stage, items) {
+  const itemCards = items.length > 0
+    ? items.map(item => renderKanbanCard(item)).join('')
+    : renderEmptyColumn()
+
+  return `
+    <div class="kanban-column" data-stage="${stage.name}">
+      <div class="column-header">
+        <div class="column-header-left">
+          <div class="column-color-dot" style="background: ${stage.color || '#6B7280'}"></div>
+          <span class="column-title">${stage.name}</span>
+        </div>
+        <span class="column-count">${items.length}</span>
+      </div>
+      <div class="column-body"
+           ondragover="KanbanPage.handleDragOver(event)"
+           ondrop="KanbanPage.handleDrop(event, '${stage.name}')"
+           ondragleave="KanbanPage.handleDragLeave(event)">
+        ${itemCards}
+      </div>
+    </div>
+  `
+}
+
+function renderEmptyColumn() {
+  return `
+    <div class="column-empty">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <p>No items in this stage</p>
+    </div>
+  `
+}
+
+function renderKanbanCard(item) {
+  const priorityClass = item.priority ? `priority-${item.priority.toLowerCase()}` : 'priority-medium'
+  const isOverdue = item.due_date && new Date(item.due_date) < new Date()
+
+  const dueDateHtml = item.due_date ? `
+    <div class="card-due-date ${isOverdue ? 'overdue' : ''}">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      ${formatDate(item.due_date)}
+    </div>
+  ` : ''
+
+  return `
+    <div class="kanban-card"
+         draggable="true"
+         data-item-id="${item.id}"
+         ondragstart="KanbanPage.handleDragStart(event, '${item.id}')"
+         ondragend="KanbanPage.handleDragEnd(event)"
+         onclick="KanbanPage.openItemDetail('${item.id}')">
+      <div class="kanban-card-title">${escapeHtml(item.title || 'Untitled')}</div>
+      <div class="kanban-card-meta">
+        <span class="card-badge ${priorityClass}">${capitalize(item.priority || 'medium')}</span>
+        ${item.authority ? `<span class="card-badge authority">${escapeHtml(item.authority)}</span>` : ''}
+        ${item.sector ? `<span class="card-badge sector">${escapeHtml(item.sector)}</span>` : ''}
+      </div>
+      <div class="kanban-card-footer">
+        ${dueDateHtml}
+        <div class="card-actions">
+          <button class="card-action-btn" onclick="event.stopPropagation(); KanbanPage.openItemDetail('${item.id}')" title="View details">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderAddItemModal(templates) {
+  const templateOptions = (templates || []).map(t =>
+    `<option value="${t.id}">${t.name}</option>`
+  ).join('')
+
+  return `
+    <div class="modal-overlay" id="add-item-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Add Regulatory Change</h2>
+          <button class="modal-close" onclick="KanbanPage.closeAddItemModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="add-item-form" onsubmit="KanbanPage.submitAddItem(event)">
+            <div class="form-group">
+              <label class="form-label required">Title</label>
+              <input type="text" class="form-input" name="title" required placeholder="Enter change title...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-textarea" name="description" placeholder="Describe the regulatory change..."></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Workflow</label>
+                <select class="form-select" name="workflow_template_id">
+                  <option value="">Select workflow...</option>
+                  ${templateOptions}
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" name="priority">
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Impact Level</label>
+                <select class="form-select" name="impact_level">
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Due Date</label>
+                <input type="date" class="form-input" name="due_date">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Authority</label>
+                <input type="text" class="form-input" name="authority" placeholder="e.g., FCA, PRA">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Sector</label>
+                <input type="text" class="form-input" name="sector" placeholder="e.g., Banking, Insurance">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Source URL</label>
+              <input type="url" class="form-input" name="source_url" placeholder="https://...">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="KanbanPage.closeAddItemModal()">Cancel</button>
+          <button type="submit" form="add-item-form" class="btn btn-primary">Create Item</button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderItemDetailModal() {
+  return `
+    <div class="modal-overlay" id="item-detail-modal">
+      <div class="modal detail-modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="detail-modal-title">Change Details</h2>
+          <button class="modal-close" onclick="KanbanPage.closeItemDetail()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="detail-modal-body">
+          <!-- Content populated dynamically -->
+        </div>
+        <div class="modal-footer" id="detail-modal-footer">
+          <!-- Actions populated dynamically -->
+        </div>
+      </div>
+    </div>
+  `
+}
+
+// Helper functions
+function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function capitalize(str) {
+  if (!str) return ''
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+module.exports = {
+  renderStatsCards,
+  renderWorkflowSelector,
+  renderKanbanBoard,
+  renderKanbanColumn,
+  renderKanbanCard,
+  renderAddItemModal,
+  renderItemDetailModal
+}

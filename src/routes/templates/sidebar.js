@@ -19,6 +19,8 @@ async function getSidebar(currentPage = '') {
       enforcement: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5.5 13.5 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M10.5 3.5 17 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 13.5h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 15.5h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="16.5" width="10" height="2.5" rx="1.1" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
       authority: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 4.5 7.5v11h15v-11L12 4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M7.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M12 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M16.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 18.5h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
       sector: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M4.5 14.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="5" width="15" height="14" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M9 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M15 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      kanban: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="5" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="10" y="4" width="5" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="16" y="4" width="5" height="13" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
+      regAnalytics: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path><path d="M18 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M13 17V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M8 17v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>',
       refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 20v-6h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.5 8a7 7 0 0 1 11.5-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M18.5 16a7 7 0 0 1-11.5 2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>'
     }
 
@@ -70,6 +72,20 @@ async function getSidebar(currentPage = '') {
                         <a href="/weekly-roundup" class="nav-link">
                             <span class="nav-icon">${icons.roundup}</span>
                             <span class="nav-text">Weekly Roundup</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'kanban' ? 'active' : ''}">
+                        <a href="/kanban" class="nav-link">
+                            <span class="nav-icon">${icons.kanban}</span>
+                            <span class="nav-text">Change Management</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'regulatory-analytics' ? 'active' : ''}">
+                        <a href="/regulatory-analytics" class="nav-link">
+                            <span class="nav-icon">${icons.regAnalytics}</span>
+                            <span class="nav-text">Reg Analytics</span>
+                            <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                 </ul>

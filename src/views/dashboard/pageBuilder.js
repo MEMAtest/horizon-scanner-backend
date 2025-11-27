@@ -1,4 +1,4 @@
-const { renderStatsGrid, renderFilters, renderUpdatesList } = require('./components')
+const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector } = require('./components')
 const { getDashboardStyles } = require('./styles')
 const { getDashboardScripts } = require('./scripts')
 const { formatCurrentDate } = require('./helpers')
@@ -10,7 +10,9 @@ function buildDashboardPage({
   filterOptions,
   currentFilters,
   clientScripts,
-  commonStyles
+  commonStyles,
+  businessLineProfiles = [],
+  selectedProfileId = null
 }) {
   return `
     <!DOCTYPE html>
@@ -30,6 +32,7 @@ function buildDashboardPage({
           <header class="dashboard-header">
             <div class="dashboard-header-top">
               <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="dashboard-logo" />
+              ${renderProfileSelector(businessLineProfiles, selectedProfileId)}
               <div class="dashboard-date">
                 <span class="date-label">Today</span>
                 <span class="date-value">${formatCurrentDate()}</span>

@@ -13,6 +13,8 @@ const renderAuthoritySpotlightPage = require('./pages/authoritySpotlightPage')
 const renderSectorIntelligencePage = require('./pages/sectorIntelligencePage')
 const renderAboutPage = require('./pages/aboutPage')
 const renderTestPage = require('./pages/testPage')
+const { renderKanbanPage } = require('./pages/kanbanPage')
+const { renderRegulatoryAnalyticsPage } = require('./pages/regulatoryAnalyticsPage')
 
 const router = express.Router()
 
@@ -33,5 +35,8 @@ router.get('/sector-intelligence/:sector?', (req, res) =>
 )
 router.get('/about', renderAboutPage)
 router.get('/test', renderTestPage)
+router.get('/kanban', renderKanbanPage)
+router.get('/regulatory-changes', renderKanbanPage)
+router.get('/regulatory-analytics', renderRegulatoryAnalyticsPage)
 
 module.exports = router

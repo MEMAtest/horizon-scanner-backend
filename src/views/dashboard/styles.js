@@ -34,6 +34,88 @@ function getDashboardStyles() {
         font-size: 14px;
       }
 
+      /* Business Line Profile Selector */
+      .profile-selector {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        justify-content: center;
+        max-width: 400px;
+      }
+
+      .profile-select-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+      }
+
+      .profile-color-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .profile-select {
+        padding: 8px 32px 8px 12px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #1f2937;
+        background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+        appearance: none;
+        cursor: pointer;
+        min-width: 180px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .profile-select:hover {
+        border-color: #d1d5db;
+      }
+
+      .profile-select:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+      }
+
+      .profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .profile-sectors {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 500;
+      }
+
+      .profile-manage-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: #f3f4f6;
+        color: #6b7280;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+
+      .profile-manage-link:hover {
+        background: #e5e7eb;
+        color: #4f46e5;
+      }
+
+      .profile-manage-link svg {
+        flex-shrink: 0;
+      }
+
       .dashboard-date .date-label {
         font-size: 12px;
         text-transform: uppercase;
