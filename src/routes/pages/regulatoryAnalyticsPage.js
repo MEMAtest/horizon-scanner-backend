@@ -156,7 +156,7 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Regulatory Analytics - Horizon Scanner</title>
       ${commonStyles}
-      <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <style>
         .analytics-page {
           padding: 24px;
@@ -561,7 +561,9 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
                   <p class="chart-card-subtitle">Total publications by month with impact breakdown</p>
                 </div>
               </div>
-              <div class="chart-container" id="monthlyTrendChart"></div>
+              <div class="chart-container">
+                <canvas id="monthlyTrendChart"></canvas>
+              </div>
             </div>
 
             <div class="chart-card">
@@ -571,7 +573,9 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
                   <p class="chart-card-subtitle">Top 10 most active authorities</p>
                 </div>
               </div>
-              <div class="chart-container" id="authorityChart"></div>
+              <div class="chart-container">
+                <canvas id="authorityChart"></canvas>
+              </div>
             </div>
 
             <div class="chart-card">
@@ -581,7 +585,9 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
                   <p class="chart-card-subtitle">Breakdown by impact level</p>
                 </div>
               </div>
-              <div class="chart-container" id="impactChart"></div>
+              <div class="chart-container">
+                <canvas id="impactChart"></canvas>
+              </div>
             </div>
           </div>
 
@@ -690,156 +696,171 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
           impactDistribution: ${JSON.stringify(impactDistribution)}
         };
 
-        // Monthly Trend Chart (Area + Bar combo)
-        const monthlyOptions = {
-          series: [
-            {
-              name: 'Total',
-              type: 'area',
-              data: analyticsData.monthlyChartData.map(d => d.total)
-            },
-            {
-              name: 'High Impact',
-              type: 'bar',
-              data: analyticsData.monthlyChartData.map(d => d.high)
-            }
-          ],
-          chart: {
-            height: 320,
-            type: 'line',
-            toolbar: { show: false },
-            fontFamily: 'Inter, system-ui, sans-serif'
-          },
-          stroke: {
-            width: [3, 0],
-            curve: 'smooth'
-          },
-          fill: {
-            type: ['gradient', 'solid'],
-            gradient: {
-              shadeIntensity: 1,
-              opacityFrom: 0.4,
-              opacityTo: 0.1,
-              stops: [0, 90, 100]
-            }
-          },
-          colors: ['#3b82f6', '#ef4444'],
-          xaxis: {
-            categories: analyticsData.monthlyChartData.map(d => {
-              const [year, month] = d.month.split('-');
-              return new Date(year, month - 1).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
-            }),
-            labels: { style: { colors: '#64748b', fontSize: '12px' } }
-          },
-          yaxis: {
-            labels: { style: { colors: '#64748b', fontSize: '12px' } }
-          },
-          legend: {
-            position: 'top',
-            horizontalAlign: 'right'
-          },
-          tooltip: {
-            shared: true,
-            intersect: false
-          },
-          grid: {
-            borderColor: '#f1f5f9',
-            strokeDashArray: 4
-          }
-        };
+        // Chart.js color palette (matching Enforcement page)
+        const chartColors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444'];
 
-        const monthlyChart = new ApexCharts(document.querySelector("#monthlyTrendChart"), monthlyOptions);
-        monthlyChart.render();
+        // Monthly Trend Chart (Mixed: Line + Bar)
+        const monthlyCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+        const monthlyLabels = analyticsData.monthlyChartData.map(d => {
+          const [year, month] = d.month.split('-');
+          return new Date(year, month - 1).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+        });
+
+        new Chart(monthlyCtx, {
+          type: 'bar',
+          data: {
+            labels: monthlyLabels,
+            datasets: [
+              {
+                type: 'line',
+                label: 'Total Publications',
+                data: analyticsData.monthlyChartData.map(d => d.total),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                tension: 0.35,
+                fill: true,
+                yAxisID: 'y'
+              },
+              {
+                type: 'bar',
+                label: 'High Impact',
+                data: analyticsData.monthlyChartData.map(d => d.high),
+                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                borderColor: '#ef4444',
+                borderWidth: 1,
+                borderRadius: 6,
+                yAxisID: 'y'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+              legend: {
+                position: 'top',
+                align: 'end',
+                labels: { usePointStyle: true, padding: 20 }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                padding: 12,
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: '#64748b' }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { color: '#64748b' }
+              }
+            }
+          }
+        });
 
         // Authority Chart (Horizontal Bar)
-        const authorityOptions = {
-          series: [{
-            name: 'Publications',
-            data: analyticsData.topAuthorities.slice(0, 8).map(a => a.total)
-          }],
-          chart: {
-            type: 'bar',
-            height: 320,
-            toolbar: { show: false },
-            fontFamily: 'Inter, system-ui, sans-serif'
+        const authorityCtx = document.getElementById('authorityChart').getContext('2d');
+        const authData = analyticsData.topAuthorities.slice(0, 8);
+
+        new Chart(authorityCtx, {
+          type: 'bar',
+          data: {
+            labels: authData.map(a => a.name),
+            datasets: [{
+              label: 'Publications',
+              data: authData.map(a => a.total),
+              backgroundColor: chartColors.map(c => c + 'cc'),
+              borderColor: chartColors,
+              borderWidth: 1,
+              borderRadius: 6
+            }]
           },
-          plotOptions: {
-            bar: {
-              borderRadius: 4,
-              horizontal: true,
-              distributed: true,
-              dataLabels: { position: 'top' }
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                padding: 12
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { color: '#64748b' }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: '#1e293b' }
+              }
             }
-          },
-          colors: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'],
-          dataLabels: {
-            enabled: true,
-            offsetX: 20,
-            style: { fontSize: '12px', colors: ['#1e293b'] }
-          },
-          xaxis: {
-            categories: analyticsData.topAuthorities.slice(0, 8).map(a => a.name),
-            labels: { style: { colors: '#64748b', fontSize: '12px' } }
-          },
-          yaxis: {
-            labels: { style: { colors: '#1e293b', fontSize: '12px' } }
-          },
-          legend: { show: false },
-          grid: {
-            borderColor: '#f1f5f9',
-            strokeDashArray: 4
           }
-        };
+        });
 
-        const authorityChart = new ApexCharts(document.querySelector("#authorityChart"), authorityOptions);
-        authorityChart.render();
+        // Impact Distribution Chart (Doughnut)
+        const impactCtx = document.getElementById('impactChart').getContext('2d');
+        const impactData = [
+          analyticsData.impactDistribution.high,
+          analyticsData.impactDistribution.medium,
+          analyticsData.impactDistribution.low
+        ];
+        const impactTotal = impactData.reduce((a, b) => a + b, 0);
 
-        // Impact Distribution Chart (Donut)
-        const impactOptions = {
-          series: [
-            analyticsData.impactDistribution.high,
-            analyticsData.impactDistribution.medium,
-            analyticsData.impactDistribution.low
-          ],
-          chart: {
-            type: 'donut',
-            height: 320,
-            fontFamily: 'Inter, system-ui, sans-serif'
+        new Chart(impactCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['High Impact', 'Medium Impact', 'Low Impact'],
+            datasets: [{
+              data: impactData,
+              backgroundColor: [
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(34, 197, 94, 0.8)'
+              ],
+              borderColor: ['#ef4444', '#f59e0b', '#22c55e'],
+              borderWidth: 2,
+              hoverOffset: 4
+            }]
           },
-          labels: ['High Impact', 'Medium Impact', 'Low Impact'],
-          colors: ['#ef4444', '#f59e0b', '#10b981'],
-          plotOptions: {
-            pie: {
-              donut: {
-                size: '60%',
-                labels: {
-                  show: true,
-                  total: {
-                    show: true,
-                    label: 'Total',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#64748b'
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { usePointStyle: true, padding: 20 }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                padding: 12,
+                callbacks: {
+                  label: function(context) {
+                    const value = context.raw;
+                    const percentage = ((value / impactTotal) * 100).toFixed(1);
+                    return context.label + ': ' + value + ' (' + percentage + '%)';
                   }
                 }
               }
             }
-          },
-          dataLabels: {
-            enabled: true,
-            formatter: function(val, opts) {
-              return opts.w.config.series[opts.seriesIndex];
-            }
-          },
-          legend: {
-            position: 'bottom',
-            fontSize: '13px'
-          },
-          stroke: { width: 2, colors: ['#fff'] }
-        };
-
-        const impactChart = new ApexCharts(document.querySelector("#impactChart"), impactOptions);
-        impactChart.render();
+          }
+        });
       </script>
     </body>
     </html>

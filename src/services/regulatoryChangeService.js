@@ -266,7 +266,7 @@ class RegulatoryChangeService {
         if (template && template.stages && template.stages.length > 0) {
           // Sort stages by order and get the first one
           const sortedStages = [...template.stages].sort((a, b) => a.order - b.order)
-          itemData.current_stage = sortedStages[0].name
+          itemData.currentStageId = sortedStages[0].name
         }
       }
 

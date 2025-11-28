@@ -40,6 +40,7 @@ function normalizeRegulatoryChangeItem(row) {
     authority: row.authority || null,
     impactLevel: row.impact_level || null,
     currentStageId: row.current_stage_id || null,
+    current_stage: row.current_stage_id || null,  // Alias for service layer compatibility
     stageHistory: row.stage_history || [],
     identifiedDate: toIso(row.identified_date),
     targetCompletionDate: toIso(row.target_completion_date),
@@ -891,6 +892,7 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
         authority: itemData.authority || null,
         impactLevel: itemData.impactLevel || null,
         currentStageId: itemData.currentStageId || null,
+        current_stage: itemData.currentStageId || null,  // Alias for service layer compatibility
         stageHistory: itemData.stageHistory || [],
         identifiedDate: itemData.identifiedDate || now,
         targetCompletionDate: itemData.targetCompletionDate || null,

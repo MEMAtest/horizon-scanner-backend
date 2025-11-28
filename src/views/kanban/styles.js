@@ -12,28 +12,36 @@ function getKanbanStyles() {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
         flex-wrap: wrap;
         gap: 16px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e2e8f0;
       }
 
       .kanban-header h1 {
-        font-size: 24px;
-        font-weight: 700;
+        font-size: 28px;
+        font-weight: 800;
         color: #1e293b;
         margin: 0;
+        background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       .header-subtitle {
         color: #64748b;
-        font-size: 14px;
-        margin: 4px 0 0 0;
+        font-size: 15px;
+        margin: 8px 0 0 0;
+        max-width: 600px;
+        line-height: 1.5;
       }
 
       .header-right {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
       }
 
       /* Workflow Selector */
@@ -114,60 +122,92 @@ function getKanbanStyles() {
         font-size: 12px;
       }
 
-      /* Stats Cards */
+      /* Stats Cards - Aligned with Dashboard Style */
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 28px;
       }
 
       .stat-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px 20px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 16px;
+        padding: 24px;
         border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
       }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      }
+
+      .stat-card:nth-child(1)::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+      .stat-card:nth-child(2)::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+      .stat-card:nth-child(3)::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+      .stat-card:nth-child(4)::before { background: linear-gradient(90deg, #10b981, #34d399); }
 
       .stat-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
 
       .stat-card-label {
-        font-size: 12px;
-        font-weight: 500;
+        font-size: 13px;
+        font-weight: 600;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
       .stat-card-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: #f1f5f9;
       }
 
+      .stat-card:nth-child(1) .stat-card-icon { background: #dbeafe; color: #2563eb; }
+      .stat-card:nth-child(2) .stat-card-icon { background: #fee2e2; color: #dc2626; }
+      .stat-card:nth-child(3) .stat-card-icon { background: #fef3c7; color: #d97706; }
+      .stat-card:nth-child(4) .stat-card-icon { background: #d1fae5; color: #059669; }
+
       .stat-card-icon svg {
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 20px;
       }
 
       .stat-card-value {
-        font-size: 28px;
-        font-weight: 700;
+        font-size: 36px;
+        font-weight: 800;
         color: #1e293b;
         line-height: 1;
+        margin-bottom: 4px;
       }
 
       .stat-card-change {
-        font-size: 12px;
-        margin-top: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-top: 6px;
       }
 
       .stat-card-change.positive { color: #10b981; }

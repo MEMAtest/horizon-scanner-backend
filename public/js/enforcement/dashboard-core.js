@@ -5,6 +5,7 @@ import { applyTopFirmsMixin } from './modules/topFirms.js'
 import { applyFiltersMixin } from './modules/filters.js'
 import { applyEventsMixin } from './modules/events.js'
 import { applyUtilsMixin } from './modules/utils.js'
+import { applyModalsMixin } from './modules/modals.js'
 
 class EnforcementDashboard {
   constructor() {
@@ -34,6 +35,7 @@ class EnforcementDashboard {
   async init() {
     console.log('[init] Initializing enforcement dashboard...')
 
+    this.initModals()
     await this.loadStats()
     await this.loadRecentFines()
     await this.loadTrends()
@@ -52,5 +54,6 @@ applyFinesMixin(EnforcementDashboard)
 applyTrendsMixin(EnforcementDashboard)
 applyTopFirmsMixin(EnforcementDashboard)
 applyEventsMixin(EnforcementDashboard)
+applyModalsMixin(EnforcementDashboard)
 
 export { EnforcementDashboard }

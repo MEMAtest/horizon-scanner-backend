@@ -14,11 +14,11 @@ function renderProfileSelector(profiles = [], selectedProfileId = null) {
         <select id="business-line-profile" class="profile-select" onchange="DashboardPage.changeProfile(this.value)">
           <option value="">All Business Lines</option>
         </select>
-        <a href="/business-line-profiles" class="profile-manage-link" title="Manage Profiles">
+        <button type="button" class="profile-manage-link" onclick="openProfileModal()" title="Manage Profiles">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3v18M3 12h18"/>
           </svg>
-        </a>
+        </button>
       </div>
     `
   }
@@ -59,12 +59,12 @@ function renderProfileSelector(profiles = [], selectedProfileId = null) {
         </select>
       </div>
       ${profileInfo}
-      <a href="/business-line-profiles" class="profile-manage-link" title="Manage Profiles">
+      <button type="button" class="profile-manage-link" onclick="openProfileModal()" title="Manage Profiles">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
         </svg>
-      </a>
+      </button>
     </div>
   `
 }
@@ -456,8 +456,63 @@ function escapeForInline(value) {
     .replace(/\n/g, '\\n')
 }
 
+function renderProfileModal() {
+  return `
+    <div id="profile-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>Manage Business Line Profiles</h2>
+          <button type="button" class="modal-close" onclick="closeProfileModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="profile-list" class="profile-list">
+            <div class="loading">Loading profiles...</div>
+          </div>
+          <div class="profile-form" id="profile-form" style="display: none;">
+            <h3 id="profile-form-title">Create New Profile</h3>
+            <input type="hidden" id="profile-id" value="">
+            <div class="form-group">
+              <label for="profile-name">Profile Name</label>
+              <input type="text" id="profile-name" placeholder="e.g., Retail Banking" required>
+            </div>
+            <div class="form-group">
+              <label for="profile-description">Description</label>
+              <textarea id="profile-description" placeholder="Describe this business line..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="profile-color">Color</label>
+              <input type="color" id="profile-color" value="#3b82f6">
+            </div>
+            <div class="form-group">
+              <label for="profile-sectors">Sectors (comma-separated)</label>
+              <input type="text" id="profile-sectors" placeholder="Banking, Insurance, Payments">
+            </div>
+            <div class="form-group">
+              <label for="profile-regulators">Regulators (comma-separated)</label>
+              <input type="text" id="profile-regulators" placeholder="FCA, PRA, Bank of England">
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="profile-default"> Set as default profile
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" onclick="cancelProfileForm()">Cancel</button>
+              <button type="button" class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" onclick="showProfileForm()">+ Add New Profile</button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 module.exports = {
   renderFilters,
+  renderProfileModal,
   renderProfileSelector,
   renderStatCard,
   renderStatsGrid,

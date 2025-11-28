@@ -84,7 +84,7 @@ function applyStatsMixin(klass) {
         this.tableRowLimit = this.defaultTableRowLimit;
         this.latestFilteredTotal = Array.isArray(this.allFines) ? this.allFines.length : 0;
         this.updateYearChips([]);
-    
+
         const container = document.getElementById('stats-container');
         const overview = stats.overview || {};
         const totalFines = overview.total_fines || 0;
@@ -95,46 +95,87 @@ function applyStatsMixin(klass) {
         const last30Amount = overview.amount_last_30_days || 0;
         const distinctFirms = overview.distinct_firms || 0;
         const repeatOffenders = overview.repeat_offenders || 0;
-    
+
         container.innerHTML = [
-            '<div class="stat-card">',
+            '<div class="stat-card clickable" onclick="window.enforcementDashboard.showFinesByPeriod(\'ytd\', \'Year-to-Date Fines\')" style="position: relative;">',
                 this.getStatIcon('total'),
                 '<div class="stat-value">' + totalFines + '</div>',
                 '<div class="stat-label">Total Enforcement Actions</div>',
                 '<div class="stat-change change-positive">Year-to-date: ' + finesThisYear + '</div>',
             '</div>',
-            '<div class="stat-card">',
+            '<div class="stat-card clickable" onclick="window.enforcementDashboard.showFinesByPeriod(\'ytd\', \'Year-to-Date Fines\')" style="position: relative;">',
                 this.getStatIcon('fines'),
                 '<div class="stat-value">' + this.formatCurrency(totalAmount) + '</div>',
                 '<div class="stat-label">Total Fines Issued</div>',
                 '<div class="stat-change">YTD amount: ' + this.formatCurrency(amountThisYear) + '</div>',
             '</div>',
-            '<div class="stat-card">',
+            '<div class="stat-card clickable" onclick="window.enforcementDashboard.showFinesByPeriod(\'30\', \'Fines - Last 30 Days\')" style="position: relative;">',
                 this.getStatIcon('recent'),
                 '<div class="stat-value">' + last30Count + '</div>',
                 '<div class="stat-label">Last 30 Days</div>',
                 '<div class="stat-change">Amount recovered: ' + this.formatCurrency(last30Amount) + '</div>',
             '</div>',
-            '<div class="stat-card">',
+            '<div class="stat-card clickable" onclick="window.enforcementDashboard.showDistinctFirms()" style="position: relative;">',
                 this.getStatIcon('risk'),
                 '<div class="stat-value">' + this.formatNumber(distinctFirms) + '</div>',
                 '<div class="stat-label">Distinct Firms Fined</div>',
-                '<div class="stat-change">Repeat offenders: ' + this.formatNumber(repeatOffenders) + '</div>',
+                '<div class="stat-change clickable-text" onclick="event.stopPropagation(); window.enforcementDashboard.showRepeatOffenders()" style="cursor: pointer; text-decoration: underline; color: #3b82f6;">Repeat offenders: ' + this.formatNumber(repeatOffenders) + '</div>',
             '</div>'
         ].join('');
-    
+
         this.updateHeaderMeta('Full dataset');
-    
+
+        // Render the fines timeline
+        this.renderFinesTimeline(overview);
+
         this.renderPatternCards({
             topBreachTypes: stats.topBreachTypes || [],
             topSectors: stats.topSectors || [],
             overview,
             yearlyOverview: stats.yearlyOverview || []
         });
-    
+
         this.renderYearlyOverview(stats.yearlyOverview || []);
         this.renderCategoryTrends(stats.topCategoryTrends || []);
         this.renderControlPlaybook(stats.controlRecommendations || []);
+    },
+
+    renderFinesTimeline(overview) {
+        const container = document.getElementById('timeline-bars');
+        if (!container) return;
+
+        const last30Count = overview.fines_last_30_days || 0;
+        const last30Amount = overview.amount_last_30_days || 0;
+        const last60Count = overview.fines_last_60_days || 0;
+        const last60Amount = overview.amount_last_60_days || 0;
+        const last90Count = overview.fines_last_90_days || 0;
+        const last90Amount = overview.amount_last_90_days || 0;
+        const ytdCount = overview.fines_this_year || 0;
+        const ytdAmount = overview.amount_this_year || 0;
+
+        // Calculate max for progress bars
+        const maxAmount = Math.max(last30Amount, last60Amount, last90Amount, ytdAmount) || 1;
+
+        const timelineData = [
+            { period: '30', label: 'Last 30 Days', count: last30Count, amount: last30Amount },
+            { period: '60', label: 'Last 60 Days', count: last60Count, amount: last60Amount },
+            { period: '90', label: 'Last 90 Days', count: last90Count, amount: last90Amount },
+            { period: 'ytd', label: 'Year to Date', count: ytdCount, amount: ytdAmount }
+        ];
+
+        container.innerHTML = timelineData.map(item => {
+            const progressPercent = Math.min(100, (item.amount / maxAmount) * 100);
+            return `
+                <div class="timeline-item" data-period="${item.period}" onclick="window.enforcementDashboard.showFinesByPeriod('${item.period}', 'Fines - ${item.label}')">
+                    <div class="timeline-period-label">${item.label}</div>
+                    <div class="timeline-amount">${this.formatCurrency(item.amount)}</div>
+                    <div class="timeline-count">${item.count} fine${item.count !== 1 ? 's' : ''}</div>
+                    <div class="timeline-progress">
+                        <div class="timeline-progress-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     renderFilteredStats(fines = [], filterContext = {}) {

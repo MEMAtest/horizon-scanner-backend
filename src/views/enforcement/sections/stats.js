@@ -6,6 +6,12 @@ function renderStatsSection() {
         <p>Loading enforcement statistics...</p>
       </div>
     </div>
+    <div class="fines-timeline-section" id="fines-timeline-container">
+      <h3 class="timeline-title">Fines Over Time</h3>
+      <div class="timeline-bars" id="timeline-bars">
+        <div class="loading-state">Loading timeline...</div>
+      </div>
+    </div>
   `
 }
 

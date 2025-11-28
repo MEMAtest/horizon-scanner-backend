@@ -300,6 +300,141 @@ router.get('/export', async (req, res) => {
 })
 
 /**
+ * GET /api/enforcement/repeat-offenders
+ * Get firms with multiple fines (repeat offenders)
+ */
+router.get('/repeat-offenders', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const offenders = await req.app.locals.enforcementService.getRepeatOffenders()
+
+    res.json({
+      success: true,
+      offenders,
+      count: offenders.length
+    })
+  } catch (error) {
+    console.error('Error getting repeat offenders:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve repeat offenders'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/fines-by-period
+ * Get fines for a specific time period (30, 60, 90 days or YTD)
+ */
+router.get('/fines-by-period', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const period = req.query.period || '30'
+    const validPeriods = ['30', '60', '90', 'ytd']
+
+    if (!validPeriods.includes(period)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid period. Must be 30, 60, 90, or ytd'
+      })
+    }
+
+    const result = await req.app.locals.enforcementService.getFinesByPeriod(period)
+
+    res.json({
+      success: true,
+      fines: result.fines,
+      totalAmount: result.totalAmount,
+      period,
+      count: result.fines.length
+    })
+  } catch (error) {
+    console.error('Error getting fines by period:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve fines by period'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/distinct-firms
+ * Get list of all distinct firms that have been fined
+ */
+router.get('/distinct-firms', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const firms = await req.app.locals.enforcementService.getDistinctFirms()
+
+    res.json({
+      success: true,
+      firms,
+      count: firms.length
+    })
+  } catch (error) {
+    console.error('Error getting distinct firms:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve distinct firms'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/firm-details
+ * Get detailed information about a specific firm
+ */
+router.get('/firm-details', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const firmName = req.query.firm
+    if (!firmName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Firm name is required'
+      })
+    }
+
+    const firm = await req.app.locals.enforcementService.getFirmDetails(firmName)
+
+    res.json({
+      success: true,
+      firm
+    })
+  } catch (error) {
+    console.error('Error getting firm details:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve firm details'
+    })
+  }
+})
+
+/**
  * Helper function to convert fines data to CSV
  */
 function convertToCSV(fines) {

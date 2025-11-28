@@ -1,4 +1,4 @@
-const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector } = require('./components')
+const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector, renderProfileModal } = require('./components')
 const { getDashboardStyles } = require('./styles')
 const { getDashboardScripts } = require('./scripts')
 const { formatCurrentDate } = require('./helpers')
@@ -49,6 +49,7 @@ function buildDashboardPage({
           </section>
         </main>
       </div>
+      ${renderProfileModal()}
       ${clientScripts}
       ${getDashboardScripts({ updates, stats, filterOptions, currentFilters })}
     </body>

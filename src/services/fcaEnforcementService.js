@@ -187,11 +187,15 @@ class FCAEnforcementService {
                     COUNT(*) as total_fines,
                     SUM(CASE WHEN EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE) THEN 1 ELSE 0 END) as fines_this_year,
                     SUM(CASE WHEN date_issued >= CURRENT_DATE - INTERVAL '30 days' THEN 1 ELSE 0 END) as fines_last_30_days,
+                    SUM(CASE WHEN date_issued >= CURRENT_DATE - INTERVAL '60 days' THEN 1 ELSE 0 END) as fines_last_60_days,
+                    SUM(CASE WHEN date_issued >= CURRENT_DATE - INTERVAL '90 days' THEN 1 ELSE 0 END) as fines_last_90_days,
                     SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
                     AVG(amount) FILTER (WHERE amount IS NOT NULL) as average_amount,
                     MAX(amount) FILTER (WHERE amount IS NOT NULL) as largest_fine,
                     SUM(amount) FILTER (WHERE EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)) as amount_this_year,
                     SUM(amount) FILTER (WHERE date_issued >= CURRENT_DATE - INTERVAL '30 days') as amount_last_30_days,
+                    SUM(amount) FILTER (WHERE date_issued >= CURRENT_DATE - INTERVAL '60 days') as amount_last_60_days,
+                    SUM(amount) FILTER (WHERE date_issued >= CURRENT_DATE - INTERVAL '90 days') as amount_last_90_days,
                     COUNT(DISTINCT COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')) as distinct_firms,
                     COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)
                         THEN COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') END) as distinct_firms_this_year,
@@ -879,6 +883,159 @@ class FCAEnforcementService {
       return await this.aiService.generateInsights()
     } catch (error) {
       console.error('Error getting enforcement insights:', error)
+      throw error
+    }
+  }
+
+  async getRepeatOffenders() {
+    try {
+      // Get firms with more than one fine
+      const result = await this.db.query(`
+        WITH repeat_firms AS (
+          SELECT
+            COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+            COUNT(*) as fine_count,
+            SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
+            AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) as average_risk
+          FROM fca_fines
+          GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+          HAVING COUNT(*) > 1
+        )
+        SELECT * FROM repeat_firms
+        ORDER BY fine_count DESC, total_amount DESC
+      `)
+
+      // Get detailed fines for each repeat offender
+      const offenders = await Promise.all(
+        result.rows.map(async (firm) => {
+          const finesResult = await this.db.query(`
+            SELECT
+              fine_reference,
+              date_issued,
+              amount,
+              breach_categories,
+              breach_type,
+              risk_score,
+              final_notice_url
+            FROM fca_fines
+            WHERE COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') = $1
+            ORDER BY date_issued DESC
+          `, [firm.firm_name])
+
+          return {
+            ...firm,
+            fines: finesResult.rows
+          }
+        })
+      )
+
+      return offenders
+    } catch (error) {
+      console.error('Error getting repeat offenders:', error)
+      throw error
+    }
+  }
+
+  async getFinesByPeriod(period) {
+    try {
+      let dateCondition
+      if (period === 'ytd') {
+        dateCondition = "EXTRACT(YEAR FROM date_issued) = EXTRACT(YEAR FROM CURRENT_DATE)"
+      } else {
+        const days = parseInt(period, 10)
+        dateCondition = `date_issued >= CURRENT_DATE - INTERVAL '${days} days'`
+      }
+
+      const result = await this.db.query(`
+        SELECT
+          fine_reference,
+          date_issued,
+          firm_individual,
+          amount,
+          breach_categories,
+          risk_score,
+          final_notice_url
+        FROM fca_fines
+        WHERE ${dateCondition}
+        ORDER BY date_issued DESC
+      `)
+
+      const totalAmount = result.rows.reduce((sum, fine) => sum + (Number(fine.amount) || 0), 0)
+
+      return {
+        fines: result.rows,
+        totalAmount
+      }
+    } catch (error) {
+      console.error('Error getting fines by period:', error)
+      throw error
+    }
+  }
+
+  async getDistinctFirms() {
+    try {
+      const result = await this.db.query(`
+        SELECT
+          COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+          COUNT(*) as fine_count,
+          SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
+          MIN(date_issued) as first_fine_date,
+          MAX(date_issued) as latest_fine_date
+        FROM fca_fines
+        GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+        ORDER BY total_amount DESC NULLS LAST
+      `)
+
+      return result.rows
+    } catch (error) {
+      console.error('Error getting distinct firms:', error)
+      throw error
+    }
+  }
+
+  async getFirmDetails(firmName) {
+    try {
+      // Get firm summary
+      const summaryResult = await this.db.query(`
+        SELECT
+          COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+          COUNT(*) as fine_count,
+          SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
+          AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) as average_risk,
+          MIN(date_issued) as first_fine_date,
+          MAX(date_issued) as latest_fine_date
+        FROM fca_fines
+        WHERE COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') = $1
+        GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+      `, [firmName])
+
+      if (summaryResult.rows.length === 0) {
+        return null
+      }
+
+      // Get all fines for the firm
+      const finesResult = await this.db.query(`
+        SELECT
+          fine_reference,
+          date_issued,
+          amount,
+          breach_categories,
+          breach_type,
+          affected_sectors,
+          risk_score,
+          ai_summary,
+          final_notice_url
+        FROM fca_fines
+        WHERE COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') = $1
+        ORDER BY date_issued DESC
+      `, [firmName])
+
+      return {
+        ...summaryResult.rows[0],
+        fines: finesResult.rows
+      }
+    } catch (error) {
+      console.error('Error getting firm details:', error)
       throw error
     }
   }
