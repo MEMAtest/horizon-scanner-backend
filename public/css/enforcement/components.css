@@ -873,3 +873,357 @@
         max-height: 90vh;
     }
 }
+
+/* Fines Database Styles */
+.fines-database-section .section-subtitle {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-top: 4px;
+}
+
+.fines-database-filters {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.filter-row + .filter-row {
+    margin-top: 16px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-group label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.filter-input,
+.filter-select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    min-width: 180px;
+    background: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.filter-input-small {
+    min-width: 120px;
+}
+
+.filter-actions {
+    flex-direction: row;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.filter-btn:hover {
+    background: #f1f5f9;
+    border-color: #9ca3af;
+}
+
+.filter-btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-color: transparent;
+}
+
+.filter-btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-color: transparent;
+}
+
+.filter-btn svg {
+    flex-shrink: 0;
+}
+
+/* Fines Table */
+.fines-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fines-table th {
+    background: #f8fafc;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #64748b;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.fines-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+}
+
+.fines-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.fines-row:hover {
+    background: #f8fafc;
+}
+
+.col-date { width: 100px; }
+.col-firm { min-width: 200px; }
+.col-amount { width: 120px; text-align: right; }
+.col-breach { min-width: 150px; }
+.col-risk { width: 100px; }
+.col-action { width: 100px; }
+
+.view-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+.view-link:hover {
+    text-decoration: underline;
+}
+
+/* Risk Badges */
+.risk-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.risk-high {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.risk-medium {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.risk-low {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.risk-unknown {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Pagination */
+.fines-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 16px;
+}
+
+.pagination-info {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #9ca3af;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-pages {
+    display: flex;
+    gap: 4px;
+}
+
+.page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.page-btn:hover {
+    background: #f1f5f9;
+}
+
+.page-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+.pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.pagination-select {
+    padding: 4px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* Fine Details Modal */
+.fine-details {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detail-row {
+    display: flex;
+    gap: 16px;
+}
+
+.detail-row-full {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-label {
+    min-width: 140px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-value {
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.detail-summary {
+    background: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 8px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.detail-link {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.detail-link:hover {
+    text-decoration: underline;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-input,
+    .filter-select {
+        min-width: 100%;
+    }
+
+    .filter-actions {
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+
+    .fines-pagination {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .fines-table {
+        display: block;
+        overflow-x: auto;
+    }
+}

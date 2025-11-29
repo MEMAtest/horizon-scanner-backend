@@ -8,6 +8,139 @@ function getKanbanStyles() {
         background: #f8fafc;
       }
 
+      /* Guidance Panel */
+      .kanban-guidance {
+        background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        overflow: hidden;
+      }
+
+      .guidance-header {
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .guidance-header:hover {
+        background: rgba(59, 130, 246, 0.05);
+      }
+
+      .guidance-header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #1e40af;
+        font-weight: 600;
+        font-size: 15px;
+      }
+
+      .guidance-header-left svg {
+        color: #3b82f6;
+      }
+
+      .guidance-chevron {
+        color: #3b82f6;
+        transition: transform 0.3s ease;
+      }
+
+      .kanban-guidance.collapsed .guidance-chevron {
+        transform: rotate(-90deg);
+      }
+
+      .guidance-content {
+        padding: 0 20px 20px 20px;
+        display: block;
+      }
+
+      .kanban-guidance.collapsed .guidance-content {
+        display: none;
+      }
+
+      .guidance-steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .guidance-step {
+        display: flex;
+        gap: 14px;
+        background: white;
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .step-number {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      .step-content h4 {
+        margin: 0 0 6px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .step-content p {
+        margin: 0;
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.5;
+      }
+
+      .guidance-tips {
+        background: white;
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .guidance-tips strong {
+        color: #1e40af;
+        font-size: 13px;
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .guidance-tips ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .guidance-tips li {
+        margin-bottom: 4px;
+      }
+
+      .text-danger {
+        color: #dc2626;
+        font-weight: 500;
+      }
+
+      .text-warning {
+        color: #d97706;
+        font-weight: 500;
+      }
+
       .kanban-header {
         display: flex;
         justify-content: space-between;

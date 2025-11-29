@@ -64,7 +64,7 @@ router.get('/recent', async (req, res) => {
 
 /**
  * GET /api/enforcement/trends
- * Get fines trends data
+ * Get fines trends data with optional filters
  */
 router.get('/trends', async (req, res) => {
   try {
@@ -88,13 +88,25 @@ router.get('/trends', async (req, res) => {
       })
     }
 
-    const trends = await req.app.locals.enforcementService.getFinesTrends(period, limit, { years })
+    // Build filter options
+    const filterOptions = {
+      years,
+      firm: req.query.firm,
+      breachType: req.query.breach_type,
+      sector: req.query.sector,
+      riskLevel: req.query.risk_level
+    }
+
+    const trends = await req.app.locals.enforcementService.getFinesTrends(period, limit, filterOptions)
 
     res.json({
       success: true,
       trends,
       period,
       years,
+      filters: Object.fromEntries(
+        Object.entries(filterOptions).filter(([_, v]) => v !== undefined)
+      ),
       count: trends.length
     })
   } catch (error) {

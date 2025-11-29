@@ -1,5 +1,66 @@
 const { serializeForScript } = require('../dashboard/helpers')
 
+function renderGuidancePanel() {
+  return `
+    <div class="kanban-guidance" id="kanban-guidance">
+      <div class="guidance-header" onclick="KanbanPage.toggleGuidance()">
+        <div class="guidance-header-left">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>How to Use Regulatory Change Management</span>
+        </div>
+        <svg class="guidance-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <div class="guidance-content" id="guidance-content">
+        <div class="guidance-steps">
+          <div class="guidance-step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h4>Select or Create a Workflow</h4>
+              <p>Use the dropdown to select an existing workflow template, or create a new one that matches your compliance process (e.g., "FCA Compliance Review").</p>
+            </div>
+          </div>
+          <div class="guidance-step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h4>Add Regulatory Changes</h4>
+              <p>Click <strong>"Add Item"</strong> to create a new change item. You can link it to a publication from your regulatory updates, set priority, due dates, and assign it to a workflow.</p>
+            </div>
+          </div>
+          <div class="guidance-step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h4>Track Progress with Stages</h4>
+              <p>Each workflow has stages like "Identified", "Gap Analysis", "Implementation", "Completed". Drag cards between columns to track progress as you work through each regulatory change.</p>
+            </div>
+          </div>
+          <div class="guidance-step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <h4>Monitor Deadlines</h4>
+              <p>Cards show due dates and priority. Items marked <span class="text-danger">overdue</span> or <span class="text-warning">due soon</span> appear in the stats above. Click any card to view full details and update status.</p>
+            </div>
+          </div>
+        </div>
+        <div class="guidance-tips">
+          <strong>Pro Tips:</strong>
+          <ul>
+            <li>Create workflow templates matching your team's compliance process</li>
+            <li>Use priorities (High/Medium/Low) to focus on critical changes first</li>
+            <li>Link items to source publications to maintain audit trail</li>
+            <li>Review overdue items weekly in your compliance meetings</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function renderStatsCards(statistics) {
   const stats = statistics || {
     total: 0,
@@ -343,6 +404,7 @@ function formatDate(dateStr) {
 }
 
 module.exports = {
+  renderGuidancePanel,
   renderStatsCards,
   renderWorkflowSelector,
   renderKanbanBoard,

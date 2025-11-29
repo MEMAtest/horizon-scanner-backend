@@ -607,7 +607,7 @@ class FCAEnforcementService {
   async getFinesTrends(period = 'monthly', limit = 12, options = {}) {
     try {
       let periodSelect, groupBy, intervalUnit
-      const { years } = options
+      const { years, firm, breachType, sector, riskLevel } = options
       const filters = []
       const params = []
 
@@ -617,6 +617,36 @@ class FCAEnforcementService {
       if (Array.isArray(years) && years.length > 0) {
         params.push(years.map(year => parseInt(year, 10)).filter(Number.isFinite))
         filters.push(`year_issued = ANY($${params.length})`)
+      }
+
+      // Firm name filter (case-insensitive partial match)
+      if (firm && typeof firm === 'string' && firm.trim()) {
+        params.push(`%${firm.trim().toLowerCase()}%`)
+        filters.push(`LOWER(firm_individual) LIKE $${params.length}`)
+      }
+
+      // Breach type filter
+      if (breachType && typeof breachType === 'string' && breachType.trim()) {
+        params.push(`%${breachType.trim()}%`)
+        filters.push(`breach_categories::text ILIKE $${params.length}`)
+      }
+
+      // Sector filter
+      if (sector && typeof sector === 'string' && sector.trim()) {
+        params.push(`%${sector.trim()}%`)
+        filters.push(`affected_sectors::text ILIKE $${params.length}`)
+      }
+
+      // Risk level filter
+      if (riskLevel && typeof riskLevel === 'string') {
+        const riskLevelLower = riskLevel.toLowerCase()
+        if (riskLevelLower === 'high') {
+          filters.push('risk_score >= 70')
+        } else if (riskLevelLower === 'medium') {
+          filters.push('risk_score >= 40 AND risk_score < 70')
+        } else if (riskLevelLower === 'low') {
+          filters.push('risk_score < 40')
+        }
       }
 
       switch (period) {

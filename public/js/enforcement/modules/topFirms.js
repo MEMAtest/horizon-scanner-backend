@@ -1,171 +1,304 @@
 function applyTopFirmsMixin(klass) {
   Object.assign(klass.prototype, {
-    async loadTopFirms() {
-        try {
-            console.log('[firms] Loading top firms...');
-    
-            const response = await fetch('/api/enforcement/top-firms?limit=10');
-            const data = await response.json();
-    
-            if (data.success) {
-                this.renderTopFirms(data.firms, { filterMode: this.isFilterActive });
-            } else {
-                throw new Error(data.error || 'Failed to load top firms');
-            }
-        } catch (error) {
-            console.error('[error] Error loading top firms:', error);
-            this.renderTopFirmsError(error.message);
-        }
+    // State for Fines Database
+    finesDbState: {
+      page: 1,
+      pageSize: 20,
+      total: 0,
+      filters: {},
+      sortBy: 'date_issued',
+      sortDir: 'desc'
     },
 
+    async loadTopFirms() {
+      // Initialize the Fines Database instead
+      this.initFinesDatabase();
+    },
+
+    initFinesDatabase() {
+      // Bind event handlers
+      const searchBtn = document.getElementById('fines-search-btn');
+      const resetBtn = document.getElementById('fines-reset-btn');
+      const exportBtn = document.getElementById('fines-export-btn');
+      const prevBtn = document.getElementById('fines-prev-btn');
+      const nextBtn = document.getElementById('fines-next-btn');
+      const pageSizeSelect = document.getElementById('fines-page-size');
+      const firmSearchInput = document.getElementById('fines-firm-search');
+
+      if (searchBtn) searchBtn.addEventListener('click', () => this.searchFinesDatabase());
+      if (resetBtn) resetBtn.addEventListener('click', () => this.resetFinesFilters());
+      if (exportBtn) exportBtn.addEventListener('click', () => this.exportFinesData());
+      if (prevBtn) prevBtn.addEventListener('click', () => this.goToFinesPage(this.finesDbState.page - 1));
+      if (nextBtn) nextBtn.addEventListener('click', () => this.goToFinesPage(this.finesDbState.page + 1));
+      if (pageSizeSelect) pageSizeSelect.addEventListener('change', (e) => {
+        this.finesDbState.pageSize = parseInt(e.target.value) || 20;
+        this.finesDbState.page = 1;
+        this.searchFinesDatabase();
+      });
+
+      // Allow Enter key to search
+      if (firmSearchInput) firmSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') this.searchFinesDatabase();
+      });
+
+      // Load initial data
+      this.searchFinesDatabase();
+    },
+
+    async searchFinesDatabase() {
+      try {
+        const container = document.getElementById('fines-database-results');
+        container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Searching fines...</p></div>';
+
+        // Gather filter values
+        const filters = {
+          q: document.getElementById('fines-firm-search')?.value?.trim() || '',
+          breach_type: document.getElementById('fines-breach-type')?.value || '',
+          risk_level: document.getElementById('fines-risk-level')?.value || '',
+          min_amount: document.getElementById('fines-min-amount')?.value || '',
+          max_amount: document.getElementById('fines-max-amount')?.value || '',
+          start_date: document.getElementById('fines-start-date')?.value || '',
+          end_date: document.getElementById('fines-end-date')?.value || ''
+        };
+
+        this.finesDbState.filters = filters;
+
+        // Build query params
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) params.set(key, value);
+        });
+        params.set('limit', this.finesDbState.pageSize);
+        params.set('offset', (this.finesDbState.page - 1) * this.finesDbState.pageSize);
+
+        const response = await fetch('/api/enforcement/search?' + params.toString());
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Search failed');
+        }
+
+        this.finesDbState.total = data.results?.total || 0;
+        this.renderFinesResults(data.results?.fines || []);
+        this.updateFinesPagination();
+
+      } catch (error) {
+        console.error('[fines-db] Search error:', error);
+        document.getElementById('fines-database-results').innerHTML =
+          '<div class="error-state"><strong>Search failed</strong><br>' + error.message + '</div>';
+      }
+    },
+
+    renderFinesResults(fines) {
+      const container = document.getElementById('fines-database-results');
+
+      if (!fines || fines.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No fines found matching your criteria.</p></div>';
+        return;
+      }
+
+      const tableRows = fines.map((fine, index) => {
+        const date = this.formatDate(fine.date_issued);
+        const amount = this.formatCurrency(fine.amount);
+        const breaches = Array.isArray(fine.breach_categories)
+          ? fine.breach_categories.slice(0, 2).join(', ')
+          : (fine.breach_categories || '-');
+        const riskLevel = this.getRiskLevelBadge(fine.risk_score);
+
+        return `
+          <tr class="fines-row" data-fine-ref="${this.escapeHtml(fine.fine_reference || '')}" onclick="window.enforcementDashboard.showFineDetails('${this.escapeHtml(fine.fine_reference || '')}', ${JSON.stringify(fine).replace(/"/g, '&quot;')})">
+            <td class="col-date">${date}</td>
+            <td class="col-firm"><strong>${this.escapeHtml(fine.firm_individual || 'Unknown')}</strong></td>
+            <td class="col-amount fine-amount">${amount}</td>
+            <td class="col-breach">${this.escapeHtml(breaches)}</td>
+            <td class="col-risk">${riskLevel}</td>
+            <td class="col-action">
+              ${fine.final_notice_url ? `<a href="${this.escapeHtml(fine.final_notice_url)}" target="_blank" class="view-link" onclick="event.stopPropagation()">View Notice</a>` : '-'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <table class="fines-table data-table">
+          <thead>
+            <tr>
+              <th class="col-date">Date</th>
+              <th class="col-firm">Firm/Individual</th>
+              <th class="col-amount">Amount</th>
+              <th class="col-breach">Breach Category</th>
+              <th class="col-risk">Risk Level</th>
+              <th class="col-action">Notice</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      `;
+    },
+
+    showFineDetails(reference, fineData) {
+      // Use the existing modal system to show fine details
+      if (this.showDrilldownModal) {
+        const fine = typeof fineData === 'string' ? JSON.parse(fineData) : fineData;
+        const breaches = Array.isArray(fine.breach_categories) ? fine.breach_categories.join(', ') : (fine.breach_categories || '-');
+        const sectors = Array.isArray(fine.affected_sectors) ? fine.affected_sectors.join(', ') : (fine.affected_sectors || '-');
+
+        const content = `
+          <div class="fine-details">
+            <div class="detail-row">
+              <span class="detail-label">Reference</span>
+              <span class="detail-value">${this.escapeHtml(fine.fine_reference || '-')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Date Issued</span>
+              <span class="detail-value">${this.formatDate(fine.date_issued)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Firm/Individual</span>
+              <span class="detail-value"><strong>${this.escapeHtml(fine.firm_individual || 'Unknown')}</strong></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Fine Amount</span>
+              <span class="detail-value fine-amount">${this.formatCurrency(fine.amount)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Breach Categories</span>
+              <span class="detail-value">${this.escapeHtml(breaches)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Affected Sectors</span>
+              <span class="detail-value">${this.escapeHtml(sectors)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Risk Score</span>
+              <span class="detail-value">${fine.risk_score || '-'}/100 ${this.getRiskLevelBadge(fine.risk_score)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Impact Level</span>
+              <span class="detail-value">${this.escapeHtml(fine.customer_impact_level || '-')}</span>
+            </div>
+            ${fine.ai_summary ? `
+            <div class="detail-row detail-row-full">
+              <span class="detail-label">Summary</span>
+              <p class="detail-value detail-summary">${this.escapeHtml(fine.ai_summary)}</p>
+            </div>
+            ` : ''}
+            ${fine.final_notice_url ? `
+            <div class="detail-row">
+              <span class="detail-label">Notice</span>
+              <a href="${this.escapeHtml(fine.final_notice_url)}" target="_blank" class="detail-link">View Final Notice</a>
+            </div>
+            ` : ''}
+          </div>
+        `;
+
+        this.showDrilldownModal(
+          this.escapeHtml(fine.firm_individual || 'Fine Details'),
+          content,
+          'fine-detail-modal'
+        );
+      }
+    },
+
+    getRiskLevelBadge(riskScore) {
+      if (!riskScore && riskScore !== 0) return '<span class="risk-badge risk-unknown">-</span>';
+      const score = parseInt(riskScore);
+      if (score >= 70) return '<span class="risk-badge risk-high">High</span>';
+      if (score >= 40) return '<span class="risk-badge risk-medium">Medium</span>';
+      return '<span class="risk-badge risk-low">Low</span>';
+    },
+
+    updateFinesPagination() {
+      const pagination = document.getElementById('fines-pagination');
+      const showingEl = document.getElementById('fines-showing');
+      const prevBtn = document.getElementById('fines-prev-btn');
+      const nextBtn = document.getElementById('fines-next-btn');
+      const pagesEl = document.getElementById('fines-pages');
+
+      const total = this.finesDbState.total;
+      const page = this.finesDbState.page;
+      const pageSize = this.finesDbState.pageSize;
+      const totalPages = Math.ceil(total / pageSize);
+
+      if (total === 0) {
+        pagination.style.display = 'none';
+        return;
+      }
+
+      pagination.style.display = 'flex';
+
+      const start = ((page - 1) * pageSize) + 1;
+      const end = Math.min(page * pageSize, total);
+      showingEl.textContent = `Showing ${start}-${end} of ${total}`;
+
+      prevBtn.disabled = page <= 1;
+      nextBtn.disabled = page >= totalPages;
+
+      // Build page numbers
+      let pagesHtml = '';
+      const maxVisible = 5;
+      let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      startPage = Math.max(1, endPage - maxVisible + 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === page ? 'active' : '';
+        pagesHtml += `<button class="page-btn ${activeClass}" onclick="window.enforcementDashboard.goToFinesPage(${i})">${i}</button>`;
+      }
+      pagesEl.innerHTML = pagesHtml;
+    },
+
+    goToFinesPage(page) {
+      const totalPages = Math.ceil(this.finesDbState.total / this.finesDbState.pageSize);
+      if (page < 1 || page > totalPages) return;
+      this.finesDbState.page = page;
+      this.searchFinesDatabase();
+    },
+
+    resetFinesFilters() {
+      document.getElementById('fines-firm-search').value = '';
+      document.getElementById('fines-breach-type').value = '';
+      document.getElementById('fines-risk-level').value = '';
+      document.getElementById('fines-min-amount').value = '';
+      document.getElementById('fines-max-amount').value = '';
+      document.getElementById('fines-start-date').value = '';
+      document.getElementById('fines-end-date').value = '';
+
+      this.finesDbState.page = 1;
+      this.finesDbState.filters = {};
+      this.searchFinesDatabase();
+    },
+
+    exportFinesData() {
+      // Build export URL with current filters
+      const params = new URLSearchParams();
+      Object.entries(this.finesDbState.filters).forEach(([key, value]) => {
+        if (value) params.set(key, value);
+      });
+
+      const url = '/api/enforcement/export?' + params.toString();
+      window.location.href = url;
+    },
+
+    // Legacy methods for backward compatibility
     renderTopFirms(firms, options = {}) {
-        const container = document.getElementById('top-firms-container');
-        if (!container) return;
-    
-        this.latestTopFirms = Array.isArray(firms) ? firms : [];
-        const searchTerm = (this.topFirmSearchTerm || '').trim().toLowerCase();
-        const workingFirms = searchTerm
-            ? this.latestTopFirms.filter(firm => this.matchesTopFirmSearch(firm, searchTerm))
-            : this.latestTopFirms;
-    
-        if (!workingFirms.length) {
-            const message = searchTerm
-                ? 'No firms match "' + this.escapeHtml(this.topFirmSearchTerm.trim()) + '"'
-                : options.filterMode
-                    ? 'No firm data captured for the current filters.'
-                    : 'No firm data available.';
-            container.innerHTML = '<p class="loading-state">' + message + '</p>';
-            return;
-        }
-    
-        const totalFines = workingFirms.reduce((sum, firm) => sum + Number(firm.total_fines || 0), 0);
-        const badges = [];
-        if (options.filterMode) {
-            badges.push('<span class="filter-badge">Filtered Firms</span>');
-            if (options.scopeLabel) {
-                badges.push('<span class="filter-badge">' + this.escapeHtml(options.scopeLabel) + '</span>');
-            }
-        }
-        if (searchTerm) {
-            badges.push('<span class="filter-badge">Search: ' + this.escapeHtml(this.topFirmSearchTerm.trim()) + '</span>');
-        }
-    
-        const filterInfo = badges.length
-            ? '<div class="trends-filter-info">' + badges.join('') + '</div>'
-            : '';
-    
-        const tableRows = workingFirms.map((firm, index) => {
-            const averageFine = firm.average_fine || (firm.fine_count ? firm.total_fines / firm.fine_count : 0);
-            const shareOfTotal = totalFines > 0 ? (Number(firm.total_fines || 0) / totalFines) * 100 : 0;
-            const shareDisplay = totalFines > 0 ? shareOfTotal.toFixed(1) : '0.0';
-            const firstFine = this.formatDate(firm.first_fine_date);
-            const latestFine = this.formatDate(firm.latest_fine_date);
-            return '<tr>' +
-                '<td><strong>' + (index + 1) + '</strong></td>' +
-                '<td>' + this.escapeHtml(firm.firm_name || 'Unknown') + '</td>' +
-                '<td class="fine-amount">' + this.formatCurrency(firm.total_fines) + '</td>' +
-                '<td>' + this.formatCurrency(averageFine) + '</td>' +
-                '<td>' + (firm.fine_count || 0) + '</td>' +
-                '<td>' + firstFine + '</td>' +
-                '<td>' + latestFine + '</td>' +
-                '<td>' + shareDisplay + '%</td>' +
-                '<td>' + (firm.is_repeat_offender ? '&#9888; Yes' : '&#9989; No') + '</td>' +
-            '</tr>';
-        }).join('');
-    
-        const tableHTML =
-            filterInfo +
-            '<table class="data-table">' +
-                '<thead>' +
-                    '<tr>' +
-                        '<th>Rank</th>' +
-                        '<th>Firm Name</th>' +
-                        '<th>Total Fines</th>' +
-                        '<th>Average Fine</th>' +
-                        '<th>Fine Count</th>' +
-                        '<th>First Fine</th>' +
-                        '<th>Latest Fine</th>' +
-                        '<th>Share of Total</th>' +
-                        '<th>Repeat Offender</th>' +
-                    '</tr>' +
-                '</thead>' +
-                '<tbody>' +
-                    tableRows +
-                '</tbody>' +
-            '</table>';
-    
-        container.innerHTML = tableHTML;
+      // Redirect to new fines database
+      this.searchFinesDatabase();
     },
 
     renderTopFirmsError(error) {
-        const container = document.getElementById('top-firms-container');
-        container.innerHTML = [
-            '<div class="error-state">',
-                '<strong>Failed to load top firms</strong><br>',
-                error,
-            '</div>'
-        ].join('');
-    },
-
-    buildTopFirmsFromFines(fines = [], limit = 10) {
-        if (!Array.isArray(fines) || fines.length === 0) return [];
-    
-        const firmMap = new Map();
-    
-        fines.forEach(fine => {
-            const firmName = (fine.firm_individual || 'Unknown').trim() || 'Unknown';
-            const amount = Number(fine.amount || 0);
-            const issuedDate = fine.date_issued ? new Date(fine.date_issued) : null;
-    
-            const record = firmMap.get(firmName) || {
-                firm_name: firmName,
-                total_fines: 0,
-                fine_count: 0,
-                first_fine_date: null,
-                latest_fine_date: null,
-                is_repeat_offender: false
-            };
-    
-            record.total_fines += amount;
-            record.fine_count += 1;
-            record.is_repeat_offender = record.is_repeat_offender || record.fine_count > 1;
-    
-            if (issuedDate instanceof Date && !isNaN(issuedDate)) {
-                if (!record.first_fine_date || issuedDate < record.first_fine_date) {
-                    record.first_fine_date = issuedDate;
-                }
-                if (!record.latest_fine_date || issuedDate > record.latest_fine_date) {
-                    record.latest_fine_date = issuedDate;
-                }
-            }
-    
-            firmMap.set(firmName, record);
-        });
-    
-        const ranked = Array.from(firmMap.values()).map(record => {
-            const average = record.fine_count > 0 ? record.total_fines / record.fine_count : 0;
-            return {
-                ...record,
-                average_fine: average,
-                first_fine_date: record.first_fine_date ? record.first_fine_date.toISOString() : null,
-                latest_fine_date: record.latest_fine_date ? record.latest_fine_date.toISOString() : null
-            };
-        }).sort((a, b) => b.total_fines - a.total_fines);
-    
-        return ranked.slice(0, limit);
+      const container = document.getElementById('fines-database-results');
+      if (container) {
+        container.innerHTML = '<div class="error-state"><strong>Failed to load data</strong><br>' + error + '</div>';
+      }
     },
 
     matchesTopFirmSearch(firm, term) {
-        if (!term) return true;
-        const haystack = [
-            firm.firm_name,
-            this.formatCurrency(firm.total_fines || 0),
-            this.formatCurrency(firm.average_fine || 0),
-            firm.fine_count,
-            firm.first_fine_date,
-            firm.latest_fine_date
-        ].map(value => String(value || '')).join(' ').toLowerCase();
-        return haystack.includes(term);
+      if (!term) return true;
+      const haystack = [firm.firm_name, firm.total_fines, firm.fine_count].map(v => String(v || '')).join(' ').toLowerCase();
+      return haystack.includes(term);
     }
   })
 }

@@ -11,6 +11,26 @@ function resolveUserId(req) {
   return 'default'
 }
 
+/**
+ * Normalize impact level values from various formats to high/medium/low
+ * Handles: Significant/Moderate/Informational, High/Medium/Low, numbers, etc.
+ */
+function normalizeImpactLevel(rawImpact) {
+  if (!rawImpact) return 'medium'
+
+  const impact = String(rawImpact).toLowerCase().trim()
+
+  // Map various formats to standard high/medium/low
+  const highValues = ['high', 'significant', 'critical', 'severe', '3', 'major']
+  const lowValues = ['low', 'informational', 'minor', 'negligible', '1', 'minimal']
+
+  if (highValues.includes(impact)) return 'high'
+  if (lowValues.includes(impact)) return 'low'
+
+  // Default to medium for: medium, moderate, normal, 2, etc.
+  return 'medium'
+}
+
 async function renderRegulatoryAnalyticsPage(req, res) {
   try {
     console.log('[Analytics] Rendering regulatory analytics dashboard...')
@@ -69,7 +89,7 @@ function calculateAnalytics(updates) {
       monthlyData[monthKey] = { total: 0, high: 0, medium: 0, low: 0 }
     }
     monthlyData[monthKey].total++
-    const impact = (update.impact_level || 'medium').toLowerCase()
+    const impact = normalizeImpactLevel(update.impact_level)
     if (monthlyData[monthKey][impact] !== undefined) {
       monthlyData[monthKey][impact]++
     }
@@ -94,9 +114,10 @@ function calculateAnalytics(updates) {
       sectorData[sector].recent++
     }
 
-    // Impact distribution
-    if (impactData[impact] !== undefined) {
-      impactData[impact]++
+    // Impact distribution (use normalized impact)
+    const impactForDist = normalizeImpactLevel(update.impact_level)
+    if (impactData[impactForDist] !== undefined) {
+      impactData[impactForDist]++
     }
   })
 
@@ -477,6 +498,169 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
           opacity: 0.9;
           line-height: 1.5;
         }
+
+        /* Export buttons */
+        .export-buttons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .export-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+          background: white;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .export-btn:hover {
+          background: #f9fafb;
+          border-color: #9ca3af;
+        }
+
+        .export-btn-primary {
+          background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+          color: white;
+          border-color: transparent;
+        }
+
+        .export-btn-primary:hover {
+          opacity: 0.9;
+          border-color: transparent;
+          background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        }
+
+        .export-btn svg {
+          flex-shrink: 0;
+        }
+
+        /* Drill-down modal */
+        .drilldown-modal {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 1000;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .drilldown-modal.active {
+          display: flex;
+        }
+
+        .drilldown-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 800px;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .drilldown-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .drilldown-header h3 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .drilldown-close {
+          width: 32px;
+          height: 32px;
+          border: none;
+          background: #f1f5f9;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748b;
+        }
+
+        .drilldown-close:hover {
+          background: #e2e8f0;
+          color: #374151;
+        }
+
+        .drilldown-body {
+          padding: 24px;
+          overflow-y: auto;
+          max-height: calc(80vh - 80px);
+        }
+
+        .drilldown-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .drilldown-item {
+          padding: 16px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          transition: all 0.15s ease;
+        }
+
+        .drilldown-item:hover {
+          border-color: #3b82f6;
+          background: #f8fafc;
+        }
+
+        .drilldown-item-title {
+          font-weight: 600;
+          color: #1e293b;
+          font-size: 14px;
+          margin-bottom: 4px;
+        }
+
+        .drilldown-item-meta {
+          font-size: 12px;
+          color: #64748b;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .drilldown-item a {
+          color: #3b82f6;
+          text-decoration: none;
+        }
+
+        .drilldown-item a:hover {
+          text-decoration: underline;
+        }
+
+        .drilldown-empty {
+          text-align: center;
+          color: #64748b;
+          padding: 32px;
+        }
+
+        /* Clickable chart cursor */
+        .chart-container canvas {
+          cursor: pointer;
+        }
       </style>
     </head>
     <body>
@@ -484,8 +668,42 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
       <main class="main-content">
         <div class="analytics-page">
           <header class="analytics-header">
-            <h1>Regulatory Analytics Dashboard</h1>
-            <p class="header-subtitle">Publications by source, regulator, sector, and trends over time</p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+              <div>
+                <h1>Regulatory Analytics Dashboard</h1>
+                <p class="header-subtitle">Publications by source, regulator, sector, and trends over time</p>
+              </div>
+              <div class="export-buttons">
+                <button onclick="exportData('csv')" class="export-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                  Export CSV
+                </button>
+                <button onclick="exportData('excel')" class="export-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                  Export Excel
+                </button>
+                <button onclick="exportData('summary')" class="export-btn export-btn-primary">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Full Report
+                </button>
+              </div>
+            </div>
           </header>
 
           <!-- Summary Cards -->
@@ -688,12 +906,38 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
         </div>
       </main>
 
+      <!-- Drill-down Modal -->
+      <div id="drilldownModal" class="drilldown-modal" onclick="if(event.target === this) closeDrilldown()">
+        <div class="drilldown-content">
+          <div class="drilldown-header">
+            <h3 id="drilldownTitle">Publications</h3>
+            <button class="drilldown-close" onclick="closeDrilldown()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="drilldown-body">
+            <div id="drilldownContent" class="drilldown-list"></div>
+          </div>
+        </div>
+      </div>
+
       ${clientScripts}
       <script>
         const analyticsData = {
           monthlyChartData: ${JSON.stringify(monthlyChartData)},
           topAuthorities: ${JSON.stringify(topAuthorities)},
-          impactDistribution: ${JSON.stringify(impactDistribution)}
+          impactDistribution: ${JSON.stringify(impactDistribution)},
+          rawUpdates: ${JSON.stringify(updates.slice(0, 500).map(u => ({
+            title: u.title,
+            authority: u.authority,
+            sector: u.sector,
+            impact_level: u.impact_level,
+            published_date: u.published_date,
+            source_url: u.source_url
+          })))}
         };
 
         // Chart.js color palette (matching Enforcement page)
@@ -763,6 +1007,13 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
                 grid: { color: '#f1f5f9' },
                 ticks: { color: '#64748b' }
               }
+            },
+            onClick: (event, elements) => {
+              if (elements.length > 0) {
+                const index = elements[0].index;
+                const monthData = analyticsData.monthlyChartData[index];
+                showDrilldown('month', monthData.month, monthData);
+              }
             }
           }
         });
@@ -806,6 +1057,13 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
               y: {
                 grid: { display: false },
                 ticks: { color: '#1e293b' }
+              }
+            },
+            onClick: (event, elements) => {
+              if (elements.length > 0) {
+                const index = elements[0].index;
+                const authority = authData[index];
+                showDrilldown('authority', authority.name, authority);
               }
             }
           }
@@ -858,9 +1116,126 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
                   }
                 }
               }
+            },
+            onClick: (event, elements) => {
+              if (elements.length > 0) {
+                const index = elements[0].index;
+                const impactLabels = ['high', 'medium', 'low'];
+                const impactLevel = impactLabels[index];
+                showDrilldown('impact', impactLevel, { count: impactData[index] });
+              }
             }
           }
         });
+
+        // Drilldown modal functions
+        function showDrilldown(type, value, data) {
+          const modal = document.getElementById('drilldownModal');
+          const title = document.getElementById('drilldownTitle');
+          const content = document.getElementById('drilldownContent');
+
+          // Filter updates based on type
+          let filteredUpdates = [];
+          let titleText = '';
+
+          if (type === 'month') {
+            titleText = 'Publications for ' + formatMonth(value);
+            const [year, month] = value.split('-');
+            filteredUpdates = analyticsData.rawUpdates.filter(u => {
+              if (!u.published_date) return false;
+              const d = new Date(u.published_date);
+              return d.getFullYear() === parseInt(year) && (d.getMonth() + 1) === parseInt(month);
+            });
+          } else if (type === 'authority') {
+            titleText = 'Publications by ' + value;
+            filteredUpdates = analyticsData.rawUpdates.filter(u => u.authority === value);
+          } else if (type === 'impact') {
+            const displayLevel = value.charAt(0).toUpperCase() + value.slice(1);
+            titleText = displayLevel + ' Impact Publications';
+            filteredUpdates = analyticsData.rawUpdates.filter(u => {
+              const level = normalizeImpactLevel(u.impact_level);
+              return level === value;
+            });
+          }
+
+          title.textContent = titleText + ' (' + filteredUpdates.length + ')';
+
+          if (filteredUpdates.length === 0) {
+            content.innerHTML = '<div class="drilldown-empty">No publications found</div>';
+          } else {
+            content.innerHTML = filteredUpdates.slice(0, 50).map(update => {
+              const date = update.published_date ? new Date(update.published_date).toLocaleDateString('en-GB') : 'Unknown date';
+              return '<div class="drilldown-item">' +
+                '<div class="drilldown-item-title">' + escapeHtml(update.title) + '</div>' +
+                '<div class="drilldown-item-meta">' +
+                  '<span>' + escapeHtml(update.authority || 'Unknown') + '</span>' +
+                  '<span>' + date + '</span>' +
+                  '<span>' + escapeHtml(update.sector || 'General') + '</span>' +
+                  (update.source_url ? '<a href="' + escapeHtml(update.source_url) + '" target="_blank">View Source</a>' : '') +
+                '</div>' +
+              '</div>';
+            }).join('');
+
+            if (filteredUpdates.length > 50) {
+              content.innerHTML += '<div class="drilldown-empty">Showing 50 of ' + filteredUpdates.length + ' publications</div>';
+            }
+          }
+
+          modal.classList.add('active');
+        }
+
+        function closeDrilldown() {
+          document.getElementById('drilldownModal').classList.remove('active');
+        }
+
+        function normalizeImpactLevel(rawImpact) {
+          if (!rawImpact) return 'medium';
+          const impact = String(rawImpact).toLowerCase().trim();
+          if (['high', 'significant', 'critical', 'severe'].includes(impact)) return 'high';
+          if (['low', 'informational', 'minor', 'negligible'].includes(impact)) return 'low';
+          return 'medium';
+        }
+
+        function formatMonth(monthStr) {
+          const [year, month] = monthStr.split('-');
+          return new Date(year, month - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        }
+
+        function escapeHtml(str) {
+          if (!str) return '';
+          const div = document.createElement('div');
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
+        // Export functionality
+        function exportData(type) {
+          const endpoints = {
+            csv: '/api/analytics/export/csv',
+            excel: '/api/analytics/export/excel',
+            summary: '/api/analytics/export/summary'
+          };
+
+          const url = endpoints[type];
+          if (!url) return;
+
+          // Show loading state on button
+          const btn = event.target.closest('.export-btn');
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/></svg> Exporting...';
+          btn.disabled = true;
+
+          // Trigger download
+          const link = document.createElement('a');
+          link.href = url;
+          link.click();
+
+          // Reset button after delay
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }, 2000);
+        }
       </script>
     </body>
     </html>

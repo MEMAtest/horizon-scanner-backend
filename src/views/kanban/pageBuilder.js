@@ -1,6 +1,7 @@
 const { getKanbanStyles } = require('./styles')
 const { getKanbanScripts } = require('./scripts')
 const {
+  renderGuidancePanel,
   renderStatsCards,
   renderWorkflowSelector,
   renderKanbanBoard,
@@ -57,6 +58,8 @@ function buildKanbanPage({
               </button>
             </div>
           </header>
+
+          ${renderGuidancePanel()}
 
           ${renderStatsCards(statistics)}
 

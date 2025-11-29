@@ -1,5 +1,6 @@
 const dbService = require('../../services/dbService')
 const predictiveIntelligenceService = require('../../services/predictiveIntelligenceService')
+const XLSX = require('xlsx')
 
 function registerAnalyticsRoutes(router) {
   router.get('/analytics', async (req, res) => {
@@ -153,6 +154,203 @@ function registerAnalyticsRoutes(router) {
     })
   }
   })
+
+  // Export regulatory updates as CSV
+  router.get('/analytics/export/csv', async (req, res) => {
+    try {
+      console.log('Analytics API: Exporting updates as CSV')
+
+      const updates = await dbService.getEnhancedUpdates({ limit: 10000 })
+
+      // Build CSV content
+      const headers = [
+        'Title',
+        'Authority',
+        'Published Date',
+        'Impact Level',
+        'Sector',
+        'Document Type',
+        'Summary',
+        'URL'
+      ]
+
+      const rows = updates.map(update => [
+        escapeCsvField(update.title),
+        escapeCsvField(update.authority),
+        update.published_date ? new Date(update.published_date).toISOString().split('T')[0] : '',
+        escapeCsvField(update.impact_level || 'Medium'),
+        escapeCsvField(update.sector || ''),
+        escapeCsvField(update.document_type || ''),
+        escapeCsvField(update.ai_summary || update.summary || ''),
+        escapeCsvField(update.source_url || '')
+      ])
+
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', `attachment; filename=regulatory_updates_${new Date().toISOString().split('T')[0]}.csv`)
+      res.send(csv)
+    } catch (error) {
+      console.error('CSV export error:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to export CSV',
+        details: error.message
+      })
+    }
+  })
+
+  // Export regulatory updates as Excel
+  router.get('/analytics/export/excel', async (req, res) => {
+    try {
+      console.log('Analytics API: Exporting updates as Excel')
+
+      const updates = await dbService.getEnhancedUpdates({ limit: 10000 })
+
+      // Prepare data for Excel
+      const data = updates.map(update => ({
+        'Title': update.title || '',
+        'Authority': update.authority || '',
+        'Published Date': update.published_date ? new Date(update.published_date).toISOString().split('T')[0] : '',
+        'Impact Level': update.impact_level || 'Medium',
+        'Sector': update.sector || '',
+        'Document Type': update.document_type || '',
+        'Summary': update.ai_summary || update.summary || '',
+        'URL': update.source_url || ''
+      }))
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.json_to_sheet(data)
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 50 },  // Title
+        { wch: 20 },  // Authority
+        { wch: 12 },  // Date
+        { wch: 12 },  // Impact
+        { wch: 20 },  // Sector
+        { wch: 15 },  // Doc Type
+        { wch: 60 },  // Summary
+        { wch: 40 }   // URL
+      ]
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Regulatory Updates')
+
+      // Generate buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename=regulatory_updates_${new Date().toISOString().split('T')[0]}.xlsx`)
+      res.send(buffer)
+    } catch (error) {
+      console.error('Excel export error:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to export Excel',
+        details: error.message
+      })
+    }
+  })
+
+  // Export analytics summary as Excel
+  router.get('/analytics/export/summary', async (req, res) => {
+    try {
+      console.log('Analytics API: Exporting analytics summary as Excel')
+
+      const updates = await dbService.getEnhancedUpdates({ limit: 10000 })
+
+      // Calculate analytics
+      const now = new Date()
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      // Authority stats
+      const authorityStats = {}
+      const sectorStats = {}
+      const impactStats = { High: 0, Medium: 0, Low: 0 }
+      const monthlyStats = {}
+
+      updates.forEach(update => {
+        // Authority
+        const auth = update.authority || 'Unknown'
+        if (!authorityStats[auth]) authorityStats[auth] = { total: 0, recent: 0 }
+        authorityStats[auth].total++
+        if (new Date(update.published_date) >= thirtyDaysAgo) authorityStats[auth].recent++
+
+        // Sector
+        const sector = update.sector || 'General'
+        if (!sectorStats[sector]) sectorStats[sector] = { total: 0, recent: 0 }
+        sectorStats[sector].total++
+        if (new Date(update.published_date) >= thirtyDaysAgo) sectorStats[sector].recent++
+
+        // Impact
+        const impact = normalizeImpact(update.impact_level)
+        impactStats[impact]++
+
+        // Monthly
+        const date = new Date(update.published_date || update.created_at)
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        if (!monthlyStats[monthKey]) monthlyStats[monthKey] = 0
+        monthlyStats[monthKey]++
+      })
+
+      // Create workbook
+      const wb = XLSX.utils.book_new()
+
+      // Summary sheet
+      const summaryData = [
+        { Metric: 'Total Publications', Value: updates.length },
+        { Metric: 'Last 30 Days', Value: updates.filter(u => new Date(u.published_date) >= thirtyDaysAgo).length },
+        { Metric: 'High Impact', Value: impactStats.High },
+        { Metric: 'Medium Impact', Value: impactStats.Medium },
+        { Metric: 'Low Impact', Value: impactStats.Low },
+        { Metric: 'Active Regulators', Value: Object.keys(authorityStats).length },
+        { Metric: 'Active Sectors', Value: Object.keys(sectorStats).length }
+      ]
+      const summaryWs = XLSX.utils.json_to_sheet(summaryData)
+      summaryWs['!cols'] = [{ wch: 20 }, { wch: 15 }]
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary')
+
+      // Authorities sheet
+      const authData = Object.entries(authorityStats)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([name, stats]) => ({ Authority: name, 'Total Publications': stats.total, 'Last 30 Days': stats.recent }))
+      const authWs = XLSX.utils.json_to_sheet(authData)
+      authWs['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 15 }]
+      XLSX.utils.book_append_sheet(wb, authWs, 'By Authority')
+
+      // Sectors sheet
+      const sectorData = Object.entries(sectorStats)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([name, stats]) => ({ Sector: name, 'Total Publications': stats.total, 'Last 30 Days': stats.recent }))
+      const sectorWs = XLSX.utils.json_to_sheet(sectorData)
+      sectorWs['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 15 }]
+      XLSX.utils.book_append_sheet(wb, sectorWs, 'By Sector')
+
+      // Monthly trends sheet
+      const monthlyData = Object.entries(monthlyStats)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-12)
+        .map(([month, count]) => ({ Month: month, Publications: count }))
+      const monthlyWs = XLSX.utils.json_to_sheet(monthlyData)
+      monthlyWs['!cols'] = [{ wch: 12 }, { wch: 12 }]
+      XLSX.utils.book_append_sheet(wb, monthlyWs, 'Monthly Trends')
+
+      // Generate buffer
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename=regulatory_analytics_summary_${new Date().toISOString().split('T')[0]}.xlsx`)
+      res.send(buffer)
+    } catch (error) {
+      console.error('Summary export error:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to export summary',
+        details: error.message
+      })
+    }
+  })
 }
 
 function calculateImpactDistribution(updates) {
@@ -197,6 +395,25 @@ function calculateImpactDistribution(updates) {
   })
 
   return distribution
+}
+
+// Helper to escape CSV fields
+function escapeCsvField(field) {
+  if (!field) return ''
+  const str = String(field)
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"'
+  }
+  return str
+}
+
+// Helper to normalize impact level
+function normalizeImpact(rawImpact) {
+  if (!rawImpact) return 'Medium'
+  const impact = String(rawImpact).toLowerCase().trim()
+  if (['high', 'significant', 'critical', 'severe'].includes(impact)) return 'High'
+  if (['low', 'informational', 'minor', 'negligible'].includes(impact)) return 'Low'
+  return 'Medium'
 }
 
 module.exports = registerAnalyticsRoutes

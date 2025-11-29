@@ -25,6 +25,11 @@ function applyTrendsMixin(klass) {
                 const yearsValue = filterParams.yearsArray.map(year => parseInt(year, 10)).filter(year => !isNaN(year)).join(',');
                 if (yearsValue) params.set('years', yearsValue);
             }
+            // Pass additional filter params to trends API
+            if (filterParams.firm) params.set('firm', filterParams.firm);
+            if (filterParams.breachType) params.set('breach_type', filterParams.breachType);
+            if (filterParams.sector) params.set('sector', filterParams.sector);
+            if (filterParams.riskLevel) params.set('risk_level', filterParams.riskLevel);
     
             const response = await fetch('/api/enforcement/trends?' + params.toString());
             const data = await response.json();
@@ -226,7 +231,11 @@ function applyTrendsMixin(klass) {
         const yearsKey = Array.isArray(filterParams.yearsArray) && filterParams.yearsArray.length
             ? filterParams.yearsArray.slice().sort().join('-')
             : 'all';
-        return period + '::' + yearsKey;
+        const firmKey = filterParams.firm || '';
+        const breachKey = filterParams.breachType || '';
+        const sectorKey = filterParams.sector || '';
+        const riskKey = filterParams.riskLevel || '';
+        return period + '::' + yearsKey + '::' + firmKey + '::' + breachKey + '::' + sectorKey + '::' + riskKey;
     },
 
     filterTrendData(trends = [], filterParams = {}) {

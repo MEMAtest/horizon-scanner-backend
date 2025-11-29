@@ -25,6 +25,22 @@ function getKanbanScripts({ workflowTemplates, selectedTemplateId, selectedTempl
         const KanbanPage = {
           init: function() {
             console.log('[Kanban] Initialized with', Object.keys(state.itemsByStage).length, 'stages');
+            // Check localStorage for guidance panel state
+            const guidanceCollapsed = localStorage.getItem('kanban-guidance-collapsed') === 'true';
+            if (guidanceCollapsed) {
+              const guidance = document.getElementById('kanban-guidance');
+              if (guidance) guidance.classList.add('collapsed');
+            }
+          },
+
+          // Guidance Panel Toggle
+          toggleGuidance: function() {
+            const guidance = document.getElementById('kanban-guidance');
+            if (guidance) {
+              guidance.classList.toggle('collapsed');
+              const isCollapsed = guidance.classList.contains('collapsed');
+              localStorage.setItem('kanban-guidance-collapsed', isCollapsed);
+            }
           },
 
           // Workflow Selection
