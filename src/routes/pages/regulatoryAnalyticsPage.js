@@ -1127,6 +1127,76 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
             </div>
           </div>
 
+          <!-- NEW: Weekly Activity Heatmap -->
+          <div class="chart-card full-width" style="margin-top: 2rem;">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-card-title">Weekly Regulatory Activity Heatmap</h3>
+                <p class="chart-card-subtitle">Authority activity patterns over the last 12 weeks - Darker = More Active</p>
+              </div>
+            </div>
+            <div style="padding: 1.5rem; overflow-x: auto;">
+              <div style="display: grid; grid-template-columns: 120px repeat(12, 1fr); gap: 4px; font-size: 0.75rem;">
+                <!-- Header Row -->
+                <div style="padding: 0.5rem; font-weight: 600; color: #6b7280;"></div>
+                ${Object.keys(weeklyActivity).map((week, i) => `
+                  <div style="padding: 0.5rem; text-align: center; font-weight: 600; color: #6b7280; writing-mode: vertical-rl; transform: rotate(180deg);">
+                    ${week}
+                  </div>
+                `).join('')}
+
+                <!-- Data Rows -->
+                ${topAuthorities.slice(0, 10).map(auth => {
+                  const weeks = Object.keys(weeklyActivity);
+                  const authMax = Math.max(...weeks.map(w => weeklyActivity[w][auth.name] || 0));
+
+                  return `
+                    <div style="display: contents;">
+                      <div style="padding: 0.75rem; font-weight: 500; color: #111827; background: #f9fafb; display: flex; align-items: center;">
+                        ${escapeHtml(auth.name)}
+                      </div>
+                      ${weeks.map(week => {
+                        const count = weeklyActivity[week][auth.name] || 0;
+                        const intensity = authMax > 0 ? count / authMax : 0;
+                        const color = intensity === 0 ? '#f3f4f6' :
+                                     intensity < 0.25 ? '#dbeafe' :
+                                     intensity < 0.5 ? '#93c5fd' :
+                                     intensity < 0.75 ? '#3b82f6' : '#1e40af';
+                        const textColor = intensity >= 0.5 ? '#ffffff' : '#1f2937';
+
+                        return `
+                          <div style="padding: 0.75rem; text-align: center; background: ${color}; color: ${textColor}; font-weight: 600; border-radius: 4px; cursor: pointer; transition: transform 0.2s;"
+                               onmouseover="this.style.transform='scale(1.1)'; this.style.zIndex='10'"
+                               onmouseout="this.style.transform='scale(1)'; this.style.zIndex='1'"
+                               title="${auth.name} - ${week}: ${count} publications">
+                            ${count > 0 ? count : '·'}
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+              <div style="margin-top: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 8px; display: flex; justify-content: center; align-items: center; gap: 2rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-weight: 600; color: #374151;">Intensity:</span>
+                  <div style="display: flex; gap: 0.25rem; align-items: center;">
+                    <div style="width: 24px; height: 24px; background: #f3f4f6; border-radius: 4px;"></div>
+                    <span style="color: #6b7280; font-size: 0.75rem;">None</span>
+                    <div style="width: 24px; height: 24px; background: #dbeafe; border-radius: 4px; margin-left: 0.5rem;"></div>
+                    <span style="color: #6b7280; font-size: 0.75rem;">Low</span>
+                    <div style="width: 24px; height: 24px; background: #93c5fd; border-radius: 4px; margin-left: 0.5rem;"></div>
+                    <span style="color: #6b7280; font-size: 0.75rem;">Medium</span>
+                    <div style="width: 24px; height: 24px; background: #3b82f6; border-radius: 4px; margin-left: 0.5rem;"></div>
+                    <span style="color: #6b7280; font-size: 0.75rem;">High</span>
+                    <div style="width: 24px; height: 24px; background: #1e40af; border-radius: 4px; margin-left: 0.5rem;"></div>
+                    <span style="color: #6b7280; font-size: 0.75rem;">Very High</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- NEW: Sector-Authority Heat Map -->
           <div class="chart-card full-width" style="margin-top: 2rem;">
             <div class="chart-card-header">
