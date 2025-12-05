@@ -534,6 +534,43 @@ class AIRegulatoryIntelligenceServer {
                 { firm_name: 'HSBC Bank plc', total_fines: 180000000, fine_count: 4, first_fine_date: '2017-03-22', latest_fine_date: '2024-03-15', is_repeat_offender: true },
                 { firm_name: 'Revolut Ltd', total_fines: 32000000, fine_count: 1, first_fine_date: '2025-03-06', latest_fine_date: '2025-03-06', is_repeat_offender: false }
               ].slice(0, limit)
+            },
+            async searchFines(params) {
+              // Return sample data from getRecentFines
+              const allFines = await this.getRecentFines(100)
+              return { fines: allFines.slice(0, params.limit || 20), total: allFines.length, filters: params }
+            },
+            async getRepeatOffenders() {
+              return [
+                { firm_name: 'NatWest Group plc', total_fines: 310000000, fine_count: 3 },
+                { firm_name: 'Barclays Bank UK PLC', total_fines: 255000000, fine_count: 4 },
+                { firm_name: 'HSBC Bank plc', total_fines: 180000000, fine_count: 4 }
+              ]
+            },
+            async getFinesByPeriod(period) {
+              return { fines: await this.getRecentFines(10), totalAmount: 500000000, period }
+            },
+            async getDistinctFirms() {
+              return ['Barclays Bank UK PLC', 'HSBC Bank plc', 'Revolut Ltd', 'Santander UK plc']
+            },
+            async getFirmDetails(firmName) {
+              return {
+                firm_name: firmName,
+                total_fines: 82500000,
+                fine_count: 1,
+                fines: await this.getRecentFines(5)
+              }
+            },
+            async getEnforcementInsights() {
+              return {
+                insights: [
+                  { title: 'Rising AML Enforcement', description: 'Anti-money laundering fines have increased 34% year-over-year' },
+                  { title: 'Focus on Systems Controls', description: 'Regulators emphasizing system and control failures in recent actions' }
+                ]
+              }
+            },
+            async updateEnforcementData() {
+              return { success: false, message: 'Using fallback data - no database connection' }
             }
           }
           console.log('✅ Fallback FCA Enforcement Service initialized')
@@ -552,7 +589,24 @@ class AIRegulatoryIntelligenceServer {
           async getRecentFines() { return [] },
           async getEnforcementTrends() { return { trends: [], monthlyTrends: [] } },
           async getFinesTrends() { return { trends: [], summary: {} } },
-          async getTopFirms() { return [] }
+          async getTopFirms() { return [] },
+          async searchFines(params) {
+            return { fines: [], total: 0, filters: params }
+          },
+          async getRepeatOffenders() { return [] },
+          async getFinesByPeriod(period) {
+            return { fines: [], totalAmount: 0, period }
+          },
+          async getDistinctFirms() { return [] },
+          async getFirmDetails(firmName) {
+            return { firm_name: firmName, total_fines: 0, fine_count: 0, fines: [] }
+          },
+          async getEnforcementInsights() {
+            return { insights: [] }
+          },
+          async updateEnforcementData() {
+            return { success: false, message: 'Enforcement service not available' }
+          }
         }
         console.log('⚠️ Using minimal fallback enforcement service')
       }
