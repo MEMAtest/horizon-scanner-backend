@@ -24,6 +24,8 @@ class EnhancedDBService {
     this.pool = null
     this.fallbackMode = false
     this.usePostgres = false
+    this.isInitialized = false
+    this.initializationPromise = null
 
     this.jsonDataPath = path.join(__dirname, '../../data')
     this.updatesFile = path.join(this.jsonDataPath, 'updates.json')
@@ -36,7 +38,12 @@ class EnhancedDBService {
     this.profileWorkflowsFile = path.join(this.jsonDataPath, 'profile_workflows.json')
     this.digestHistoryFile = path.join(this.jsonDataPath, 'digest_history.json')
 
-    this.initializeDatabase()
+    this.initializationPromise = this.initializeDatabase()
+  }
+
+  async waitForInitialization() {
+    if (this.isInitialized) return
+    await this.initializationPromise
   }
 }
 

@@ -95,6 +95,9 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
         this.fallbackMode = true
         this.usePostgres = false
         await this.ensureJSONFiles()
+      } finally {
+        this.isInitialized = true
+        console.log('✅ Database service initialized')
       }
     },
 
