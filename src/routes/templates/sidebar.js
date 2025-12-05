@@ -84,11 +84,34 @@ async function getSidebar(currentPage = '') {
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
+                </ul>
+
+                <div class="nav-section-title">ANALYSIS</div>
+                <ul class="nav-list">
                     <li class="nav-item ${currentPage === 'regulatory-analytics' ? 'active' : ''}">
                         <a href="/regulatory-analytics" class="nav-link">
                             <span class="nav-icon">${icons.regAnalytics}</span>
                             <span class="nav-text">Reg Analytics</span>
                             <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'enforcement' ? 'active' : ''}">
+                        <a href="/enforcement" class="nav-link">
+                            <span class="nav-icon">${icons.enforcement}</span>
+                            <span class="nav-text">Enforcement</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'authority-spotlight' ? 'active' : ''}">
+                        <a href="/authority-spotlight/FCA" class="nav-link">
+                            <span class="nav-icon">${icons.authority}</span>
+                            <span class="nav-text">Authority Spotlight</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'sector-intelligence' ? 'active' : ''}">
+                        <a href="/sector-intelligence/Banking" class="nav-link">
+                            <span class="nav-icon">${icons.sector}</span>
+                            <span class="nav-text">Sector Intelligence</span>
                         </a>
                     </li>
                 </ul>
@@ -114,29 +137,6 @@ async function getSidebar(currentPage = '') {
                             <span class="nav-icon">${icons.policy}</span>
                             <span class="nav-text">Policy Library</span>
                             <span class="nav-badge new">NEW</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="nav-section-title">ANALYSIS</div>
-                <ul class="nav-list">
-                    <li class="nav-item ${currentPage === 'enforcement' ? 'active' : ''}">
-                        <a href="/enforcement" class="nav-link">
-                            <span class="nav-icon">${icons.enforcement}</span>
-                            <span class="nav-text">Enforcement</span>
-                            <span class="nav-badge new">NEW</span>
-                        </a>
-                    </li>
-                    <li class="nav-item ${currentPage === 'authority-spotlight' ? 'active' : ''}">
-                        <a href="/authority-spotlight/FCA" class="nav-link">
-                            <span class="nav-icon">${icons.authority}</span>
-                            <span class="nav-text">Authority Spotlight</span>
-                        </a>
-                    </li>
-                    <li class="nav-item ${currentPage === 'sector-intelligence' ? 'active' : ''}">
-                        <a href="/sector-intelligence/Banking" class="nav-link">
-                            <span class="nav-icon">${icons.sector}</span>
-                            <span class="nav-text">Sector Intelligence</span>
                         </a>
                     </li>
                 </ul>
