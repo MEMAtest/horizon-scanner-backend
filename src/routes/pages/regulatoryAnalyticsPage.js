@@ -82,7 +82,8 @@ async function renderRegulatoryAnalyticsPage(req, res) {
       commonStyles,
       clientScripts,
       analyticsData,
-      filterOptions
+      filterOptions,
+      updates
     })
 
     res.send(html)
@@ -94,6 +95,9 @@ async function renderRegulatoryAnalyticsPage(req, res) {
 }
 
 function calculateAnalytics(updates) {
+  // Ensure updates is always an array
+  const safeUpdates = Array.isArray(updates) ? updates : []
+
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
@@ -104,7 +108,7 @@ function calculateAnalytics(updates) {
   const sectorData = {}
   const impactData = { high: 0, medium: 0, low: 0 }
 
-  updates.forEach(update => {
+  safeUpdates.forEach(update => {
     const date = new Date(update.published_date || update.created_at)
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
@@ -165,9 +169,9 @@ function calculateAnalytics(updates) {
     .map(([name, data]) => ({ name, ...data }))
 
   // Calculate velocity (change in last 30 days vs previous 30 days)
-  const last30Days = updates.filter(u => new Date(u.published_date || u.created_at) >= thirtyDaysAgo).length
+  const last30Days = safeUpdates.filter(u => new Date(u.published_date || u.created_at) >= thirtyDaysAgo).length
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
-  const previous30Days = updates.filter(u => {
+  const previous30Days = safeUpdates.filter(u => {
     const date = new Date(u.published_date || u.created_at)
     return date >= sixtyDaysAgo && date < thirtyDaysAgo
   }).length
@@ -175,9 +179,9 @@ function calculateAnalytics(updates) {
 
   return {
     summary: {
-      totalUpdates: updates.length,
+      totalUpdates: safeUpdates.length,
       last30Days,
-      last90Days: updates.filter(u => new Date(u.published_date || u.created_at) >= ninetyDaysAgo).length,
+      last90Days: safeUpdates.filter(u => new Date(u.published_date || u.created_at) >= ninetyDaysAgo).length,
       velocityChange,
       highImpact: impactData.high,
       activeAuthorities: Object.keys(authorityData).length,
@@ -190,8 +194,10 @@ function calculateAnalytics(updates) {
   }
 }
 
-function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsData, filterOptions }) {
+function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsData, filterOptions, updates }) {
   const { summary, monthlyChartData, topAuthorities, topSectors, impactDistribution } = analyticsData
+  // Ensure updates is always an array
+  const safeUpdates = Array.isArray(updates) ? updates : []
 
   return `
     <!DOCTYPE html>
@@ -954,7 +960,7 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
           monthlyChartData: ${JSON.stringify(monthlyChartData)},
           topAuthorities: ${JSON.stringify(topAuthorities)},
           impactDistribution: ${JSON.stringify(impactDistribution)},
-          rawUpdates: ${JSON.stringify(updates.slice(0, 500).map(u => ({
+          rawUpdates: ${JSON.stringify(safeUpdates.slice(0, 500).map(u => ({
             title: u.title,
             authority: u.authority,
             sector: u.sector,
