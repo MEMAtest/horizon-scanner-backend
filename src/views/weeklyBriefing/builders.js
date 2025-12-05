@@ -1,3 +1,5 @@
+const { externalLinkIcon, bookmarkIcon, eyeIcon, fileTextIcon } = require('./icons')
+
 const MAX_HIGHLIGHT_UPDATES = 10
 const MAX_UPDATES_PER_GROUP = 4
 
@@ -238,18 +240,17 @@ function formatDateTimeDisplay(value) {
   })
 }
 
-function buildUpdateCardHtml(update) {
+function buildUpdateCardHtml(update, options = {}) {
+  const { isHero = false } = options
   const theme = classifyCardTheme(update)
-  const authority = escapeHtml(update.authority || 'Unknown authority')
+  const authority = escapeHtml(update.authority || 'Unknown')
   const date = escapeHtml(formatDateDisplay(update.published_date))
   const headline = (update.title || update.headline || '').trim()
   const aiSummary = (update.ai_summary || '').trim()
   const summarySource = (aiSummary || update.summary || '').replace(/\s+/g, ' ').trim()
-  const summary = truncateText(summarySource, 520) || 'Summary not available.'
+  const summary = truncateText(summarySource, isHero ? 400 : 280) || 'Summary not available.'
   const impactLevel = update.impact_level || 'Informational'
-  const urgency = update.urgency || 'Low'
   const impactKey = slugify(impactLevel)
-  const urgencyKey = slugify(urgency)
   const regulatoryArea = update.regulatory_area || update.regulatoryArea || ''
   const idAttr = escapeAttribute(String(update.id || ''))
   const urlAttr = escapeAttribute(update.url || '')
@@ -257,48 +258,46 @@ function buildUpdateCardHtml(update) {
   const summaryAttr = escapeAttribute(summarySource)
   const authorityAttr = escapeAttribute(update.authority || '')
   const impactAttr = escapeAttribute(impactLevel)
-  const urgencyAttr = escapeAttribute(urgency)
+  const urgencyAttr = escapeAttribute(update.urgency || 'Low')
   const publishedAttr = escapeAttribute(update.published_date || update.publishedDate || update.created_at || '')
   const regulatoryAttr = escapeAttribute(regulatoryArea)
+
+  const cardClass = isHero ? 'update-card hero-card' : 'update-card'
+
   const titleHtml = headline
     ? `<h3 class="update-card__title"><a href="${escapeAttribute(update.url || '#')}" target="_blank" rel="noopener">${escapeHtml(headline)}</a></h3>`
     : '<h3 class="update-card__title update-card__title--empty">No headline provided</h3>'
   const summaryHtml = `<p class="update-card__summary">${escapeHtml(summary)}</p>`
-  const scoreHtml = update.business_impact_score
-    ? `<span class="meta-pill score-pill">Impact score: ${escapeHtml(String(update.business_impact_score))}</span>`
-    : ''
+
+  // Simplified sector display
+  const sectors = Array.isArray(update.sectors) ? update.sectors.slice(0, 2) : []
+  const sectorPills = sectors.map(s => `<span class="meta-pill sector-pill">${escapeHtml(s)}</span>`).join('')
+
   const linkHtml = update.url
-    ? `<a class="update-card__source" href="${escapeAttribute(update.url)}" target="_blank" rel="noopener">View source</a>`
+    ? `<a class="update-card__source" href="${escapeAttribute(update.url)}" target="_blank" rel="noopener">Read more ${externalLinkIcon({ size: 12, strokeWidth: 1.5 })}</a>`
     : ''
 
   return `
-    <div class="update-card" data-update-id="${idAttr}" data-update-url="${urlAttr}" data-id="${idAttr}" data-url="${urlAttr}" data-headline="${headlineAttr}" data-summary="${summaryAttr}" data-authority="${authorityAttr}" data-impact="${impactAttr}" data-urgency="${urgencyAttr}" data-published="${publishedAttr}" data-regulatory-area="${regulatoryAttr}">
+    <article class="${cardClass}" data-update-id="${idAttr}" data-update-url="${urlAttr}" data-id="${idAttr}" data-url="${urlAttr}" data-headline="${headlineAttr}" data-summary="${summaryAttr}" data-authority="${authorityAttr}" data-impact="${impactAttr}" data-urgency="${urgencyAttr}" data-published="${publishedAttr}" data-regulatory-area="${regulatoryAttr}">
       <header class="update-card__top">
         <div class="update-card__chips">
           <span class="update-chip authority-chip">${authority}</span>
-          <span class="update-chip date-chip">${date}</span>
+          <span class="update-chip category-chip category-${theme.key}">${escapeHtml(theme.label)}</span>
         </div>
-        <span class="update-chip category-chip category-${theme.key}">${escapeHtml(theme.label)}</span>
+        <span class="update-chip date-chip">${date}</span>
       </header>
       <div class="update-card__title-row">
         ${titleHtml}
       </div>
       ${summaryHtml}
       <div class="update-card__meta-row">
-        <span class="meta-pill impact-${impactKey}">Impact: ${escapeHtml(impactLevel)}</span>
-        <span class="meta-pill urgency-${urgencyKey}">Urgency: ${escapeHtml(urgency)}</span>
-        ${scoreHtml}
+        <span class="meta-pill impact-${impactKey}">${escapeHtml(impactLevel)}</span>
+        ${sectorPills}
       </div>
       <footer class="update-card__footer">
-        <div class="update-card__actions">
-          <button class="action-btn update-action-btn bookmark-btn" data-update-id="${idAttr}" title="Bookmark" aria-label="Bookmark"><svg width="16" height="16" fill="currentColor"><path d="M3 3a2 2 0 012-2h6a2 2 0 012 2v11l-5-3-5 3V3z"/></svg></button>
-          <button class="action-btn update-action-btn share-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Share" aria-label="Share"><svg width="16" height="16" fill="currentColor"><path d="M11 2.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm-9 9a2.5 2.5 0 115 0 2.5 2.5 0 01-5 0zm9 0a2.5 2.5 0 115 0 2.5 2.5 0 01-5 0z"/></svg></button>
-          <button class="action-btn update-action-btn details-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="View details" aria-label="View details"><svg width="16" height="16" fill="currentColor"><path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/><path fill-rule="evenodd" d="M1.38 8C2.77 5.44 5.23 3.5 8 3.5c2.77 0 5.23 1.94 6.62 4.5-1.39 2.56-3.85 4.5-6.62 4.5-2.77 0-5.23-1.94-6.62-4.5zm9.12 0a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg></button>
-          <button class="action-btn update-action-btn quick-note-btn" data-update-id="${idAttr}" data-update-url="${urlAttr}" title="Create quick note" aria-label="Create quick note"><svg width="16" height="16" fill="currentColor"><path d="M4 1.5H3a2 2 0 00-2 2V14a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/><path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/></svg></button>
-        </div>
         ${linkHtml}
       </footer>
-    </div>
+    </article>
   `
 }
 
@@ -557,7 +556,11 @@ function buildInitialUpdatesHtml(briefing) {
     return '<div class="empty-state">No updates found. Try refreshing the briefing.</div>'
   }
 
-  const cards = updates.map(update => buildUpdateCardHtml(update)).join('')
+  // First item is a hero card, rest are regular cards
+  const cards = updates.map((update, index) => {
+    const isHero = index === 0
+    return buildUpdateCardHtml(update, { isHero })
+  }).join('')
   return cards
 }
 
