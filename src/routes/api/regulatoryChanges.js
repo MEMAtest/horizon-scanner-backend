@@ -266,6 +266,34 @@ function registerRegulatoryChangeRoutes(router) {
     }
   })
 
+  // POST /api/regulatory-changes/:id/link - Link a regulatory update to this item
+  router.post('/regulatory-changes/:id/link', async (req, res) => {
+    try {
+      const userId = req.headers['x-user-id'] || 'default'
+      const { regulatoryUpdateId } = req.body
+      if (!regulatoryUpdateId) {
+        return res.status(400).json({ success: false, error: 'regulatoryUpdateId is required' })
+      }
+      const item = await regulatoryChangeService.linkRegulatoryUpdate(req.params.id, userId, regulatoryUpdateId)
+      res.json({ success: true, data: item })
+    } catch (error) {
+      console.error('Error linking regulatory update:', error)
+      res.status(400).json({ success: false, error: error.message })
+    }
+  })
+
+  // DELETE /api/regulatory-changes/:id/link - Unlink regulatory update from this item
+  router.delete('/regulatory-changes/:id/link', async (req, res) => {
+    try {
+      const userId = req.headers['x-user-id'] || 'default'
+      const item = await regulatoryChangeService.unlinkRegulatoryUpdate(req.params.id, userId)
+      res.json({ success: true, data: item })
+    } catch (error) {
+      console.error('Error unlinking regulatory update:', error)
+      res.status(400).json({ success: false, error: error.message })
+    }
+  })
+
   // ==================== ACTIONS ====================
 
   // GET /api/regulatory-changes/:id/actions - Get actions for item

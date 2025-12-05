@@ -21,6 +21,9 @@ async function getSidebar(currentPage = '') {
       sector: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M4.5 14.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="5" width="15" height="14" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M9 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M15 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
       kanban: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="5" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="10" y="4" width="5" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="16" y="4" width="5" height="13" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
       regAnalytics: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path><path d="M18 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M13 17V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M8 17v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>',
+      watchList: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" fill="none" stroke="currentColor" stroke-width="1.6"></path><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg>',
+      dossier: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M12 11v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M9 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      policy: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M16 13H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M16 17H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M10 9H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
       refresh: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M4 20v-6h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.5 8a7 7 0 0 1 11.5-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M18.5 16a7 7 0 0 1-11.5 2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>'
     }
 
@@ -85,6 +88,31 @@ async function getSidebar(currentPage = '') {
                         <a href="/regulatory-analytics" class="nav-link">
                             <span class="nav-icon">${icons.regAnalytics}</span>
                             <span class="nav-text">Reg Analytics</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="nav-section-title">RESEARCH & POLICY</div>
+                <ul class="nav-list">
+                    <li class="nav-item ${currentPage === 'watch-lists' ? 'active' : ''}">
+                        <a href="/watch-lists" class="nav-link">
+                            <span class="nav-icon">${icons.watchList}</span>
+                            <span class="nav-text">Watch Lists</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'dossiers' ? 'active' : ''}">
+                        <a href="/dossiers" class="nav-link">
+                            <span class="nav-icon">${icons.dossier}</span>
+                            <span class="nav-text">Research Dossiers</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'policies' ? 'active' : ''}">
+                        <a href="/policies" class="nav-link">
+                            <span class="nav-icon">${icons.policy}</span>
+                            <span class="nav-text">Policy Library</span>
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>

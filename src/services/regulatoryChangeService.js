@@ -528,6 +528,52 @@ class RegulatoryChangeService {
       return { period: periodDays, completed: 0, created: 0, netChange: 0, avgCompletionRate: 0 }
     }
   }
+
+  /**
+   * Link a regulatory update to a change item
+   */
+  async linkRegulatoryUpdate(itemId, userId = 'default', regulatoryUpdateId) {
+    try {
+      // Verify the item exists and belongs to user
+      const existingItem = await this.db.getRegulatoryChangeItemById(itemId, userId)
+      if (!existingItem) {
+        throw new Error('Change item not found')
+      }
+
+      // Update the item with the regulatory update ID
+      const updatedItem = await this.db.updateRegulatoryChangeItem(itemId, userId, {
+        regulatory_update_id: regulatoryUpdateId
+      })
+
+      return updatedItem
+    } catch (error) {
+      console.error('Error linking regulatory update:', error.message)
+      throw error
+    }
+  }
+
+  /**
+   * Unlink regulatory update from a change item
+   */
+  async unlinkRegulatoryUpdate(itemId, userId = 'default') {
+    try {
+      // Verify the item exists and belongs to user
+      const existingItem = await this.db.getRegulatoryChangeItemById(itemId, userId)
+      if (!existingItem) {
+        throw new Error('Change item not found')
+      }
+
+      // Update the item to remove the regulatory update ID
+      const updatedItem = await this.db.updateRegulatoryChangeItem(itemId, userId, {
+        regulatory_update_id: null
+      })
+
+      return updatedItem
+    } catch (error) {
+      console.error('Error unlinking regulatory update:', error.message)
+      throw error
+    }
+  }
 }
 
 module.exports = new RegulatoryChangeService()

@@ -253,11 +253,23 @@ function getEnhancementStyles() {
         }
 
         .btn-danger {
-            color: #dc2626;
+            background: #dc2626;
+            color: white;
             border-color: #dc2626;
         }
 
         .btn-danger:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
+        }
+
+        .btn-danger-outline {
+            color: #dc2626;
+            background: transparent;
+            border-color: #dc2626;
+        }
+
+        .btn-danger-outline:hover {
             background: #fef2f2;
         }
   `

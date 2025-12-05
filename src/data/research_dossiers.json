@@ -1,0 +1,18 @@
+[
+  {
+    "id": "eca6c636-4947-43d2-97a7-0fbd44df8527",
+    "userId": "default",
+    "name": "Syria Sanctions Research",
+    "description": "Collecting evidence on Syria sanctions changes for policy update",
+    "category": null,
+    "tags": [
+      "sanctions",
+      "syria",
+      "policy-update"
+    ],
+    "status": "active",
+    "relatedPolicyId": null,
+    "createdAt": "2025-11-29T22:47:05.561Z",
+    "updatedAt": "2025-11-29T22:47:05.561Z"
+  }
+]

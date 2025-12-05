@@ -118,10 +118,275 @@ function getDashboardScripts({ updates, stats, filterOptions, currentFilters }) 
         }
       }
 
+      // Add to Dossier function
+      async function addToDossier(updateId) {
+        const update = window.initialUpdates.find(u => u.id === updateId);
+        if (!update) {
+          console.error('[Dashboard] Update not found:', updateId);
+          return;
+        }
+
+        // Show dossier selector modal
+        openDossierModal(updateId, update.headline);
+      }
+
+      // Link to Policy function
+      async function linkToPolicy(updateId) {
+        const update = window.initialUpdates.find(u => u.id === updateId);
+        if (!update) {
+          console.error('[Dashboard] Update not found:', updateId);
+          return;
+        }
+
+        // Show policy selector modal
+        openPolicyModal(updateId, update.headline);
+      }
+
+      // Dossier Modal
+      let dossiersCache = [];
+      let currentUpdateForDossier = null;
+
+      async function openDossierModal(updateId, updateTitle) {
+        currentUpdateForDossier = updateId;
+        let modal = document.getElementById('dossier-select-modal');
+
+        if (!modal) {
+          // Create modal if it doesn't exist
+          modal = document.createElement('div');
+          modal.id = 'dossier-select-modal';
+          modal.className = 'modal-overlay';
+          modal.innerHTML = getDossierModalHtml();
+          document.body.appendChild(modal);
+
+          // Add event listeners
+          modal.querySelector('.modal-close').addEventListener('click', closeDossierModal);
+          modal.addEventListener('click', (e) => { if (e.target === modal) closeDossierModal(); });
+        }
+
+        modal.querySelector('#dossier-update-title').textContent = updateTitle || 'Selected Update';
+        modal.classList.add('active');
+        await loadDossiers();
+      }
+
+      function getDossierModalHtml() {
+        return \`
+          <div class="modal" style="max-width:500px">
+            <div class="modal-header">
+              <h2>Add to Research Dossier</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p style="margin-bottom:12px;color:#6b7280;font-size:14px">Adding: <strong id="dossier-update-title"></strong></p>
+              <div id="dossier-list" style="max-height:300px;overflow-y:auto">Loading...</div>
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+                <label style="font-weight:500;font-size:14px">Notes (optional)</label>
+                <textarea id="dossier-notes" placeholder="Add notes about why this update is relevant..." style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-top:6px;min-height:60px;font-size:14px"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer" style="display:flex;gap:12px;justify-content:flex-end;padding:16px 24px;border-top:1px solid #e5e7eb;background:#f9fafb">
+              <button onclick="closeDossierModal()" class="btn btn-secondary">Cancel</button>
+              <a href="/dossiers" class="btn btn-secondary" style="text-decoration:none">Manage Dossiers</a>
+            </div>
+          </div>
+        \`;
+      }
+
+      async function loadDossiers() {
+        const listEl = document.getElementById('dossier-list');
+        if (!listEl) return;
+
+        try {
+          const response = await fetch('/api/dossiers', { headers: { 'x-user-id': 'default' } });
+          const result = await response.json();
+
+          if (result.success && result.data.length > 0) {
+            dossiersCache = result.data;
+            listEl.innerHTML = result.data.map(d => \`
+              <div class="dossier-option" style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="selectDossier('\${d.id}')">
+                <div style="font-weight:500">\${escapeHtml(d.name)}</div>
+                <div style="font-size:12px;color:#6b7280">\${d.topic || 'No topic'} &bull; \${d.item_count || 0} items</div>
+              </div>
+            \`).join('');
+          } else {
+            listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280">No dossiers yet. <a href="/dossiers" style="color:#6366f1">Create one first</a></div>';
+          }
+        } catch (error) {
+          console.error('[Dashboard] Error loading dossiers:', error);
+          listEl.innerHTML = '<div style="color:#ef4444">Error loading dossiers</div>';
+        }
+      }
+
+      async function selectDossier(dossierId) {
+        if (!currentUpdateForDossier || !dossierId) return;
+
+        const notes = document.getElementById('dossier-notes')?.value || '';
+
+        try {
+          const response = await fetch('/api/dossiers/' + dossierId + '/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': 'default' },
+            body: JSON.stringify({ updateId: currentUpdateForDossier, notes })
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            showToast('Added to dossier successfully', 'success');
+            closeDossierModal();
+          } else {
+            showToast('Error: ' + result.error, 'error');
+          }
+        } catch (error) {
+          console.error('[Dashboard] Error adding to dossier:', error);
+          showToast('Failed to add to dossier', 'error');
+        }
+      }
+
+      function closeDossierModal() {
+        const modal = document.getElementById('dossier-select-modal');
+        if (modal) modal.classList.remove('active');
+        currentUpdateForDossier = null;
+      }
+
+      // Policy Modal
+      let policiesCache = [];
+      let currentUpdateForPolicy = null;
+
+      async function openPolicyModal(updateId, updateTitle) {
+        currentUpdateForPolicy = updateId;
+        let modal = document.getElementById('policy-select-modal');
+
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'policy-select-modal';
+          modal.className = 'modal-overlay';
+          modal.innerHTML = getPolicyModalHtml();
+          document.body.appendChild(modal);
+
+          modal.querySelector('.modal-close').addEventListener('click', closePolicyModal);
+          modal.addEventListener('click', (e) => { if (e.target === modal) closePolicyModal(); });
+        }
+
+        modal.querySelector('#policy-update-title').textContent = updateTitle || 'Selected Update';
+        modal.classList.add('active');
+        await loadPolicies();
+      }
+
+      function getPolicyModalHtml() {
+        return \`
+          <div class="modal" style="max-width:500px">
+            <div class="modal-header">
+              <h2>Link to Policy</h2>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p style="margin-bottom:12px;color:#6b7280;font-size:14px">Citing: <strong id="policy-update-title"></strong></p>
+              <div id="policy-list" style="max-height:300px;overflow-y:auto">Loading...</div>
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+                <label style="font-weight:500;font-size:14px">Citation context (optional)</label>
+                <textarea id="citation-text" placeholder="Describe how this regulatory update relates to the policy..." style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-top:6px;min-height:60px;font-size:14px"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer" style="display:flex;gap:12px;justify-content:flex-end;padding:16px 24px;border-top:1px solid #e5e7eb;background:#f9fafb">
+              <button onclick="closePolicyModal()" class="btn btn-secondary">Cancel</button>
+              <a href="/policies" class="btn btn-secondary" style="text-decoration:none">Manage Policies</a>
+            </div>
+          </div>
+        \`;
+      }
+
+      async function loadPolicies() {
+        const listEl = document.getElementById('policy-list');
+        if (!listEl) return;
+
+        try {
+          const response = await fetch('/api/policies', { headers: { 'x-user-id': 'default' } });
+          const result = await response.json();
+
+          if (result.success && result.data.length > 0) {
+            policiesCache = result.data;
+            listEl.innerHTML = result.data.map(p => \`
+              <div class="policy-option" style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb'" onclick="selectPolicy('\${p.id}')">
+                <div style="font-weight:500">\${escapeHtml(p.title)}</div>
+                <div style="font-size:12px;color:#6b7280">\${p.category || 'Uncategorized'} &bull; v\${p.current_version || '1.0'}</div>
+              </div>
+            \`).join('');
+          } else {
+            listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280">No policies yet. <a href="/policies" style="color:#6366f1">Create one first</a></div>';
+          }
+        } catch (error) {
+          console.error('[Dashboard] Error loading policies:', error);
+          listEl.innerHTML = '<div style="color:#ef4444">Error loading policies</div>';
+        }
+      }
+
+      async function selectPolicy(policyId) {
+        if (!currentUpdateForPolicy || !policyId) return;
+
+        const citationText = document.getElementById('citation-text')?.value || '';
+
+        try {
+          const response = await fetch('/api/policies/' + policyId + '/citations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-user-id': 'default' },
+            body: JSON.stringify({ updateId: currentUpdateForPolicy, citationText })
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            showToast('Linked to policy successfully', 'success');
+            closePolicyModal();
+          } else {
+            showToast('Error: ' + result.error, 'error');
+          }
+        } catch (error) {
+          console.error('[Dashboard] Error linking to policy:', error);
+          showToast('Failed to link to policy', 'error');
+        }
+      }
+
+      function closePolicyModal() {
+        const modal = document.getElementById('policy-select-modal');
+        if (modal) modal.classList.remove('active');
+        currentUpdateForPolicy = null;
+      }
+
+      // Toast notification helper
+      function showToast(message, type) {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.className = 'toast-container';
+          container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:1100;display:flex;flex-direction:column;gap:8px';
+          document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        toast.style.cssText = 'padding:12px 20px;border-radius:8px;color:white;font-size:14px;animation:slideIn 0.3s ease;background:' + (type === 'success' ? '#059669' : '#dc2626');
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(() => toast.remove(), 3000);
+      }
+
+      // HTML escape helper
+      function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
       // Make functions globally available
       window.viewDetails = viewDetails;
       window.bookmarkUpdate = bookmarkUpdate;
       window.shareUpdate = shareUpdate;
+      window.addToDossier = addToDossier;
+      window.linkToPolicy = linkToPolicy;
+      window.selectDossier = selectDossier;
+      window.selectPolicy = selectPolicy;
+      window.closeDossierModal = closeDossierModal;
+      window.closePolicyModal = closePolicyModal;
 
       // Profile Modal Functions
       let profilesCache = [];

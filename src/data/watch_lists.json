@@ -1,0 +1,24 @@
+[
+  {
+    "id": "6f3a2143-350c-4d6b-90aa-d46b8f9c6e03",
+    "userId": "default",
+    "name": "Sanctions Updates",
+    "description": "Updated: Track sanction-related changes including Syria updates",
+    "keywords": [
+      "sanctions",
+      "AML",
+      "OFAC",
+      "Syria"
+    ],
+    "authorities": [
+      "FCA",
+      "OFAC"
+    ],
+    "sectors": [
+      "Banking"
+    ],
+    "isActive": true,
+    "createdAt": "2025-11-29T22:46:50.715Z",
+    "updatedAt": "2025-11-29T22:46:50.971Z"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "35bcd1da-a826-43a0-9bb0-54b9bf682f93",
+    "policyId": "6caee5d8-b693-455b-8483-f2085fdbbf95",
+    "versionNumber": "1.0",
+    "content": "# Sanctions Compliance Policy\n\n## Purpose\nThis policy establishes the framework for sanctions compliance across the organization.\n\n## Scope\nApplies to all business units and employees.",
+    "effectiveDate": null,
+    "changeSummary": "Initial version",
+    "triggeredByUpdateId": null,
+    "approvalStatus": "draft",
+    "approverName": null,
+    "approvedAt": null,
+    "createdBy": "default",
+    "createdAt": "2025-11-29T22:49:15.284Z"
+  }
+]

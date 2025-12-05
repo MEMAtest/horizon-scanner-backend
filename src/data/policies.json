@@ -1,0 +1,16 @@
+[
+  {
+    "id": "6caee5d8-b693-455b-8483-f2085fdbbf95",
+    "userId": "default",
+    "name": "New Policy",
+    "code": null,
+    "category": "Compliance",
+    "ownerName": null,
+    "reviewFrequencyMonths": 12,
+    "nextReviewDate": "2026-11-29",
+    "currentVersionId": null,
+    "status": "draft",
+    "createdAt": "2025-11-29T22:49:15.222Z",
+    "updatedAt": "2025-11-29T22:49:15.222Z"
+  }
+]

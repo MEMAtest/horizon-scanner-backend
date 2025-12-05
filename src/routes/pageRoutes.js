@@ -15,6 +15,9 @@ const renderAboutPage = require('./pages/aboutPage')
 const renderTestPage = require('./pages/testPage')
 const { renderKanbanPage } = require('./pages/kanbanPage')
 const { renderRegulatoryAnalyticsPage } = require('./pages/regulatoryAnalyticsPage')
+const { renderWatchListsPage } = require('./pages/watchListsPage')
+const { renderDossiersPage } = require('./pages/dossiersPage')
+const { renderPoliciesPage } = require('./pages/policiesPage')
 
 const router = express.Router()
 
@@ -38,5 +41,8 @@ router.get('/test', renderTestPage)
 router.get('/kanban', renderKanbanPage)
 router.get('/regulatory-changes', renderKanbanPage)
 router.get('/regulatory-analytics', renderRegulatoryAnalyticsPage)
+router.get('/watch-lists', renderWatchListsPage)
+router.get('/dossiers', renderDossiersPage)
+router.get('/policies', renderPoliciesPage)
 
 module.exports = router

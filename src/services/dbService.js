@@ -14,6 +14,10 @@ const applyHealthMethods = require('./db/health')
 const applyWeeklyBriefingsMethods = require('./db/weeklyBriefings')
 const applyBusinessLineProfileMethods = require('./db/businessLineProfiles')
 const applyRegulatoryChangesMethods = require('./db/regulatoryChanges')
+const applyWatchListsMethods = require('./db/watchLists')
+const applyDossiersMethods = require('./db/dossiers')
+const applyPoliciesMethods = require('./db/policies')
+const applyNotificationsMethods = require('./db/notifications')
 
 class EnhancedDBService {
   constructor() {
@@ -50,5 +54,9 @@ applyWorkflowMethods(EnhancedDBService)
 applyWeeklyBriefingsMethods(EnhancedDBService)
 applyBusinessLineProfileMethods(EnhancedDBService)
 applyRegulatoryChangesMethods(EnhancedDBService)
+applyWatchListsMethods(EnhancedDBService)
+applyDossiersMethods(EnhancedDBService)
+applyPoliciesMethods(EnhancedDBService)
+applyNotificationsMethods(EnhancedDBService)
 
 module.exports = new EnhancedDBService()

@@ -17,6 +17,11 @@ const registerProfileRoutes = require('./api/profile')
 const registerWorkflowRoutes = require('./api/workflows')
 const registerBusinessLineProfileRoutes = require('./api/businessLineProfiles')
 const registerRegulatoryChangeRoutes = require('./api/regulatoryChanges')
+const registerWatchListRoutes = require('./api/watchLists')
+const registerDossierRoutes = require('./api/dossiers')
+const registerPolicyRoutes = require('./api/policies')
+const registerNotificationRoutes = require('./api/notifications')
+const registerLinkedItemsRoutes = require('./api/linkedItems')
 
 const router = express.Router()
 
@@ -37,5 +42,10 @@ registerProfileRoutes(router)
 registerWorkflowRoutes(router)
 registerBusinessLineProfileRoutes(router)
 registerRegulatoryChangeRoutes(router)
+registerWatchListRoutes(router)
+registerDossierRoutes(router)
+registerPolicyRoutes(router)
+registerNotificationRoutes(router)
+registerLinkedItemsRoutes(router)
 
 module.exports = router

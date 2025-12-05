@@ -226,6 +226,26 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
         if (typeof this.ensureRegulatoryChangesTables === 'function') {
           await this.ensureRegulatoryChangesTables()
         }
+
+        // Create watch lists tables
+        if (typeof this.ensureWatchListsTables === 'function') {
+          await this.ensureWatchListsTables()
+        }
+
+        // Create dossiers tables
+        if (typeof this.ensureDossiersTables === 'function') {
+          await this.ensureDossiersTables()
+        }
+
+        // Create policies tables
+        if (typeof this.ensurePoliciesTables === 'function') {
+          await this.ensurePoliciesTables()
+        }
+
+        // Create notifications table
+        if (typeof this.ensureNotificationsTables === 'function') {
+          await this.ensureNotificationsTables()
+        }
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
       }

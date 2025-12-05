@@ -2,6 +2,7 @@ const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const regulatoryChangeService = require('../../services/regulatoryChangeService')
+const linkedItemsService = require('../../services/linkedItemsService')
 const { buildKanbanPage } = require('../../views/kanban/pageBuilder')
 
 function resolveUserId(req) {
@@ -38,8 +39,11 @@ async function renderKanbanPage(req, res) {
     const filters = selectedTemplate ? { workflow_template_id: selectedTemplate.id } : {}
     const itemsByStage = await regulatoryChangeService.getChangeItemsByStage(userId, filters)
 
-    // Load statistics
-    const statistics = await regulatoryChangeService.getStatistics(userId, filters)
+    // Load statistics and connection counts in parallel
+    const [statistics, connectionCounts] = await Promise.all([
+      regulatoryChangeService.getStatistics(userId, filters),
+      linkedItemsService.getKanbanConnectionCounts(userId)
+    ])
 
     // Get common page elements
     const [sidebar, clientScripts, commonStyles] = await Promise.all([
@@ -56,7 +60,8 @@ async function renderKanbanPage(req, res) {
       selectedTemplateId: selectedTemplate ? selectedTemplate.id : null,
       selectedTemplate,
       itemsByStage,
-      statistics
+      statistics,
+      connectionCounts
     })
 
     res.send(html)

@@ -50,7 +50,11 @@ function normalizeRegulatoryChangeItem(row) {
     tags: Array.isArray(row.tags) ? row.tags : [],
     isActive: row.is_active !== false,
     createdAt: toIso(row.created_at),
-    updatedAt: toIso(row.updated_at)
+    updatedAt: toIso(row.updated_at),
+    // New linking fields for dossiers, policies, and watch lists
+    linkedDossierIds: row.linked_dossier_ids || [],
+    linkedPolicyIds: row.linked_policy_ids || [],
+    watchListMatchIds: row.watch_list_match_ids || []
   }
 }
 
@@ -124,10 +128,29 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
             status VARCHAR(30) DEFAULT 'active',
             priority VARCHAR(20) DEFAULT 'medium',
             tags TEXT[] DEFAULT ARRAY[]::TEXT[],
+            linked_dossier_ids UUID[] DEFAULT ARRAY[]::UUID[],
+            linked_policy_ids UUID[] DEFAULT ARRAY[]::UUID[],
+            watch_list_match_ids UUID[] DEFAULT ARRAY[]::UUID[],
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
           )
+        `)
+
+        // Add linking columns if they don't exist (for existing databases)
+        await client.query(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'regulatory_change_items' AND column_name = 'linked_dossier_ids') THEN
+              ALTER TABLE regulatory_change_items ADD COLUMN linked_dossier_ids UUID[] DEFAULT ARRAY[]::UUID[];
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'regulatory_change_items' AND column_name = 'linked_policy_ids') THEN
+              ALTER TABLE regulatory_change_items ADD COLUMN linked_policy_ids UUID[] DEFAULT ARRAY[]::UUID[];
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'regulatory_change_items' AND column_name = 'watch_list_match_ids') THEN
+              ALTER TABLE regulatory_change_items ADD COLUMN watch_list_match_ids UUID[] DEFAULT ARRAY[]::UUID[];
+            END IF;
+          END $$;
         `)
 
         await client.query(`
@@ -900,6 +923,9 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
         status: itemData.status || 'active',
         priority: itemData.priority || 'medium',
         tags: itemData.tags || [],
+        linkedDossierIds: itemData.linkedDossierIds || [],
+        linkedPolicyIds: itemData.linkedPolicyIds || [],
+        watchListMatchIds: itemData.watchListMatchIds || [],
         isActive: true,
         createdAt: now,
         updatedAt: now

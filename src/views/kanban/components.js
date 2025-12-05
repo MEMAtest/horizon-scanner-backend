@@ -1,4 +1,5 @@
 const { serializeForScript } = require('../dashboard/helpers')
+const { AUTHORITIES, SECTORS, generateSingleSelectDropdown, getDropdownStyles } = require('../../constants/dropdownOptions')
 
 function renderGuidancePanel() {
   return `
@@ -148,7 +149,7 @@ function renderWorkflowSelector(templates, selectedId) {
   `
 }
 
-function renderKanbanBoard(template, itemsByStage) {
+function renderKanbanBoard(template, itemsByStage, connectionCounts = {}) {
   if (!template || !template.stages || template.stages.length === 0) {
     return renderNoTemplateState()
   }
@@ -157,7 +158,7 @@ function renderKanbanBoard(template, itemsByStage) {
 
   const columns = sortedStages.map(stage => {
     const stageItems = itemsByStage[stage.name] || []
-    return renderKanbanColumn(stage, stageItems)
+    return renderKanbanColumn(stage, stageItems, connectionCounts)
   }).join('')
 
   return `
@@ -185,9 +186,9 @@ function renderNoTemplateState() {
   `
 }
 
-function renderKanbanColumn(stage, items) {
+function renderKanbanColumn(stage, items, connectionCounts = {}) {
   const itemCards = items.length > 0
-    ? items.map(item => renderKanbanCard(item)).join('')
+    ? items.map(item => renderKanbanCard(item, connectionCounts[item.id])).join('')
     : renderEmptyColumn()
 
   return `
@@ -222,9 +223,30 @@ function renderEmptyColumn() {
   `
 }
 
-function renderKanbanCard(item) {
+function renderConnectionBadge(counts) {
+  if (!counts || counts.total === 0) return ''
+
+  const parts = []
+  if (counts.watchLists > 0) parts.push(`${counts.watchLists} WL`)
+  if (counts.dossiers > 0) parts.push(`${counts.dossiers} D`)
+  if (counts.policies > 0) parts.push(`${counts.policies} P`)
+
+  return `
+    <div class="connection-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+      <span class="connection-count">${counts.total}</span>
+      <span class="connection-breakdown">${parts.join(' | ')}</span>
+    </div>
+  `
+}
+
+function renderKanbanCard(item, connectionCounts) {
   const priorityClass = item.priority ? `priority-${item.priority.toLowerCase()}` : 'priority-medium'
   const isOverdue = item.due_date && new Date(item.due_date) < new Date()
+  const counts = connectionCounts || { watchLists: 0, dossiers: 0, policies: 0, total: 0 }
 
   const dueDateHtml = item.due_date ? `
     <div class="card-due-date ${isOverdue ? 'overdue' : ''}">
@@ -251,6 +273,7 @@ function renderKanbanCard(item) {
         ${item.authority ? `<span class="card-badge authority">${escapeHtml(item.authority)}</span>` : ''}
         ${item.sector ? `<span class="card-badge sector">${escapeHtml(item.sector)}</span>` : ''}
       </div>
+      ${renderConnectionBadge(counts)}
       <div class="kanban-card-footer">
         ${dueDateHtml}
         <div class="card-actions">
@@ -333,12 +356,12 @@ function renderAddItemModal(templates) {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Authority</label>
-                <input type="text" class="form-input" name="authority" placeholder="e.g., FCA, PRA">
+                <div id="add-authority-dropdown-container"></div>
               </div>
 
               <div class="form-group">
                 <label class="form-label">Sector</label>
-                <input type="text" class="form-input" name="sector" placeholder="e.g., Banking, Insurance">
+                <div id="add-sector-dropdown-container"></div>
               </div>
             </div>
 
@@ -360,7 +383,7 @@ function renderAddItemModal(templates) {
 function renderItemDetailModal() {
   return `
     <div class="modal-overlay" id="item-detail-modal">
-      <div class="modal detail-modal">
+      <div class="modal detail-modal" style="max-width: 900px;">
         <div class="modal-header">
           <h2 class="modal-title" id="detail-modal-title">Change Details</h2>
           <button class="modal-close" onclick="KanbanPage.closeItemDetail()">
@@ -370,7 +393,7 @@ function renderItemDetailModal() {
             </svg>
           </button>
         </div>
-        <div class="modal-body" id="detail-modal-body">
+        <div class="modal-body" id="detail-modal-body" style="max-height: 70vh; overflow-y: auto;">
           <!-- Content populated dynamically -->
         </div>
         <div class="modal-footer" id="detail-modal-footer">
@@ -403,6 +426,13 @@ function formatDate(dateStr) {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
+function getKanbanDropdownOptions() {
+  return {
+    authorities: AUTHORITIES,
+    sectors: SECTORS
+  }
+}
+
 module.exports = {
   renderGuidancePanel,
   renderStatsCards,
@@ -411,5 +441,7 @@ module.exports = {
   renderKanbanColumn,
   renderKanbanCard,
   renderAddItemModal,
-  renderItemDetailModal
+  renderItemDetailModal,
+  getKanbanDropdownOptions,
+  getDropdownStyles
 }

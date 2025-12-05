@@ -17,7 +17,8 @@ function buildKanbanPage({
   selectedTemplateId,
   selectedTemplate,
   itemsByStage,
-  statistics
+  statistics,
+  connectionCounts = {}
 }) {
   const kanbanStyles = getKanbanStyles()
   const kanbanScripts = getKanbanScripts({
@@ -64,7 +65,7 @@ function buildKanbanPage({
           ${renderStatsCards(statistics)}
 
           <div class="kanban-container">
-            ${renderKanbanBoard(selectedTemplate, itemsByStage)}
+            ${renderKanbanBoard(selectedTemplate, itemsByStage, connectionCounts)}
           </div>
         </div>
       </main>

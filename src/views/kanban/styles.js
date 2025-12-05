@@ -1,6 +1,9 @@
+const { getDropdownStyles } = require('../../constants/dropdownOptions')
+
 function getKanbanStyles() {
   return `
     <style>
+      ${getDropdownStyles()}
       /* Kanban Page Layout */
       .kanban-page {
         padding: 24px;
@@ -484,6 +487,35 @@ function getKanbanStyles() {
         color: #7c3aed;
       }
 
+      /* Connection Badge */
+      .connection-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #fcd34d;
+        border-radius: 6px;
+        margin-bottom: 10px;
+      }
+
+      .connection-badge svg {
+        color: #d97706;
+        flex-shrink: 0;
+      }
+
+      .connection-badge .connection-count {
+        font-weight: 600;
+        color: #b45309;
+        font-size: 12px;
+      }
+
+      .connection-badge .connection-breakdown {
+        font-size: 11px;
+        color: #92400e;
+        opacity: 0.85;
+      }
+
       .kanban-card-footer {
         display: flex;
         justify-content: space-between;
@@ -903,6 +935,254 @@ function getKanbanStyles() {
           transform: translateX(0);
           opacity: 1;
         }
+      }
+
+      /* Policy Linking Styles */
+      .linked-policies-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .linked-policy-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .linked-policy-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .linked-policy-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .linked-policy-version {
+        font-size: 12px;
+        color: #64748b;
+        background: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .linked-policy-meta {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .no-policies {
+        color: #94a3b8;
+        font-size: 14px;
+        text-align: center;
+        padding: 16px;
+        margin: 0;
+      }
+
+      /* Policy Selector Modal */
+      .modal-content {
+        background: white;
+        border-radius: 16px;
+        width: 100%;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .policy-selector-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .policy-selector-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .policy-selector-item:hover {
+        background: #eff6ff;
+        border-color: #3b82f6;
+      }
+
+      .policy-selector-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .policy-selector-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .policy-selector-category {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .policy-selector-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .policy-version-badge {
+        font-size: 11px;
+        color: #64748b;
+        background: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .policy-status-badge {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: capitalize;
+      }
+
+      .policy-status-badge.draft {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .policy-status-badge.pending_review {
+        background: #dbeafe;
+        color: #2563eb;
+      }
+
+      .policy-status-badge.approved {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+
+      .policy-status-badge.published {
+        background: #d1fae5;
+        color: #059669;
+      }
+
+      .policy-status-badge.archived {
+        background: #f1f5f9;
+        color: #64748b;
+      }
+
+      /* Dossier Selector Modal */
+      .dossier-selector-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .dossier-selector-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .dossier-selector-item:hover {
+        background: #ecfdf5;
+        border-color: #10b981;
+      }
+
+      .dossier-selector-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .dossier-selector-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      .dossier-selector-topic {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .dossier-selector-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dossier-item-count {
+        font-size: 11px;
+        color: #64748b;
+        background: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .dossier-status-badge {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: capitalize;
+      }
+
+      .dossier-status-badge.active {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+
+      .dossier-status-badge.draft {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .dossier-status-badge.archived {
+        background: #f1f5f9;
+        color: #64748b;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 24px;
+        color: #64748b;
+      }
+
+      .loading-spinner {
+        text-align: center;
+        padding: 24px;
+        color: #64748b;
+      }
+
+      .error-text {
+        color: #dc2626;
+        text-align: center;
+        padding: 16px;
       }
     </style>
   `
