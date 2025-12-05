@@ -177,6 +177,90 @@ function calculateAnalytics(updates) {
   }).length
   const velocityChange = previous30Days > 0 ? Math.round(((last30Days - previous30Days) / previous30Days) * 100) : 0
 
+  // NEW: Calculate sector compliance burden (avg publications per month)
+  const sectorBurden = Object.entries(sectorData)
+    .map(([name, data]) => ({
+      name,
+      total: data.total,
+      recent: data.recent,
+      avgPerMonth: Math.round(data.total / 12), // Assume 12 months of data
+      percentOfTotal: Math.round((data.total / safeUpdates.length) * 100)
+    }))
+    .sort((a, b) => b.avgPerMonth - a.avgPerMonth)
+    .slice(0, 15)
+
+  // NEW: Calculate weekly activity heatmap for authorities
+  const weeklyActivity = {}
+  const weeksAgo = (weeks) => new Date(now.getTime() - weeks * 7 * 24 * 60 * 60 * 1000)
+
+  for (let i = 0; i < 12; i++) {
+    const weekStart = weeksAgo(i + 1)
+    const weekEnd = weeksAgo(i)
+    const weekKey = `Week ${12 - i}`
+
+    weeklyActivity[weekKey] = {}
+    safeUpdates.forEach(update => {
+      const date = new Date(update.published_date || update.created_at)
+      if (date >= weekStart && date < weekEnd) {
+        const auth = update.authority || 'Unknown'
+        weeklyActivity[weekKey][auth] = (weeklyActivity[weekKey][auth] || 0) + 1
+      }
+    })
+  }
+
+  // NEW: Impact severity trends over time
+  const impactTrends = sortedMonths.map(monthKey => {
+    const data = monthlyData[monthKey]
+    return {
+      month: monthKey,
+      highCount: data.high,
+      mediumCount: data.medium,
+      lowCount: data.low,
+      highPercentage: Math.round((data.high / data.total) * 100),
+      severityScore: (data.high * 3 + data.medium * 2 + data.low * 1) / data.total
+    }
+  })
+
+  // NEW: Authority comparison data
+  const authorityComparison = Object.entries(authorityData)
+    .map(([name, data]) => ({
+      name,
+      total: data.total,
+      recent: data.recent,
+      trend: data.recent > (data.total / 12) ? 'increasing' : 'decreasing',
+      marketShare: Math.round((data.total / safeUpdates.length) * 100),
+      velocity: data.recent - Math.round(data.total / 12)
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+
+  // NEW: Sector cross-analysis (which sectors are most active together)
+  const sectorPairs = {}
+  safeUpdates.forEach(update => {
+    const sector = update.sector || 'General'
+    const authority = update.authority || 'Unknown'
+    const key = `${sector}|${authority}`
+    sectorPairs[key] = (sectorPairs[key] || 0) + 1
+  })
+
+  const topSectorAuthorityPairs = Object.entries(sectorPairs)
+    .map(([key, count]) => {
+      const [sector, authority] = key.split('|')
+      return { sector, authority, count }
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20)
+
+  // NEW: Publication velocity metrics
+  const velocityMetrics = {
+    current30Days: last30Days,
+    previous30Days,
+    change: velocityChange,
+    avgPerDay: Math.round(last30Days / 30),
+    peakDay: 0, // Would need daily data
+    projection90Days: Math.round(last30Days * 3 * (1 + velocityChange / 100))
+  }
+
   return {
     summary: {
       totalUpdates: safeUpdates.length,
@@ -190,12 +274,22 @@ function calculateAnalytics(updates) {
     monthlyChartData,
     topAuthorities,
     topSectors,
-    impactDistribution: impactData
+    impactDistribution: impactData,
+    // NEW ANALYTICS DATA
+    sectorBurden,
+    weeklyActivity,
+    impactTrends,
+    authorityComparison,
+    topSectorAuthorityPairs,
+    velocityMetrics
   }
 }
 
 function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsData, filterOptions, updates }) {
-  const { summary, monthlyChartData, topAuthorities, topSectors, impactDistribution } = analyticsData
+  const {
+    summary, monthlyChartData, topAuthorities, topSectors, impactDistribution,
+    sectorBurden, weeklyActivity, impactTrends, authorityComparison, topSectorAuthorityPairs, velocityMetrics
+  } = analyticsData
   // Ensure updates is always an array
   const safeUpdates = Array.isArray(updates) ? updates : []
 
@@ -691,6 +785,17 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
         .chart-container canvas {
           cursor: pointer;
         }
+
+        /* NEW: Hover highlight for interactive elements */
+        .hover-highlight {
+          transition: all 0.2s ease;
+        }
+
+        .hover-highlight:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border-color: #6366f1 !important;
+        }
       </style>
     </head>
     <body>
@@ -887,6 +992,183 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
                   </li>
                 `).join('')}
               </ul>
+            </div>
+          </div>
+
+          <!-- NEW: Advanced Analytics Widgets -->
+          <div class="charts-grid" style="margin-top: 2rem;">
+            <!-- Sector Compliance Burden Widget -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3 class="chart-card-title">Sector Compliance Burden</h3>
+                  <p class="chart-card-subtitle">Average publications per month by sector - Click to drill down</p>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="sectorBurdenChart" style="cursor: pointer;"></canvas>
+              </div>
+              <div style="padding: 1rem; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 0.875rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem;">
+                  ${sectorBurden.slice(0, 6).map(sector => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: white; border-radius: 4px; border: 1px solid #e5e7eb; cursor: pointer;"
+                         onclick="drillDownSector('${escapeHtml(sector.name)}')"
+                         class="hover-highlight">
+                      <span style="font-weight: 500; color: #374151;">${escapeHtml(sector.name)}</span>
+                      <span style="color: #6366f1; font-weight: 600;">${sector.avgPerMonth}/mo</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Impact Severity Trends Widget -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3 class="chart-card-title">Impact Severity Trends</h3>
+                  <p class="chart-card-subtitle">High-impact publication rate over time - Click for details</p>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="impactTrendsChart" style="cursor: pointer;"></canvas>
+              </div>
+              <div style="padding: 1rem; background: #fef2f2; border-top: 1px solid #fecaca;">
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                  <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #dc2626;">
+                      ${Math.round(impactTrends[impactTrends.length - 1]?.highPercentage || 0)}%
+                    </div>
+                    <div style="font-size: 0.75rem; color: #991b1b;">High Impact This Month</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ea580c;">
+                      ${impactTrends[impactTrends.length - 1]?.severityScore.toFixed(2) || '0'}
+                    </div>
+                    <div style="font-size: 0.75rem; color: #9a3412;">Severity Score</div>
+                  </div>
+                  <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: ${impactTrends.length >= 2 && impactTrends[impactTrends.length - 1]?.highPercentage > impactTrends[impactTrends.length - 2]?.highPercentage ? '#dc2626' : '#10b981'};">
+                      ${impactTrends.length >= 2 ? (impactTrends[impactTrends.length - 1]?.highPercentage > impactTrends[impactTrends.length - 2]?.highPercentage ? '↑' : '↓') : '−'}
+                    </div>
+                    <div style="font-size: 0.75rem; color: #78350f;">Trend</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Authority Comparison Widget -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <div>
+                  <h3 class="chart-card-title">Authority Activity Comparison</h3>
+                  <p class="chart-card-subtitle">Regulatory velocity by authority - Click to compare</p>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="authorityComparisonChart" style="cursor: pointer;"></canvas>
+              </div>
+              <div style="padding: 1rem; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.875rem;">
+                  ${authorityComparison.slice(0, 4).map(auth => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: white; border-radius: 6px; border: 1px solid #e5e7eb; cursor: pointer;"
+                         onclick="drillDownAuthority('${escapeHtml(auth.name)}')"
+                         class="hover-highlight">
+                      <div>
+                        <div style="font-weight: 600; color: #111827; margin-bottom: 0.25rem;">${escapeHtml(auth.name)}</div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">
+                          ${auth.marketShare}% market share · ${auth.trend}
+                        </div>
+                      </div>
+                      <div style="text-align: right;">
+                        <div style="font-weight: 700; color: ${auth.velocity >= 0 ? '#10b981' : '#ef4444'};">
+                          ${auth.velocity >= 0 ? '+' : ''}${auth.velocity}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #9ca3af;">velocity</div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NEW: Publication Velocity Dashboard -->
+          <div class="chart-card full-width" style="margin-top: 2rem;">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-card-title">Publication Velocity Dashboard</h3>
+                <p class="chart-card-subtitle">Detailed analysis of regulatory activity rate</p>
+              </div>
+            </div>
+            <div style="padding: 1.5rem;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Current 30-Day Rate</div>
+                  <div style="font-size: 2.5rem; font-weight: 700;">${velocityMetrics.current30Days}</div>
+                  <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">publications</div>
+                </div>
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; color: white;">
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Velocity Change</div>
+                  <div style="font-size: 2.5rem; font-weight: 700;">${velocityMetrics.change >= 0 ? '+' : ''}${velocityMetrics.change}%</div>
+                  <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">vs previous period</div>
+                </div>
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; color: white;">
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">Daily Average</div>
+                  <div style="font-size: 2.5rem; font-weight: 700;">${velocityMetrics.avgPerDay}</div>
+                  <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">publications/day</div>
+                </div>
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 12px; color: white;">
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem;">90-Day Projection</div>
+                  <div style="font-size: 2.5rem; font-weight: 700;">${velocityMetrics.projection90Days}</div>
+                  <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">estimated publications</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NEW: Sector-Authority Heat Map -->
+          <div class="chart-card full-width" style="margin-top: 2rem;">
+            <div class="chart-card-header">
+              <div>
+                <h3 class="chart-card-title">Sector-Authority Activity Matrix</h3>
+                <p class="chart-card-subtitle">Top sector-regulator pairs by volume - Click to drill down</p>
+              </div>
+            </div>
+            <div style="padding: 1.5rem; overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                    <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151;">Rank</th>
+                    <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151;">Sector</th>
+                    <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #374151;">Authority</th>
+                    <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151;">Publications</th>
+                    <th style="padding: 0.75rem; text-align: right; font-weight: 600; color: #374151;">Activity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${topSectorAuthorityPairs.slice(0, 15).map((pair, i) => `
+                    <tr style="border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.2s;"
+                        onclick="drillDownPair('${escapeHtml(pair.sector)}', '${escapeHtml(pair.authority)}')"
+                        onmouseover="this.style.background='#f9fafb'"
+                        onmouseout="this.style.background='transparent'">
+                      <td style="padding: 0.75rem;">
+                        <span style="display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; background: ${i < 3 ? '#fef3c7' : '#f3f4f6'}; color: ${i < 3 ? '#92400e' : '#6b7280'}; font-weight: 600; font-size: 0.75rem;">
+                          ${i + 1}
+                        </span>
+                      </td>
+                      <td style="padding: 0.75rem; font-weight: 500; color: #111827;">${escapeHtml(pair.sector)}</td>
+                      <td style="padding: 0.75rem; color: #6b7280;">${escapeHtml(pair.authority)}</td>
+                      <td style="padding: 0.75rem; text-align: right; font-weight: 600; color: #6366f1;">${pair.count}</td>
+                      <td style="padding: 0.75rem; text-align: right;">
+                        <div style="background: #e0e7ff; height: 6px; border-radius: 3px; overflow: hidden;">
+                          <div style="background: #6366f1; height: 100%; width: ${(pair.count / topSectorAuthorityPairs[0].count) * 100}%;"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -1158,6 +1440,197 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
           }
         });
 
+        // NEW: Sector Burden Chart
+        const sectorBurdenCtx = document.getElementById('sectorBurdenChart').getContext('2d');
+        const sectorBurdenData = ${JSON.stringify(sectorBurden)};
+        new Chart(sectorBurdenCtx, {
+          type: 'bar',
+          data: {
+            labels: sectorBurdenData.map(s => s.name),
+            datasets: [{
+              label: 'Avg Publications/Month',
+              data: sectorBurdenData.map(s => s.avgPerMonth),
+              backgroundColor: 'rgba(99, 102, 241, 0.8)',
+              borderColor: '#6366f1',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                callbacks: {
+                  label: function(context) {
+                    const sector = sectorBurdenData[context.dataIndex];
+                    return [
+                      'Avg/Month: ' + sector.avgPerMonth,
+                      'Total: ' + sector.total,
+                      'Market Share: ' + sector.percentOfTotal + '%'
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Avg Publications/Month' } }
+            },
+            onClick: (event, elements) => {
+              if (elements.length > 0) {
+                const sector = sectorBurdenData[elements[0].index];
+                drillDownSector(sector.name);
+              }
+            }
+          }
+        });
+
+        // NEW: Impact Trends Chart
+        const impactTrendsCtx = document.getElementById('impactTrendsChart').getContext('2d');
+        const impactTrendsData = ${JSON.stringify(impactTrends)};
+        new Chart(impactTrendsCtx, {
+          type: 'line',
+          data: {
+            labels: impactTrendsData.map(t => t.month),
+            datasets: [
+              {
+                label: 'High Impact %',
+                data: impactTrendsData.map(t => t.highPercentage),
+                borderColor: '#dc2626',
+                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+              },
+              {
+                label: 'Severity Score',
+                data: impactTrendsData.map(t => t.severityScore * 20), // Scale for visibility
+                borderColor: '#ea580c',
+                backgroundColor: 'rgba(234, 88, 12, 0.1)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                callbacks: {
+                  label: function(context) {
+                    if (context.datasetIndex === 0) {
+                      return 'High Impact: ' + context.parsed.y + '%';
+                    } else {
+                      return 'Severity Score: ' + (context.parsed.y / 20).toFixed(2);
+                    }
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, max: 100 }
+            }
+          }
+        });
+
+        // NEW: Authority Comparison Chart
+        const authCompCtx = document.getElementById('authorityComparisonChart').getContext('2d');
+        const authCompData = ${JSON.stringify(authorityComparison)};
+        new Chart(authCompCtx, {
+          type: 'bar',
+          data: {
+            labels: authCompData.map(a => a.name),
+            datasets: [
+              {
+                label: 'Total Publications',
+                data: authCompData.map(a => a.total),
+                backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                borderColor: '#6366f1',
+                borderWidth: 2
+              },
+              {
+                label: 'Recent (30d)',
+                data: authCompData.map(a => a.recent),
+                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                borderColor: '#10b981',
+                borderWidth: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: {
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                callbacks: {
+                  afterLabel: function(context) {
+                    const auth = authCompData[context.dataIndex];
+                    return 'Trend: ' + auth.trend + ' | Velocity: ' + auth.velocity;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            },
+            onClick: (event, elements) => {
+              if (elements.length > 0) {
+                const auth = authCompData[elements[0].index];
+                drillDownAuthority(auth.name);
+              }
+            }
+          }
+        });
+
+        // NEW: Drill-down functions for new widgets
+        function drillDownSector(sectorName) {
+          const filtered = analyticsData.rawUpdates.filter(u => u.sector === sectorName);
+          showDrilldown('sector', sectorName, { count: filtered.length });
+        }
+
+        function drillDownAuthority(authorityName) {
+          showDrilldown('authority', authorityName, {});
+        }
+
+        function drillDownPair(sector, authority) {
+          const modal = document.getElementById('drilldownModal');
+          const title = document.getElementById('drilldownTitle');
+          const content = document.getElementById('drilldownContent');
+
+          const filtered = analyticsData.rawUpdates.filter(u =>
+            u.sector === sector && u.authority === authority
+          );
+
+          title.textContent = sector + ' × ' + authority + ' (' + filtered.length + ' publications)';
+
+          if (filtered.length === 0) {
+            content.innerHTML = '<div class="drilldown-empty">No publications found</div>';
+          } else {
+            content.innerHTML = filtered.slice(0, 50).map(update => {
+              const date = update.published_date ? new Date(update.published_date).toLocaleDateString('en-GB') : 'Unknown';
+              return '<div class="drilldown-item">' +
+                '<div class="drilldown-item-title">' + escapeHtml(update.title || 'Untitled') + '</div>' +
+                '<div class="drilldown-item-meta">' +
+                  '<span>' + escapeHtml(update.authority || 'Unknown') + '</span>' +
+                  '<span>' + date + '</span>' +
+                  '<span>' + escapeHtml(update.impact_level || 'Unknown') + '</span>' +
+                  (update.source_url ? '<a href="' + escapeHtml(update.source_url) + '" target="_blank">View</a>' : '') +
+                '</div>' +
+              '</div>';
+            }).join('');
+          }
+
+          modal.classList.add('active');
+        }
+
         // Drilldown modal functions
         function showDrilldown(type, value, data) {
           const modal = document.getElementById('drilldownModal');
@@ -1179,6 +1652,9 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
           } else if (type === 'authority') {
             titleText = 'Publications by ' + value;
             filteredUpdates = analyticsData.rawUpdates.filter(u => u.authority === value);
+          } else if (type === 'sector') {
+            titleText = 'Publications in ' + value + ' Sector';
+            filteredUpdates = analyticsData.rawUpdates.filter(u => u.sector === value);
           } else if (type === 'impact') {
             const displayLevel = value.charAt(0).toUpperCase() + value.slice(1);
             titleText = displayLevel + ' Impact Publications';
