@@ -6,6 +6,7 @@ const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
 const firmPersonaService = require('../../services/firmPersonaService')
+const { Pool } = require('pg')
 
 async function renderHomePage(req, res) {
   try {
@@ -32,8 +33,7 @@ async function renderHomePage(req, res) {
     const systemStats = await getSystemStatistics()
 
     // Get top fines this year
-    const enforcementService = req.app.locals.enforcementService
-    const topFines = await getTopFinesThisYear(enforcementService)
+    const topFines = await getTopFinesThisYear()
 
     // Generate sidebar
     const sidebar = await getSidebar('home', { user, persona })
@@ -915,26 +915,37 @@ function renderForYouStrip(updates = []) {
 // Top Fines Widget Functions
 // =========================================================================
 
-async function getTopFinesThisYear(enforcementService) {
-  if (!enforcementService || typeof enforcementService.getRecentFines !== 'function') {
-    console.log('Enforcement service not available for home page fines widget')
-    return []
-  }
-
+async function getTopFinesThisYear() {
   try {
     const currentYear = new Date().getFullYear()
-    const allFines = await enforcementService.getRecentFines(100)
 
-    // Filter to current year and sort by amount
-    const thisYearFines = allFines
-      .filter(fine => {
-        const fineYear = fine.date_issued ? new Date(fine.date_issued).getFullYear() : null
-        return fineYear === currentYear && fine.amount && fine.amount > 0
-      })
-      .sort((a, b) => (b.amount || 0) - (a.amount || 0))
-      .slice(0, 5)
+    // Query database directly to get all fines (including pending) for current year
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    })
 
-    return thisYearFines
+    const result = await pool.query(`
+      SELECT
+        fine_reference,
+        date_issued,
+        firm_individual,
+        amount,
+        ai_summary,
+        breach_categories,
+        affected_sectors,
+        final_notice_url
+      FROM fca_fines
+      WHERE EXTRACT(YEAR FROM date_issued) = $1
+        AND amount IS NOT NULL
+        AND amount > 0
+      ORDER BY amount DESC
+      LIMIT 5
+    `, [currentYear])
+
+    await pool.end()
+
+    return result.rows
   } catch (error) {
     console.error('Error getting top fines:', error)
     return []
