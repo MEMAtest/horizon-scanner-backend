@@ -22,6 +22,8 @@ const registerDossierRoutes = require('./api/dossiers')
 const registerPolicyRoutes = require('./api/policies')
 const registerNotificationRoutes = require('./api/notifications')
 const registerLinkedItemsRoutes = require('./api/linkedItems')
+const registerAuthRoutes = require('./api/auth')
+const registerFirmPersonaRoutes = require('./api/firmPersonas')
 
 const router = express.Router()
 
@@ -47,5 +49,7 @@ registerDossierRoutes(router)
 registerPolicyRoutes(router)
 registerNotificationRoutes(router)
 registerLinkedItemsRoutes(router)
+registerAuthRoutes(router)
+registerFirmPersonaRoutes(router)
 
 module.exports = router

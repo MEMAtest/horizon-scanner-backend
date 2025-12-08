@@ -459,10 +459,9 @@ function buildExecutiveOnePager(briefing) {
   const generated = formatDateTimeDisplay(briefing?.generatedAt)
   const bodyHtml = stylizeOnePagerBody(briefing.artifacts.onePager)
   const spotlights = buildOnePagerHighlights(briefing)
-  const heroTagline = [
-    stats.totalUpdates != null ? `${stats.totalUpdates} regulatory developments analysed` : '',
-    impact.Significant != null ? `${impact.Significant} flagged high-impact` : ''
-  ].filter(Boolean).join(' · ') || 'Curated regulatory intelligence for your leadership team.'
+  const heroTagline = stats.totalUpdates != null
+    ? `${stats.totalUpdates} regulatory developments analysed`
+    : 'Curated regulatory intelligence for your leadership team.'
 
   return `
     <article class="executive-brief">

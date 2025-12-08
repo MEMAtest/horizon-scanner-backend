@@ -249,6 +249,16 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
         if (typeof this.ensureNotificationsTables === 'function') {
           await this.ensureNotificationsTables()
         }
+
+        // Create auth tables
+        if (typeof this.ensureAuthTables === 'function') {
+          await this.ensureAuthTables()
+        }
+
+        // Create firm personas table
+        if (typeof this.ensureFirmPersonasTable === 'function') {
+          await this.ensureFirmPersonasTable()
+        }
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
       }

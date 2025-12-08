@@ -2,13 +2,18 @@
 // File: src/routes/templates/sidebar.js
 
 const dbService = require('../../services/dbService')
+const { renderWeeklyBriefingModal } = require('../../views/weeklyBriefing/sections/modals')
+const { getPersonaSummaries } = require('../../config/firmPersonas')
 
-async function getSidebar(currentPage = '') {
+async function getSidebar(currentPage = '', options = {}) {
+  const { user, persona } = options
+
   try {
     console.log('Tools Generating clean sidebar...')
 
     // Get recent update counts for live counters
     const recentCounts = await getRecentUpdateCounts()
+    const personaPresets = getPersonaSummaries()
 
     const icons = {
       home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.5 12 4l7.5 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 9.75v9.25a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.75" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
@@ -39,7 +44,42 @@ async function getSidebar(currentPage = '') {
                     <span class="last-update">Last sync: ${formatRelativeTime(new Date())}</span>
                 </div>
             </div>
-            
+
+            <!-- User/Persona Section -->
+            ${user ? `
+            <div class="sidebar-user-section">
+                <div class="user-info">
+                    <div class="user-avatar">${user.email ? user.email.charAt(0).toUpperCase() : 'U'}</div>
+                    <div class="user-details">
+                        <span class="user-email">${user.email || 'User'}</span>
+                        ${persona ? `<span class="user-persona" style="color: ${persona.color}">${persona.name}</span>` : ''}
+                    </div>
+                </div>
+                <div class="persona-selector">
+                    <label class="persona-label">Firm Type</label>
+                    <select id="personaSelect" onchange="updatePersona(this.value)" class="persona-dropdown">
+                        <option value="">-- Select Firm Type --</option>
+                        ${personaPresets.map(p => `
+                            <option value="${p.id}" ${persona && persona.id === p.id ? 'selected' : ''}>${p.name}</option>
+                        `).join('')}
+                    </select>
+                </div>
+            </div>
+            ` : `
+            <div class="sidebar-login-prompt">
+                <a href="/login" class="login-prompt-btn">
+                    <span class="login-icon">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                            <polyline points="10 17 15 12 10 7"></polyline>
+                            <line x1="15" y1="12" x2="3" y2="12"></line>
+                        </svg>
+                    </span>
+                    <span>Log in for personalized intelligence</span>
+                </a>
+            </div>
+            `}
+
             <!-- Navigation Section -->
             <nav class="sidebar-nav-clean">
                 <div class="nav-section-title">NAVIGATION</div>
@@ -72,7 +112,7 @@ async function getSidebar(currentPage = '') {
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'weekly-roundup' ? 'active' : ''}">
-                        <a href="/weekly-roundup" class="nav-link">
+                        <a href="#" class="nav-link" onclick="event.preventDefault(); openWeeklyBriefingModal();">
                             <span class="nav-icon">${icons.roundup}</span>
                             <span class="nav-text">Weekly Roundup</span>
                         </a>
@@ -164,6 +204,10 @@ async function getSidebar(currentPage = '') {
                     <a href="#" onclick="showFilterPanel()" class="footer-link">Filters</a>
                     <span class="separator">- </span>
                     <a href="#" onclick="showHelp()" class="footer-link">Help</a>
+                    ${user ? `
+                    <span class="separator">- </span>
+                    <a href="#" onclick="logout()" class="footer-link">Logout</a>
+                    ` : ''}
                 </div>
             </div>
         </div>
@@ -225,6 +269,123 @@ async function getSidebar(currentPage = '') {
                 gap: 0.5rem;
                 font-size: 0.75rem;
                 color: #6b7280;
+            }
+
+            /* User/Persona Section */
+            .sidebar-user-section {
+                padding: 1rem 1.5rem;
+                background: #f0f9ff;
+                border-bottom: 1px solid #e0e7ff;
+            }
+
+            .user-info {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .user-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 600;
+                font-size: 0.875rem;
+            }
+
+            .user-details {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .user-email {
+                font-size: 0.8rem;
+                color: #374151;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .user-persona {
+                font-size: 0.7rem;
+                font-weight: 600;
+            }
+
+            .persona-selector {
+                margin-top: 0.5rem;
+            }
+
+            .persona-label {
+                display: block;
+                font-size: 0.7rem;
+                color: #6b7280;
+                margin-bottom: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .persona-dropdown {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                color: #374151;
+                background: white;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .persona-dropdown:hover {
+                border-color: #3b82f6;
+            }
+
+            .persona-dropdown:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+            }
+
+            /* Login Prompt */
+            .sidebar-login-prompt {
+                padding: 1rem 1.5rem;
+                background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+                border-bottom: 1px solid #e0e7ff;
+            }
+
+            .login-prompt-btn {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 10px 12px;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                color: #3b82f6;
+                font-size: 0.8rem;
+                font-weight: 500;
+                text-decoration: none;
+                transition: all 0.2s;
+            }
+
+            .login-prompt-btn:hover {
+                background: #3b82f6;
+                color: white;
+                border-color: #3b82f6;
+            }
+
+            .login-icon {
+                display: flex;
+                align-items: center;
             }
             
             .status-indicator {
@@ -735,6 +896,46 @@ async function getSidebar(currentPage = '') {
                     alert('Help section coming soon. For now, use the filters above to refine your view.');
                 };
             }
+
+            // Persona update function
+            if (typeof updatePersona === 'undefined') {
+                window.updatePersona = async function(personaId) {
+                    if (!personaId) return;
+
+                    try {
+                        const response = await fetch('/api/personas/select', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ personaId })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Reload page to apply persona filtering
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Failed to update persona');
+                        }
+                    } catch (error) {
+                        console.error('Error updating persona:', error);
+                        alert('Failed to update persona. Please try again.');
+                    }
+                };
+            }
+
+            // Logout function
+            if (typeof logout === 'undefined') {
+                window.logout = async function() {
+                    try {
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                        window.location.href = '/';
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                        window.location.href = '/';
+                    }
+                };
+            }
             
             if (typeof refreshData === 'undefined') {
                 window.refreshData = function() {
@@ -827,7 +1028,9 @@ async function getSidebar(currentPage = '') {
             
             // Auto-refresh counters every 30 seconds
             setInterval(updateLiveCounters, 30000);
-        </script>`
+        </script>
+
+        ${renderWeeklyBriefingModal()}`
   } catch (error) {
     console.error('[error] Error generating sidebar:', error)
     return generateFallbackSidebar(currentPage)

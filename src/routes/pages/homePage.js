@@ -5,13 +5,23 @@ const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
+const firmPersonaService = require('../../services/firmPersonaService')
 
 async function renderHomePage(req, res) {
   try {
     console.log('Home Rendering enhanced home page...')
 
-    // Get recent updates for home page preview
-    const recentUpdates = await dbService.getRecentUpdates(6)
+    // Get user and persona for sidebar
+    const user = req.user && req.isAuthenticated ? req.user : null
+    const persona = user ? await firmPersonaService.getUserPersona(user.id).catch(() => null) : null
+
+    // Get recent updates for home page preview (get more for charts)
+    let recentUpdates = await dbService.getRecentUpdates(50)
+
+    // Apply persona filtering if available
+    if (persona) {
+      recentUpdates = firmPersonaService.applyPersonaFilter(recentUpdates, persona)
+    }
 
     // Get AI insights for home page highlights
     const aiInsights = (dbService.getRecentAIInsights && typeof dbService.getRecentAIInsights === 'function')
@@ -21,8 +31,12 @@ async function renderHomePage(req, res) {
     // Get system statistics
     const systemStats = await getSystemStatistics()
 
+    // Get top fines this year
+    const enforcementService = req.app.locals.enforcementService
+    const topFines = await getTopFinesThisYear(enforcementService)
+
     // Generate sidebar
-    const sidebar = await getSidebar('home')
+    const sidebar = await getSidebar('home', { user, persona })
 
     const html = `
         <!DOCTYPE html>
@@ -34,6 +48,51 @@ async function renderHomePage(req, res) {
             ${getCommonStyles()}
             <style>
                 .home-dashboard { background: #f5f7fb; min-height: 100vh; padding: 32px 40px; }
+                .priority-panel {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    padding: 22px 24px;
+                    box-shadow: 0 16px 32px -18px rgba(15, 23, 42, 0.28);
+                    display: grid;
+                    grid-template-columns: 1.3fr 0.7fr;
+                    gap: 18px;
+                    align-items: center;
+                    margin-bottom: 24px;
+                }
+                .priority-primary h3 {
+                    margin: 8px 0 6px;
+                    font-size: 1.25rem;
+                    letter-spacing: -0.01em;
+                    color: #0f172a;
+                }
+                .priority-lead { display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 999px; background: #fef2f2; color: #b91c1c; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.78rem; }
+                .priority-summary { color: #475569; margin: 0 0 12px; line-height: 1.5; }
+                .priority-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+                .pill { padding: 6px 10px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 0.82rem; font-weight: 600; color: #0f172a; }
+                .pill.impact-significant { background: #fef2f2; color: #b91c1c; border-color: #fecdd3; }
+                .pill.impact-moderate { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
+                .pill.impact-informational { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+                .pill.urgency-high { background: #fef2f2; color: #c2410c; border-color: #fed7aa; }
+                .priority-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+                .primary-chip, .ghost-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 0.92rem; border: 1px solid transparent; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+                .primary-chip { background: linear-gradient(135deg, #dc2626, #ef4444); color: #0f172a; box-shadow: 0 12px 26px rgba(239, 68, 68, 0.25); }
+                .primary-chip:hover { transform: translateY(-1px); box-shadow: 0 16px 30px rgba(239, 68, 68, 0.32); }
+                .ghost-chip { background: #f8fafc; border-color: #e2e8f0; color: #0f172a; }
+                .ghost-chip:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12); }
+                .priority-side { background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+                .heat-label { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; font-weight: 700; }
+                .heat-pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 7px 12px; font-weight: 700; width: fit-content; }
+                .heat-pill.high { background: #fef2f2; color: #b91c1c; border: 1px solid #fecdd3; }
+                .heat-pill.moderate { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+                .heat-pill.low { background: #ecfdf3; color: #15803d; border: 1px solid #bbf7d0; }
+                .heat-meta { color: #475569; font-size: 0.9rem; }
+                .for-you-panel { margin: 0 0 32px; }
+                .for-you-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+                .for-you-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); display: flex; flex-direction: column; gap: 6px; }
+                .for-you-title { font-weight: 600; color: #0f172a; font-size: 1rem; }
+                .for-you-meta { display: flex; gap: 8px; flex-wrap: wrap; color: #475569; font-size: 0.85rem; }
+                .for-you-actions { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
                 .status-banner {
                     background: #ffffff;
                     color: #0f172a;
@@ -111,13 +170,63 @@ async function renderHomePage(req, res) {
                 .footer-note { margin-top: 32px; text-align: center; color: #64748b; font-size: 0.85rem; }
                 .footer-note a { color: #1e40af; text-decoration: none; font-weight: 600; }
                 .footer-note a:hover { text-decoration: underline; }
+                /* Charts Row Styles */
+                .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+                .chart-card { background: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
+                .chart-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+                .chart-card-title { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin: 0; }
+                .chart-card-subtitle { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+
+                /* Authority Heatmap */
+                .authority-heatmap { display: flex; flex-wrap: wrap; gap: 10px; }
+                .heat-badge { padding: 10px 14px; border-radius: 10px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; transition: transform 0.2s ease; }
+                .heat-badge:hover { transform: translateY(-2px); }
+                .heat-badge .count { font-size: 1.1rem; font-weight: 700; }
+                .heat-high { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #b91c1c; border: 1px solid #fecdd3; }
+                .heat-medium { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); color: #b45309; border: 1px solid #fcd34d; }
+                .heat-low { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #047857; border: 1px solid #6ee7b7; }
+
+                /* Sector Pressure Chart */
+                .pressure-chart { display: flex; flex-direction: column; gap: 12px; }
+                .pressure-row { display: flex; align-items: center; gap: 12px; }
+                .pressure-label { width: 120px; font-size: 0.85rem; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .pressure-bar-container { flex: 1; height: 24px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
+                .pressure-bar { height: 100%; border-radius: 6px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+                .pressure-bar.high { background: linear-gradient(90deg, #ef4444 0%, #f87171 100%); }
+                .pressure-bar.medium { background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%); }
+                .pressure-bar.low { background: linear-gradient(90deg, #10b981 0%, #34d399 100%); }
+                .pressure-value { font-size: 0.75rem; font-weight: 700; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+                /* Top Fines Widget */
+                .fines-widget { background: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); margin-bottom: 32px; }
+                .fines-widget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+                .fines-widget-title { font-size: 1.15rem; font-weight: 600; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 10px; }
+                .fines-widget-title .icon { width: 28px; height: 28px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #dc2626; }
+                .fines-table { width: 100%; border-collapse: collapse; }
+                .fines-table th { text-align: left; padding: 10px 12px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+                .fines-table td { padding: 14px 12px; border-bottom: 1px solid #f1f5f9; }
+                .fines-table tr:last-child td { border-bottom: none; }
+                .fines-table tr:hover td { background: #f8fafc; }
+                .fine-rank { width: 40px; font-weight: 700; color: #64748b; font-size: 0.9rem; }
+                .fine-rank.top-3 { color: #dc2626; }
+                .fine-firm { font-weight: 600; color: #0f172a; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .fine-amount { font-weight: 700; color: #dc2626; font-size: 1rem; white-space: nowrap; }
+                .fine-breach { display: inline-flex; padding: 4px 10px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 0.78rem; font-weight: 500; }
+                .fine-date { color: #64748b; font-size: 0.85rem; white-space: nowrap; }
+                .fines-empty { text-align: center; padding: 40px 20px; color: #64748b; }
+
                 @media (max-width: 768px) {
                     .home-dashboard { padding: 24px 18px; }
                     .status-actions { flex-direction: column; align-items: stretch; }
                     .primary-action, .secondary-action { justify-content: center; width: 100%; }
                     .module-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+                    .priority-panel { grid-template-columns: 1fr; }
+                    .charts-row { grid-template-columns: 1fr; }
+                    .fines-table { font-size: 0.85rem; }
+                    .fines-table th, .fines-table td { padding: 10px 8px; }
+                    .pressure-label { width: 80px; font-size: 0.75rem; }
                 }
-            </style></style>
+            </style>
         </head>
         <body>
          <!-- Firm Profile Modal -->
@@ -357,21 +466,29 @@ async function renderHomePage(req, res) {
                                 <span class="status-meta-value">${formatNumber(systemStats.activeAuthorities || 0)}</span>
                             </div>
                             <div class="status-meta-card">
-                                <span class="status-meta-label">High-impact items</span>
-                                <span class="status-meta-value">${formatNumber(systemStats.highImpact || 0)}</span>
-                            </div>
-                        </div>
-                    </section>
+                        <span class="status-meta-label">High-impact items</span>
+                        <span class="status-meta-value">${formatNumber(systemStats.highImpact || 0)}</span>
+                    </div>
+                </div>
+            </section>
+
+                    ${renderPriorityStrip(recentUpdates)}
+                    ${renderForYouStrip(recentUpdates)}
 
                     <section class="quick-nav">
                         ${generateQuickNav()}
                     </section>
 
                     <section class="insights-grid">
-                        ${generateInsightCards(recentUpdates, systemStats)}
+                        ${generateInsightCards(recentUpdates.slice(0, 6), systemStats)}
                     </section>
 
-                    
+                    <section class="charts-row">
+                        ${renderAuthorityHeatmap(recentUpdates)}
+                        ${renderSectorPressureChart(recentUpdates)}
+                    </section>
+
+                    ${renderTopFinesWidget(topFines)}
 
                     <section class="module-grid">
                         ${generateModuleGrid(systemStats, aiInsights)}
@@ -671,6 +788,410 @@ function formatRelativeDate(dateString) {
     day: 'numeric',
     month: 'short'
   })
+}
+
+function isToday(value) {
+  if (!value) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  const now = new Date()
+  return date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+}
+
+function selectPriorityUpdate(updates = []) {
+  if (!Array.isArray(updates) || updates.length === 0) return null
+  const today = updates.filter(update => isToday(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt))
+  const candidates = today.length ? today : updates
+  const scored = candidates.map(update => {
+    const impact = (update.impactLevel || update.impact_level || '').toLowerCase()
+    const urgency = (update.urgency || '').toLowerCase()
+    let score = 0
+    if (impact === 'significant' || impact === 'critical') score += 5
+    else if (impact === 'moderate') score += 3
+    if (urgency === 'high') score += 4
+    else if (urgency === 'medium') score += 2
+    if (isToday(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)) score += 3
+    return { update, score }
+  })
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0]?.update || null
+}
+
+function formatHeatMeta(updates = []) {
+  const todayUpdates = updates.filter(update => isToday(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt))
+  const highImpact = todayUpdates.filter(update => {
+    const impact = (update.impactLevel || update.impact_level || '').toLowerCase()
+    return impact === 'significant' || impact === 'critical'
+  })
+  const level = highImpact.length >= 3 || todayUpdates.length >= 8
+    ? 'high'
+    : highImpact.length >= 1 || todayUpdates.length >= 3
+      ? 'moderate'
+      : 'low'
+  return {
+    level,
+    todayCount: todayUpdates.length,
+    highImpactCount: highImpact.length
+  }
+}
+
+function renderPriorityStrip(updates = []) {
+  const priority = selectPriorityUpdate(updates)
+  const heat = formatHeatMeta(updates)
+  if (!priority) return ''
+
+  const impact = (priority.impactLevel || priority.impact_level || 'Informational')
+  const urgency = priority.urgency || '—'
+  const summary = priority.summary || priority.ai_summary || 'Most recent high-impact update for today.'
+  const heatLabel = heat.level === 'high' ? 'High' : heat.level === 'moderate' ? 'Moderate' : 'Low'
+
+  return `
+        <section class="priority-panel">
+            <div class="priority-primary">
+                <span class="priority-lead">Top Impact Today</span>
+                <h3>${escapeHtml(priority.headline || 'Priority update')}</h3>
+                <p class="priority-summary">${escapeHtml(summary.substring(0, 200))}</p>
+                <div class="priority-meta">
+                    <span class="pill impact-${impact.toLowerCase()}">${escapeHtml(impact)}</span>
+                    <span class="pill urgency-${String(urgency).toLowerCase()}">Urgency: ${escapeHtml(urgency)}</span>
+                    <span class="pill">${escapeHtml(priority.authority || 'Unknown')}</span>
+                </div>
+                <div class="priority-actions">
+                    <a class="primary-chip" href="/dashboard?range=today&impact=Significant,Moderate&sort=newest">Open Today</a>
+                    <a class="ghost-chip" href="/dashboard?sort=newest">Go to Dashboard</a>
+                    <a class="ghost-chip" href="/ai-intelligence">Open Intelligence Center</a>
+                </div>
+            </div>
+            <div class="priority-side">
+                <div class="heat-label">Today heat</div>
+                <div class="heat-pill ${heat.level}">${heatLabel}</div>
+                <div class="heat-meta">New today: ${heat.todayCount} • High impact: ${heat.highImpactCount}</div>
+                <a class="ghost-chip" href="/dashboard?range=today&sort=newest">View all today →</a>
+            </div>
+        </section>
+    `
+}
+
+function renderForYouStrip(updates = []) {
+  const today = updates.filter(update => isToday(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt))
+  const shortlist = (today.length ? today : updates).slice(0, 4)
+  if (!shortlist.length) return ''
+
+  const cards = shortlist.map(update => {
+    const impact = (update.impactLevel || update.impact_level || 'Informational')
+    const urgency = update.urgency || '—'
+    return `
+            <article class="for-you-card">
+                <div class="for-you-title">${escapeHtml(update.headline || 'Untitled update')}</div>
+                <div class="for-you-meta">
+                    <span class="pill impact-${impact.toLowerCase()}">${escapeHtml(impact)}</span>
+                    <span class="pill">${escapeHtml(update.authority || 'Unknown')}</span>
+                    <span class="pill urgency-${String(urgency).toLowerCase()}">${escapeHtml(urgency)}</span>
+                </div>
+                <div class="for-you-actions">
+                    <a class="module-link" href="${update.url ? escapeAttribute(update.url) : '/update/' + escapeAttribute(update.id || '')}" target="_blank" rel="noopener">View →</a>
+                    <a class="module-link" href="/dashboard?range=today&impact=${escapeAttribute(impact)}&sort=newest">Open in dashboard →</a>
+                </div>
+            </article>
+        `
+  }).join('')
+
+  return `
+        <section class="for-you-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">For you today</h2>
+                <a class="panel-link" href="/dashboard?range=today&sort=newest">Open today view →</a>
+            </div>
+            <div class="for-you-grid">
+                ${cards}
+            </div>
+        </section>
+    `
+}
+
+// =========================================================================
+// Top Fines Widget Functions
+// =========================================================================
+
+async function getTopFinesThisYear(enforcementService) {
+  if (!enforcementService || typeof enforcementService.getRecentFines !== 'function') {
+    console.log('Enforcement service not available for home page fines widget')
+    return []
+  }
+
+  try {
+    const currentYear = new Date().getFullYear()
+    const allFines = await enforcementService.getRecentFines(100)
+
+    // Filter to current year and sort by amount
+    const thisYearFines = allFines
+      .filter(fine => {
+        const fineYear = fine.date_issued ? new Date(fine.date_issued).getFullYear() : null
+        return fineYear === currentYear && fine.amount && fine.amount > 0
+      })
+      .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+      .slice(0, 5)
+
+    return thisYearFines
+  } catch (error) {
+    console.error('Error getting top fines:', error)
+    return []
+  }
+}
+
+function renderTopFinesWidget(fines = []) {
+  const currentYear = new Date().getFullYear()
+
+  if (!fines || fines.length === 0) {
+    return `
+      <section class="fines-widget">
+        <div class="fines-widget-header">
+          <h2 class="fines-widget-title">
+            <span class="icon">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </span>
+            Top 5 FCA Fines ${currentYear}
+          </h2>
+          <a class="panel-link" href="/enforcement">View all enforcement →</a>
+        </div>
+        <div class="fines-empty">
+          <p>No fines data available for ${currentYear} yet.</p>
+        </div>
+      </section>
+    `
+  }
+
+  const totalAmount = fines.reduce((sum, f) => sum + (f.amount || 0), 0)
+
+  const rows = fines.map((fine, index) => {
+    const rank = index + 1
+    const firm = escapeHtml(fine.firm_individual || 'Unknown Firm')
+    const amount = formatCurrency(fine.amount)
+    const breach = fine.breach_categories && Array.isArray(fine.breach_categories)
+      ? fine.breach_categories[0]
+      : (fine.breach_type || 'Unknown')
+    const date = fine.date_issued
+      ? new Date(fine.date_issued).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      : 'N/A'
+
+    return `
+      <tr>
+        <td class="fine-rank ${rank <= 3 ? 'top-3' : ''}">#${rank}</td>
+        <td class="fine-firm" title="${firm}">${firm}</td>
+        <td class="fine-amount">${amount}</td>
+        <td><span class="fine-breach">${escapeHtml(breach)}</span></td>
+        <td class="fine-date">${date}</td>
+      </tr>
+    `
+  }).join('')
+
+  return `
+    <section class="fines-widget">
+      <div class="fines-widget-header">
+        <h2 class="fines-widget-title">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </span>
+          Top 5 FCA Fines ${currentYear}
+        </h2>
+        <a class="panel-link" href="/enforcement">View all enforcement →</a>
+      </div>
+      <table class="fines-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Firm / Individual</th>
+            <th>Amount</th>
+            <th>Breach Type</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.85rem; color: #64748b;">Total top 5 fines:</span>
+        <span style="font-size: 1.1rem; font-weight: 700; color: #dc2626;">${formatCurrency(totalAmount)}</span>
+      </div>
+    </section>
+  `
+}
+
+function formatCurrency(amount) {
+  if (!amount || isNaN(amount)) return '£0'
+
+  if (amount >= 1000000) {
+    return '£' + (amount / 1000000).toFixed(1) + 'M'
+  } else if (amount >= 1000) {
+    return '£' + (amount / 1000).toFixed(0) + 'K'
+  }
+  return '£' + amount.toLocaleString('en-GB')
+}
+
+// =========================================================================
+// Authority Heatmap Functions
+// =========================================================================
+
+function calculateAuthorityActivity(updates = []) {
+  const authorityCounts = {}
+
+  updates.forEach(update => {
+    const authority = update.authority || 'Unknown'
+    if (!authorityCounts[authority]) {
+      authorityCounts[authority] = { total: 0, highImpact: 0 }
+    }
+    authorityCounts[authority].total++
+
+    const impact = (update.impactLevel || update.impact_level || '').toLowerCase()
+    if (impact === 'significant' || impact === 'critical' || impact === 'high') {
+      authorityCounts[authority].highImpact++
+    }
+  })
+
+  // Convert to sorted array
+  return Object.entries(authorityCounts)
+    .map(([name, data]) => ({
+      name,
+      total: data.total,
+      highImpact: data.highImpact,
+      level: data.total >= 8 ? 'high' : data.total >= 4 ? 'medium' : 'low'
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8)
+}
+
+function renderAuthorityHeatmap(updates = []) {
+  const authorities = calculateAuthorityActivity(updates)
+
+  if (authorities.length === 0) {
+    return `
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <h3 class="chart-card-title">Authority Activity</h3>
+            <p class="chart-card-subtitle">No activity data available</p>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  const badges = authorities.map(auth => `
+    <a href="/authority-spotlight/${encodeURIComponent(auth.name)}" class="heat-badge heat-${auth.level}" title="${auth.total} updates, ${auth.highImpact} high-impact">
+      <span>${escapeHtml(auth.name)}</span>
+      <span class="count">${auth.total}</span>
+    </a>
+  `).join('')
+
+  return `
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <h3 class="chart-card-title">Authority Activity</h3>
+          <p class="chart-card-subtitle">Updates by regulator this period</p>
+        </div>
+        <a class="panel-link" href="/authority-spotlight/FCA">View all →</a>
+      </div>
+      <div class="authority-heatmap">
+        ${badges}
+      </div>
+    </div>
+  `
+}
+
+// =========================================================================
+// Sector Pressure Chart Functions
+// =========================================================================
+
+function calculateSectorPressure(updates = []) {
+  const sectorData = {}
+
+  updates.forEach(update => {
+    const sector = update.sector || 'General'
+    if (!sectorData[sector]) {
+      sectorData[sector] = { total: 0, highImpact: 0 }
+    }
+    sectorData[sector].total++
+
+    const impact = (update.impactLevel || update.impact_level || '').toLowerCase()
+    if (impact === 'significant' || impact === 'critical' || impact === 'high') {
+      sectorData[sector].highImpact++
+    }
+  })
+
+  // Calculate pressure score and convert to array
+  const sectors = Object.entries(sectorData)
+    .map(([name, data]) => {
+      // Pressure score: weighted combination of total and high-impact
+      const pressure = Math.round(((data.highImpact * 2) + data.total) * 10 / 3)
+      return {
+        name,
+        total: data.total,
+        highImpact: data.highImpact,
+        pressure: Math.min(pressure, 100), // Cap at 100%
+        level: pressure >= 70 ? 'high' : pressure >= 40 ? 'medium' : 'low'
+      }
+    })
+    .sort((a, b) => b.pressure - a.pressure)
+    .slice(0, 6)
+
+  // Normalize to max pressure
+  const maxPressure = Math.max(...sectors.map(s => s.pressure), 1)
+  sectors.forEach(s => {
+    s.normalizedPressure = Math.round((s.pressure / maxPressure) * 100)
+  })
+
+  return sectors
+}
+
+function renderSectorPressureChart(updates = []) {
+  const sectors = calculateSectorPressure(updates)
+
+  if (sectors.length === 0) {
+    return `
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <h3 class="chart-card-title">Sector Risk Pressure</h3>
+            <p class="chart-card-subtitle">No sector data available</p>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  const bars = sectors.map(sector => `
+    <div class="pressure-row">
+      <span class="pressure-label" title="${sector.name}">${escapeHtml(sector.name)}</span>
+      <div class="pressure-bar-container">
+        <div class="pressure-bar ${sector.level}" style="width: ${sector.normalizedPressure}%">
+          ${sector.normalizedPressure >= 20 ? `<span class="pressure-value">${sector.pressure}%</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('')
+
+  return `
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <h3 class="chart-card-title">Sector Risk Pressure</h3>
+          <p class="chart-card-subtitle">Regulatory activity by sector</p>
+        </div>
+        <a class="panel-link" href="/sector-intelligence/Banking">View all →</a>
+      </div>
+      <div class="pressure-chart">
+        ${bars}
+      </div>
+    </div>
+  `
 }
 
 module.exports = renderHomePage

@@ -1,5 +1,8 @@
 function renderStatsSection() {
   return `
+    <div class="latest-fine-highlight" id="latest-fine-highlight">
+      <div class="loading-state">Loading latest fine...</div>
+    </div>
     <div class="stats-grid" id="stats-container">
       <div class="loading-state">
         <div class="loading-spinner"></div>

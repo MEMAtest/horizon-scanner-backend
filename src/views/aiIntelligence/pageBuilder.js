@@ -407,11 +407,11 @@ function streamTimestamp(value) {
 
 function renderPersonaTabs(personas = {}) {
   const personaOrder = ['executive', 'analyst', 'operations']
-  const tabs = personaOrder
-    .filter(persona => personas[persona])
+  const availablePersonas = personaOrder.filter(persona => personas[persona])
+  const tabs = availablePersonas
     .map(
-      persona => `
-        <button type="button" class="persona-tab" data-persona="${persona}">
+      (persona, index) => `
+        <button type="button" class="persona-tab${index === 0 ? ' active' : ''}" data-persona="${persona}" onclick="if(typeof setActivePersona==='function')setActivePersona('${persona}')">
           <span class="persona-tab-label">${persona.charAt(0).toUpperCase() + persona.slice(1)}</span>
           <span class="persona-tab-count">${formatNumber(personas[persona].count)}</span>
         </button>
@@ -419,16 +419,15 @@ function renderPersonaTabs(personas = {}) {
     )
     .join('')
 
-  const panels = personaOrder
-    .filter(persona => personas[persona])
-    .map(persona => {
+  const panels = availablePersonas
+    .map((persona, index) => {
       const data = personas[persona]
       const briefing = data.briefing || {}
       const actions = Array.isArray(briefing.nextSteps) && briefing.nextSteps.length
         ? `<ol class="persona-brief-list">${briefing.nextSteps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>`
         : '<div class="persona-empty">No spotlight updates for this persona right now. Pin or annotate items to surface them here.</div>'
       return `
-        <div class="persona-panel" data-persona-panel="${persona}">
+        <div class="persona-panel${index === 0 ? ' active' : ''}" data-persona-panel="${persona}">
           <div class="persona-metrics">
             <div><span class="metric-label">Updates</span><span class="metric-value">${formatNumber(
               data.count

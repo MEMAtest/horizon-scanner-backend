@@ -18,6 +18,8 @@ const applyWatchListsMethods = require('./db/watchLists')
 const applyDossiersMethods = require('./db/dossiers')
 const applyPoliciesMethods = require('./db/policies')
 const applyNotificationsMethods = require('./db/notifications')
+const applyAuthMethods = require('./db/auth')
+const applyFirmPersonasMethods = require('./db/firmPersonas')
 
 class EnhancedDBService {
   constructor() {
@@ -65,5 +67,7 @@ applyWatchListsMethods(EnhancedDBService)
 applyDossiersMethods(EnhancedDBService)
 applyPoliciesMethods(EnhancedDBService)
 applyNotificationsMethods(EnhancedDBService)
+applyAuthMethods(EnhancedDBService)
+applyFirmPersonasMethods(EnhancedDBService)
 
 module.exports = new EnhancedDBService()

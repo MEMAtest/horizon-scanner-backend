@@ -139,14 +139,197 @@ function renderQuickNoteModal() {
   `
 }
 
+function renderWeeklyBriefingModal() {
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  return `
+    <div class="modal-backdrop weekly-modal-backdrop" id="weeklyBriefingModal" style="display: none;">
+      <div class="weekly-modal">
+        <header class="weekly-modal__header">
+          <div class="weekly-modal__title-row">
+            <div class="weekly-modal__branding">
+              <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="weekly-modal__logo" />
+            </div>
+            <button class="weekly-modal__close" id="closeWeeklyBriefing" aria-label="Close">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="weekly-modal__meta">
+            <h1 class="weekly-modal__title">Weekly Regulatory Briefing</h1>
+            <span class="weekly-modal__date">${today}</span>
+          </div>
+          <nav class="weekly-modal__tabs">
+            <button class="weekly-modal__tab active" data-tab="executive">Executive Summary</button>
+            <button class="weekly-modal__tab" data-tab="narrative">Week's Narrative</button>
+            <button class="weekly-modal__tab" data-tab="updates">Key Updates</button>
+          </nav>
+        </header>
+        <div class="weekly-modal__content">
+          <div class="weekly-modal__panel active" id="panel-executive">
+            <div class="weekly-modal__loading">Loading executive summary...</div>
+          </div>
+          <div class="weekly-modal__panel" id="panel-narrative">
+            <div class="weekly-modal__loading">Loading narrative...</div>
+          </div>
+          <div class="weekly-modal__panel" id="panel-updates">
+            <div class="weekly-modal__loading">Loading key updates...</div>
+          </div>
+        </div>
+        <footer class="weekly-modal__footer">
+          <button class="btn btn-secondary" id="closeWeeklyBriefingFooter">Close</button>
+          <button class="btn btn-primary" id="printWeeklyBriefing">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9V2h12v7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="6" y="14" width="12" height="8" rx="1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Print Report
+          </button>
+        </footer>
+      </div>
+    </div>
+    <script>
+      (function() {
+        // Weekly Briefing Modal functionality
+        function openWeeklyBriefingModal() {
+          const modal = document.getElementById('weeklyBriefingModal');
+          if (!modal) return;
+
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+
+          // Load content
+          loadWeeklyBriefingContent();
+        }
+
+        function closeWeeklyBriefingModal() {
+          const modal = document.getElementById('weeklyBriefingModal');
+          if (!modal) return;
+
+          modal.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+
+        async function loadWeeklyBriefingContent() {
+          try {
+            const response = await fetch('/api/weekly-briefing/current');
+            if (!response.ok) throw new Error('Failed to load briefing');
+
+            const data = await response.json();
+
+            // Populate Executive Summary
+            const execPanel = document.getElementById('panel-executive');
+            if (execPanel && data.executive) {
+              execPanel.innerHTML = data.executive;
+            } else if (execPanel) {
+              execPanel.innerHTML = '<div class="empty-state">No executive summary available. Generate a briefing first.</div>';
+            }
+
+            // Populate Narrative
+            const narrativePanel = document.getElementById('panel-narrative');
+            if (narrativePanel && data.narrative) {
+              narrativePanel.innerHTML = '<div class="briefing-rich-text">' + data.narrative + '</div>';
+            } else if (narrativePanel) {
+              narrativePanel.innerHTML = '<div class="empty-state">No narrative available. Generate a briefing first.</div>';
+            }
+
+            // Populate Key Updates
+            const updatesPanel = document.getElementById('panel-updates');
+            if (updatesPanel && data.updates) {
+              updatesPanel.innerHTML = '<div class="updates-grid">' + data.updates + '</div>';
+            } else if (updatesPanel) {
+              updatesPanel.innerHTML = '<div class="empty-state">No updates available.</div>';
+            }
+          } catch (error) {
+            console.error('Error loading weekly briefing:', error);
+            const panels = document.querySelectorAll('.weekly-modal__panel');
+            panels.forEach(panel => {
+              panel.innerHTML = '<div class="empty-state">Unable to load content. Please try again.</div>';
+            });
+          }
+        }
+
+        function switchTab(tabName) {
+          // Update tab buttons
+          document.querySelectorAll('.weekly-modal__tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+          });
+
+          // Update panels
+          document.querySelectorAll('.weekly-modal__panel').forEach(panel => {
+            panel.classList.toggle('active', panel.id === 'panel-' + tabName);
+          });
+        }
+
+        function printWeeklyBriefing() {
+          // Show all panels for printing
+          const panels = document.querySelectorAll('.weekly-modal__panel');
+          panels.forEach(panel => panel.classList.add('print-visible'));
+
+          // Add print class to modal
+          const modal = document.getElementById('weeklyBriefingModal');
+          if (modal) modal.classList.add('printing');
+
+          // Trigger print
+          window.print();
+
+          // Remove print classes after printing
+          setTimeout(() => {
+            panels.forEach(panel => panel.classList.remove('print-visible'));
+            if (modal) modal.classList.remove('printing');
+          }, 1000);
+        }
+
+        // Event listeners
+        document.addEventListener('click', function(e) {
+          // Close button
+          if (e.target.closest('#closeWeeklyBriefing') || e.target.closest('#closeWeeklyBriefingFooter')) {
+            closeWeeklyBriefingModal();
+          }
+
+          // Backdrop click
+          if (e.target.classList.contains('weekly-modal-backdrop')) {
+            closeWeeklyBriefingModal();
+          }
+
+          // Tab click
+          const tab = e.target.closest('.weekly-modal__tab');
+          if (tab) {
+            switchTab(tab.dataset.tab);
+          }
+
+          // Print button
+          if (e.target.closest('#printWeeklyBriefing')) {
+            printWeeklyBriefing();
+          }
+        });
+
+        // ESC key to close
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            closeWeeklyBriefingModal();
+          }
+        });
+
+        // Expose to global scope
+        window.openWeeklyBriefingModal = openWeeklyBriefingModal;
+        window.closeWeeklyBriefingModal = closeWeeklyBriefingModal;
+      })();
+    </script>
+  `
+}
+
 function renderModals() {
   return [
     renderAssembleModal(),
     renderAnnotationModal(),
-    renderQuickNoteModal()
+    renderQuickNoteModal(),
+    renderWeeklyBriefingModal()
   ].join('\n')
 }
 
 module.exports = {
-  renderModals
+  renderModals,
+  renderWeeklyBriefingModal
 }

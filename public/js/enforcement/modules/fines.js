@@ -15,6 +15,7 @@ function applyFinesMixin(klass) {
                     const dateB = b.date_issued ? new Date(b.date_issued).getTime() : 0;
                     return dateB - dateA;
                 });
+                this.renderLatestFineHighlight(this.allFines[0]);
                 if (!options.skipRender) {
                     this.renderFines(this.allFines);
                 }
@@ -118,6 +119,7 @@ function applyFinesMixin(klass) {
         const container = document.getElementById('fines-container');
         this.latestFilteredFines = [];
         this.filteredSummary = null;
+        this.renderLatestFineHighlight(null, error);
         container.innerHTML = [
             '<div class="error-state">',
                 '<strong>Failed to load enforcement actions</strong><br>',
@@ -169,6 +171,43 @@ function applyFinesMixin(klass) {
             return '"' + stringValue.replace(/"/g, '""') + '"';
         }
         return stringValue;
+    },
+
+    renderLatestFineHighlight(latestFine, errorMessage = null) {
+        const container = document.getElementById('latest-fine-highlight');
+        if (!container) return;
+
+        if (errorMessage) {
+            container.innerHTML = '<div class="error-state">Latest fine unavailable: ' + errorMessage + '</div>';
+            return;
+        }
+
+        if (!latestFine) {
+            container.innerHTML = '<div class="loading-state">No fines recorded yet.</div>';
+            return;
+        }
+
+        const issuedDate = this.formatDate(latestFine.date_issued);
+        const regulator = latestFine.regulator || latestFine.authority || 'Regulator';
+        const amount = this.formatCurrency(latestFine.amount);
+        const subject = latestFine.firm_individual || 'Unknown firm';
+        const noticeLink = latestFine.final_notice_url ? '<a href="' + latestFine.final_notice_url + '" target="_blank" rel="noopener">View notice →</a>' : '';
+
+        container.innerHTML = [
+            '<div>',
+                '<div class="heat-pill high" style="margin-bottom:6px;">Latest fine issued</div>',
+                '<div class="latest-fine-title">' + subject + '</div>',
+                '<div class="latest-fine-meta">',
+                    '<span class="fine-chip amount">' + amount + '</span>',
+                    '<span class="fine-chip date">' + issuedDate + '</span>',
+                    '<span class="fine-chip regulator">' + regulator + '</span>',
+                '</div>',
+            '</div>',
+            '<div class="latest-fine-actions">',
+                noticeLink,
+                '<a href="/enforcement" aria-label="Refresh fines" onclick="window.enforcementDashboard && window.enforcementDashboard.loadRecentFines({ skipRender: false }); return false;">Refresh</a>',
+            '</div>'
+        ].join('');
     }
   })
 }

@@ -5,6 +5,7 @@ const express = require('express')
 const cors = require('cors')
 const path = require('path')
 const net = require('net')
+const cookieParser = require('cookie-parser')
 require('dotenv').config()
 
 // Import enhanced services
@@ -17,6 +18,10 @@ const { scheduleDailyDigest } = require('./services/dailyDigestService')
 // Import routes
 const pageRoutes = require('./routes/pageRoutes')
 const apiRoutes = require('./routes/apiRoutes')
+
+// Import auth
+const { optionalAuth } = require('./middleware/authMiddleware')
+const { registerAuthPageRoutes } = require('./routes/pages/loginPage')
 
 // Helper function to check if a port is available
 function isPortAvailable(port) {
@@ -70,6 +75,12 @@ class AIRegulatoryIntelligenceServer {
     // Body parsing
     this.app.use(express.json({ limit: '10mb' }))
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+    // Cookie parsing (for auth sessions)
+    this.app.use(cookieParser(process.env.COOKIE_SECRET || 'regcanary-dev-secret-change-in-production'))
+
+    // Auth middleware (populates req.user if session exists)
+    this.app.use(optionalAuth)
 
     // Static files
     this.app.use('/static', express.static(path.join(__dirname, '../public')))
@@ -210,6 +221,9 @@ class AIRegulatoryIntelligenceServer {
     this.app.get('/favicon.ico', (req, res) => {
       res.sendFile(path.join(__dirname, '../public/favicon.ico'))
     })
+
+    // Auth page routes (login, verify)
+    registerAuthPageRoutes(this.app)
 
     // API routes
     this.app.use('/api', apiRoutes)

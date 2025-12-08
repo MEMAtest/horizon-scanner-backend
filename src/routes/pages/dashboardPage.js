@@ -3,6 +3,7 @@ const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
 const businessLineProfileService = require('../../services/businessLineProfileService')
+const firmPersonaService = require('../../services/firmPersonaService')
 const { buildDashboardPage } = require('../../views/dashboard/pageBuilder')
 const {
   formatDashboardStats,
@@ -10,7 +11,7 @@ const {
 } = require('../../views/dashboard/helpers')
 
 function resolveUserId(req) {
-  const headerUser = req.headers['x-user-id']
+  const headerUser = req.headers?.['x-user-id']
   if (headerUser && typeof headerUser === 'string' && headerUser.trim()) {
     return headerUser.trim()
   }
@@ -26,6 +27,10 @@ async function renderDashboardPage(req, res) {
 
     const userId = resolveUserId(req)
     const filters = getCurrentFilters(req.query)
+
+    // Get user and persona for sidebar
+    const user = req.user && req.isAuthenticated ? req.user : null
+    const persona = user ? await firmPersonaService.getUserPersona(user.id).catch(() => null) : null
 
     // Get business line profiles for the user
     const businessLineProfiles = await businessLineProfileService.getProfiles(userId).catch(() => [])
@@ -43,10 +48,15 @@ async function renderDashboardPage(req, res) {
       updates = await loadUpdates(filters)
     }
 
+    // Apply persona filtering if persona is set and no profile filter
+    if (persona && !selectedProfileId) {
+      updates = firmPersonaService.applyPersonaFilter(updates, persona)
+    }
+
     const [statsRaw, filterOptionsRaw, sidebar] = await Promise.all([
       dbService.getDashboardStatistics().catch(handleStatsFailure),
       dbService.getFilterOptions().catch(handleFilterOptionsFailure),
-      getSidebar('dashboard')
+      getSidebar('dashboard', { user, persona })
     ])
 
     const stats = formatDashboardStats(statsRaw)

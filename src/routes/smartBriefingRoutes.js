@@ -4,6 +4,11 @@ const express = require('express')
 const router = express.Router()
 
 const smartBriefingService = require('../services/smartBriefingService')
+const {
+  buildExecutiveOnePager,
+  buildInitialNarrativeHtml,
+  buildInitialUpdatesHtml
+} = require('../views/weeklyBriefing/builders')
 
 // Trigger a manual run of the weekly Smart Briefing pipeline
 router.post('/weekly-briefings/run', async (req, res) => {
@@ -85,6 +90,45 @@ router.get('/weekly-briefings/:briefingId', async (req, res) => {
   } catch (error) {
     console.error('SmartBriefing retrieval failed:', error)
     res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// Get current briefing content for modal display (pre-rendered HTML)
+router.get('/weekly-briefing/current', async (req, res) => {
+  try {
+    console.log('[SmartBriefing] Fetching current briefing for modal...')
+    const briefing = await smartBriefingService.getLatestBriefing()
+
+    if (!briefing) {
+      return res.status(404).json({
+        success: false,
+        error: 'No briefings available',
+        executive: null,
+        narrative: null,
+        updates: null
+      })
+    }
+
+    // Build the HTML content for each section
+    const executive = buildExecutiveOnePager(briefing)
+    const narrative = buildInitialNarrativeHtml(briefing)
+    const updates = buildInitialUpdatesHtml(briefing)
+
+    res.json({
+      success: true,
+      executive,
+      narrative,
+      updates
+    })
+  } catch (error) {
+    console.error('[SmartBriefing] Modal content retrieval failed:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      executive: null,
+      narrative: null,
+      updates: null
+    })
   }
 })
 

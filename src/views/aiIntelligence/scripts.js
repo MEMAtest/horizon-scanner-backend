@@ -3,6 +3,15 @@ function getAiIntelligenceScripts(snapshot) {
 
   return `
     <script>
+      // Global persona switcher for inline onclick handlers
+      window.setActivePersona = function(persona) {
+        document.querySelectorAll('.persona-tab').forEach(function(tab) {
+          tab.classList.toggle('active', tab.dataset.persona === persona);
+        });
+        document.querySelectorAll('.persona-panel').forEach(function(panel) {
+          panel.classList.toggle('active', panel.dataset.personaPanel === persona);
+        });
+      };
       (function() {
         let snapshot = window.intelligenceSnapshot || ${snapshotJson};
         const state = {

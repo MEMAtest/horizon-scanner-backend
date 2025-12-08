@@ -508,12 +508,50 @@ function renderInitializationSection() {
             );
         }
 
+        function bindUpdateActionHandlers() {
+            if (window.__updateActionsBound) return;
+            window.__updateActionsBound = true;
+
+            const getUpdateContext = (el) => {
+                const card = el.closest('.update-card');
+                return {
+                    id: el.getAttribute('data-update-id') || card?.getAttribute('data-id') || '',
+                    url: el.getAttribute('data-update-url') || card?.getAttribute('data-url') || ''
+                };
+            };
+
+            document.addEventListener('click', (event) => {
+                const actionBtn = event.target.closest('.update-action-btn');
+                if (actionBtn) {
+                    event.preventDefault();
+                    const context = getUpdateContext(actionBtn);
+
+                    if (actionBtn.classList.contains('bookmark-btn')) {
+                        if (context.id) bookmarkUpdate(context.id);
+                    } else if (actionBtn.classList.contains('share-btn')) {
+                        if (context.id) shareUpdate(context.id);
+                    } else if (actionBtn.classList.contains('details-btn')) {
+                        viewUpdateDetails(context.id, context.url);
+                    }
+                    return;
+                }
+
+                const timelineBtn = event.target.closest('.timeline-btn');
+                if (timelineBtn) {
+                    event.preventDefault();
+                    const context = getUpdateContext(timelineBtn);
+                    viewUpdateDetails(context.id, context.url);
+                }
+            });
+        }
+
         async function initializeDashboard() {
             try {
                 const filters = window.currentFilters || {};
                 setActiveCategoryButton(filters.category || 'all');
                 initializeFilters();
                 setupSearchBox();
+                bindUpdateActionHandlers();
                 updateWorkspaceCounts(workspaceStats);
 
                 const isDashboardPage = Boolean(document.querySelector('.dashboard-header'));
