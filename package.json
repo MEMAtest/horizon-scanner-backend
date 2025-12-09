@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
+    "@vercel/analytics": "^1.6.1",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "compression": "^1.8.0",

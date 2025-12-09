@@ -7,3 +7,4 @@ db.json
 # Environment variables
 .env
 .vercel
+.env.vercel

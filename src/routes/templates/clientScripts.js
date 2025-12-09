@@ -60,6 +60,7 @@ function getClientScripts(options = {}) {
   }
 
   scripts.push(getClientScriptsContent())
+  scripts.push(getVercelAnalyticsScript())
 
   return scripts.join('\n')
 }
@@ -80,6 +81,20 @@ function getClientScriptsContent() {
   ].join('\n')
 }
 
+function getVercelAnalyticsScript() {
+  // Only inject in production
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    return `
+    <!-- Vercel Analytics -->
+    <script>
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+    `
+  }
+  return ''
+}
+
 // Export all variations for compatibility
 module.exports = {
   getClientScriptsContent,
@@ -87,5 +102,6 @@ module.exports = {
   getClientScripts,
   getSharedClientScripts: getClientScripts,
   getCommonScripts: getClientScripts,
-  getWorkspaceBootstrapScripts
+  getWorkspaceBootstrapScripts,
+  getVercelAnalyticsScript
 }
