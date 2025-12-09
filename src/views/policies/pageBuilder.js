@@ -40,7 +40,7 @@ function buildPoliciesPage({
               <p class="subtitle">Manage your regulatory policies with version control and approval workflows</p>
             </div>
             <div class="header-actions">
-              <button class="btn btn-primary" onclick="PolicyPage.openCreateModal()">
+              <button class="btn btn-primary" data-action="create">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>

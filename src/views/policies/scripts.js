@@ -826,6 +826,20 @@ function getPolicyScripts({ policies, stats }) {
         window.PolicyPage = PolicyPage;
         PolicyPage.init();
 
+        // Event delegation for data-action buttons
+        document.addEventListener('click', function(e) {
+          const btn = e.target.closest('[data-action]');
+          if (!btn) return;
+
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+
+          if (action === 'create') PolicyPage.openCreateModal();
+          if (action === 'view' && id) PolicyPage.viewPolicy(id);
+          if (action === 'edit' && id) PolicyPage.editPolicy(id);
+          if (action === 'approve' && id) PolicyPage.submitForApproval(id);
+        });
+
         // Close modals on escape
         document.addEventListener('keydown', function(e) {
           if (e.key === 'Escape') {

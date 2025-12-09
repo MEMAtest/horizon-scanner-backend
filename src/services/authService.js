@@ -45,7 +45,12 @@ async function requestMagicLink(email) {
     console.log(`✉️ Magic link sent to ${normalizedEmail}`)
     return { success: true, message: 'Check your email for the login link' }
   } catch (error) {
-    console.error('Error sending magic link email:', error.message)
+    console.error('❌ Email send error:', {
+      message: error.message,
+      email: normalizedEmail,
+      from: process.env.DIGEST_FROM_EMAIL || 'not-set',
+      apiKey: process.env.RESEND_API_KEY ? 'set' : 'missing'
+    })
     throw new Error('Failed to send login email. Please try again.')
   }
 }

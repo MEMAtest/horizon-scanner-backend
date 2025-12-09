@@ -309,10 +309,11 @@ body {
 .executive-content p:first-of-type::first-letter {
     float: left;
     font-size: 2.75rem;
-    line-height: 1;
+    line-height: 0.85;
     font-weight: 600;
-    margin-right: 0.5rem;
-    margin-top: 0.15rem;
+    margin-right: 0.75rem;
+    margin-top: 0.25rem;
+    padding-right: 0.25rem;
     color: var(--ink-primary);
 }
 

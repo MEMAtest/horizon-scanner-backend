@@ -133,11 +133,18 @@ function registerDossierRoutes(router) {
   // GET /api/dossiers/:id/timeline - Get dossier timeline
   router.get('/dossiers/:id/timeline', async (req, res) => {
     try {
-      const userId = req.headers['x-user-id'] || 'default'
+      const userId = req.user?.id || req.headers['x-user-id'] || 'default'
       const result = await dossierService.getDossierTimeline(req.params.id, userId)
       if (result.success) {
         res.json(result)
       } else {
+        console.error('Timeline 404:', {
+          dossierId: req.params.id,
+          userId,
+          error: result.error,
+          hasUser: !!req.user,
+          hasHeader: !!req.headers['x-user-id']
+        })
         res.status(404).json(result)
       }
     } catch (error) {

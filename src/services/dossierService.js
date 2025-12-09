@@ -190,13 +190,18 @@ class DossierService {
       // Verify dossier exists and belongs to user
       const dossier = await db.getDossierById(dossierId, userId)
       if (!dossier) {
-        return { success: false, error: 'Dossier not found' }
+        console.log(`[Timeline 404] Dossier ${dossierId} not found for user ${userId}`)
+        return {
+          success: false,
+          error: 'Dossier not found or access denied',
+          details: { dossierId, userId }
+        }
       }
 
       const timeline = await db.getDossierTimeline(dossierId)
       return { success: true, data: timeline }
     } catch (error) {
-      console.error('[DossierService] Error getting timeline:', error)
+      console.error('[DossierService] Timeline error:', error)
       return { success: false, error: error.message }
     }
   }
