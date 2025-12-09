@@ -3,6 +3,85 @@
 
 const express = require('express')
 const router = express.Router()
+const { Pool } = require('pg')
+
+// Direct database fallback for when enforcement service isn't initialized
+async function getDirectDbPool() {
+  if (!process.env.DATABASE_URL) return null
+  return new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  })
+}
+
+async function directSearchFines(params) {
+  const pool = await getDirectDbPool()
+  if (!pool) return { fines: [], total: 0 }
+
+  try {
+    const limit = params.limit || 20
+    const offset = params.offset || 0
+
+    const result = await pool.query(`
+      SELECT
+        fine_reference,
+        date_issued,
+        firm_individual,
+        amount,
+        ai_summary,
+        breach_categories,
+        affected_sectors,
+        customer_impact_level,
+        risk_score,
+        final_notice_url
+      FROM fca_fines
+      WHERE amount IS NOT NULL
+      ORDER BY date_issued DESC
+      LIMIT $1 OFFSET $2
+    `, [limit, offset])
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM fca_fines WHERE amount IS NOT NULL')
+
+    await pool.end()
+    return { fines: result.rows, total: parseInt(countResult.rows[0].count) }
+  } catch (error) {
+    console.error('Direct DB search error:', error)
+    await pool.end().catch(() => {})
+    return { fines: [], total: 0 }
+  }
+}
+
+async function directGetRecentFines(limit = 20) {
+  const pool = await getDirectDbPool()
+  if (!pool) return []
+
+  try {
+    const result = await pool.query(`
+      SELECT
+        fine_reference,
+        date_issued,
+        firm_individual,
+        amount,
+        ai_summary,
+        breach_categories,
+        affected_sectors,
+        customer_impact_level,
+        risk_score,
+        final_notice_url
+      FROM fca_fines
+      WHERE amount IS NOT NULL
+      ORDER BY date_issued DESC
+      LIMIT $1
+    `, [limit])
+
+    await pool.end()
+    return result.rows
+  } catch (error) {
+    console.error('Direct DB recent fines error:', error)
+    await pool.end().catch(() => {})
+    return []
+  }
+}
 
 /**
  * GET /api/enforcement/stats
@@ -38,15 +117,16 @@ router.get('/stats', async (req, res) => {
  */
 router.get('/recent', async (req, res) => {
   try {
-    if (!req.app.locals.enforcementService) {
-      return res.status(503).json({
-        success: false,
-        error: 'Enforcement service not available'
-      })
-    }
-
     const limit = Math.min(parseInt(req.query.limit) || 20, 100)
-    const fines = await req.app.locals.enforcementService.getRecentFines(limit)
+
+    let fines
+    if (req.app.locals.enforcementService) {
+      fines = await req.app.locals.enforcementService.getRecentFines(limit)
+    } else {
+      // Fallback to direct database query
+      console.log('[enforcement] Using direct DB fallback for recent fines')
+      fines = await directGetRecentFines(limit)
+    }
 
     res.json({
       success: true,
@@ -124,13 +204,6 @@ router.get('/trends', async (req, res) => {
  */
 router.get('/search', async (req, res) => {
   try {
-    if (!req.app.locals.enforcementService) {
-      return res.status(503).json({
-        success: false,
-        error: 'Enforcement service not available'
-      })
-    }
-
     const searchParams = {
       query: req.query.q,
       breachType: req.query.breach_type,
@@ -148,7 +221,14 @@ router.get('/search', async (req, res) => {
       offset: parseInt(req.query.offset) || 0
     }
 
-    const results = await req.app.locals.enforcementService.searchFines(searchParams)
+    let results
+    if (req.app.locals.enforcementService) {
+      results = await req.app.locals.enforcementService.searchFines(searchParams)
+    } else {
+      // Fallback to direct database query
+      console.log('[enforcement] Using direct DB fallback for search')
+      results = await directSearchFines(searchParams)
+    }
 
     res.json({
       success: true,

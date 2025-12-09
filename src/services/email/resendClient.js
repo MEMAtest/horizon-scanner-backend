@@ -13,7 +13,8 @@ async function sendEmail({ from, to, subject, html, text }) {
     throw new Error('Resend: RESEND_API_KEY is not configured')
   }
 
-  const sender = from || process.env.DIGEST_FROM_EMAIL || 'Regulatory Horizon Scanner <onboarding@resend.dev>'
+  // Use resend.dev for testing, or configured domain for production
+  const sender = from || process.env.DIGEST_FROM_EMAIL || 'RegCanary <onboarding@resend.dev>'
 
   const response = await fetch(RESEND_ENDPOINT, {
     method: 'POST',

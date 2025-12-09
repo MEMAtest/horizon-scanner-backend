@@ -720,7 +720,10 @@ function generateRecentUpdatesPreview(updates) {
         `
   }
 
-  return updates.map(update => {
+  // Limit to 10 most recent updates for home page
+  const limitedUpdates = updates.slice(0, 10)
+
+  return limitedUpdates.map(update => {
     const dateMeta = formatRelativeDate(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
     const impact = update.impactLevel || update.impact_level || 'Informational'
     const deadlineRaw = update.compliance_deadline || update.complianceDeadline
