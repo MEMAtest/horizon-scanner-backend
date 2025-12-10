@@ -82,7 +82,7 @@ body {
 
 .main-content {
     flex: 1;
-    margin-left: 280px;
+    margin-left: 280px !important;
     padding: clamp(3.5rem, 5.5vw, 5rem) clamp(3.5rem, 7vw, 5.75rem) clamp(4.5rem, 7vw, 6rem);
     background: transparent;
 }
