@@ -52,7 +52,7 @@ async function renderAboutPage(req, res) {
 
           <main class="main-content">
             <div class="version-info">
-              <h1>AI AI Regulatory Intelligence Platform</h1>
+              <h1>AI Regulatory Intelligence Platform</h1>
               <p style="font-size: 1.2rem; color: #0c4a6e; margin-bottom: 20px;">
                 <strong>Version 2.0 - Phase 1.3 Complete</strong>
               </p>
@@ -76,10 +76,10 @@ async function renderAboutPage(req, res) {
               <ul style="line-height: 2;">
                 <li><strong>Target Firm Profile System:</strong> Personalized relevance scoring based on your sectors</li>
                 <li><strong>Pin Workspace Management:</strong> Pin important updates, save searches, create alerts</li>
-                <li><strong>AI AI-Powered Analysis:</strong> Automated impact scoring and sector relevance analysis</li>
-                <li><strong>Analytics Real-time Dashboard:</strong> Live regulatory updates with intelligent filtering</li>
+                <li><strong>AI-Powered Analysis:</strong> Automated impact scoring and sector relevance analysis</li>
+                <li><strong>Real-time Dashboard:</strong> Live regulatory updates with intelligent filtering</li>
                 <li><strong>Note Weekly AI Roundups:</strong> Comprehensive weekly intelligence briefings</li>
-                <li><strong>Authority Authority Spotlight:</strong> Deep analysis of regulatory authority patterns</li>
+                <li><strong>Authority Spotlight:</strong> Deep analysis of regulatory authority patterns</li>
                 <li><strong>Growth Trend Analysis:</strong> Emerging regulatory themes and compliance priorities</li>
                 <li><strong>Power Smart Filtering:</strong> Advanced search and categorization capabilities</li>
               </ul>
@@ -93,7 +93,7 @@ async function renderAboutPage(req, res) {
                   <p>Node.js, Express.js</p>
                 </div>
                 <div class="tech-item">
-                  <h4>AI AI Engine</h4>
+                  <h4>AI Engine</h4>
                   <p>Groq API, Llama-3.3-70B</p>
                 </div>
                 <div class="tech-item">

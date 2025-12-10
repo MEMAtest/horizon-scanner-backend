@@ -724,7 +724,7 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
                     <header class="spotlight-header">
                         <a href="/" class="back-link"><- Back to Home</a>
                         <h1 class="authority-title">
-                            Authority ${authority} Authority Spotlight
+                            ${authority} Authority Spotlight
                         </h1>
                         <p>Deep analysis of regulatory patterns, enforcement trends, and policy directions</p>
 
@@ -888,7 +888,7 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
 
                     <div class="content-section">
                         <h2 class="section-title">
-                            Analytics Recent Updates from ${authority}
+                            Recent Updates from ${authority}
                         </h2>
 
                         ${authorityUpdates.length > 0
