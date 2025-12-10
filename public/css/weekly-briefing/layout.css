@@ -380,19 +380,23 @@ body {
 
 /* Force disable drop cap in briefing content only - override any cached CSS */
 .briefing-rich-text p::first-letter,
+.briefing-rich-text p:first-of-type::first-letter,
 .executive-content p::first-letter,
-.narrative-content p::first-letter {
+.executive-content p:first-of-type::first-letter,
+.narrative-content p::first-letter,
+.narrative-content p:first-of-type::first-letter {
     float: none !important;
     font-size: inherit !important;
     line-height: inherit !important;
     margin: 0 !important;
     padding: 0 !important;
     font-weight: inherit !important;
+    color: inherit !important;
 }
 
-/* Cache buster - DO NOT REMOVE - Forces browser to recognize CSS update */
-.weekly-briefing-v2-cache-bust {
-    content: "v2-drop-cap-fix-final";
+/* Cache buster v3 - DO NOT REMOVE - Forces browser to recognize CSS update */
+.weekly-briefing-v3-cache-bust-final {
+    --cache-version: "v3-drop-cap-final-fix";
 }
 
 .briefing-rich-text p + p {
