@@ -378,6 +378,19 @@ body {
     color: var(--ink-secondary);
 }
 
+/* Force disable drop cap everywhere - override any cached CSS */
+.briefing-rich-text p::first-letter,
+.executive-content p::first-letter,
+.narrative-content p::first-letter,
+p::first-letter {
+    float: none !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-weight: inherit !important;
+}
+
 .briefing-rich-text p + p {
     margin-top: var(--space-xs);
 }
