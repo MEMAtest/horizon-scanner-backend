@@ -112,7 +112,7 @@ async function getSidebar(currentPage = '', options = {}) {
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'weekly-roundup' ? 'active' : ''}">
-                        <a href="#" class="nav-link" onclick="event.preventDefault(); openWeeklyBriefingModal();">
+                        <a href="/weekly-roundup" class="nav-link">
                             <span class="nav-icon">${icons.roundup}</span>
                             <span class="nav-text">Weekly Roundup</span>
                         </a>
