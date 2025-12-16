@@ -159,6 +159,7 @@ function renderUpdateItem(update, pinnedItems = [], personaMap = {}, velocityLoo
   const impactLevel = update.impactLevel || update.impact_level || 'Informational'
   const relevanceScore = update.relevanceScore || update.relevance_score || null
   const authority = update.authority || 'Unknown'
+  const contentType = update.content_type || update.contentType || ''
 
   const sectorCandidates = []
   const sectorFields = [
@@ -201,9 +202,18 @@ function renderUpdateItem(update, pinnedItems = [], personaMap = {}, velocityLoo
     .join('')
 
   const chips = [
-    `<span class="meta-chip meta-authority">${escapeHtml(authority)}</span>`,
-    `<span class="meta-chip meta-impact">${escapeHtml(impactLevel)}</span>`
+    `<span class="meta-chip meta-authority">${escapeHtml(authority)}</span>`
   ]
+
+  // Add content type badge if available (more prominent than impact level)
+  if (contentType && contentType !== 'Other') {
+    const contentTypeClass = contentType.toLowerCase().replace(/\s+/g, '-')
+    chips.push(`<span class="meta-chip meta-content-type content-type-${contentTypeClass}">${escapeHtml(contentType)}</span>`)
+  }
+
+  // Impact level as secondary badge
+  const impactClass = impactLevel.toLowerCase().replace(/\s+/g, '-')
+  chips.push(`<span class="meta-chip meta-impact impact-${impactClass}">${escapeHtml(impactLevel)}</span>`)
 
   if (relevanceScore) {
     chips.push(`<span class="meta-chip meta-score">${relevanceScore}% relevance</span>`)

@@ -1226,6 +1226,150 @@ function getAiIntelligenceStyles() {
         font-size: 0.75rem;
       }
 
+      /* Meta Chip Base Styling */
+      .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .meta-chip.meta-authority {
+        background: #1e40af;
+        color: white;
+        font-weight: 600;
+      }
+
+      .meta-chip.meta-date,
+      .meta-chip.meta-score {
+        background: rgba(148, 163, 184, 0.16);
+        color: #64748b;
+      }
+
+      .meta-chip.meta-sector {
+        background: rgba(99, 102, 241, 0.12);
+        color: #4f46e5;
+      }
+
+      .meta-chip.meta-deadline {
+        background: rgba(239, 68, 68, 0.12);
+        color: #dc2626;
+        font-weight: 600;
+      }
+
+      /* Content Type Badge - Prominent Styling */
+      .meta-chip.meta-content-type {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.68rem;
+        letter-spacing: 0.03em;
+        border: 1.5px solid;
+        padding: 3px 8px;
+      }
+
+      /* Consultation - Blue (action required) */
+      .content-type-consultation {
+        background: #dbeafe;
+        color: #1d4ed8;
+        border-color: #3b82f6;
+      }
+
+      /* Guidance - Green (informational) */
+      .content-type-guidance {
+        background: #d1fae5;
+        color: #047857;
+        border-color: #10b981;
+      }
+
+      /* Final Rule - Purple (enacted) */
+      .content-type-final-rule {
+        background: #ede9fe;
+        color: #6d28d9;
+        border-color: #8b5cf6;
+      }
+
+      /* Enforcement Action - Red (punitive) */
+      .content-type-enforcement-action {
+        background: #fee2e2;
+        color: #b91c1c;
+        border-color: #ef4444;
+      }
+
+      /* Speech - Amber */
+      .content-type-speech {
+        background: #fef3c7;
+        color: #b45309;
+        border-color: #f59e0b;
+      }
+
+      /* Policy Statement - Indigo */
+      .content-type-policy-statement {
+        background: #e0e7ff;
+        color: #4338ca;
+        border-color: #6366f1;
+      }
+
+      /* Market Notice - Cyan */
+      .content-type-market-notice {
+        background: #cffafe;
+        color: #0e7490;
+        border-color: #06b6d4;
+      }
+
+      /* Press Release - Gray */
+      .content-type-press-release {
+        background: #f3f4f6;
+        color: #4b5563;
+        border-color: #9ca3af;
+      }
+
+      /* Statistical Report - Slate */
+      .content-type-statistical-report {
+        background: #f1f5f9;
+        color: #475569;
+        border-color: #64748b;
+      }
+
+      /* Research Paper - Teal */
+      .content-type-research-paper {
+        background: #ccfbf1;
+        color: #0f766e;
+        border-color: #14b8a6;
+      }
+
+      /* Event - Pink */
+      .content-type-event {
+        background: #fce7f3;
+        color: #be185d;
+        border-color: #ec4899;
+      }
+
+      /* Impact Level - Secondary Styling */
+      .meta-chip.meta-impact {
+        font-weight: 500;
+        font-size: 0.65rem;
+        opacity: 0.9;
+      }
+
+      .impact-significant {
+        background: #fef2f2;
+        color: #dc2626;
+      }
+
+      .impact-moderate {
+        background: #fff7ed;
+        color: #ea580c;
+      }
+
+      .impact-informational,
+      .impact-low {
+        background: #f8fafc;
+        color: #64748b;
+      }
+
       .card-actions {
         display: flex;
         justify-content: space-between;
