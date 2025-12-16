@@ -8,15 +8,16 @@ function applyStatsMixin(klass) {
         try {
             this.currentFilterParams = filterParams || {};
             const hasFilters = this.hasActiveFilters(filterParams);
-    
+
             if (!hasFilters) {
+                // No filters - load full dataset
                 const response = await fetch('/api/enforcement/stats');
                 const data = await response.json();
-    
+
                 if (!data.success) {
                     throw new Error(data.error || 'Failed to load stats');
                 }
-    
+
                 this.isFilterActive = false;
                 this.currentFilterParams = {};
                 this.baseStats = data.stats;
@@ -25,7 +26,7 @@ function applyStatsMixin(klass) {
                 this.baseCategoryTrends = data.stats.topCategoryTrends || [];
                 this.latestFilteredFines = [];
                 this.latestFilteredTotal = 0;
-    
+
                 this.populateFilters(data.stats);
                 this.renderStats(data.stats);
                 this.filteredSummary = null;
@@ -36,21 +37,69 @@ function applyStatsMixin(klass) {
                 await this.loadTopFirms();
                 return;
             }
-    
-            const { fines: filteredFines, total: totalMatches } = await this.fetchFilteredFines(filterParams);
+
+            // CRITICAL FIX: Load filtered stats from API
+            console.log('[stats] Loading stats with filters:', filterParams);
+
+            // Build query params for stats endpoint
+            const params = new URLSearchParams();
+            if (filterParams.yearsArray && filterParams.yearsArray.length > 0) {
+                params.set('years', filterParams.yearsArray.join(','));
+            }
+            if (filterParams.breach_type) {
+                params.set('breach_type', filterParams.breach_type);
+            }
+            if (filterParams.minAmount) {
+                params.set('minAmount', filterParams.minAmount);
+            }
+            if (filterParams.maxAmount) {
+                params.set('maxAmount', filterParams.maxAmount);
+            }
+
+            // Fetch filtered stats
+            const statsUrl = '/api/enforcement/stats' + (params.toString() ? '?' + params.toString() : '');
+            const statsResponse = await fetch(statsUrl);
+            const statsData = await statsResponse.json();
+
+            if (!statsData.success) {
+                throw new Error(statsData.error || 'Failed to load filtered stats');
+            }
+
+            console.log('[stats] Filtered stats loaded:', statsData);
+
+            // Store filtered stats
+            this.baseStats = statsData.stats;
+            this.baseYearlyOverview = statsData.stats.yearlyOverview || [];
+            this.baseControlRecommendations = statsData.stats.controlRecommendations || [];
+            this.baseCategoryTrends = statsData.stats.topCategoryTrends || [];
             this.isFilterActive = true;
-            this.latestFilteredFines = filteredFines;
-            this.latestFilteredTotal = totalMatches;
-    
-            this.renderFilteredStats(filteredFines, filterParams);
-            this.renderFines(filteredFines);
-    
-            const topFirmSnapshot = this.buildTopFirmsFromFines(filteredFines);
+
+            // Fetch filtered fines (CRITICAL FIX: Use new method)
+            if (typeof this.loadRecentFinesWithFilters === 'function') {
+                await this.loadRecentFinesWithFilters(filterParams);
+            } else {
+                // Fallback to old method if new method not yet available
+                const { fines: filteredFines, total: totalMatches } = await this.fetchFilteredFines(filterParams);
+                this.latestFilteredFines = filteredFines;
+                this.latestFilteredTotal = totalMatches;
+            }
+
+            // Render filtered stats
+            this.renderFilteredStats(filterParams);
+
+            // Render fines
+            if (this.latestFilteredFines && this.latestFilteredFines.length > 0) {
+                this.renderFines(this.latestFilteredFines);
+            }
+
+            // Render top firms from filtered data
+            const topFirmSnapshot = this.buildTopFirmsFromFines(this.latestFilteredFines);
             this.renderTopFirms(topFirmSnapshot, {
                 filterMode: true,
                 scopeLabel: this.filteredSummary ? this.filteredSummary.scopeLabel : null
             });
-    
+
+            // Load filtered trends
             await this.loadTrends(true, filterParams);
         } catch (error) {
             console.warn('[enforcement] Statistics unavailable:', error);
@@ -504,6 +553,8 @@ function applyStatsMixin(klass) {
             this.charts.yearly.destroy();
         }
     
+        const self = this;
+
         this.charts.yearly = new Chart(chartCanvas, {
             type: 'bar',
             data: {
@@ -536,6 +587,13 @@ function applyStatsMixin(klass) {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { intersect: false, mode: 'nearest' },
+                onClick: function(event, elements) {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const year = labels[index];
+                        self.handleYearClick(year, event.native);
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -691,9 +749,10 @@ function applyStatsMixin(klass) {
         if (this.charts.category) {
             this.charts.category.destroy();
         }
-    
+
         const formatCurrency = value => this.formatCurrency(value);
-    
+        const self = this;
+
         this.charts.category = new Chart(chartCanvas, {
             type: 'line',
             data: {
@@ -703,6 +762,13 @@ function applyStatsMixin(klass) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: function(event, elements) {
+                    if (elements.length > 0) {
+                        const datasetIndex = elements[0].datasetIndex;
+                        const category = datasets[datasetIndex].label;
+                        self.handleCategoryClick(category);
+                    }
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -976,6 +1042,42 @@ function applyStatsMixin(klass) {
             availableYears: [],
             availableCategories: []
         };
+    },
+
+    /**
+     * Handle click on year in Yearly Overview chart
+     * Shift+click opens year summary modal, regular click filters
+     */
+    handleYearClick(year, event) {
+        console.log('[yearly-chart] Clicked year:', year);
+
+        // Shift+Click = Open year summary modal
+        if (event && (event.shiftKey || event.ctrlKey || event.metaKey)) {
+            console.log('[yearly-chart] Opening year summary modal for:', year);
+            this.showYearSummary(parseInt(year, 10));
+            return;
+        }
+
+        // Default: Filter by year
+        this.setChartFilter({
+            type: 'year',
+            year: parseInt(year, 10),
+            label: `Year ${year}`
+        });
+        this.loadStatsWithFilters(this.getCurrentFilterParams());
+    },
+
+    /**
+     * Handle click on category in Category Trends chart
+     */
+    handleCategoryClick(category) {
+        console.log('[category-chart] Clicked category:', category);
+        this.setChartFilter({
+            type: 'category',
+            category: category,
+            label: `Category: ${category}`
+        });
+        this.loadStatsWithFilters(this.getCurrentFilterParams());
     },
 
     updateHeaderMeta(coverageLabel = 'Full dataset') {

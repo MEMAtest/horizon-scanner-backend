@@ -1,5 +1,98 @@
 function applyFiltersMixin(klass) {
   Object.assign(klass.prototype, {
+    // Chart filter state (separate from UI filter controls)
+    chartFilter: null,
+
+    /**
+     * Safely parse a value that should be an array
+     * Handles JSONB fields that may be strings, objects, or already-parsed arrays
+     */
+    safeArray(value, defaultValue = []) {
+      if (Array.isArray(value)) return value;
+      if (!value) return defaultValue;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      }
+      return defaultValue;
+    },
+
+    /**
+     * Set chart-based filter
+     * @param {Object} filterConfig - Filter configuration { type, value, label, ... }
+     */
+    setChartFilter(filterConfig) {
+      this.chartFilter = filterConfig
+      this.renderChartFilterBadge()
+      console.log('[chart-filter] Applied:', filterConfig)
+    },
+
+    /**
+     * Clear chart-based filter
+     */
+    clearChartFilter() {
+      this.chartFilter = null
+      this.removeChartFilterBadge()
+      this.performSearch()
+      console.log('[chart-filter] Cleared')
+    },
+
+    /**
+     * Render visual indicator for active chart filter
+     */
+    renderChartFilterBadge() {
+      const container = document.getElementById('chart-filter-badge-container')
+      if (!container || !this.chartFilter) return
+
+      const label = this.chartFilter.label || 'Chart Filter'
+
+      container.innerHTML = `
+        <div class="chart-filter-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+          <span>Filtered by Chart: ${this.escapeHtml(label)}</span>
+          <button type="button" class="badge-close" onclick="window.enforcementDashboard.clearChartFilter()" aria-label="Clear chart filter">
+            &times;
+          </button>
+        </div>
+      `
+
+      // Slide in animation
+      setTimeout(() => {
+        const badge = container.querySelector('.chart-filter-badge')
+        if (badge) badge.classList.add('active')
+      }, 10)
+    },
+
+    /**
+     * Remove chart filter badge
+     */
+    removeChartFilterBadge() {
+      const container = document.getElementById('chart-filter-badge-container')
+      if (!container) return
+
+      const badge = container.querySelector('.chart-filter-badge')
+      if (badge) {
+        badge.classList.remove('active')
+        setTimeout(() => {
+          container.innerHTML = ''
+        }, 300)
+      }
+    },
+
     hasActiveFilters(filterParams = {}) {
         return Boolean(
             (filterParams.q && filterParams.q.trim()) ||
@@ -44,7 +137,7 @@ function applyFiltersMixin(klass) {
             if (yearsSet && (issueYear === null || !yearsSet.has(issueYear))) return false;
     
             if (breachType) {
-                const categories = Array.isArray(fine.breach_categories) ? fine.breach_categories : [];
+                const categories = this.safeArray(fine.breach_categories);
                 if (!categories.includes(breachType)) return false;
             }
     
@@ -63,7 +156,7 @@ function applyFiltersMixin(klass) {
                     fine.ai_summary,
                     fine.summary,
                     fine.fine_reference,
-                    ...(fine.breach_categories || [])
+                    ...this.safeArray(fine.breach_categories)
                 ].join(' ').toLowerCase();
     
                 if (!haystack.includes(query)) return false;
@@ -142,7 +235,7 @@ function applyFiltersMixin(klass) {
         const breachCategory = document.getElementById('breach-category').value;
         const minAmount = document.getElementById('min-amount').value;
         const riskLevel = document.getElementById('risk-level').value;
-    
+
         const filterParams = {};
         if (query) filterParams.q = query.trim();
         if (selectedYears.length > 0) {
@@ -158,9 +251,40 @@ function applyFiltersMixin(klass) {
         if (breachCategory) filterParams.breach_type = breachCategory;
         if (minAmount) filterParams.min_amount = minAmount;
         if (riskLevel) filterParams.risk_level = riskLevel;
-    
+
+        // Integrate chart filter
+        if (this.chartFilter) {
+            switch (this.chartFilter.type) {
+                case 'year':
+                    // Override year filter with chart selection
+                    filterParams.years = String(this.chartFilter.year);
+                    filterParams.yearsArray = [this.chartFilter.year];
+                    filterParams.yearsRaw = [String(this.chartFilter.year)];
+                    break;
+
+                case 'category':
+                    // Override breach type filter
+                    filterParams.breach_type = this.chartFilter.category;
+                    break;
+
+                case 'amount_range':
+                    // Set min/max amount filters
+                    filterParams.min_amount = this.chartFilter.min;
+                    filterParams.max_amount = this.chartFilter.max;
+                    break;
+
+                case 'year_category':
+                    // Combined year AND category filter
+                    filterParams.years = String(this.chartFilter.year);
+                    filterParams.yearsArray = [this.chartFilter.year];
+                    filterParams.yearsRaw = [String(this.chartFilter.year)];
+                    filterParams.breach_type = this.chartFilter.category;
+                    break;
+            }
+        }
+
         this.updateYearChips(filterParams.yearsArray);
-    
+
         return filterParams;
     },
 

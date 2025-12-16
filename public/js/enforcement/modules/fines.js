@@ -1,13 +1,31 @@
 function applyFinesMixin(klass) {
   Object.assign(klass.prototype, {
+    /**
+     * Safely parse a value that should be an array
+     * Handles JSONB fields that may be strings, objects, or already-parsed arrays
+     */
+    safeArray(value, defaultValue = []) {
+      if (Array.isArray(value)) return value;
+      if (!value) return defaultValue;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      }
+      return defaultValue;
+    },
+
     async loadRecentFines(options = {}) {
         try {
             console.log('[fines] Loading recent fines...');
-    
+
             const limit = options.limit || 500;
             const response = await fetch('/api/enforcement/recent?limit=' + limit);
             const data = await response.json();
-    
+
             if (data.success) {
                 this.allFines = Array.isArray(data.fines) ? data.fines : [];
                 this.allFines.sort((a, b) => {
@@ -24,6 +42,80 @@ function applyFinesMixin(klass) {
             }
         } catch (error) {
             console.error('[error] Error loading fines:', error);
+            this.renderFinesError(error.message);
+        }
+    },
+
+    /**
+     * Load fines with filter parameters
+     * CRITICAL FIX: Ensures fines reload when filters are applied
+     */
+    async loadRecentFinesWithFilters(filterParams = {}) {
+        try {
+            console.log('[fines] Loading fines with filters:', filterParams);
+
+            // Build query params for search endpoint
+            const params = new URLSearchParams();
+
+            if (filterParams.yearsArray && filterParams.yearsArray.length > 0) {
+                params.set('years', filterParams.yearsArray.join(','));
+            }
+
+            if (filterParams.breach_type) {
+                params.set('breach_type', filterParams.breach_type);
+            }
+
+            if (filterParams.minAmount) {
+                params.set('minAmount', filterParams.minAmount);
+            }
+
+            if (filterParams.maxAmount) {
+                params.set('maxAmount', filterParams.maxAmount);
+            }
+
+            if (filterParams.firms && filterParams.firms.length > 0) {
+                params.set('firms', filterParams.firms.join(','));
+            }
+
+            // Always load full filtered dataset (no limit)
+            params.set('limit', '500');
+
+            // Fetch filtered fines from search endpoint
+            const url = '/api/enforcement/search?' + params.toString();
+            console.log('[fines] Fetching from:', url);
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load filtered fines');
+            }
+
+            console.log('[fines] Loaded', data.fines ? data.fines.length : 0, 'filtered fines');
+
+            // Store filtered results
+            this.allFines = Array.isArray(data.fines) ? data.fines : [];
+
+            // Sort by date (most recent first)
+            this.allFines.sort((a, b) => {
+                const dateA = a.date_issued ? new Date(a.date_issued).getTime() : 0;
+                const dateB = b.date_issued ? new Date(b.date_issued).getTime() : 0;
+                return dateB - dateA;
+            });
+
+            // Slice for table display
+            this.latestFilteredFines = this.allFines.slice(0, this.tableRowLimit || 50);
+            this.latestFilteredTotal = data.total || this.allFines.length;
+
+            // Update latest fine highlight
+            const latestFine = this.allFines[0] || null;
+            this.renderLatestFineHighlight(latestFine);
+
+            console.log('[fines] Set latestFilteredFines to', this.latestFilteredFines.length, 'fines');
+
+        } catch (error) {
+            console.error('[fines] Error loading filtered fines:', error);
+            this.renderLatestFineHighlight(null, error.message);
             this.renderFinesError(error.message);
         }
     },
@@ -45,7 +137,7 @@ function applyFinesMixin(klass) {
             : fines;
     
         const tableRows = displayFines.map(fine => {
-            const breachTagsHtml = (fine.breach_categories || []).map(category =>
+            const breachTagsHtml = this.safeArray(fine.breach_categories).map(category =>
                 '<span class="breach-tag">' + category + '</span>'
             ).join('');
     
@@ -149,8 +241,8 @@ function applyFinesMixin(klass) {
             fine.date_issued || '',
             this.escapeCsv(fine.firm_individual),
             fine.amount || '',
-            this.escapeCsv(Array.isArray(fine.breach_categories) ? fine.breach_categories.join('; ') : ''),
-            this.escapeCsv(Array.isArray(fine.affected_sectors) ? fine.affected_sectors.join('; ') : ''),
+            this.escapeCsv(this.safeArray(fine.breach_categories).join('; ')),
+            this.escapeCsv(this.safeArray(fine.affected_sectors).join('; ')),
             fine.customer_impact_level || '',
             fine.risk_score || '',
             fine.systemic_risk ? 'Yes' : 'No',

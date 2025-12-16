@@ -147,7 +147,7 @@ function renderWeeklyBriefingModal() {
         <header class="weekly-modal__header">
           <div class="weekly-modal__title-row">
             <div class="weekly-modal__branding">
-              <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="weekly-modal__logo" />
+              <img src="/images/regcanary-sidebar-full.png" alt="RegCanary" class="weekly-modal__logo" width="180" height="44" style="max-width: 180px; height: auto;" />
             </div>
             <button class="weekly-modal__close" id="closeWeeklyBriefing" aria-label="Close">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">

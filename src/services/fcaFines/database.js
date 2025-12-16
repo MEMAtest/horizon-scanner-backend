@@ -36,14 +36,29 @@ function applyDatabaseMethods(ServiceClass) {
   ServiceClass.prototype.saveFine = async function(fine, forceScrape = false) {
     try {
       if (!forceScrape) {
+        // Only check for duplicates based on actual data (firm, date, amount)
+        // NOT the generated fine_reference which may collide with existing sequential IDs
         const existing = await this.db.query(
-          'SELECT id FROM fca_fines WHERE fine_reference = $1 OR (firm_individual = $2 AND date_issued = $3 AND amount = $4)',
-          [fine.fine_reference, fine.firm_individual, fine.date_issued, fine.amount]
+          'SELECT id, fine_reference FROM fca_fines WHERE firm_individual = $1 AND date_issued = $2 AND amount = $3',
+          [fine.firm_individual, fine.date_issued, fine.amount]
         )
 
         if (existing.rows.length > 0) {
           return { isNew: false, id: existing.rows[0].id }
         }
+      }
+
+      // Generate a unique fine_reference based on firm name hash + date to avoid collisions
+      const existingRefCheck = await this.db.query(
+        'SELECT id FROM fca_fines WHERE fine_reference = $1',
+        [fine.fine_reference]
+      )
+
+      // If the generated reference already exists, create a more unique one
+      if (existingRefCheck.rows.length > 0) {
+        const firmHash = fine.firm_individual.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X')
+        const dateStr = fine.date_issued.toISOString().split('T')[0].replace(/-/g, '')
+        fine.fine_reference = `FCA-${dateStr}-${firmHash}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
       }
 
       const query = `

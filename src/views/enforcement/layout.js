@@ -6,11 +6,14 @@ const {
   renderPatternSection
 } = require('./sections/stats')
 const { renderYearlyOverviewSection } = require('./sections/yearlyOverview')
+const { renderDistributionSection } = require('./sections/distribution')
+const { renderHeatmapSection } = require('./sections/heatmap')
 const { renderCategoryMixSection } = require('./sections/categoryMix')
 const { renderControlPlaybookSection } = require('./sections/controlPlaybook')
 const { renderFinesSection } = require('./sections/fines')
 const { renderTrendsSection } = require('./sections/trends')
 const { renderTopFirmsSection } = require('./sections/topFirms')
+const { renderAdvancedAnalyticsSection } = require('./sections/advancedAnalytics')
 const {
   getEnforcementStyles,
   getEnforcementHeadScripts,
@@ -41,11 +44,14 @@ function renderEnforcementPage({
             ${renderStatsSection()}
             ${renderPatternSection()}
             ${renderYearlyOverviewSection()}
+            ${renderAdvancedAnalyticsSection()}  <!-- PHASE 4: MOVED UP - after Yearly Overview -->
+            ${renderDistributionSection()}
+            ${renderHeatmapSection()}
             ${renderCategoryMixSection()}
-            ${renderControlPlaybookSection()}
             ${renderFinesSection()}
             ${renderTrendsSection()}
             ${renderTopFirmsSection()}
+            ${renderControlPlaybookSection()}    <!-- PHASE 4: MOVED DOWN - before end -->
           </main>
         </div>
         ${commonClientScripts}

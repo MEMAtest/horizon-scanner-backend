@@ -4,6 +4,7 @@
 const express = require('express')
 const router = express.Router()
 const { Pool } = require('pg')
+const { parseFinesJsonbFields } = require('../../utils/jsonbHelpers')
 
 // Direct database fallback for when enforcement service isn't initialized
 async function getDirectDbPool() {
@@ -42,8 +43,10 @@ async function directSearchFines(params) {
 
     const countResult = await pool.query('SELECT COUNT(*) FROM fca_fines WHERE amount IS NOT NULL')
 
+    const parsedFines = parseFinesJsonbFields(result.rows)
+
     await pool.end()
-    return { fines: result.rows, total: parseInt(countResult.rows[0].count) }
+    return { fines: parsedFines, total: parseInt(countResult.rows[0].count) }
   } catch (error) {
     console.error('Direct DB search error:', error)
     await pool.end().catch(() => {})
@@ -74,8 +77,10 @@ async function directGetRecentFines(limit = 20) {
       LIMIT $1
     `, [limit])
 
+    const parsedFines = parseFinesJsonbFields(result.rows)
+
     await pool.end()
-    return result.rows
+    return parsedFines
   } catch (error) {
     console.error('Direct DB recent fines error:', error)
     await pool.end().catch(() => {})
@@ -96,11 +101,47 @@ router.get('/stats', async (req, res) => {
       })
     }
 
-    const stats = await req.app.locals.enforcementService.getEnforcementStats()
+    // Parse filter parameters from query string
+    const filterParams = {}
+
+    // Parse years filter (comma-separated list)
+    if (req.query.years) {
+      filterParams.years = req.query.years
+        .split(',')
+        .map(y => parseInt(y.trim(), 10))
+        .filter(Number.isFinite)
+    }
+
+    // Parse breach type filter
+    if (req.query.breach_type) {
+      filterParams.breach_type = req.query.breach_type.trim()
+    }
+
+    // Parse amount range filters
+    if (req.query.minAmount) {
+      const minAmount = parseFloat(req.query.minAmount)
+      if (Number.isFinite(minAmount) && minAmount >= 0) {
+        filterParams.minAmount = minAmount
+      }
+    }
+
+    if (req.query.maxAmount) {
+      const maxAmount = parseFloat(req.query.maxAmount)
+      if (Number.isFinite(maxAmount) && maxAmount >= 0) {
+        filterParams.maxAmount = maxAmount
+      }
+    }
+
+    console.log('[stats] Filter params:', filterParams)
+
+    // Get stats with filters
+    const stats = await req.app.locals.enforcementService.getEnforcementStats(filterParams)
 
     res.json({
       success: true,
-      stats
+      stats,
+      filtered: Object.keys(filterParams).length > 0,
+      filters: filterParams
     })
   } catch (error) {
     console.error('Error getting enforcement stats:', error)
@@ -194,6 +235,74 @@ router.get('/trends', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve trends data'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/heatmap
+ * Get breach category × year heatmap data
+ */
+router.get('/heatmap', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const years = req.query.years
+      ? req.query.years.split(',').map(year => parseInt(year.trim(), 10)).filter(Number.isFinite)
+      : undefined
+
+    const heatmap = await req.app.locals.enforcementService.getHeatmapData({ years })
+
+    res.json({
+      success: true,
+      heatmap,
+      years,
+      count: heatmap.length
+    })
+  } catch (error) {
+    console.error('Error getting heatmap data:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve heatmap data'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/distribution
+ * Get fine amount distribution across buckets
+ */
+router.get('/distribution', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const years = req.query.years
+      ? req.query.years.split(',').map(year => parseInt(year.trim(), 10)).filter(Number.isFinite)
+      : undefined
+
+    const distribution = await req.app.locals.enforcementService.getDistribution({ years })
+
+    res.json({
+      success: true,
+      distribution,
+      years,
+      count: distribution.length
+    })
+  } catch (error) {
+    console.error('Error getting distribution data:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve distribution data'
     })
   }
 })
@@ -464,6 +573,7 @@ router.get('/fines-by-period', async (req, res) => {
 /**
  * GET /api/enforcement/distinct-firms
  * Get list of all distinct firms that have been fined
+ * Supports optional search query parameter for autocomplete
  */
 router.get('/distinct-firms', async (req, res) => {
   try {
@@ -474,11 +584,15 @@ router.get('/distinct-firms', async (req, res) => {
       })
     }
 
-    const firms = await req.app.locals.enforcementService.getDistinctFirms()
+    const searchQuery = req.query.q || ''
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100)
+
+    const firms = await req.app.locals.enforcementService.getDistinctFirms(searchQuery, limit)
 
     res.json({
       success: true,
       firms,
+      query: searchQuery,
       count: firms.length
     })
   } catch (error) {
@@ -522,6 +636,261 @@ router.get('/firm-details', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve firm details'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/compare-firms
+ * Compare multiple firms side-by-side (max 3 firms)
+ * Query params: firms (comma-separated list of firm names)
+ */
+router.get('/compare-firms', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const firmsParam = req.query.firms
+    if (!firmsParam) {
+      return res.status(400).json({
+        success: false,
+        error: 'Firms parameter is required (comma-separated list)'
+      })
+    }
+
+    const firmNames = firmsParam.split(',').map(f => f.trim()).filter(f => f.length > 0)
+
+    if (firmNames.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one firm name is required'
+      })
+    }
+
+    if (firmNames.length > 3) {
+      return res.status(400).json({
+        success: false,
+        error: 'Maximum 3 firms can be compared at once'
+      })
+    }
+
+    const comparison = await req.app.locals.enforcementService.compareFirms(firmNames)
+
+    res.json({
+      success: true,
+      firms: comparison,
+      count: comparison.length
+    })
+  } catch (error) {
+    console.error('Error comparing firms:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to compare firms'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/sector-benchmarks
+ * Get sector benchmarking data (avg, median, percentiles)
+ * Query params: sector (optional - if not provided, returns all sectors)
+ */
+router.get('/sector-benchmarks', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const sector = req.query.sector || null
+    const benchmarks = await req.app.locals.enforcementService.getSectorBenchmarks(sector)
+
+    res.json({
+      success: true,
+      benchmarks,
+      sector: sector || 'all'
+    })
+  } catch (error) {
+    console.error('Error getting sector benchmarks:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve sector benchmarks'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/firm-percentile
+ * Get a firm's percentile ranking within its sector
+ * Query params: firm (required), sector (optional)
+ */
+router.get('/firm-percentile', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const firmName = req.query.firm
+    if (!firmName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Firm name is required'
+      })
+    }
+
+    const sector = req.query.sector || null
+    const percentileData = await req.app.locals.enforcementService.getFirmPercentile(firmName, sector)
+
+    res.json({
+      success: true,
+      firm: firmName,
+      sector: sector || 'overall',
+      percentile: percentileData
+    })
+  } catch (error) {
+    console.error('Error getting firm percentile:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve firm percentile'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/sector-analysis
+ * Get sector-level analysis data for bubble chart visualization
+ * Returns: sector name, fine count, total amount, avg fine, dominant breach category
+ */
+router.get('/sector-analysis', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const analysis = await req.app.locals.enforcementService.getSectorAnalysis()
+
+    res.json({
+      success: true,
+      sectors: analysis,
+      count: analysis.length
+    })
+  } catch (error) {
+    console.error('Error getting sector analysis:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve sector analysis'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/percentile-rankings
+ * Get all firms with percentile rankings and tier classifications
+ * Query params: limit (default 50)
+ */
+router.get('/percentile-rankings', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100)
+    const rankings = await req.app.locals.enforcementService.getPercentileRankings(limit)
+
+    res.json({
+      success: true,
+      rankings,
+      count: rankings.length
+    })
+  } catch (error) {
+    console.error('Error getting percentile rankings:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve percentile rankings'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/sector-trends
+ * Get sector enforcement trends over time for line chart visualization
+ * Returns yearly totals for each sector
+ */
+router.get('/sector-trends', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const trends = await req.app.locals.enforcementService.getSectorTrends()
+
+    res.json({
+      success: true,
+      ...trends
+    })
+  } catch (error) {
+    console.error('Error getting sector trends:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve sector trends'
+    })
+  }
+})
+
+/**
+ * GET /api/enforcement/year-summary/:year
+ * Get comprehensive summary data for a specific year
+ */
+router.get('/year-summary/:year', async (req, res) => {
+  try {
+    if (!req.app.locals.enforcementService) {
+      return res.status(503).json({
+        success: false,
+        error: 'Enforcement service not available'
+      })
+    }
+
+    const year = parseInt(req.params.year, 10)
+
+    // Validate year
+    if (!Number.isFinite(year) || year < 2013 || year > new Date().getFullYear()) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid year. Must be between 2013 and ${new Date().getFullYear()}`
+      })
+    }
+
+    console.log(`[year-summary] Fetching summary for year ${year}`)
+    const summary = await req.app.locals.enforcementService.getYearSummary(year)
+
+    res.json({
+      success: true,
+      year,
+      summary
+    })
+  } catch (error) {
+    console.error('Error getting year summary:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve year summary'
     })
   }
 })

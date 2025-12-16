@@ -34,6 +34,7 @@ function renderHeaderSection() {
           <span class="meta-value" id="data-coverage">Full dataset</span>
         </div>
       </div>
+      <div id="chart-filter-badge-container" class="chart-filter-badge-container"></div>
     </header>
   `
 }

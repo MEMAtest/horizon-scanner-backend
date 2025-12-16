@@ -4,6 +4,7 @@
 const FCAFinesScraper = require('./fcaFinesScraper')
 const FCAFinesAI = require('./fcaFinesAI')
 const { Pool } = require('pg')
+const { parseFinesJsonbFields } = require('../utils/jsonbHelpers')
 
 class FCAEnforcementService {
   constructor(dbConfig, aiAnalyzer) {
@@ -180,8 +181,51 @@ class FCAEnforcementService {
     }
   }
 
-  async getEnforcementStats() {
+  /**
+   * Build WHERE clause conditions for filtering fines
+   * @param {Object} filterParams - Filter parameters
+   * @returns {string} WHERE clause SQL fragment
+   */
+  buildFilterWhereClause(filterParams = {}) {
+    const conditions = []
+
+    // Year filter
+    if (filterParams.years && filterParams.years.length > 0) {
+      const yearsList = filterParams.years.join(', ')
+      conditions.push(`year_issued IN (${yearsList})`)
+    }
+
+    // Breach type filter (searches in breach_categories JSONB)
+    if (filterParams.breach_type) {
+      const breachType = filterParams.breach_type.replace(/'/g, "''") // Escape single quotes
+      conditions.push(`(
+        breach_categories::text ILIKE '%${breachType}%' OR
+        breach_type ILIKE '%${breachType}%'
+      )`)
+    }
+
+    // Amount range filters
+    if (filterParams.minAmount !== undefined) {
+      conditions.push(`amount >= ${filterParams.minAmount}`)
+    }
+
+    if (filterParams.maxAmount !== undefined) {
+      conditions.push(`amount <= ${filterParams.maxAmount}`)
+    }
+
+    return conditions.length > 0 ? conditions.join(' AND ') : ''
+  }
+
+  async getEnforcementStats(filterParams = {}) {
     try {
+      console.log('[getEnforcementStats] Filter params:', filterParams)
+
+      // Build WHERE clause
+      const whereConditions = this.buildFilterWhereClause(filterParams)
+      const whereClause = whereConditions ? `WHERE ${whereConditions}` : ''
+
+      console.log('[getEnforcementStats] WHERE clause:', whereClause)
+
       const stats = await this.db.query(`
                 SELECT
                     COUNT(*) as total_fines,
@@ -208,11 +252,13 @@ class FCAEnforcementService {
                         FROM (
                             SELECT COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') AS entity
                             FROM fca_fines
+                            ${whereClause}
                             GROUP BY entity
                             HAVING COUNT(*) > 1
                         ) repeat_entities
                     ) as repeat_offenders
                 FROM fca_fines
+                ${whereClause}
             `)
 
       const breachStats = await this.db.query(`
@@ -240,6 +286,7 @@ class FCAEnforcementService {
                             END
                         ) as value
                     ) AS bc(category) ON true
+                    ${whereClause}
                 )
                 SELECT
                     category,
@@ -256,9 +303,9 @@ class FCAEnforcementService {
                     SELECT
                         COALESCE(
                             NULLIF(TRIM(s.sector), ''),
-                            NULLIF(TRIM(f.firm_category), ''),
-                            'Unspecified'
+                            'Empty'
                         ) AS sector,
+                        NULLIF(TRIM(f.firm_category), '') AS firm_category,
                         f.amount
                     FROM fca_fines f
                     LEFT JOIN LATERAL (
@@ -276,9 +323,11 @@ class FCAEnforcementService {
                             END
                         ) as value
                     ) AS s(sector) ON true
+                    ${whereClause}
                 )
                 SELECT
                     sector,
+                    MAX(firm_category) AS sample_firm_category,
                     COUNT(*) AS count,
                     SUM(amount) FILTER (WHERE amount IS NOT NULL) AS total_amount
                 FROM sector_source
@@ -290,6 +339,7 @@ class FCAEnforcementService {
       const yearsResult = await this.db.query(`
                 SELECT DISTINCT EXTRACT(YEAR FROM date_issued)::INT as year
                 FROM fca_fines
+                ${whereClause}
                 ORDER BY year DESC
                 LIMIT 20
             `)
@@ -313,6 +363,7 @@ class FCAEnforcementService {
                     ) as value
                 ) as val
                 WHERE val.value IS NOT NULL AND TRIM(val.value::text) <> ''
+                ${whereConditions ? `AND (${whereConditions})` : ''}
                 ORDER BY category ASC
             `)
 
@@ -327,6 +378,7 @@ class FCAEnforcementService {
                         COUNT(*) FILTER (WHERE systemic_risk = true) AS systemic_risk_cases,
                         COUNT(*) FILTER (WHERE precedent_setting = true) AS precedent_cases
                     FROM fca_fines
+                    ${whereClause}
                     GROUP BY year_issued
                 ),
                 category_rank AS (
@@ -364,6 +416,7 @@ class FCAEnforcementService {
                                 END
                             ) as value
                         ) AS bc(category) ON true
+                        ${whereClause}
                     ) data
                     GROUP BY data.year_issued, data.category
                 ),
@@ -402,6 +455,7 @@ class FCAEnforcementService {
                                 END
                             ) as value
                         ) AS s(sector) ON true
+                        ${whereClause}
                     ) data
                     GROUP BY data.year_issued, data.sector
                 )
@@ -447,6 +501,7 @@ class FCAEnforcementService {
                             END
                         ) as value
                     ) AS bc(category) ON true
+                    ${whereClause}
                 ),
                 top_categories AS (
                     SELECT category
@@ -478,13 +533,59 @@ class FCAEnforcementService {
         repeat_offenders: overview.repeat_offenders || 0
       }
 
+      // PHASE 2 FIX: Apply sector inference to yearly overview
+      const enhancedYearlyOverview = yearlyStatsResult.rows.map(row => {
+        if (!row.dominant_sector) {
+          return row
+        }
+
+        // Parse the JSONB dominant_sector object
+        let dominantSector = row.dominant_sector
+        if (typeof dominantSector === 'string') {
+          try {
+            dominantSector = JSON.parse(dominantSector)
+          } catch (e) {
+            console.warn('Failed to parse dominant_sector:', e)
+            return row
+          }
+        }
+
+        // Check if sector is 'Unspecified' or empty and try to infer
+        if (dominantSector && (dominantSector.sector === 'Unspecified' || !dominantSector.sector || dominantSector.sector.trim() === '')) {
+          // Try to infer sector from firm_category (we'd need to query this separately, but for now we'll mark it)
+          dominantSector.sector = 'Not captured'
+        }
+
+        return {
+          ...row,
+          dominant_sector: dominantSector
+        }
+      })
+
+      // PHASE 2 FIX: Apply sector inference to topSectors
+      const enhancedTopSectors = sectorStats.rows.map(row => {
+        let sector = row.sector
+
+        // If sector is 'Empty' or missing, try to infer from firm_category
+        if (!sector || sector === 'Empty' || sector === 'Unspecified' || sector.trim() === '') {
+          // Try to infer sector from firm_category
+          const inferredSector = this.inferSectorFromFirmCategory(row.sample_firm_category)
+          sector = inferredSector || 'Not captured'
+        }
+
+        return {
+          ...row,
+          sector: sector
+        }
+      })
+
       return {
         overview: normalisedOverview,
         topBreachTypes: breachStats.rows,
-        topSectors: sectorStats.rows,
+        topSectors: enhancedTopSectors,
         availableYears: yearsResult.rows.map(row => row.year),
         availableCategories: categoriesResult.rows.map(row => row.category),
-        yearlyOverview: yearlyStatsResult.rows,
+        yearlyOverview: enhancedYearlyOverview,
         topCategoryTrends: categoryTrendResult.rows,
         controlRecommendations: this.buildControlRecommendations(breachStats.rows, categoryTrendResult.rows, yearlyStatsResult.rows)
       }
@@ -592,12 +693,11 @@ class FCAEnforcementService {
                     precedent_setting,
                     final_notice_url
                 FROM fca_fines
-                WHERE processing_status = 'completed'
                 ORDER BY date_issued DESC
                 LIMIT $1
             `, [limit])
 
-      return result.rows
+      return parseFinesJsonbFields(result.rows)
     } catch (error) {
       console.error('Error getting recent fines:', error)
       throw error
@@ -611,7 +711,7 @@ class FCAEnforcementService {
       const filters = []
       const params = []
 
-      filters.push("processing_status = 'completed'")
+      // FIXED: Removed processing_status filter
       filters.push('date_issued IS NOT NULL')
 
       if (Array.isArray(years) && years.length > 0) {
@@ -696,6 +796,128 @@ class FCAEnforcementService {
     }
   }
 
+  async getHeatmapData(options = {}) {
+    try {
+      const { years } = options
+
+      // Fetch all fines and process in JavaScript due to complex JSONB encoding
+      const params = []
+      const filters = ['amount IS NOT NULL', 'year_issued IS NOT NULL', 'breach_categories IS NOT NULL']
+
+      if (Array.isArray(years) && years.length > 0) {
+        params.push(years.map(year => parseInt(year, 10)).filter(Number.isFinite))
+        filters.push(`year_issued = ANY($${params.length})`)
+      }
+
+      const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
+
+      const query = `
+        SELECT year_issued, breach_categories, amount
+        FROM fca_fines
+        ${whereClause}
+      `
+
+      const result = await this.db.query(query, params)
+
+      // Process in JavaScript to handle complex JSON encoding
+      const heatmapMap = new Map()
+
+      result.rows.forEach(row => {
+        const year = parseInt(row.year_issued)
+        const amount = parseFloat(row.amount) || 0
+
+        // Parse breach categories (handling double/triple encoding)
+        let categories = []
+        try {
+          let parsed = row.breach_categories
+          if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed)
+          }
+          if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed)
+          }
+          if (Array.isArray(parsed)) {
+            categories = parsed
+          }
+        } catch (e) {
+          // Skip rows with unparseable categories
+          return
+        }
+
+        categories.forEach(category => {
+          if (!category) return
+          const key = `${year}::${category}`
+          const existing = heatmapMap.get(key) || { year, category, count: 0, total_amount: 0 }
+          existing.count += 1
+          existing.total_amount += amount
+          heatmapMap.set(key, existing)
+        })
+      })
+
+      // Convert to array and sort
+      const heatmapData = Array.from(heatmapMap.values())
+        .sort((a, b) => {
+          if (a.year === b.year) {
+            return a.category.localeCompare(b.category)
+          }
+          return a.year - b.year
+        })
+
+      return heatmapData
+    } catch (error) {
+      console.error('Error getting heatmap data:', error)
+      throw error
+    }
+  }
+
+  async getDistribution(options = {}) {
+    try {
+      const { years } = options
+      const filters = ['amount IS NOT NULL']
+      const params = []
+
+      // Year filter
+      if (Array.isArray(years) && years.length > 0) {
+        params.push(years.map(year => parseInt(year, 10)).filter(Number.isFinite))
+        filters.push(`year_issued = ANY($${params.length})`)
+      }
+
+      const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
+
+      const query = `
+        SELECT
+          CASE
+            WHEN amount < 100000 THEN '£0-100k'
+            WHEN amount >= 100000 AND amount < 500000 THEN '£100k-500k'
+            WHEN amount >= 500000 AND amount < 1000000 THEN '£500k-1M'
+            WHEN amount >= 1000000 AND amount < 5000000 THEN '£1M-5M'
+            WHEN amount >= 5000000 THEN '£5M+'
+          END as bucket,
+          CASE
+            WHEN amount < 100000 THEN 1
+            WHEN amount >= 100000 AND amount < 500000 THEN 2
+            WHEN amount >= 500000 AND amount < 1000000 THEN 3
+            WHEN amount >= 1000000 AND amount < 5000000 THEN 4
+            WHEN amount >= 5000000 THEN 5
+          END as bucket_order,
+          COUNT(*) as count,
+          SUM(amount) as total_amount,
+          MIN(amount) as min_amount,
+          MAX(amount) as max_amount
+        FROM fca_fines
+        ${whereClause}
+        GROUP BY bucket, bucket_order
+        ORDER BY bucket_order
+      `
+
+      const result = await this.db.query(query, params)
+      return result.rows
+    } catch (error) {
+      console.error('Error getting fine amount distribution:', error)
+      throw error
+    }
+  }
+
   async searchFines(searchParams = {}) {
     try {
       const {
@@ -713,7 +935,7 @@ class FCAEnforcementService {
         offset = 0
       } = searchParams
 
-      const whereConditions = ['processing_status = \'completed\'']
+      const whereConditions = []  // FIXED: Removed processing_status filter
       const queryParams = []
       let paramCount = 0
 
@@ -831,7 +1053,7 @@ class FCAEnforcementService {
 
       return {
         total: parseInt(countResult.rows[0].total),
-        fines: dataResult.rows,
+        fines: parseFinesJsonbFields(dataResult.rows),
         limit,
         offset
       }
@@ -954,7 +1176,7 @@ class FCAEnforcementService {
 
           return {
             ...firm,
-            fines: finesResult.rows
+            fines: parseFinesJsonbFields(finesResult.rows)
           }
         })
       )
@@ -990,10 +1212,11 @@ class FCAEnforcementService {
         ORDER BY date_issued DESC
       `)
 
-      const totalAmount = result.rows.reduce((sum, fine) => sum + (Number(fine.amount) || 0), 0)
+      const parsedFines = parseFinesJsonbFields(result.rows)
+      const totalAmount = parsedFines.reduce((sum, fine) => sum + (Number(fine.amount) || 0), 0)
 
       return {
-        fines: result.rows,
+        fines: parsedFines,
         totalAmount
       }
     } catch (error) {
@@ -1002,8 +1225,17 @@ class FCAEnforcementService {
     }
   }
 
-  async getDistinctFirms() {
+  async getDistinctFirms(searchQuery = '', limit = 20) {
     try {
+      const params = []
+      let whereClause = ''
+
+      // Add search filter if provided
+      if (searchQuery && searchQuery.trim().length > 0) {
+        whereClause = 'WHERE firm_individual ILIKE $1'
+        params.push(`%${searchQuery.trim()}%`)
+      }
+
       const result = await this.db.query(`
         SELECT
           COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
@@ -1012,9 +1244,11 @@ class FCAEnforcementService {
           MIN(date_issued) as first_fine_date,
           MAX(date_issued) as latest_fine_date
         FROM fca_fines
+        ${whereClause}
         GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
         ORDER BY total_amount DESC NULLS LAST
-      `)
+        LIMIT $${params.length + 1}
+      `, [...params, limit])
 
       return result.rows
     } catch (error) {
@@ -1062,13 +1296,1019 @@ class FCAEnforcementService {
 
       return {
         ...summaryResult.rows[0],
-        fines: finesResult.rows
+        fines: parseFinesJsonbFields(finesResult.rows)
       }
     } catch (error) {
       console.error('Error getting firm details:', error)
       throw error
     }
   }
+
+  /**
+   * Compare multiple firms side-by-side (max 3)
+   * @param {Array<string>} firmNames - Array of firm names to compare
+   * @returns {Array<Object>} Comparison data for each firm including yearly breakdown
+   */
+  async compareFirms(firmNames) {
+    try {
+      const comparisonData = []
+
+      for (const firmName of firmNames) {
+        // Get firm summary
+        const summaryResult = await this.db.query(`
+          SELECT
+            COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+            COUNT(*) as fine_count,
+            SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
+            AVG(amount) FILTER (WHERE amount IS NOT NULL) as avg_amount,
+            AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) as average_risk,
+            MIN(date_issued) as first_fine_date,
+            MAX(date_issued) as latest_fine_date
+          FROM fca_fines
+          WHERE COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') = $1
+          GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+        `, [firmName])
+
+        if (summaryResult.rows.length === 0) {
+          // If firm not found, add placeholder
+          comparisonData.push({
+            firm_name: firmName,
+            fine_count: 0,
+            total_amount: 0,
+            avg_amount: 0,
+            average_risk: 0,
+            first_fine_date: null,
+            latest_fine_date: null,
+            yearly_breakdown: [],
+            not_found: true
+          })
+          continue
+        }
+
+        // Get yearly breakdown for the firm
+        const yearlyResult = await this.db.query(`
+          SELECT
+            EXTRACT(YEAR FROM date_issued)::integer as year,
+            COUNT(*) as fine_count,
+            SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount
+          FROM fca_fines
+          WHERE COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') = $1
+          GROUP BY EXTRACT(YEAR FROM date_issued)
+          ORDER BY year DESC
+        `, [firmName])
+
+        comparisonData.push({
+          ...summaryResult.rows[0],
+          yearly_breakdown: yearlyResult.rows
+        })
+      }
+
+      return comparisonData
+    } catch (error) {
+      console.error('Error comparing firms:', error)
+      throw error
+    }
+  }
+
+  // ============================================================================
+  // PEER BENCHMARKING METHODS (Phase 6)
+  // ============================================================================
+
+  /**
+   * Get sector benchmarking data (avg, median, percentiles)
+   * @param {string|null} sector - Specific sector or null for all sectors
+   * @returns {Object} Benchmarking statistics
+   */
+  async getSectorBenchmarks(sector = null) {
+    try {
+      let whereClause = 'WHERE amount IS NOT NULL'
+      const params = []
+
+      if (sector) {
+        whereClause += ` AND (
+          affected_sectors::text ILIKE $1
+          OR affected_sectors::text ILIKE $2
+        )`
+        params.push(`%"${sector}"%`, `%${sector}%`)
+      }
+
+      // Get overall statistics and percentiles for the sector
+      const statsQuery = `
+        WITH firm_totals AS (
+          SELECT
+            COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+            SUM(amount) as total_amount,
+            COUNT(*) as fine_count,
+            AVG(amount) as avg_fine
+          FROM fca_fines
+          ${whereClause}
+          GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+        ),
+        ranked AS (
+          SELECT
+            firm_name,
+            total_amount,
+            fine_count,
+            avg_fine,
+            PERCENT_RANK() OVER (ORDER BY total_amount) as percentile_rank
+          FROM firm_totals
+        )
+        SELECT
+          COUNT(*) as firm_count,
+          AVG(total_amount) as avg_total,
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total_amount) as median_total,
+          PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY total_amount) as p25_total,
+          PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY total_amount) as p75_total,
+          PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY total_amount) as p90_total,
+          MIN(total_amount) as min_total,
+          MAX(total_amount) as max_total,
+          AVG(fine_count) as avg_fine_count,
+          AVG(avg_fine) as avg_fine_size
+        FROM ranked
+      `
+
+      const statsResult = await this.db.query(statsQuery, params)
+
+      // Get top firms in this sector
+      const topFirmsQuery = `
+        SELECT
+          COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+          SUM(amount) as total_amount,
+          COUNT(*) as fine_count
+        FROM fca_fines
+        ${whereClause}
+        GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+        ORDER BY total_amount DESC
+        LIMIT 5
+      `
+
+      const topFirmsResult = await this.db.query(topFirmsQuery, params)
+
+      return {
+        sector: sector || 'All Sectors',
+        statistics: statsResult.rows[0] || {},
+        top_firms: topFirmsResult.rows
+      }
+    } catch (error) {
+      console.error('Error getting sector benchmarks:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get a firm's percentile ranking within a sector or overall
+   * @param {string} firmName - Firm name to analyze
+   * @param {string|null} sector - Specific sector or null for overall
+   * @returns {Object} Percentile data for the firm
+   */
+  async getFirmPercentile(firmName, sector = null) {
+    try {
+      let whereClause = 'WHERE amount IS NOT NULL'
+      const params = [firmName]
+
+      if (sector) {
+        whereClause += ` AND (
+          affected_sectors::text ILIKE $2
+          OR affected_sectors::text ILIKE $3
+        )`
+        params.push(`%"${sector}"%`, `%${sector}%`)
+      }
+
+      // Get the firm's total and its percentile rank
+      const query = `
+        WITH firm_totals AS (
+          SELECT
+            COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+            SUM(amount) as total_amount,
+            COUNT(*) as fine_count,
+            AVG(amount) as avg_fine
+          FROM fca_fines
+          ${whereClause}
+          GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+        ),
+        ranked AS (
+          SELECT
+            firm_name,
+            total_amount,
+            fine_count,
+            avg_fine,
+            PERCENT_RANK() OVER (ORDER BY total_amount) * 100 as percentile,
+            RANK() OVER (ORDER BY total_amount DESC) as rank_desc,
+            COUNT(*) OVER () as total_firms
+          FROM firm_totals
+        )
+        SELECT *
+        FROM ranked
+        WHERE firm_name = $1
+      `
+
+      const firmResult = await this.db.query(query, params)
+
+      if (firmResult.rows.length === 0) {
+        return {
+          found: false,
+          message: 'Firm not found in this sector'
+        }
+      }
+
+      const firmData = firmResult.rows[0]
+
+      // Get sector benchmarks for comparison
+      const benchmarks = await this.getSectorBenchmarks(sector)
+
+      // Determine tier based on percentile
+      let tier = 'Average'
+      const percentile = parseFloat(firmData.percentile) || 0
+      if (percentile >= 99) tier = 'Top 1%'
+      else if (percentile >= 95) tier = 'Top 5%'
+      else if (percentile >= 90) tier = 'Top 10%'
+      else if (percentile >= 75) tier = 'Top 25%'
+      else if (percentile >= 50) tier = 'Above Average'
+      else if (percentile >= 25) tier = 'Below Average'
+      else tier = 'Bottom 25%'
+
+      return {
+        found: true,
+        firm_name: firmData.firm_name,
+        total_amount: parseFloat(firmData.total_amount) || 0,
+        fine_count: parseInt(firmData.fine_count) || 0,
+        avg_fine: parseFloat(firmData.avg_fine) || 0,
+        percentile: percentile,
+        rank: parseInt(firmData.rank_desc) || 0,
+        total_firms: parseInt(firmData.total_firms) || 0,
+        tier: tier,
+        sector_benchmarks: {
+          avg: parseFloat(benchmarks.statistics.avg_total) || 0,
+          median: parseFloat(benchmarks.statistics.median_total) || 0,
+          p75: parseFloat(benchmarks.statistics.p75_total) || 0,
+          p90: parseFloat(benchmarks.statistics.p90_total) || 0
+        },
+        vs_average: firmData.total_amount && benchmarks.statistics.avg_total
+          ? ((firmData.total_amount - benchmarks.statistics.avg_total) / benchmarks.statistics.avg_total * 100).toFixed(1)
+          : 0,
+        vs_median: firmData.total_amount && benchmarks.statistics.median_total
+          ? ((firmData.total_amount - benchmarks.statistics.median_total) / benchmarks.statistics.median_total * 100).toFixed(1)
+          : 0
+      }
+    } catch (error) {
+      console.error('Error getting firm percentile:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get all firms with percentile rankings and tier classifications
+   * @param {number} limit - Maximum number of firms to return
+   * @returns {Array<Object>} Ranked firms with percentile data
+   */
+  async getPercentileRankings(limit = 50) {
+    try {
+      const query = `
+        WITH firm_totals AS (
+          SELECT
+            COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') as firm_name,
+            SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
+            COUNT(*) as fine_count,
+            AVG(amount) FILTER (WHERE amount IS NOT NULL) as avg_fine,
+            MIN(date_issued) as first_fine_date,
+            MAX(date_issued) as latest_fine_date
+          FROM fca_fines
+          WHERE amount IS NOT NULL
+          GROUP BY COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')
+        ),
+        ranked AS (
+          SELECT
+            firm_name,
+            total_amount,
+            fine_count,
+            avg_fine,
+            first_fine_date,
+            latest_fine_date,
+            PERCENT_RANK() OVER (ORDER BY total_amount) * 100 as percentile,
+            RANK() OVER (ORDER BY total_amount DESC) as rank_position,
+            COUNT(*) OVER () as total_firms
+          FROM firm_totals
+        )
+        SELECT *
+        FROM ranked
+        ORDER BY total_amount DESC
+        LIMIT $1
+      `
+
+      const result = await this.db.query(query, [limit])
+
+      // Add tier classification to each firm
+      return result.rows.map(firm => {
+        const percentile = parseFloat(firm.percentile) || 0
+
+        let tier = 'Average'
+        let tierColor = '#64748b'
+        if (percentile >= 99) { tier = 'Top 1%'; tierColor = '#dc2626' }
+        else if (percentile >= 95) { tier = 'Top 5%'; tierColor = '#ea580c' }
+        else if (percentile >= 90) { tier = 'Top 10%'; tierColor = '#d97706' }
+        else if (percentile >= 75) { tier = 'Top 25%'; tierColor = '#ca8a04' }
+        else if (percentile >= 50) { tier = 'Above Average'; tierColor = '#65a30d' }
+        else if (percentile >= 25) { tier = 'Below Average'; tierColor = '#0d9488' }
+        else { tier = 'Bottom 25%'; tierColor = '#0891b2' }
+
+        // Add medal emoji for top 3
+        let medal = ''
+        if (firm.rank_position === '1' || firm.rank_position === 1) medal = '🥇'
+        else if (firm.rank_position === '2' || firm.rank_position === 2) medal = '🥈'
+        else if (firm.rank_position === '3' || firm.rank_position === 3) medal = '🥉'
+
+        return {
+          ...firm,
+          total_amount: parseFloat(firm.total_amount) || 0,
+          fine_count: parseInt(firm.fine_count) || 0,
+          avg_fine: parseFloat(firm.avg_fine) || 0,
+          percentile: percentile,
+          rank: parseInt(firm.rank_position) || 0,
+          total_firms: parseInt(firm.total_firms) || 0,
+          tier: tier,
+          tier_color: tierColor,
+          medal: medal
+        }
+      })
+    } catch (error) {
+      console.error('Error getting percentile rankings:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get sector-level analysis for bubble chart visualization
+   * @returns {Array<Object>} Sector data with fine count, totals, avg, and dominant breach category
+   */
+  async getSectorAnalysis() {
+    try {
+      // Query to get sector statistics with dominant breach category
+      const query = `
+        WITH sector_data AS (
+          SELECT
+            s.sector,
+            COUNT(*) as fine_count,
+            SUM(f.amount) FILTER (WHERE f.amount IS NOT NULL) as total_amount,
+            AVG(f.amount) FILTER (WHERE f.amount IS NOT NULL) as avg_amount,
+            MAX(f.amount) FILTER (WHERE f.amount IS NOT NULL) as max_amount
+          FROM fca_fines f
+          CROSS JOIN LATERAL (
+            SELECT jsonb_array_elements_text(
+              CASE
+                WHEN f.affected_sectors IS NULL THEN '["Not captured"]'::jsonb
+                WHEN f.affected_sectors::text = '[]' THEN '["Not captured"]'::jsonb
+                WHEN f.affected_sectors::text = '' THEN '["Not captured"]'::jsonb
+                ELSE f.affected_sectors
+              END
+            ) as sector
+          ) s
+          WHERE f.amount IS NOT NULL
+          GROUP BY s.sector
+          HAVING COUNT(*) >= 2
+        ),
+        breach_data AS (
+          SELECT
+            s.sector,
+            b.breach as breach_category,
+            COUNT(*) as breach_count,
+            ROW_NUMBER() OVER (PARTITION BY s.sector ORDER BY COUNT(*) DESC) as rn
+          FROM fca_fines f
+          CROSS JOIN LATERAL (
+            SELECT jsonb_array_elements_text(
+              CASE
+                WHEN f.affected_sectors IS NULL THEN '["Not captured"]'::jsonb
+                WHEN f.affected_sectors::text = '[]' THEN '["Not captured"]'::jsonb
+                WHEN f.affected_sectors::text = '' THEN '["Not captured"]'::jsonb
+                ELSE f.affected_sectors
+              END
+            ) as sector
+          ) s
+          CROSS JOIN LATERAL (
+            SELECT jsonb_array_elements_text(
+              CASE
+                WHEN f.breach_categories IS NULL THEN '["Other"]'::jsonb
+                WHEN f.breach_categories::text = '[]' THEN '["Other"]'::jsonb
+                WHEN f.breach_categories::text = '' THEN '["Other"]'::jsonb
+                ELSE f.breach_categories
+              END
+            ) as breach
+          ) b
+          WHERE f.amount IS NOT NULL
+          GROUP BY s.sector, b.breach
+        )
+        SELECT
+          sd.sector,
+          sd.fine_count,
+          sd.total_amount,
+          sd.avg_amount,
+          sd.max_amount,
+          COALESCE(bd.breach_category, 'Other') as dominant_breach
+        FROM sector_data sd
+        LEFT JOIN breach_data bd ON sd.sector = bd.sector AND bd.rn = 1
+        ORDER BY sd.total_amount DESC
+      `
+
+      const result = await this.db.query(query)
+
+      // Assign colors based on dominant breach category
+      const breachColors = {
+        'Anti-Money Laundering': '#dc2626',
+        'Systems and Controls': '#ea580c',
+        'Customer Treatment': '#d97706',
+        'Market Abuse': '#ca8a04',
+        'Financial Crime': '#65a30d',
+        'Disclosure': '#0d9488',
+        'Conflicts of Interest': '#0891b2',
+        'Conduct': '#6366f1',
+        'Prudential': '#8b5cf6',
+        'Other': '#64748b'
+      }
+
+      return result.rows.map(sector => ({
+        sector: sector.sector,
+        fine_count: parseInt(sector.fine_count) || 0,
+        total_amount: parseFloat(sector.total_amount) || 0,
+        avg_amount: parseFloat(sector.avg_amount) || 0,
+        max_amount: parseFloat(sector.max_amount) || 0,
+        dominant_breach: sector.dominant_breach,
+        color: breachColors[sector.dominant_breach] || breachColors['Other']
+      }))
+    } catch (error) {
+      console.error('Error getting sector analysis:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get sector enforcement trends over time
+   * Returns yearly totals for each sector for line chart visualization
+   * @returns {Object} {years: [], sectors: [{name, data: []}], matrix: {}}
+   */
+  async getSectorTrends() {
+    try {
+      const query = `
+        WITH sector_year_data AS (
+          SELECT
+            s.sector,
+            EXTRACT(YEAR FROM f.date_issued)::integer as year,
+            COUNT(*) as fine_count,
+            SUM(f.amount) FILTER (WHERE f.amount IS NOT NULL) as total_amount
+          FROM fca_fines f
+          CROSS JOIN LATERAL (
+            SELECT jsonb_array_elements_text(
+              CASE
+                WHEN f.affected_sectors IS NULL THEN '["Not captured"]'::jsonb
+                WHEN f.affected_sectors::text = '[]' THEN '["Not captured"]'::jsonb
+                WHEN f.affected_sectors::text = '' THEN '["Not captured"]'::jsonb
+                ELSE f.affected_sectors
+              END
+            ) as sector
+          ) s
+          WHERE f.date_issued IS NOT NULL
+            AND f.amount IS NOT NULL
+          GROUP BY s.sector, EXTRACT(YEAR FROM f.date_issued)
+        ),
+        all_years AS (
+          SELECT DISTINCT year FROM sector_year_data ORDER BY year
+        ),
+        sector_totals AS (
+          SELECT sector, SUM(total_amount) as grand_total
+          FROM sector_year_data
+          GROUP BY sector
+          ORDER BY grand_total DESC
+          LIMIT 10
+        )
+        SELECT
+          syd.sector,
+          syd.year,
+          syd.fine_count,
+          syd.total_amount
+        FROM sector_year_data syd
+        INNER JOIN sector_totals st ON syd.sector = st.sector
+        ORDER BY st.grand_total DESC, syd.year ASC
+      `
+
+      const result = await this.db.query(query)
+
+      // Get unique years and sectors
+      const yearsSet = new Set()
+      const sectorsMap = new Map()
+
+      result.rows.forEach(row => {
+        yearsSet.add(row.year)
+        if (!sectorsMap.has(row.sector)) {
+          sectorsMap.set(row.sector, new Map())
+        }
+        sectorsMap.get(row.sector).set(row.year, {
+          fine_count: parseInt(row.fine_count) || 0,
+          total_amount: parseFloat(row.total_amount) || 0
+        })
+      })
+
+      const years = Array.from(yearsSet).sort((a, b) => a - b)
+
+      // Define sector colors
+      const sectorColors = {
+        'Banking': '#3b82f6',
+        'Individual': '#8b5cf6',
+        'Insurance': '#10b981',
+        'Brokerage & Trading': '#f59e0b',
+        'Investment Banking': '#ef4444',
+        'Asset Management': '#06b6d4',
+        'Wealth Management': '#ec4899',
+        'Consumer Finance': '#f97316',
+        'Payments & E-Money': '#14b8a6',
+        'Investment Services': '#6366f1',
+        'Pensions': '#84cc16',
+        'Commodities': '#78716c',
+        'Not captured': '#9ca3af'
+      }
+
+      // Build sector data for charts
+      const sectors = []
+      sectorsMap.forEach((yearData, sectorName) => {
+        const data = years.map(year => ({
+          year,
+          fine_count: yearData.get(year)?.fine_count || 0,
+          total_amount: yearData.get(year)?.total_amount || 0
+        }))
+
+        const totalAmount = data.reduce((sum, d) => sum + d.total_amount, 0)
+        const totalCount = data.reduce((sum, d) => sum + d.fine_count, 0)
+
+        sectors.push({
+          name: sectorName,
+          color: sectorColors[sectorName] || '#64748b',
+          data,
+          totalAmount,
+          totalCount
+        })
+      })
+
+      // Sort by total amount
+      sectors.sort((a, b) => b.totalAmount - a.totalAmount)
+
+      return {
+        years,
+        sectors,
+        summary: {
+          totalSectors: sectors.length,
+          yearRange: `${years[0]} - ${years[years.length - 1]}`,
+          topSector: sectors[0]?.name || 'N/A'
+        }
+      }
+    } catch (error) {
+      console.error('Error getting sector trends:', error)
+      throw error
+    }
+  }
+
+  // ============================================================================
+  // YEAR SUMMARY METHODS (Phase 4)
+  // ============================================================================
+
+  /**
+   * Get comprehensive year summary with all sections
+   * @param {number} year - Year to analyze
+   * @returns {Object} Complete year summary data
+   */
+  async getYearSummary(year) {
+    try {
+      const [
+        yearStats,
+        topFirms,
+        categoryBreakdown,
+        monthlyTimeline,
+        priorYearStats,
+        datasetAverages
+      ] = await Promise.all([
+        this.getYearStats(year),
+        this.getTopFirmsForYear(year),
+        this.getCategoryBreakdownForYear(year),
+        this.getMonthlyTimelineForYear(year),
+        this.getYearStats(year - 1),
+        this.getDatasetAverages()
+      ])
+
+      const aiSummary = this.generateYearSummary(
+        year, yearStats, categoryBreakdown, topFirms, priorYearStats
+      )
+
+      return {
+        aiSummary,
+        yearStats,
+        priorYearStats,
+        datasetAverages,
+        topFirms,
+        categoryBreakdown,
+        monthlyTimeline
+      }
+    } catch (error) {
+      console.error(`Error getting year summary for ${year}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get statistics for a specific year
+   * @param {number} year - Year to analyze
+   * @returns {Object} Year statistics
+   */
+  async getYearStats(year) {
+    try {
+      const result = await this.db.query(`
+        SELECT
+          COUNT(*) as fine_count,
+          SUM(amount) FILTER (WHERE amount IS NOT NULL) as total_amount,
+          AVG(amount) FILTER (WHERE amount IS NOT NULL) as average_fine,
+          MAX(amount) FILTER (WHERE amount IS NOT NULL) as largest_fine,
+          MIN(amount) FILTER (WHERE amount IS NOT NULL) as smallest_fine,
+          COUNT(DISTINCT COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown')) as distinct_firms,
+          AVG(risk_score) FILTER (WHERE risk_score IS NOT NULL) as avg_risk_score,
+          COUNT(*) FILTER (WHERE systemic_risk = true) as systemic_risk_count
+        FROM fca_fines
+        WHERE year_issued = $1
+          AND amount IS NOT NULL
+      `, [year])
+
+      return result.rows[0] || {
+        fine_count: 0,
+        total_amount: 0,
+        average_fine: 0,
+        largest_fine: 0,
+        smallest_fine: 0,
+        distinct_firms: 0,
+        avg_risk_score: 0,
+        systemic_risk_count: 0
+      }
+    } catch (error) {
+      console.error(`Error getting year stats for ${year}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get dataset-wide averages for comparison
+   * @returns {Object} Dataset average statistics
+   */
+  async getDatasetAverages() {
+    try {
+      const result = await this.db.query(`
+        WITH yearly_aggregates AS (
+          SELECT
+            year_issued as year,
+            COUNT(*) as fine_count,
+            SUM(amount) as total_amount
+          FROM fca_fines
+          WHERE amount IS NOT NULL
+            AND year_issued IS NOT NULL
+          GROUP BY year_issued
+        )
+        SELECT
+          AVG(fine_count) as avg_fines_per_year,
+          AVG(total_amount) as avg_amount_per_year
+        FROM yearly_aggregates
+      `)
+
+      return result.rows[0] || {
+        avg_fines_per_year: 0,
+        avg_amount_per_year: 0
+      }
+    } catch (error) {
+      console.error('Error getting dataset averages:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get top 10 firms fined in a specific year
+   * @param {number} year - Year to analyze
+   * @returns {Array} Top firms with their fines
+   */
+  async getTopFirmsForYear(year) {
+    try {
+      // First get the aggregated data
+      const result = await this.db.query(`
+        SELECT
+          firm_individual as firm_name,
+          COUNT(*) as fine_count,
+          SUM(amount) as total_amount,
+          AVG(risk_score) as avg_risk_score,
+          array_agg(
+            json_build_object(
+              'date_issued', date_issued,
+              'amount', amount,
+              'breach_categories', breach_categories,
+              'final_notice_url', final_notice_url
+            ) ORDER BY date_issued DESC
+          ) as fines
+        FROM fca_fines
+        WHERE year_issued = $1
+          AND amount IS NOT NULL
+          AND COALESCE(NULLIF(TRIM(firm_individual), ''), 'Unknown') != 'Unknown'
+        GROUP BY firm_individual
+        ORDER BY SUM(amount) DESC
+        LIMIT 10
+      `, [year])
+
+      // Parse breach_categories for each fine in each firm
+      return result.rows.map(firm => ({
+        ...firm,
+        fine_count: parseInt(firm.fine_count),
+        total_amount: parseFloat(firm.total_amount),
+        avg_risk_score: firm.avg_risk_score ? parseFloat(firm.avg_risk_score) : null,
+        fines: firm.fines.map(fine => ({
+          ...fine,
+          breach_categories: this.parseJsonbField(fine.breach_categories)
+        }))
+      }))
+    } catch (error) {
+      console.error(`Error getting top firms for ${year}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get category breakdown for a specific year
+   * @param {number} year - Year to analyze
+   * @returns {Array} Category statistics with percentages
+   */
+  async getCategoryBreakdownForYear(year) {
+    try {
+      // Get all fines for the year
+      const result = await this.db.query(`
+        SELECT amount, breach_categories
+        FROM fca_fines
+        WHERE year_issued = $1
+          AND amount IS NOT NULL
+      `, [year])
+
+      // Process in JavaScript to handle JSONB
+      const categoryMap = new Map()
+      let totalFines = 0
+
+      result.rows.forEach(row => {
+        const amount = parseFloat(row.amount) || 0
+        let categories = this.parseJsonbField(row.breach_categories)
+
+        if (!Array.isArray(categories) || categories.length === 0) {
+          categories = ['Not Categorised']
+        }
+
+        categories.forEach(category => {
+          if (!category) return
+          const existing = categoryMap.get(category) || { category, fine_count: 0, total_amount: 0 }
+          existing.fine_count += 1
+          existing.total_amount += amount
+          categoryMap.set(category, existing)
+          totalFines += 1
+        })
+      })
+
+      // Convert to array and calculate percentages
+      const breakdown = Array.from(categoryMap.values()).map(item => ({
+        category: item.category,
+        fine_count: item.fine_count,
+        total_amount: item.total_amount,
+        avg_amount: Math.round(item.total_amount / item.fine_count),
+        percentage: totalFines > 0 ? Math.round((item.fine_count / totalFines) * 1000) / 10 : 0
+      }))
+
+      return breakdown.sort((a, b) => b.fine_count - a.fine_count)
+    } catch (error) {
+      console.error(`Error getting category breakdown for ${year}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get monthly timeline for a specific year
+   * @param {number} year - Year to analyze
+   * @returns {Array} Monthly statistics (all 12 months)
+   */
+  async getMonthlyTimelineForYear(year) {
+    try {
+      const result = await this.db.query(`
+        SELECT
+          EXTRACT(MONTH FROM date_issued) as month,
+          TO_CHAR(date_issued, 'Mon') as month_name,
+          COUNT(*) as fine_count,
+          SUM(amount) as total_amount,
+          AVG(amount) as avg_amount
+        FROM fca_fines
+        WHERE year_issued = $1
+          AND amount IS NOT NULL
+          AND date_issued IS NOT NULL
+        GROUP BY EXTRACT(MONTH FROM date_issued), TO_CHAR(date_issued, 'Mon')
+        ORDER BY month
+      `, [year])
+
+      // Fill in missing months with zero values
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const monthlyData = monthNames.map((monthName, index) => {
+        const existing = result.rows.find(row => parseInt(row.month) === index + 1)
+        return existing ? {
+          month: index + 1,
+          month_name: monthName,
+          fine_count: parseInt(existing.fine_count),
+          total_amount: parseFloat(existing.total_amount),
+          avg_amount: existing.avg_amount ? parseFloat(existing.avg_amount) : 0
+        } : {
+          month: index + 1,
+          month_name: monthName,
+          fine_count: 0,
+          total_amount: 0,
+          avg_amount: 0
+        }
+      })
+
+      return monthlyData
+    } catch (error) {
+      console.error(`Error getting monthly timeline for ${year}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Generate AI summary text for a year (template-based)
+   * @param {number} year - Year to summarize
+   * @param {Object} yearStats - Year statistics
+   * @param {Array} categoryBreakdown - Category breakdown
+   * @param {Array} topFirms - Top firms
+   * @param {Object} priorYearStats - Prior year statistics (for comparison)
+   * @returns {Object} Two-paragraph summary
+   */
+  generateYearSummary(year, yearStats, categoryBreakdown, topFirms, priorYearStats) {
+    const fineCount = parseInt(yearStats.fine_count || 0)
+    const totalAmount = parseFloat(yearStats.total_amount || 0)
+    const avgFine = parseFloat(yearStats.average_fine || 0)
+    const largestFine = parseFloat(yearStats.largest_fine || 0)
+
+    // Calculate YoY changes
+    const priorFineCount = parseInt(priorYearStats?.fine_count || 0)
+    const priorTotalAmount = parseFloat(priorYearStats?.total_amount || 0)
+
+    const countChange = priorFineCount > 0
+      ? ((fineCount - priorFineCount) / priorFineCount * 100).toFixed(1)
+      : null
+    const amountChange = priorTotalAmount > 0
+      ? ((totalAmount - priorTotalAmount) / priorTotalAmount * 100).toFixed(1)
+      : null
+
+    const dominantCategory = categoryBreakdown[0] || {
+      category: 'Not Categorised', fine_count: 0, percentage: 0
+    }
+    const notableFirm = topFirms[0] || { firm_name: 'Unknown', total_amount: 0 }
+
+    // Paragraph 1: Overview and YoY comparison
+    let paragraph1 = `In ${year}, the FCA issued ${fineCount} enforcement ${fineCount === 1 ? 'action' : 'actions'} totalling £${(totalAmount / 1000000).toFixed(1)}m, with an average fine of £${(avgFine / 1000).toFixed(0)}k. `
+
+    if (countChange !== null && amountChange !== null) {
+      const countDirection = parseFloat(countChange) >= 0 ? 'increased' : 'decreased'
+      const amountDirection = parseFloat(amountChange) >= 0 ? 'increased' : 'decreased'
+      paragraph1 += `Compared to ${year - 1}, the number of fines ${countDirection} by ${Math.abs(countChange)}% while the total amount ${amountDirection} by ${Math.abs(amountChange)}%. `
+    } else {
+      paragraph1 += `This represented a baseline year in the FCA's enforcement trajectory. `
+    }
+
+    paragraph1 += `The largest single fine was £${(largestFine / 1000000).toFixed(1)}m, issued to ${notableFirm.firm_name}.`
+
+    // Paragraph 2: Thematic focus
+    const paragraph2 = `${dominantCategory.category} emerged as the dominant enforcement theme, accounting for ${dominantCategory.percentage}% of all actions (${dominantCategory.fine_count} cases). ` +
+      `The FCA's focus on ${dominantCategory.category.toLowerCase()} reflects ongoing regulatory priorities around ${this.getCategoryContext(dominantCategory.category)}. ` +
+      `${yearStats.systemic_risk_count > 0 ? `Notably, ${yearStats.systemic_risk_count} ${yearStats.systemic_risk_count === 1 ? 'case was' : 'cases were'} flagged for systemic risk implications, highlighting the FCA's attention to market-wide conduct issues. ` : ''}` +
+      `Firms should review their ${dominantCategory.category.toLowerCase()} controls in light of this enforcement activity and ensure robust governance frameworks are in place.`
+
+    return { paragraph1, paragraph2 }
+  }
+
+  /**
+   * Parse JSONB field (handles double/triple JSON encoding)
+   * @param {any} value - JSONB field value from database
+   * @returns {Array} Parsed array or empty array
+   */
+  parseJsonbField(value) {
+    if (!value) return []
+
+    try {
+      let parsed = value
+      // Handle string encoding (may be doubly or triply encoded)
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed)
+      }
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed)
+      }
+
+      // Return array or wrap single value in array
+      if (Array.isArray(parsed)) {
+        return parsed
+      } else if (parsed !== null && parsed !== undefined) {
+        return [parsed]
+      }
+
+      return []
+    } catch (e) {
+      console.warn('Failed to parse JSONB field:', value, e.message)
+      return []
+    }
+  }
+
+  /**
+   * Infer sector from firm category when affected_sectors is empty
+   * Maps common firm_category values to standard sector names
+   * @param {string} firmCategory - The firm_category field value
+   * @returns {string|null} Inferred sector name or null if no match
+   */
+  inferSectorFromFirmCategory(firmCategory) {
+    if (!firmCategory || typeof firmCategory !== 'string') {
+      return null
+    }
+
+    const category = firmCategory.toLowerCase().trim()
+
+    // Banking sector keywords
+    if (category.includes('bank') || category.includes('building society')) {
+      return 'Banking'
+    }
+
+    // Insurance sector keywords
+    if (category.includes('insurance') || category.includes('insurer') ||
+        category.includes('underwriter') || category.includes('lloyd')) {
+      return 'Insurance'
+    }
+
+    // Asset Management keywords
+    if (category.includes('asset management') || category.includes('investment manager') ||
+        category.includes('fund manager') || category.includes('portfolio')) {
+      return 'Asset Management'
+    }
+
+    // Wealth Management keywords
+    if (category.includes('wealth') || category.includes('private bank') ||
+        category.includes('financial advisor') || category.includes('financial planner')) {
+      return 'Wealth Management'
+    }
+
+    // Payments/E-Money keywords
+    if (category.includes('payment') || category.includes('e-money') ||
+        category.includes('emoney') || category.includes('fintech')) {
+      return 'Payments & E-Money'
+    }
+
+    // Investment/Securities keywords
+    if (category.includes('broker') || category.includes('dealer') ||
+        category.includes('securities') || category.includes('trading')) {
+      return 'Investment Services'
+    }
+
+    // Mortgage keywords
+    if (category.includes('mortgage') || category.includes('home finance')) {
+      return 'Mortgages'
+    }
+
+    // Consumer Credit keywords
+    if (category.includes('credit') || category.includes('lending') ||
+        category.includes('loan')) {
+      return 'Consumer Credit'
+    }
+
+    // Pension/Retirement keywords
+    if (category.includes('pension') || category.includes('retirement')) {
+      return 'Pensions'
+    }
+
+    // If no match, return null (will fall back to 'Not captured')
+    return null
+  }
+
+  /**
+   * Get contextual description for a breach category
+   * @param {string} category - Breach category name
+   * @returns {string} Contextual description
+   */
+  getCategoryContext(category) {
+    const contexts = {
+      'Anti-Money Laundering': 'financial crime prevention, customer due diligence, and transaction monitoring effectiveness',
+      'Systems and Controls': 'operational resilience, governance frameworks, and control environment maturity',
+      'Customer Treatment': 'fair customer outcomes, vulnerable customer protections, and Consumer Duty compliance',
+      'Market Abuse': 'market integrity, surveillance systems, and trading conduct standards',
+      'Financial Crime': 'sanctions compliance, fraud prevention, and holistic financial crime defences',
+      'Client Money': 'client asset protection, segregation requirements, and custody arrangements',
+      'Disclosure': 'transparency obligations, client communications, and regulatory reporting accuracy',
+      'Regulatory Breach': 'general regulatory compliance, supervisory expectations, and rule adherence',
+      'Reporting and Disclosure': 'accuracy of regulatory submissions, transparency standards, and timely reporting',
+      'Governance': 'board effectiveness, risk oversight, and senior manager accountability',
+      'Prudential Requirements': 'capital adequacy, liquidity management, and solvency standards',
+      'Not Categorised': 'general regulatory compliance and supervisory standards'
+    }
+    return contexts[category] || 'regulatory compliance and supervisory standards'
+  }
+
+  // ============================================================================
+  // END YEAR SUMMARY METHODS
+  // ============================================================================
 
   // Method to be called by the main Horizon Scanner scheduler
   async runScheduledUpdate() {

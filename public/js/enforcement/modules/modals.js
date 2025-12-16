@@ -2,6 +2,24 @@
 
 function applyModalsMixin(klass) {
   Object.assign(klass.prototype, {
+    /**
+     * Safely parse a value that should be an array
+     * Handles JSONB fields that may be strings, objects, or already-parsed arrays
+     */
+    safeArray(value, defaultValue = []) {
+      if (Array.isArray(value)) return value;
+      if (!value) return defaultValue;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      }
+      return defaultValue;
+    },
+
     initModals() {
       this.createModalContainer();
       this.bindModalEvents();
@@ -105,7 +123,7 @@ function applyModalsMixin(klass) {
         const entries = firm.fines.slice(0, 5).map(fine => {
           const date = fine.date_issued ? new Date(fine.date_issued).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
           const amount = this.formatCurrency(fine.amount || 0);
-          const breach = fine.breach_categories?.[0] || fine.breach_type || 'Not specified';
+          const breach = this.safeArray(fine.breach_categories)[0] || fine.breach_type || 'Not specified';
           return `
             <div class="timeline-entry">
               <span class="timeline-date">${this.escapeHtml(date)}</span>
@@ -254,20 +272,120 @@ function applyModalsMixin(klass) {
       );
 
       try {
-        const response = await fetch(`/api/enforcement/firm-details?firm=${encodeURIComponent(firmName)}`);
-        const data = await response.json();
+        // Fetch firm details and percentile data in parallel
+        const [firmResponse, percentileResponse] = await Promise.all([
+          fetch(`/api/enforcement/firm-details?firm=${encodeURIComponent(firmName)}`),
+          fetch(`/api/enforcement/firm-percentile?firm=${encodeURIComponent(firmName)}`)
+        ]);
 
-        if (!data.success || !data.firm) {
+        const firmData = await firmResponse.json();
+        const percentileData = await percentileResponse.json();
+
+        if (!firmData.success || !firmData.firm) {
           this.updateModalContent('<div class="modal-empty-state"><p>Firm details not found.</p></div>');
           return;
         }
 
-        const card = this.renderFirmCard(data.firm);
-        this.updateModalContent(`<div class="firm-cards-grid">${card}</div>`);
+        const card = this.renderFirmCard(firmData.firm);
+        const benchmarking = percentileData.success && percentileData.percentile?.found
+          ? this.renderBenchmarkingSection(percentileData.percentile)
+          : '';
+
+        this.updateModalContent(`
+          <div class="firm-details-wrapper">
+            <div class="firm-cards-grid">${card}</div>
+            ${benchmarking}
+          </div>
+        `);
       } catch (error) {
         console.error('Failed to load firm details:', error);
         this.updateModalContent('<div class="modal-empty-state"><p>Failed to load firm details. Please try again.</p></div>');
       }
+    },
+
+    /**
+     * Render benchmarking section with percentile track
+     */
+    renderBenchmarkingSection(percentile) {
+      const tierColors = {
+        'Top 1%': '#dc2626',
+        'Top 5%': '#ea580c',
+        'Top 10%': '#d97706',
+        'Top 25%': '#ca8a04',
+        'Above Average': '#65a30d',
+        'Average': '#16a34a',
+        'Below Average': '#0d9488',
+        'Bottom 25%': '#0891b2'
+      };
+
+      const tierColor = tierColors[percentile.tier] || '#64748b';
+      const pctValue = Math.round(percentile.percentile || 0);
+
+      // Determine color for vs_average and vs_median
+      const vsAvgNum = parseFloat(percentile.vs_average) || 0;
+      const vsMedianNum = parseFloat(percentile.vs_median) || 0;
+      const vsAvgColor = vsAvgNum > 0 ? '#dc2626' : '#16a34a';
+      const vsMedianColor = vsMedianNum > 0 ? '#dc2626' : '#16a34a';
+      const vsAvgSign = vsAvgNum > 0 ? '+' : '';
+      const vsMedianSign = vsMedianNum > 0 ? '+' : '';
+
+      return `
+        <div class="firm-benchmarking-section">
+          <div class="benchmarking-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+            <h4>Peer Benchmarking</h4>
+          </div>
+
+          <div class="benchmarking-tier">
+            <span class="tier-badge" style="background: ${tierColor};">${percentile.tier}</span>
+            <span class="tier-rank">#${percentile.rank} of ${percentile.total_firms} firms</span>
+          </div>
+
+          <div class="percentile-track-container">
+            <div class="percentile-labels">
+              <span>0%</span>
+              <span>25%</span>
+              <span>50%</span>
+              <span>75%</span>
+              <span>100%</span>
+            </div>
+            <div class="percentile-track">
+              <div class="percentile-track-fill" style="width: ${pctValue}%; background: ${tierColor};"></div>
+              <div class="percentile-marker" style="left: ${pctValue}%;">
+                <div class="percentile-marker-dot"></div>
+                <div class="percentile-marker-label">${pctValue}%</div>
+              </div>
+            </div>
+            <div class="percentile-quartiles">
+              <div class="quartile q1" title="Bottom 25%"></div>
+              <div class="quartile q2" title="25-50%"></div>
+              <div class="quartile q3" title="50-75%"></div>
+              <div class="quartile q4" title="Top 25%"></div>
+            </div>
+          </div>
+
+          <div class="benchmarking-comparison">
+            <div class="comparison-card">
+              <div class="comparison-label">This Firm</div>
+              <div class="comparison-value">${this.formatCurrency(percentile.total_amount || 0)}</div>
+            </div>
+            <div class="comparison-card">
+              <div class="comparison-label">Market Avg</div>
+              <div class="comparison-value">${this.formatCurrency(percentile.sector_benchmarks?.avg || 0)}</div>
+              <div class="comparison-diff" style="color: ${vsAvgColor};">${vsAvgSign}${percentile.vs_average}%</div>
+            </div>
+            <div class="comparison-card">
+              <div class="comparison-label">Median</div>
+              <div class="comparison-value">${this.formatCurrency(percentile.sector_benchmarks?.median || 0)}</div>
+              <div class="comparison-diff" style="color: ${vsMedianColor};">${vsMedianSign}${percentile.vs_median}%</div>
+            </div>
+          </div>
+        </div>
+      `;
     },
 
     updateModalContent(html) {

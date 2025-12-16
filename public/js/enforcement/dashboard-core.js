@@ -6,6 +6,11 @@ import { applyFiltersMixin } from './modules/filters.js'
 import { applyEventsMixin } from './modules/events.js'
 import { applyUtilsMixin } from './modules/utils.js'
 import { applyModalsMixin } from './modules/modals.js'
+import { applyDistributionMixin } from './modules/distribution.js'
+import { applyHeatmapMixin } from './modules/heatmap.js'
+import { applyYearSummaryMixin } from './modules/yearSummary.js'
+import { applyAdvancedAnalyticsMixin } from './modules/advancedAnalytics.js'
+import { applyFirmComparisonMixin } from './modules/firmComparison.js'
 
 class EnforcementDashboard {
   constructor() {
@@ -40,8 +45,12 @@ class EnforcementDashboard {
     await this.loadRecentFines()
     await this.loadTrends()
     await this.loadTopFirms()
+    await this.loadDistribution()
+    await this.loadHeatmap()
 
     this.setupEventListeners()
+    this.initAdvancedAnalytics()
+    this.initFirmComparison()
 
     console.log('[ready] Enforcement dashboard initialized')
   }
@@ -55,5 +64,10 @@ applyTrendsMixin(EnforcementDashboard)
 applyTopFirmsMixin(EnforcementDashboard)
 applyEventsMixin(EnforcementDashboard)
 applyModalsMixin(EnforcementDashboard)
+applyDistributionMixin(EnforcementDashboard)
+applyHeatmapMixin(EnforcementDashboard)
+applyYearSummaryMixin(EnforcementDashboard)
+applyAdvancedAnalyticsMixin(EnforcementDashboard)
+applyFirmComparisonMixin(EnforcementDashboard)
 
 export { EnforcementDashboard }

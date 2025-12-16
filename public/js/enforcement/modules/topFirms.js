@@ -1,5 +1,23 @@
 function applyTopFirmsMixin(klass) {
   Object.assign(klass.prototype, {
+    /**
+     * Safely parse a value that should be an array
+     * Handles JSONB fields that may be strings, objects, or already-parsed arrays
+     */
+    safeArray(value, defaultValue = []) {
+      if (Array.isArray(value)) return value;
+      if (!value) return defaultValue;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      }
+      return defaultValue;
+    },
+
     // State for Fines Database
     finesDbState: {
       page: 1,
@@ -100,9 +118,7 @@ function applyTopFirmsMixin(klass) {
       const tableRows = fines.map((fine, index) => {
         const date = this.formatDate(fine.date_issued);
         const amount = this.formatCurrency(fine.amount);
-        const breaches = Array.isArray(fine.breach_categories)
-          ? fine.breach_categories.slice(0, 2).join(', ')
-          : (fine.breach_categories || '-');
+        const breaches = this.safeArray(fine.breach_categories).slice(0, 2).join(', ') || '-';
         const riskLevel = this.getRiskLevelBadge(fine.risk_score);
 
         return `
@@ -142,8 +158,8 @@ function applyTopFirmsMixin(klass) {
       // Use the existing modal system to show fine details
       if (this.showDrilldownModal) {
         const fine = typeof fineData === 'string' ? JSON.parse(fineData) : fineData;
-        const breaches = Array.isArray(fine.breach_categories) ? fine.breach_categories.join(', ') : (fine.breach_categories || '-');
-        const sectors = Array.isArray(fine.affected_sectors) ? fine.affected_sectors.join(', ') : (fine.affected_sectors || '-');
+        const breaches = this.safeArray(fine.breach_categories).join(', ') || '-';
+        const sectors = this.safeArray(fine.affected_sectors).join(', ') || '-';
 
         const content = `
           <div class="fine-details">

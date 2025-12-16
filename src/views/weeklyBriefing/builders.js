@@ -41,7 +41,15 @@ function truncateText(value, limit = 220) {
 }
 
 function serialize(value) {
-  return JSON.stringify(value || null).replace(/</g, '\\u003c')
+  const json = JSON.stringify(value || null)
+  return json
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+    .replace(/\\u003c\/script/gi, '\\u003c\\/script')
+    .replace(/<!--/g, '\\u003c!--')
 }
 
 function escapeHtml(value) {
