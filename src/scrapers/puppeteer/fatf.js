@@ -67,7 +67,13 @@ const INFORMATIONAL_PATTERNS = {
 
 // Multiple selector strategies for resilience
 const SELECTOR_STRATEGIES = {
-  // Strategy 1: AEM Content Fragment List (most reliable for FATF)
+  // Strategy 1: Date-based discovery (FATF news page uses p.date elements)
+  dateBasedNews: {
+    type: 'date-based',
+    dateSelector: 'p.date',
+    linkSelector: 'a[href*="/publications/"]'
+  },
+  // Strategy 2: AEM Content Fragment List
   contentFragments: {
     container: '.cmp-contentfragmentlist__item, [data-cmp-is="contentfragmentlist"] > div',
     title: '.cmp-contentfragmentlist__item-title, h2, h3, [class*="title"]',
@@ -75,7 +81,7 @@ const SELECTOR_STRATEGIES = {
     date: 'time, .cmp-contentfragmentlist__item-date, [class*="date"]',
     description: '.cmp-contentfragmentlist__item-description, p, [class*="description"]'
   },
-  // Strategy 2: Teaser components
+  // Strategy 3: Teaser components
   teasers: {
     container: '.cmp-teaser, [data-cmp-is="teaser"]',
     title: '.cmp-teaser__title, h2, h3',
@@ -83,7 +89,7 @@ const SELECTOR_STRATEGIES = {
     date: '.cmp-teaser__date, time, [class*="date"]',
     description: '.cmp-teaser__description, p'
   },
-  // Strategy 3: List components
+  // Strategy 4: List components
   lists: {
     container: '.cmp-list__item, .cmp-list > li, ul.cmp-list > li',
     title: '.cmp-list__item-title, a',
@@ -91,7 +97,7 @@ const SELECTOR_STRATEGIES = {
     date: '.cmp-list__item-date, time, [class*="date"]',
     description: '.cmp-list__item-description, p'
   },
-  // Strategy 4: Generic article/card patterns
+  // Strategy 5: Generic article/card patterns
   articles: {
     container: 'article, .article, .card, .news-item, .publication-item, .result-item',
     title: 'h1, h2, h3, .title, [class*="title"]',
@@ -99,9 +105,9 @@ const SELECTOR_STRATEGIES = {
     date: 'time, .date, [datetime], [class*="date"], [class*="published"]',
     description: 'p, .summary, .excerpt, .description, [class*="description"]'
   },
-  // Strategy 5: Direct link discovery (fallback)
+  // Strategy 6: Direct link discovery (fallback)
   links: {
-    container: null, // Will scan all links
+    container: null,
     title: null,
     link: 'a[href*="/publications/"], a[href*="/news/"], a[href*="/topics/"]',
     date: null,
@@ -354,140 +360,194 @@ function applyFatfMethods(ServiceClass) {
       })
       await this.wait(FATF_CONFIG.scrollWait)
 
-      // Try each selector strategy until we get results
-      let extractedItems = []
+      // Try date-based extraction first (most reliable for FATF news page)
+      console.log(`   🔍 Trying date-based extraction (p.date elements)...`)
 
-      for (const [strategyName, selectors] of Object.entries(SELECTOR_STRATEGIES)) {
-        console.log(`   🔍 Trying strategy: ${strategyName}`)
+      let extractedItems = await page.evaluate((informationalPatterns) => {
+        const items = []
+        const seen = new Set()
 
-        extractedItems = await page.evaluate(
-          (selectors, informationalPatterns, strategyName) => {
-            const items = []
+        // Helper to check informational pages
+        const isInformational = (url, title) => {
+          const urlLower = (url || '').toLowerCase()
+          const titleLower = (title || '').toLowerCase()
 
-            // Helper to check informational pages
-            const isInformational = (url, title) => {
-              const urlLower = (url || '').toLowerCase()
-              const titleLower = (title || '').toLowerCase()
+          for (const pattern of informationalPatterns.urls) {
+            if (urlLower.includes(pattern)) return true
+          }
+          for (const pattern of informationalPatterns.titles) {
+            if (titleLower.includes(pattern)) return true
+          }
+          return false
+        }
 
-              for (const pattern of informationalPatterns.urls) {
-                if (urlLower.includes(pattern)) return true
+        // Find all date elements (FATF uses p.date for chronological lists)
+        const dateElements = document.querySelectorAll('p.date')
+
+        dateElements.forEach((dateEl) => {
+          const dateText = dateEl.textContent?.trim()
+          if (!dateText) return
+
+          // Find the parent container and look for the associated link
+          let parent = dateEl.parentElement
+          for (let i = 0; i < 5 && parent; i++) {
+            const link = parent.querySelector('a[href*="/publications/"]')
+            if (link && link.href && !seen.has(link.href)) {
+              const title = link.textContent?.trim()
+              if (title && title.length > 15 && !isInformational(link.href, title)) {
+                seen.add(link.href)
+
+                // Find description
+                const descEl = parent.querySelector('p:not(.date)')
+                const description = descEl?.textContent?.trim() || title.substring(0, 200)
+
+                items.push({
+                  title: title.replace(/\s+/g, ' ').trim(),
+                  url: link.href,
+                  date: dateText,
+                  description: description.substring(0, 300)
+                })
               }
-              for (const pattern of informationalPatterns.titles) {
-                if (titleLower.includes(pattern)) return true
-              }
-              return false
+              break
             }
+            parent = parent.parentElement
+          }
+        })
 
-            // Strategy 5: Direct link discovery
-            if (strategyName === 'links') {
-              const links = document.querySelectorAll(selectors.link)
-              const seen = new Set()
+        return items
+      }, INFORMATIONAL_PATTERNS)
 
-              links.forEach((link) => {
-                const href = link.href
-                const text = link.textContent?.trim()
+      if (extractedItems.length > 0) {
+        console.log(`   ✅ Date-based extraction found ${extractedItems.length} items`)
+      } else {
+        // Fallback to other strategies
+        console.log(`   ⚠️ Date-based extraction found no items, trying fallback strategies...`)
 
-                if (
-                  href &&
-                  text &&
-                  text.length > 25 &&
-                  !seen.has(href) &&
-                  !href.includes('.pdf') &&
-                  !isInformational(href, text)
-                ) {
-                  seen.add(href)
+        for (const [strategyName, selectors] of Object.entries(SELECTOR_STRATEGIES)) {
+          if (strategyName === 'dateBasedNews') continue // Already tried
 
-                  // Try to find date in parent
-                  const parent = link.closest('div, article, section, li, tr')
-                  let dateText = ''
-                  if (parent) {
-                    const dateEl = parent.querySelector(
-                      'time, [datetime], .date, [class*="date"]'
+          console.log(`   🔍 Trying strategy: ${strategyName}`)
+
+          extractedItems = await page.evaluate(
+            (selectors, informationalPatterns, strategyName) => {
+              const items = []
+
+              // Helper to check informational pages
+              const isInformational = (url, title) => {
+                const urlLower = (url || '').toLowerCase()
+                const titleLower = (title || '').toLowerCase()
+
+                for (const pattern of informationalPatterns.urls) {
+                  if (urlLower.includes(pattern)) return true
+                }
+                for (const pattern of informationalPatterns.titles) {
+                  if (titleLower.includes(pattern)) return true
+                }
+                return false
+              }
+
+              // Direct link discovery fallback
+              if (strategyName === 'links' || !selectors.container) {
+                const links = document.querySelectorAll('a[href*="/publications/"], a[href*="/news/"]')
+                const seen = new Set()
+
+                links.forEach((link) => {
+                  const href = link.href
+                  const text = link.textContent?.trim()
+
+                  if (
+                    href &&
+                    text &&
+                    text.length > 25 &&
+                    !seen.has(href) &&
+                    !href.includes('.pdf') &&
+                    !isInformational(href, text)
+                  ) {
+                    seen.add(href)
+
+                    const parent = link.closest('div, article, section, li, tr')
+                    let dateText = ''
+                    if (parent) {
+                      const dateEl = parent.querySelector('time, [datetime], p.date, .date')
+                      dateText = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || ''
+                    }
+
+                    const dateMatch = text.match(
+                      /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i
                     )
+                    if (dateMatch && !dateText) {
+                      dateText = dateMatch[1]
+                    }
+
+                    items.push({
+                      title: text.replace(/\s+/g, ' ').trim(),
+                      url: href,
+                      date: dateText,
+                      description: text.substring(0, 200)
+                    })
+                  }
+                })
+
+                return items
+              }
+
+              // Container-based extraction
+              const containers = document.querySelectorAll(selectors.container)
+
+              containers.forEach((container) => {
+                try {
+                  const linkEl = container.querySelector(selectors.link)
+                  if (!linkEl) return
+
+                  let href = linkEl.href
+                  if (!href) return
+
+                  let title = ''
+                  if (selectors.title) {
+                    const titleEl = container.querySelector(selectors.title)
+                    title = titleEl?.textContent?.trim() || linkEl.textContent?.trim()
+                  } else {
+                    title = linkEl.textContent?.trim()
+                  }
+
+                  if (!title || title.length < 10) return
+
+                  let dateText = ''
+                  if (selectors.date) {
+                    const dateEl = container.querySelector(selectors.date)
                     dateText = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || ''
                   }
 
-                  // Also check if date is embedded in title
-                  const dateMatch = text.match(
-                    /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i
-                  )
-                  if (dateMatch && !dateText) {
-                    dateText = dateMatch[1]
+                  let description = ''
+                  if (selectors.description) {
+                    const descEl = container.querySelector(selectors.description)
+                    description = descEl?.textContent?.trim() || ''
                   }
 
+                  if (isInformational(href, title)) return
+
                   items.push({
-                    title: text.replace(/\s+/g, ' ').trim(),
+                    title: title.replace(/\s+/g, ' ').trim(),
                     url: href,
                     date: dateText,
-                    description: text.substring(0, 200)
+                    description: description || title.substring(0, 200)
                   })
+                } catch (e) {
+                  // Skip this item on error
                 }
               })
 
               return items
-            }
+            },
+            selectors,
+            INFORMATIONAL_PATTERNS,
+            strategyName
+          )
 
-            // Strategies 1-4: Container-based extraction
-            const containers = document.querySelectorAll(selectors.container)
-
-            containers.forEach((container) => {
-              try {
-                // Find link
-                const linkEl = container.querySelector(selectors.link)
-                if (!linkEl) return
-
-                let href = linkEl.href
-                if (!href) return
-
-                // Find title
-                let title = ''
-                if (selectors.title) {
-                  const titleEl = container.querySelector(selectors.title)
-                  title = titleEl?.textContent?.trim() || linkEl.textContent?.trim()
-                } else {
-                  title = linkEl.textContent?.trim()
-                }
-
-                if (!title || title.length < 10) return
-
-                // Find date
-                let dateText = ''
-                if (selectors.date) {
-                  const dateEl = container.querySelector(selectors.date)
-                  dateText = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || ''
-                }
-
-                // Find description
-                let description = ''
-                if (selectors.description) {
-                  const descEl = container.querySelector(selectors.description)
-                  description = descEl?.textContent?.trim() || ''
-                }
-
-                // Filter informational pages
-                if (isInformational(href, title)) return
-
-                items.push({
-                  title: title.replace(/\s+/g, ' ').trim(),
-                  url: href,
-                  date: dateText,
-                  description: description || title.substring(0, 200)
-                })
-              } catch (e) {
-                // Skip this item on error
-              }
-            })
-
-            return items
-          },
-          selectors,
-          INFORMATIONAL_PATTERNS,
-          strategyName
-        )
-
-        if (extractedItems.length > 0) {
-          console.log(`   ✅ Strategy "${strategyName}" found ${extractedItems.length} items`)
-          break
+          if (extractedItems.length > 0) {
+            console.log(`   ✅ Strategy "${strategyName}" found ${extractedItems.length} items`)
+            break
+          }
         }
       }
 
