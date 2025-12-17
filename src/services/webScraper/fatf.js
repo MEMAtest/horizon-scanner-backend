@@ -1,8 +1,51 @@
-const puppeteer = require('puppeteer')
+/**
+ * FATF Scraper Service - with Cloudflare Bypass
+ *
+ * This module applies FATF scraping methods to the WebScraper service class.
+ * Uses puppeteer-extra with stealth plugin for Cloudflare protection bypass.
+ */
+
+const puppeteer = require('puppeteer-extra')
+const StealthPlugin = require('puppeteer-extra-plugin-stealth')
+
+// Apply stealth plugin
+puppeteer.use(StealthPlugin())
+
+// Informational page patterns to filter out
+const FILTER_PATTERNS = {
+  urls: [
+    '/job-opportunities', '/jobs/', '/careers/',
+    '/fatf-secretariat', '/secretariat/',
+    '/code-of-conduct', '/history-of-the-fatf',
+    '/fatf-presidency', '/mandate-of-the-fatf',
+    '/about-us', '/about/', '/contact',
+    '/members', '/membership', '/who-we-are',
+    '/faqs', '/glossary', '/sitemap'
+  ],
+  titles: [
+    'job opportunit', 'career', 'vacancy', 'recruitment',
+    'secretariat', 'fatf team', 'staff',
+    'code of conduct', 'history of the fatf',
+    'presidency', 'mandate', 'about us', 'about fatf',
+    'contact us', 'members', 'membership', 'faq', 'glossary'
+  ]
+}
+
+function isInformationalPage(url, title) {
+  const urlLower = (url || '').toLowerCase()
+  const titleLower = (title || '').toLowerCase()
+  for (const pattern of FILTER_PATTERNS.urls) {
+    if (urlLower.includes(pattern)) return true
+  }
+  for (const pattern of FILTER_PATTERNS.titles) {
+    if (titleLower.includes(pattern)) return true
+  }
+  return false
+}
 
 function applyFatfMethods(ServiceClass) {
   ServiceClass.prototype.scrapeFATF = async function() {
-    console.log('🌍 FATF: Starting specialized scraping...')
+    console.log('🌍 FATF: Starting specialized scraping with Stealth...')
 
     let browser
     const results = []
@@ -10,223 +53,210 @@ function applyFatfMethods(ServiceClass) {
     try {
       browser = await puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-features=site-per-process',
+          '--window-size=1920,1080'
+        ],
+        defaultViewport: { width: 1920, height: 1080 }
       })
 
       const page = await browser.newPage()
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+      await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9'
+      })
 
+      // Block unnecessary resources
+      await page.setRequestInterception(true)
+      page.on('request', req => {
+        if (['image', 'font', 'media'].includes(req.resourceType())) {
+          req.abort()
+        } else {
+          req.continue()
+        }
+      })
+
+      // Scrape news
       console.log('   📰 Scraping FATF news...')
-      await page.goto('https://www.fatf-gafi.org/en/the-fatf/news.html', {
-        waitUntil: 'networkidle2',
-        timeout: 60000
-      })
+      const newsItems = await this._scrapeFATFPage(page, 'https://www.fatf-gafi.org/en/the-fatf/news.html', 'News')
+      results.push(...newsItems)
+      console.log(`   ✅ FATF News: ${newsItems.length} items`)
 
-      await new Promise(resolve => setTimeout(resolve, 5000))
+      await this.wait(3000)
 
-      const newsItems = await page.evaluate(() => {
-        const items = []
-        const mainContent = document.querySelector('main') || document.body
-
-        const walker = document.createTreeWalker(
-          mainContent,
-          NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-          null,
-          false
-        )
-
-        let currentDate = null
-        let node = walker.nextNode()
-
-        while (node) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const text = node.textContent?.trim() || ''
-            const dateMatch = text.match(/^(\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})$/)
-            if (dateMatch) {
-              currentDate = dateMatch[1]
-            }
-          } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'A') {
-            const link = node
-            const href = link.href
-            const fullText = link.textContent?.trim() || ''
-
-            if (currentDate &&
-                href &&
-                fullText.length > 20 &&
-                (href.includes('/publications/') ||
-                 href.includes('/news/') ||
-                 href.includes('/the-fatf/')) &&
-                !fullText.includes('All publications') &&
-                !fullText.includes('window.') &&
-                !href.includes('#')) {
-              items.push({
-                title: fullText,
-                link: href,
-                date: currentDate,
-                type: 'news'
-              })
-            }
-          }
-
-          node = walker.nextNode()
-        }
-
-        return items
-      })
-
-      newsItems.forEach(item => {
-        if (item.title && item.link) {
-          results.push({
-            headline: item.title,
-            url: item.link,
-            authority: 'FATF',
-            area: 'news',
-            source_category: 'fatf_news',
-            source_description: 'FATF - News & Updates',
-            fetched_date: new Date().toISOString(),
-            published_date: this.parseFATFDate(item.date),
-            raw_data: {
-              originalDate: item.date,
-              type: 'news',
-              fullTitle: item.title,
-              fatfSource: true
-            }
-          })
-        }
-      })
-
+      // Scrape publications
       console.log('   📚 Scraping FATF publications...')
-      await page.goto('https://www.fatf-gafi.org/en/publications.html', {
-        waitUntil: 'networkidle2',
-        timeout: 60000
+      const pubItems = await this._scrapeFATFPage(page, 'https://www.fatf-gafi.org/en/publications.html', 'Publications')
+      results.push(...pubItems)
+      console.log(`   ✅ FATF Publications: ${pubItems.length} items`)
+
+      await page.close()
+
+      // Deduplicate
+      const seen = new Set()
+      const unique = results.filter(item => {
+        if (seen.has(item.url)) return false
+        seen.add(item.url)
+        return true
       })
 
-      await new Promise(resolve => setTimeout(resolve, 5000))
-
-      const publications = await page.evaluate(() => {
-        const items = []
-        const mainContent = document.querySelector('main') || document.body
-        const links = mainContent.querySelectorAll('a[href*=\"/publications/\"]')
-
-        links.forEach(link => {
-          const href = link.href
-          const fullText = link.textContent?.trim() || ''
-
-          if (fullText.length > 20 &&
-              !fullText.includes('Publications') &&
-              !fullText.includes('Browse') &&
-              !href.endsWith('/publications.html') &&
-              !href.includes('#')) {
-            const parent = link.closest('article, div, li, section')
-            let dateText = null
-
-            if (parent) {
-              const parentText = parent.textContent || ''
-              const dateMatch = parentText.match(/(\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/)
-              if (dateMatch) dateText = dateMatch[1]
-            }
-
-            items.push({
-              title: fullText,
-              link: href,
-              date: dateText,
-              type: 'publication'
-            })
-          }
-        })
-
-        return items
-      })
-
-      const seenUrls = new Set()
-      publications.forEach(item => {
-        if (item.title && item.link && !seenUrls.has(item.link)) {
-          seenUrls.add(item.link)
-
-          let category = 'publication'
-          const lowerTitle = item.title.toLowerCase()
-
-          if (lowerTitle.includes('consultation') || lowerTitle.includes('public comment')) {
-            category = 'consultation'
-          } else if (lowerTitle.includes('mutual evaluation') || lowerTitle.includes('follow-up report')) {
-            category = 'country_evaluation'
-          } else if (lowerTitle.includes('guidance')) {
-            category = 'guidance'
-          }
-
-          results.push({
-            headline: item.title,
-            url: item.link,
-            authority: 'FATF',
-            area: category,
-            source_category: `fatf_${category}`,
-            source_description: `FATF - ${category.replace('_', ' ').toUpperCase()}`,
-            fetched_date: new Date().toISOString(),
-            published_date: this.parseFATFDate(item.date),
-            raw_data: {
-              originalDate: item.date,
-              type: 'publication',
-              category,
-              fullTitle: item.title,
-              fatfSource: true
-            }
-          })
-        }
-      })
-
-      await browser.close()
-
-      const recentResults = results.filter(item => {
-        if (!item.published_date) return false
-        const date = new Date(item.published_date)
-        const cutoff = new Date()
-        cutoff.setDate(cutoff.getDate() - 30)
-        return date >= cutoff
-      })
-
-      console.log(`   ✅ FATF: Found ${recentResults.length} recent items`)
-
-      this.processingStats.byType.fatf = recentResults.length
-
-      return recentResults
+      console.log(`🎉 FATF: Total ${unique.length} unique items`)
+      return unique
     } catch (error) {
-      console.error('❌ FATF scraping error:', error.message)
-      if (browser) await browser.close()
-      return []
+      console.error('❌ FATF scraping failed:', error.message)
+      return results
+    } finally {
+      if (browser) {
+        await browser.close()
+      }
     }
   }
 
-  ServiceClass.prototype.parseFATFDate = function(dateStr) {
-    if (!dateStr) return null
+  ServiceClass.prototype._scrapeFATFPage = async function(page, url, area) {
+    const items = []
 
     try {
-      const monthMap = {
-        Jan: 0,
-        Feb: 1,
-        Mar: 2,
-        Apr: 3,
-        May: 4,
-        Jun: 5,
-        Jul: 6,
-        Aug: 7,
-        Sep: 8,
-        Oct: 9,
-        Nov: 10,
-        Dec: 11
-      }
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 })
+      await this.wait(8000)
 
-      const match = dateStr.match(/(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})/)
-      if (match) {
-        const day = parseInt(match[1], 10)
-        const month = monthMap[match[2]]
-        const year = parseInt(match[3], 10)
-        return new Date(year, month, day).toISOString()
-      }
+      // Scroll for lazy loading
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2))
+      await this.wait(2000)
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await this.wait(3000)
 
-      return null
+      const extracted = await page.evaluate((filterPatterns) => {
+        const found = []
+        const seen = new Set()
+
+        const isInfo = (u, t) => {
+          const ul = (u || '').toLowerCase()
+          const tl = (t || '').toLowerCase()
+          for (const p of filterPatterns.urls) if (ul.includes(p)) return true
+          for (const p of filterPatterns.titles) if (tl.includes(p)) return true
+          return false
+        }
+
+        // Try selectors
+        const strategies = [
+          '.cmp-teaser, [data-cmp-is="teaser"]',
+          '.cmp-list__item',
+          '.cmp-contentfragmentlist__item',
+          'article, .article, .card'
+        ]
+
+        for (const selector of strategies) {
+          const containers = document.querySelectorAll(selector)
+          if (containers.length > 0) {
+            containers.forEach(container => {
+              const link = container.querySelector('a[href]')
+              if (!link) return
+
+              const href = link.href
+              const title = link.textContent?.trim() ||
+                container.querySelector('h2, h3, [class*="title"]')?.textContent?.trim()
+
+              if (!href || !title || title.length < 15 || seen.has(href)) return
+              if (isInfo(href, title)) return
+              seen.add(href)
+
+              let dateText = ''
+              const dateEl = container.querySelector('time, [datetime], .date, [class*="date"]')
+              if (dateEl) {
+                dateText = dateEl.getAttribute('datetime') || dateEl.textContent?.trim() || ''
+              }
+              if (!dateText) {
+                const match = title.match(/(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/i)
+                if (match) dateText = match[1]
+              }
+
+              const descEl = container.querySelector('p, [class*="description"]')
+              const description = descEl?.textContent?.trim() || title.substring(0, 200)
+
+              found.push({
+                title: title.replace(/\s+/g, ' ').trim(),
+                href,
+                dateText,
+                description
+              })
+            })
+            break
+          }
+        }
+
+        // Fallback
+        if (found.length === 0) {
+          const links = document.querySelectorAll('a[href*="/publications/"], a[href*="/news/"], a[href*="/topics/"]')
+          links.forEach(link => {
+            const href = link.href
+            const title = link.textContent?.trim()
+            if (!href || !title || title.length < 25 || seen.has(href) || href.includes('.pdf')) return
+            if (isInfo(href, title)) return
+            seen.add(href)
+
+            const parent = link.closest('div, article, section, li')
+            let dateText = ''
+            if (parent) {
+              const dateEl = parent.querySelector('time, [datetime], .date')
+              dateText = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || ''
+            }
+
+            found.push({
+              title: title.replace(/\s+/g, ' ').trim(),
+              href,
+              dateText,
+              description: title.substring(0, 200)
+            })
+          })
+        }
+
+        return found.slice(0, 15)
+      }, FILTER_PATTERNS)
+
+      // Process
+      for (const item of extracted) {
+        if (isInformationalPage(item.href, item.title)) continue
+
+        let publishedDate = null
+        if (item.dateText) {
+          const parsed = new Date(item.dateText)
+          if (!isNaN(parsed.getTime())) {
+            publishedDate = parsed.toISOString()
+          }
+        }
+
+        items.push({
+          headline: item.title,
+          url: item.href.startsWith('http') ? item.href : `https://www.fatf-gafi.org${item.href}`,
+          authority: 'FATF',
+          area,
+          source_category: 'international_scraping',
+          source_description: `FATF ${area}`,
+          fetched_date: new Date().toISOString(),
+          published_date: publishedDate,
+          raw_data: {
+            sourceType: 'puppeteer-stealth',
+            sourceKey: 'FATF',
+            country: 'International',
+            priority: 'HIGH',
+            originalDate: item.dateText || null,
+            summary: item.description,
+            international: {
+              isInternational: true,
+              sourceAuthority: 'FATF',
+              sourceCountry: 'International'
+            }
+          }
+        })
+      }
     } catch (error) {
-      return null
+      console.error(`FATF page scrape failed (${url}):`, error.message)
     }
+
+    return items
   }
 }
 
