@@ -8,6 +8,18 @@ function applyLseMethods(ServiceClass) {
       const page = await browser.newPage()
       await page.setViewport({ width: 1920, height: 1080 })
 
+      // Set realistic user agent to avoid blocking
+      await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+
+      // Add extra headers
+      await page.setExtraHTTPHeaders({
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      })
+
       const lseUrl = 'https://www.londonstockexchange.com/discover/news-and-insights?tab=latest'
       console.log(`🌐 LSE: Loading ${lseUrl}`)
 
