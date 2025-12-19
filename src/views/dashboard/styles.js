@@ -484,9 +484,70 @@ function getDashboardStyles() {
       }
 
       .content-type-badge.other {
-        background: #f3f4f6;
-        color: #6b7280;
-        border: 1px solid #d1d5db;
+        background: #e0e7ff;
+        color: #4338ca;
+        border: 1px solid #a5b4fc;
+      }
+
+      .content-type-badge.enforcement-action {
+        background: #fecaca;
+        color: #dc2626;
+        border: 1px solid #f87171;
+      }
+      .content-type-badge.final-rule {
+        background: #d1fae5;
+        color: #059669;
+        border: 1px solid #6ee7b7;
+      }
+      .content-type-badge.statistical-report {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #7dd3fc;
+      }
+      .content-type-badge.policy-paper {
+        background: #ddd6fe;
+        color: #7c3aed;
+        border: 1px solid #a78bfa;
+      }
+      .content-type-badge.letter {
+        background: #ccfbf1;
+        color: #0d9488;
+        border: 1px solid #5eead4;
+      }
+      .content-type-badge.event {
+        background: #ffedd5;
+        color: #ea580c;
+        border: 1px solid #fdba74;
+      }
+      .content-type-badge.speech {
+        background: #fae8ff;
+        color: #a21caf;
+        border: 1px solid #e879f9;
+      }
+      .content-type-badge.announcement {
+        background: #cffafe;
+        color: #0891b2;
+        border: 1px solid #67e8f9;
+      }
+      .content-type-badge.notice {
+        background: #fef9c3;
+        color: #ca8a04;
+        border: 1px solid #fde047;
+      }
+      .content-type-badge.statement {
+        background: #e0e7ff;
+        color: #4f46e5;
+        border: 1px solid #a5b4fc;
+      }
+      .content-type-badge.press-release {
+        background: #ccfbf1;
+        color: #0d9488;
+        border: 1px solid #5eead4;
+      }
+      .content-type-badge.market-notice {
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fcd34d;
       }
 
       .risk-score-badge {
