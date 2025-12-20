@@ -5,6 +5,7 @@ const { getCommonStyles } = require('../templates/commonStyles')
 const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const dbService = require('../../services/dbService')
+const { getSpotlightIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../views/icons')
 
 const KNOWN_AUTHORITIES = [
   'FCA', 'PRA', 'BoE', 'PSR', 'TPR', 'FATF', 'SFO',
@@ -319,6 +320,10 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
     // Get sidebar
     const sidebar = await getSidebar('authority-spotlight')
 
+    // Generate canary icon
+    const canaryStyles = getCanaryAnimationStyles()
+    const pageIcon = wrapIconInContainer(getSpotlightIcon())
+
     const html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -328,6 +333,7 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
             <title>${authority} Authority Spotlight - Regulatory Intelligence Platform</title>
             ${getCommonStyles()}
             <style>
+                ${canaryStyles}
                 .spotlight-header {
                     background: #ffffff;
                     color: #0f172a;
@@ -724,6 +730,7 @@ async function renderAuthoritySpotlightPage(req, res, authority = 'FCA') {
                     <header class="spotlight-header">
                         <a href="/" class="back-link"><- Back to Home</a>
                         <h1 class="authority-title">
+                            ${pageIcon}
                             ${authority} Authority Spotlight
                         </h1>
                         <p>Deep analysis of regulatory patterns, enforcement trends, and policy directions</p>

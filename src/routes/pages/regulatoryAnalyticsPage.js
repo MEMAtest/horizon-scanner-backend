@@ -2,6 +2,7 @@ const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
+const { getAnalyticsIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../views/icons')
 
 function resolveUserId(req) {
   const headerUser = req.headers['x-user-id']
@@ -77,13 +78,19 @@ async function renderRegulatoryAnalyticsPage(req, res) {
     const commonStyles = getCommonStyles()
     const clientScripts = getClientScripts()
 
+    // Generate canary icon for this page
+    const canaryStyles = getCanaryAnimationStyles()
+    const pageIcon = wrapIconInContainer(getAnalyticsIcon())
+
     const html = buildAnalyticsPage({
       sidebar,
       commonStyles,
       clientScripts,
       analyticsData,
       filterOptions,
-      updates
+      updates,
+      canaryStyles,
+      pageIcon
     })
 
     res.send(html)
@@ -285,7 +292,7 @@ function calculateAnalytics(updates) {
   }
 }
 
-function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsData, filterOptions, updates }) {
+function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsData, filterOptions, updates, canaryStyles, pageIcon }) {
   const {
     summary, monthlyChartData, topAuthorities, topSectors, impactDistribution,
     sectorBurden, weeklyActivity, impactTrends, authorityComparison, topSectorAuthorityPairs, velocityMetrics
@@ -303,6 +310,7 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
       ${commonStyles}
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <style>
+        ${canaryStyles}
         .analytics-page {
           padding: 24px;
           min-height: 100vh;
@@ -314,16 +322,16 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
         }
 
         .analytics-header h1 {
-          font-size: 24px;
+          font-size: 1.75rem;
           font-weight: 700;
-          color: #1e293b;
+          color: #0f172a;
           margin: 0 0 4px 0;
         }
 
         .header-subtitle {
           color: #64748b;
-          font-size: 14px;
-          margin: 0;
+          font-size: 0.9rem;
+          margin: 4px 0 0 0;
         }
 
         /* Summary Cards */
@@ -804,9 +812,12 @@ function buildAnalyticsPage({ sidebar, commonStyles, clientScripts, analyticsDat
         <div class="analytics-page">
           <header class="analytics-header">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-              <div>
-                <h1>Regulatory Analytics Dashboard</h1>
-                <p class="header-subtitle">Publications by source, regulator, sector, and trends over time</p>
+              <div style="display: flex; align-items: center; gap: 16px;">
+                ${pageIcon}
+                <div>
+                  <h1>Regulatory Analytics Dashboard</h1>
+                  <p class="header-subtitle">Publications by source, regulator, sector, and trends over time</p>
+                </div>
               </div>
               <div class="export-buttons">
                 <button onclick="exportData('csv')" class="export-btn">

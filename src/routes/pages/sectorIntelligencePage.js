@@ -5,6 +5,7 @@ const { getCommonStyles } = require('../templates/commonStyles')
 const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const dbService = require('../../services/dbService')
+const { getIntelligenceIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../views/icons')
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -49,6 +50,10 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
   try {
     console.log(`Firm Rendering sector intelligence page for: ${sector}`)
 
+    // Get canary icon for this page
+    const canaryStyles = getCanaryAnimationStyles()
+    const pageIcon = wrapIconInContainer(getIntelligenceIcon())
+
     // Get sector-specific data
     const allUpdates = await dbService.getEnhancedUpdates({ limit: 200 })
     const sectorUpdates = allUpdates.filter(update =>
@@ -79,6 +84,7 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
             <title>${sector} Intelligence - Regulatory Intelligence Platform</title>
             ${getCommonStyles()}
             <style>
+                ${canaryStyles}
                 .intelligence-header {
                     background: #ffffff;
                     color: #0f172a;
@@ -511,7 +517,8 @@ async function renderSectorIntelligencePage(req, res, sector = 'Banking') {
                     <header class="intelligence-header">
                         <a href="/" class="back-link"><- Back to Home</a>
                         <h1 class="sector-title">
-                            Firm ${sector} Sector Intelligence
+                            ${pageIcon}
+                            ${sector} Sector Intelligence
                         </h1>
                         <p>Regulatory pressure analysis and compliance priority recommendations</p>
 

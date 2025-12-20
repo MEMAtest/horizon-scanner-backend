@@ -4,6 +4,7 @@ const { getCommonStyles } = require('../templates/commonStyles')
 const { getSidebar } = require('../templates/sidebar')
 const { getCommonClientScripts } = require('../templates/clientScripts')
 const predictiveIntelligenceService = require('../../services/predictiveIntelligenceService')
+const { getPredictiveIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../views/icons')
 
 const laneDefinitions = {
   act_now: {
@@ -247,6 +248,10 @@ const analyticsPage = async (req, res) => {
     const predictiveData = await predictiveIntelligenceService.getPredictiveDashboard()
     const sidebarHtml = await getSidebar('analytics')
 
+    // Generate canary icon
+    const canaryStyles = getCanaryAnimationStyles()
+    const pageIcon = wrapIconInContainer(getPredictiveIcon())
+
     const predictions = predictiveData?.predictions || { imminent: [], nearTerm: [], strategic: [] }
     const flattenPredictions = [
       ...(predictions.imminent || []),
@@ -332,6 +337,7 @@ const analyticsPage = async (req, res) => {
   <title>Predictive Analytics Dashboard</title>
   ${getCommonStyles()}
   <style>
+    ${canaryStyles}
     :root {
       color-scheme: light;
     }
@@ -363,20 +369,27 @@ const analyticsPage = async (req, res) => {
 
     .header-copy {
       display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-copy-text {
+      display: flex;
       flex-direction: column;
       gap: 0.4rem;
     }
 
     .header-copy h1 {
       margin: 0;
-      font-size: 2rem;
+      font-size: 1.75rem;
+      font-weight: 700;
       color: #0f172a;
     }
 
     .header-copy .subtitle {
-      margin: 0;
-      color: #475569;
-      font-size: 1rem;
+      margin: 4px 0 0 0;
+      color: #64748b;
+      font-size: 0.9rem;
     }
 
     .header-actions {
@@ -1002,8 +1015,11 @@ const analyticsPage = async (req, res) => {
   <main class="predictive-main" id="predictiveMain">
     <header class="predictive-header">
       <div class="header-copy">
-        <p class="subtitle">Prioritised regulatory intelligence and actions</p>
-        <h1>Predictive Analytics Dashboard</h1>
+        ${pageIcon}
+        <div class="header-copy-text">
+          <h1>Predictive Analytics Dashboard</h1>
+          <p class="subtitle">Prioritised regulatory intelligence and actions</p>
+        </div>
       </div>
       <div class="header-actions">
         <button type="button" class="btn btn-primary" id="downloadOnePager">Download One-Pager</button>

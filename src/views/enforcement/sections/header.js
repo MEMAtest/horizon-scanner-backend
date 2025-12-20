@@ -1,15 +1,14 @@
+const { getEnforcementIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../icons')
+
 function renderHeaderSection() {
+  const canaryStyles = getCanaryAnimationStyles()
+  const pageIcon = wrapIconInContainer(getEnforcementIcon())
+
   return `
+    <style>${canaryStyles}</style>
     <header class="enforcement-header">
       <div class="header-title">
-        <span class="title-icon">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3v16"></path>
-            <path d="M5 7h14"></path>
-            <path d="M7 7 4 13h6l-3-6z"></path>
-            <path d="M17 7 14 13h6l-3-6z"></path>
-          </svg>
-        </span>
+        ${pageIcon}
         <div>
           <h1>FCA Enforcement Dashboard</h1>
           <p class="enforcement-subtitle">
