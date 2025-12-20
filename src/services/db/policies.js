@@ -13,60 +13,123 @@ function toIso(value) {
 
 function normalizePolicy(row) {
   if (!row) return null
+  const userId = row.user_id || row.userId
+  const title = row.title || row.name
+  const ownerName = row.owner_name || row.ownerName || row.owner || null
+  const reviewFrequencyMonths = parseInt(row.review_frequency_months || row.reviewFrequencyMonths) || 12
+  const nextReviewDate = row.next_review_date || row.nextReviewDate || null
+  const currentVersionId = row.current_version_id || row.currentVersionId || null
+  const versionCount = parseInt(row.version_count || row.versionCount) || 0
+  const citationCount = parseInt(row.citation_count || row.citationCount) || 0
+  const createdAt = toIso(row.created_at || row.createdAt)
+  const updatedAt = toIso(row.updated_at || row.updatedAt)
   return {
     id: row.id,
-    userId: row.user_id,
-    name: row.name,
+    userId,
+    user_id: userId,
+    title,
+    name: row.name || title,
     code: row.code || null,
     category: row.category || null,
-    ownerName: row.owner_name || null,
-    reviewFrequencyMonths: parseInt(row.review_frequency_months) || 12,
-    nextReviewDate: row.next_review_date || null,
-    currentVersionId: row.current_version_id || null,
+    description: row.description || null,
+    owner: ownerName,
+    ownerName,
+    owner_name: ownerName,
+    reviewFrequencyMonths,
+    review_frequency_months: reviewFrequencyMonths,
+    nextReviewDate,
+    next_review_date: nextReviewDate,
+    currentVersionId,
+    current_version_id: currentVersionId,
+    current_version: row.current_version || row.currentVersion || null,
+    effective_date: row.effective_date || row.effectiveDate || null,
+    citationCount,
+    citation_count: citationCount,
     status: row.status || 'draft',
-    versionCount: parseInt(row.version_count) || 0,
-    createdAt: toIso(row.created_at),
-    updatedAt: toIso(row.updated_at)
+    versionCount,
+    version_count: versionCount,
+    createdAt,
+    created_at: createdAt,
+    updatedAt,
+    updated_at: updatedAt
   }
 }
 
 function normalizePolicyVersion(row) {
   if (!row) return null
+  const policyId = row.policy_id || row.policyId
+  const versionNumber = row.version_number || row.versionNumber
+  const approvalStatus = row.approval_status || row.approvalStatus || row.status || 'draft'
+  const approverName = row.approver_name || row.approverName || row.approved_by || row.approvedBy || null
+  const createdBy = row.created_by || row.createdBy || null
+  const createdAt = toIso(row.created_at || row.createdAt)
+  const approvedAt = toIso(row.approved_at || row.approvedAt)
+  const citationCount = parseInt(row.citation_count || row.citationCount) || 0
   return {
     id: row.id,
-    policyId: row.policy_id,
-    versionNumber: row.version_number,
+    policyId,
+    policy_id: policyId,
+    versionNumber,
+    version_number: versionNumber,
     content: row.content || null,
-    effectiveDate: row.effective_date || null,
-    changeSummary: row.change_summary || null,
-    triggeredByUpdateId: row.triggered_by_update_id || null,
-    approvalStatus: row.approval_status || 'draft',
-    approverName: row.approver_name || null,
-    approvedAt: toIso(row.approved_at),
-    createdBy: row.created_by || null,
-    citationCount: parseInt(row.citation_count) || 0,
-    createdAt: toIso(row.created_at)
+    effectiveDate: row.effective_date || row.effectiveDate || null,
+    effective_date: row.effective_date || row.effectiveDate || null,
+    changeSummary: row.change_summary || row.changeSummary || null,
+    change_summary: row.change_summary || row.changeSummary || null,
+    triggeredByUpdateId: row.triggered_by_update_id || row.triggeredByUpdateId || null,
+    triggered_by_update_id: row.triggered_by_update_id || row.triggeredByUpdateId || null,
+    approvalStatus,
+    approval_status: approvalStatus,
+    status: approvalStatus,
+    approverName,
+    approver_name: approverName,
+    approvedBy: approverName,
+    approved_by: approverName,
+    approvedAt,
+    approved_at: approvedAt,
+    createdBy,
+    created_by: createdBy,
+    citationCount,
+    citation_count: citationCount,
+    createdAt,
+    created_at: createdAt
   }
 }
 
 function normalizePolicyCitation(row) {
   if (!row) return null
+  const policyVersionId = row.policy_version_id || row.policyVersionId
+  const regulatoryUpdateId = row.regulatory_update_id || row.regulatoryUpdateId || row.update_id || row.updateId
+  const createdAt = toIso(row.created_at || row.createdAt)
+  const update = row.headline ? {
+    id: regulatoryUpdateId,
+    headline: row.headline,
+    authority: row.authority,
+    publishedDate: toIso(row.published_date),
+    url: row.url
+  } : row.update || null
+  const citationText = row.citation_text || row.citationText || row.notes || row.section_reference || row.sectionReference || null
   return {
     id: row.id,
-    policyVersionId: row.policy_version_id,
-    regulatoryUpdateId: row.regulatory_update_id,
-    citationType: row.citation_type || null,
-    sectionReference: row.section_reference || null,
+    policyVersionId,
+    policy_version_id: policyVersionId,
+    regulatoryUpdateId,
+    regulatory_update_id: regulatoryUpdateId,
+    updateId: regulatoryUpdateId,
+    update_id: regulatoryUpdateId,
+    citationType: row.citation_type || row.citationType || null,
+    citation_type: row.citation_type || row.citationType || null,
+    sectionReference: row.section_reference || row.sectionReference || null,
+    section_reference: row.section_reference || row.sectionReference || null,
     notes: row.notes || null,
-    createdAt: toIso(row.created_at),
-    // Include update details if joined
-    update: row.headline ? {
-      id: row.regulatory_update_id,
-      headline: row.headline,
-      authority: row.authority,
-      publishedDate: toIso(row.published_date),
-      url: row.url
-    } : null
+    citationText,
+    citation_text: citationText,
+    createdAt,
+    created_at: createdAt,
+    update,
+    update_title: update ? update.headline : null,
+    update_source: update ? update.authority : null,
+    update_url: update ? update.url : null
   }
 }
 
@@ -87,6 +150,7 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
             id BIGSERIAL PRIMARY KEY,
             user_id TEXT NOT NULL,
             name VARCHAR(255) NOT NULL,
+            description TEXT,
             code VARCHAR(50),
             category VARCHAR(100),
             owner_name VARCHAR(255),
@@ -97,6 +161,11 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
             created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
           )
+        `)
+
+        await client.query(`
+          ALTER TABLE policies
+            ADD COLUMN IF NOT EXISTS description TEXT
         `)
 
         await client.query(`
@@ -186,8 +255,12 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
         try {
           let query = `
             SELECT p.*,
-              (SELECT COUNT(*) FROM policy_versions v WHERE v.policy_id = p.id) as version_count
+              (SELECT COUNT(*) FROM policy_versions v WHERE v.policy_id = p.id) as version_count,
+              cv.version_number as current_version,
+              cv.effective_date as effective_date,
+              COALESCE((SELECT COUNT(*) FROM policy_citations c WHERE c.policy_version_id = p.current_version_id), 0) as citation_count
             FROM policies p
+            LEFT JOIN policy_versions cv ON cv.id = p.current_version_id
             WHERE p.user_id = $1
           `
           const params = [userKey]
@@ -232,8 +305,12 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
         try {
           const result = await client.query(`
             SELECT p.*,
-              (SELECT COUNT(*) FROM policy_versions v WHERE v.policy_id = p.id) as version_count
+              (SELECT COUNT(*) FROM policy_versions v WHERE v.policy_id = p.id) as version_count,
+              cv.version_number as current_version,
+              cv.effective_date as effective_date,
+              COALESCE((SELECT COUNT(*) FROM policy_citations c WHERE c.policy_version_id = p.current_version_id), 0) as citation_count
             FROM policies p
+            LEFT JOIN policy_versions cv ON cv.id = p.current_version_id
             WHERE p.id = $1 AND p.user_id = $2
           `, [policyId, userKey])
           return result.rows.length ? normalizePolicy(result.rows[0]) : null
@@ -256,25 +333,42 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
         const client = await this.pool.connect()
         try {
           // Calculate next review date
-          const reviewMonths = data.reviewFrequencyMonths || 12
+          const rawReviewMonths = data.reviewFrequencyMonths || data.review_frequency_months || null
+          const rawReviewDays = data.reviewFrequencyDays || data.review_frequency_days || null
+          const parsedReviewMonths = parseInt(rawReviewMonths)
+          const parsedReviewDays = parseInt(rawReviewDays)
+          const reviewMonths = Number.isFinite(parsedReviewMonths)
+            ? parsedReviewMonths
+            : Number.isFinite(parsedReviewDays)
+              ? Math.max(1, Math.round(parsedReviewDays / 30))
+              : 12
+
+          const requestedNextReview = data.nextReviewDate || data.next_review_date || null
           const nextReview = new Date()
           nextReview.setMonth(nextReview.getMonth() + reviewMonths)
+          const nextReviewDate = requestedNextReview
+            ? new Date(requestedNextReview)
+            : nextReview
+          const nextReviewValue = Number.isNaN(nextReviewDate.getTime())
+            ? nextReview.toISOString().split('T')[0]
+            : nextReviewDate.toISOString().split('T')[0]
 
           const result = await client.query(`
             INSERT INTO policies (
-              user_id, name, code, category, owner_name,
+              user_id, name, description, code, category, owner_name,
               review_frequency_months, next_review_date, status,
               created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft', NOW(), NOW())
             RETURNING *
           `, [
             userKey,
-            data.name || 'New Policy',
+            data.name || data.title || 'New Policy',
+            data.description || null,
             data.code || null,
             data.category || null,
-            data.ownerName || null,
+            data.ownerName || data.owner || null,
             reviewMonths,
-            nextReview.toISOString().split('T')[0]
+            nextReviewValue
           ])
           return normalizePolicy(result.rows[0])
         } catch (error) {
@@ -301,6 +395,7 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
 
           const fieldMap = {
             name: 'name',
+            description: 'description',
             code: 'code',
             category: 'category',
             ownerName: 'owner_name',
@@ -766,6 +861,7 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
     async getPoliciesJSON(userId, filters = {}) {
       const policies = await this.loadPoliciesJSON()
       const versions = await this.loadPolicyVersionsJSON()
+      const citations = await this.loadPolicyCitationsJSON()
 
       let filtered = policies.filter(p => p.userId === userId)
 
@@ -782,15 +878,36 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
         filtered = filtered.filter(p => p.nextReviewDate && new Date(p.nextReviewDate) <= dueDate)
       }
 
-      return filtered.map(p => ({
-        ...p,
-        versionCount: versions.filter(v => String(v.policyId) === String(p.id)).length
-      }))
+      return filtered.map(policy => {
+        const policyVersions = versions
+          .filter(v => String(v.policyId) === String(policy.id))
+          .slice()
+          .sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0))
+        const versionCount = policyVersions.length
+        const currentVersionId = policy.currentVersionId || policy.current_version_id || null
+        const resolvedCurrent = currentVersionId
+          ? policyVersions.find(v => String(v.id) === String(currentVersionId))
+          : (policyVersions.length > 0 ? policyVersions[0] : null)
+
+        const citationCount = resolvedCurrent
+          ? citations.filter(c => String(c.policyVersionId) === String(resolvedCurrent.id)).length
+          : 0
+
+        return normalizePolicy({
+          ...policy,
+          versionCount,
+          currentVersionId: resolvedCurrent ? resolvedCurrent.id : currentVersionId,
+          current_version: resolvedCurrent ? (resolvedCurrent.versionNumber || resolvedCurrent.version_number) : null,
+          effective_date: resolvedCurrent ? (resolvedCurrent.effectiveDate || resolvedCurrent.effective_date) : null,
+          citation_count: citationCount
+        })
+      })
     },
 
     async getPolicyByIdJSON(policyId, userId) {
       const policies = await this.loadPoliciesJSON()
       const versions = await this.loadPolicyVersionsJSON()
+      const citations = await this.loadPolicyCitationsJSON()
 
       const policy = policies.find(p =>
         String(p.id) === String(policyId) && p.userId === userId
@@ -798,29 +915,61 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
 
       if (!policy) return null
 
-      return {
+      const policyVersions = versions.filter(v => String(v.policyId) === String(policy.id))
+        .slice()
+        .sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0))
+      const versionCount = policyVersions.length
+      const currentVersionId = policy.currentVersionId || policy.current_version_id || null
+      const resolvedCurrent = currentVersionId
+        ? policyVersions.find(v => String(v.id) === String(currentVersionId))
+        : (policyVersions.length > 0 ? policyVersions[0] : null)
+
+      const citationCount = resolvedCurrent
+        ? citations.filter(c => String(c.policyVersionId) === String(resolvedCurrent.id)).length
+        : 0
+
+      return normalizePolicy({
         ...policy,
-        versionCount: versions.filter(v => String(v.policyId) === String(policy.id)).length
-      }
+        versionCount,
+        currentVersionId: resolvedCurrent ? resolvedCurrent.id : currentVersionId,
+        current_version: resolvedCurrent ? (resolvedCurrent.versionNumber || resolvedCurrent.version_number) : null,
+        effective_date: resolvedCurrent ? (resolvedCurrent.effectiveDate || resolvedCurrent.effective_date) : null,
+        citation_count: citationCount
+      })
     },
 
     async createPolicyJSON(userId, data) {
       const policies = await this.loadPoliciesJSON()
       const now = new Date().toISOString()
 
-      const reviewMonths = data.reviewFrequencyMonths || 12
+      const parsedReviewMonths = parseInt(data.reviewFrequencyMonths || data.review_frequency_months)
+      const parsedReviewDays = parseInt(data.reviewFrequencyDays || data.review_frequency_days)
+      const reviewMonths = Number.isFinite(parsedReviewMonths)
+        ? parsedReviewMonths
+        : Number.isFinite(parsedReviewDays)
+          ? Math.max(1, Math.round(parsedReviewDays / 30))
+          : 12
+
+      const requestedNextReview = data.nextReviewDate || data.next_review_date || null
       const nextReview = new Date()
       nextReview.setMonth(nextReview.getMonth() + reviewMonths)
+      const nextReviewDate = requestedNextReview ? new Date(requestedNextReview) : nextReview
+      const nextReviewValue = Number.isNaN(nextReviewDate.getTime())
+        ? nextReview.toISOString().split('T')[0]
+        : nextReviewDate.toISOString().split('T')[0]
 
       const newPolicy = {
         id: crypto.randomUUID ? crypto.randomUUID() : `pol-${Date.now()}`,
         userId,
-        name: data.name || 'New Policy',
+        title: data.title || data.name || 'New Policy',
+        name: data.name || data.title || 'New Policy',
+        description: data.description || null,
         code: data.code || null,
         category: data.category || null,
-        ownerName: data.ownerName || null,
+        owner: data.owner || data.ownerName || null,
+        ownerName: data.ownerName || data.owner || null,
         reviewFrequencyMonths: reviewMonths,
-        nextReviewDate: nextReview.toISOString().split('T')[0],
+        nextReviewDate: nextReviewValue,
         currentVersionId: null,
         status: 'draft',
         createdAt: now,
@@ -829,23 +978,46 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
 
       policies.push(newPolicy)
       await this.savePoliciesJSON(policies)
-      return { ...newPolicy, versionCount: 0 }
+      return normalizePolicy({ ...newPolicy, versionCount: 0 })
     },
 
     async updatePolicyJSON(policyId, userId, updates) {
       const policies = await this.loadPoliciesJSON()
+      const normalizedUpdates = { ...updates }
+      if (normalizedUpdates.name === undefined && normalizedUpdates.title !== undefined) {
+        normalizedUpdates.name = normalizedUpdates.title
+      }
+      if (normalizedUpdates.title === undefined && normalizedUpdates.name !== undefined) {
+        normalizedUpdates.title = normalizedUpdates.name
+      }
+      if (normalizedUpdates.ownerName === undefined && normalizedUpdates.owner !== undefined) {
+        normalizedUpdates.ownerName = normalizedUpdates.owner
+      }
+      if (normalizedUpdates.owner === undefined && normalizedUpdates.ownerName !== undefined) {
+        normalizedUpdates.owner = normalizedUpdates.ownerName
+      }
+      if (normalizedUpdates.nextReviewDate === undefined && normalizedUpdates.next_review_date !== undefined) {
+        normalizedUpdates.nextReviewDate = normalizedUpdates.next_review_date
+      }
+      if (normalizedUpdates.next_review_date === undefined && normalizedUpdates.nextReviewDate !== undefined) {
+        normalizedUpdates.next_review_date = normalizedUpdates.nextReviewDate
+      }
+
       let updated = null
 
       const nextPolicies = policies.map(p => {
         if (String(p.id) === String(policyId) && p.userId === userId) {
-          updated = { ...p, ...updates, updatedAt: new Date().toISOString() }
+          updated = { ...p, ...normalizedUpdates, updatedAt: new Date().toISOString() }
           return updated
         }
         return p
       })
 
       if (updated) await this.savePoliciesJSON(nextPolicies)
-      return updated
+      if (!updated) return null
+      const versions = await this.loadPolicyVersionsJSON()
+      const versionCount = versions.filter(v => String(v.policyId) === String(updated.id)).length
+      return normalizePolicy({ ...updated, versionCount })
     },
 
     async deletePolicyJSON(policyId, userId) {
@@ -871,10 +1043,10 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
       return versions
         .filter(v => String(v.policyId) === String(policyId))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .map(v => ({
-          ...v,
-          citationCount: citations.filter(c => String(c.policyVersionId) === String(v.id)).length
-        }))
+        .map(v => {
+          const citationCount = citations.filter(c => String(c.policyVersionId) === String(v.id)).length
+          return normalizePolicyVersion({ ...v, citationCount })
+        })
     },
 
     async getPolicyVersionByIdJSON(versionId) {
@@ -884,10 +1056,8 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
       const version = versions.find(v => String(v.id) === String(versionId))
       if (!version) return null
 
-      return {
-        ...version,
-        citationCount: citations.filter(c => String(c.policyVersionId) === String(version.id)).length
-      }
+      const citationCount = citations.filter(c => String(c.policyVersionId) === String(version.id)).length
+      return normalizePolicyVersion({ ...version, citationCount })
     },
 
     async createPolicyVersionJSON(policyId, data) {
@@ -924,11 +1094,12 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
 
       versions.push(newVersion)
       await this.savePolicyVersionsJSON(versions)
-      return { ...newVersion, citationCount: 0 }
+      return normalizePolicyVersion({ ...newVersion, citationCount: 0 })
     },
 
     async updatePolicyVersionJSON(versionId, updates) {
       const versions = await this.loadPolicyVersionsJSON()
+      const citations = await this.loadPolicyCitationsJSON()
       let updated = null
 
       const nextVersions = versions.map(v => {
@@ -940,7 +1111,9 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
       })
 
       if (updated) await this.savePolicyVersionsJSON(nextVersions)
-      return updated
+      if (!updated) return null
+      const citationCount = citations.filter(c => String(c.policyVersionId) === String(updated.id)).length
+      return normalizePolicyVersion({ ...updated, citationCount })
     },
 
     async approvePolicyVersionJSON(versionId, approverName, userId) {
@@ -975,12 +1148,31 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
       })
       await this.savePoliciesJSON(nextPolicies)
 
-      return updatedVersion
+      return normalizePolicyVersion(updatedVersion)
     },
 
     async getPolicyCitationsJSON(versionId) {
       const citations = await this.loadPolicyCitationsJSON()
-      return citations.filter(c => String(c.policyVersionId) === String(versionId))
+      const updates = await this.loadJSONData(this.updatesFile)
+      const updateMap = new Map((Array.isArray(updates) ? updates : []).map(update => [String(update.id), update]))
+      return citations
+        .filter(c => String(c.policyVersionId) === String(versionId))
+        .map(citation => {
+          const updateId = citation.regulatoryUpdateId || citation.regulatory_update_id || citation.updateId || citation.update_id
+          const update = updateMap.get(String(updateId))
+          return normalizePolicyCitation({
+            ...citation,
+            policy_version_id: citation.policyVersionId,
+            regulatory_update_id: updateId,
+            citation_type: citation.citationType,
+            section_reference: citation.sectionReference,
+            created_at: citation.createdAt,
+            headline: update?.headline,
+            authority: update?.authority,
+            published_date: update?.publishedDate || update?.published_date || update?.fetchedDate || update?.createdAt,
+            url: update?.url
+          })
+        })
     },
 
     async addPolicyCitationJSON(versionId, updateId, data) {
@@ -1015,7 +1207,22 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
       }
 
       await this.savePolicyCitationsJSON(citations)
-      return existingIndex >= 0 ? citations[existingIndex] : newCitation
+      const updates = await this.loadJSONData(this.updatesFile)
+      const updateMap = new Map((Array.isArray(updates) ? updates : []).map(update => [String(update.id), update]))
+      const update = updateMap.get(String(updateId))
+      const selected = existingIndex >= 0 ? citations[existingIndex] : newCitation
+      return normalizePolicyCitation({
+        ...selected,
+        policy_version_id: selected.policyVersionId,
+        regulatory_update_id: updateId,
+        citation_type: selected.citationType,
+        section_reference: selected.sectionReference,
+        created_at: selected.createdAt,
+        headline: update?.headline,
+        authority: update?.authority,
+        published_date: update?.publishedDate || update?.published_date || update?.fetchedDate || update?.createdAt,
+        url: update?.url
+      })
     },
 
     async removePolicyCitationJSON(citationId) {
@@ -1043,10 +1250,10 @@ module.exports = function applyPoliciesMethods(EnhancedDBService) {
           p.nextReviewDate &&
           new Date(p.nextReviewDate) <= dueDate
         )
-        .map(p => ({
-          ...p,
-          versionCount: versions.filter(v => String(v.policyId) === String(p.id)).length
-        }))
+        .map(p => {
+          const versionCount = versions.filter(v => String(v.policyId) === String(p.id)).length
+          return normalizePolicy({ ...p, versionCount })
+        })
     }
   })
 }

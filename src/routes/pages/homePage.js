@@ -7,6 +7,9 @@ const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
 const firmPersonaService = require('../../services/firmPersonaService')
 const { Pool } = require('pg')
+const { renderCalendarWidget } = require('../../views/calendar/widget')
+const { getCalendarWidgetStyles } = require('../../views/calendar/styles')
+const calendarService = require('../../services/calendarService')
 
 async function renderHomePage(req, res) {
   try {
@@ -34,6 +37,12 @@ async function renderHomePage(req, res) {
 
     // Get top fines this year
     const topFines = await getTopFinesThisYear()
+
+    // Get upcoming calendar events for widget
+    const upcomingEvents = await calendarService.getUpcomingEvents(30, 7).catch(err => {
+      console.error('Error fetching calendar events:', err)
+      return []
+    })
 
     // Generate sidebar
     const sidebar = await getSidebar('home', { user, persona })
@@ -183,6 +192,106 @@ async function renderHomePage(req, res) {
                 .footer-note { margin-top: 32px; text-align: center; color: #64748b; font-size: 0.85rem; }
                 .footer-note a { color: #1e40af; text-decoration: none; font-weight: 600; }
                 .footer-note a:hover { text-decoration: underline; }
+                /* Widgets Row */
+                .widgets-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+
+                /* Quick Actions Widget */
+                .quick-actions-widget {
+                  background: white;
+                  border-radius: 12px;
+                  border: 1px solid #e2e8f0;
+                  overflow: hidden;
+                  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+                  display: flex;
+                  flex-direction: column;
+                }
+                .quick-actions-header {
+                  padding: 10px 14px;
+                  border-bottom: 1px solid #f1f5f9;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                }
+                .quick-actions-title {
+                  font-size: 0.85rem;
+                  font-weight: 600;
+                  color: #0f172a;
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                }
+                .quick-actions-title svg { width: 14px; height: 14px; color: #f59e0b; }
+                .quick-actions-link { font-size: 0.72rem; color: #3b82f6; text-decoration: none; font-weight: 500; }
+                .quick-actions-link:hover { text-decoration: underline; }
+                .quick-actions-body { padding: 0; flex: 1; max-height: 200px; overflow-y: auto; }
+                .action-item {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  padding: 8px 14px;
+                  border-bottom: 1px solid #f8fafc;
+                  cursor: pointer;
+                  transition: background 0.15s;
+                }
+                .action-item:hover { background: #f8fafc; }
+                .action-item:last-child { border-bottom: none; }
+                .action-indicator {
+                  width: 3px;
+                  height: 24px;
+                  border-radius: 2px;
+                  flex-shrink: 0;
+                }
+                .action-indicator.significant { background: #dc2626; }
+                .action-indicator.critical { background: #dc2626; }
+                .action-indicator.high { background: #f59e0b; }
+                .action-indicator.moderate { background: #3b82f6; }
+                .action-content { flex: 1; min-width: 0; }
+                .action-title {
+                  font-size: 0.75rem;
+                  font-weight: 600;
+                  color: #0f172a;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  margin-bottom: 2px;
+                }
+                .action-meta { font-size: 0.65rem; color: #64748b; display: flex; gap: 8px; }
+                .action-authority { font-weight: 500; }
+                .action-impact {
+                  padding: 1px 6px;
+                  border-radius: 4px;
+                  background: #fef2f2;
+                  color: #dc2626;
+                  font-weight: 500;
+                }
+                .action-empty { padding: 20px; text-align: center; color: #64748b; font-size: 0.8rem; }
+                .quick-actions-footer {
+                  padding: 8px 14px;
+                  background: #f8fafc;
+                  border-top: 1px solid #f1f5f9;
+                  display: flex;
+                  gap: 8px;
+                }
+                .action-btn {
+                  flex: 1;
+                  padding: 6px 10px;
+                  border-radius: 6px;
+                  font-size: 0.7rem;
+                  font-weight: 600;
+                  text-decoration: none;
+                  text-align: center;
+                  background: #3b82f6;
+                  color: white;
+                  transition: background 0.15s;
+                }
+                .action-btn:hover { background: #2563eb; }
+                .action-btn.secondary {
+                  background: white;
+                  color: #3b82f6;
+                  border: 1px solid #e2e8f0;
+                }
+                .action-btn.secondary:hover { background: #f8fafc; }
+
                 /* Charts Row Styles */
                 .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
                 .chart-card { background: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
@@ -239,6 +348,8 @@ async function renderHomePage(req, res) {
                     .fines-table th, .fines-table td { padding: 10px 8px; }
                     .pressure-label { width: 80px; font-size: 0.75rem; }
                 }
+
+                ${getCalendarWidgetStyles()}
             </style>
         </head>
         <body>
@@ -493,7 +604,12 @@ async function renderHomePage(req, res) {
                     </section>
 
                     <section class="insights-grid">
-                        ${generateInsightCards(recentUpdates.slice(0, 6), systemStats)}
+                        ${generateInsightCards(recentUpdates.slice(0, 6), systemStats, upcomingEvents)}
+                    </section>
+
+                    <section class="widgets-row">
+                        ${renderCalendarWidget(upcomingEvents)}
+                        ${renderQuickActionsWidget(recentUpdates)}
                     </section>
 
                     <section class="charts-row">
@@ -564,8 +680,8 @@ async function getSystemStatistics() {
   }
 }
 
-function generateInsightCards(recentUpdates, systemStats) {
-  const highlights = buildHomepageHighlights(recentUpdates, systemStats)
+function generateInsightCards(recentUpdates, systemStats, calendarEvents = []) {
+  const highlights = buildHomepageHighlights(recentUpdates, systemStats, calendarEvents)
   return highlights.map(item => `
         <article class="insight-card">
             <span class="insight-label">${escapeHtml(item.label)}</span>
@@ -576,7 +692,7 @@ function generateInsightCards(recentUpdates, systemStats) {
     `).join('')
 }
 
-function buildHomepageHighlights(recentUpdates = [], systemStats = {}) {
+function buildHomepageHighlights(recentUpdates = [], systemStats = {}, calendarEvents = []) {
   const highlights = []
 
   if (recentUpdates.length > 0) {
@@ -596,34 +712,28 @@ function buildHomepageHighlights(recentUpdates = [], systemStats = {}) {
         meta: 'Monitoring window: last refresh'
       })
     }
-
-    const now = Date.now()
-    let upcomingDeadlines = 0
-    let consultationCount = 0
-
-    recentUpdates.forEach(update => {
-      const summary = `${update.headline || ''} ${update.summary || ''}`.toLowerCase()
-      if (summary.includes('consultation') || summary.includes('feedback')) {
-        consultationCount += 1
-      }
-      const deadlineRaw = update.compliance_deadline || update.complianceDeadline
-      if (deadlineRaw) {
-        const due = new Date(deadlineRaw).getTime()
-        if (!Number.isNaN(due) && due >= now && due - now <= 14 * 24 * 60 * 60 * 1000) {
-          upcomingDeadlines += 1
-        }
-      }
-    })
-
-    highlights.push({
-      label: 'Upcoming deadlines',
-      headline: `${upcomingDeadlines} deadline${upcomingDeadlines === 1 ? '' : 's'} in next 14 days`,
-      body: consultationCount
-        ? `${consultationCount} consultation${consultationCount === 1 ? '' : 's'} currently open for response.`
-        : 'No active consultations flagged in the latest feed.',
-      meta: 'Monitoring window: 14 days'
-    })
   }
+
+  // Use calendar events for deadline count (more accurate)
+  const now = Date.now()
+  const upcomingDeadlines = calendarEvents.filter(event => {
+    if (!event.eventDate) return false
+    const due = new Date(event.eventDate).getTime()
+    return !Number.isNaN(due) && due >= now && due - now <= 14 * 24 * 60 * 60 * 1000
+  }).length
+
+  const consultationCount = calendarEvents.filter(e =>
+    e.eventType === 'consultation' || e.sourceType === 'consultation'
+  ).length
+
+  highlights.push({
+    label: 'Upcoming deadlines',
+    headline: `${upcomingDeadlines} deadline${upcomingDeadlines === 1 ? '' : 's'} in next 14 days`,
+    body: consultationCount
+      ? `${consultationCount} consultation${consultationCount === 1 ? '' : 's'} currently open for response.`
+      : 'Review the calendar for all upcoming regulatory events.',
+    meta: 'From regulatory calendar'
+  })
 
   if (highlights.length < 2) {
     highlights.push({
@@ -1216,6 +1326,57 @@ function renderSectorPressureChart(updates = []) {
       </div>
       <div class="pressure-chart">
         ${bars}
+      </div>
+    </div>
+  `
+}
+
+// =========================================================================
+// Quick Actions Widget
+// =========================================================================
+
+function renderQuickActionsWidget(updates = []) {
+  // Get high-impact items
+  const highImpact = updates.filter(u => {
+    const impact = (u.impactLevel || u.impact_level || '').toLowerCase()
+    return impact === 'significant' || impact === 'critical' || impact === 'high'
+  }).slice(0, 4)
+
+  const actionItems = highImpact.map(item => {
+    const impact = (item.impactLevel || item.impact_level || 'Moderate')
+    return `
+      <div class="action-item" title="${escapeHtml(item.headline || 'Update')}">
+        <div class="action-indicator ${impact.toLowerCase()}"></div>
+        <div class="action-content">
+          <div class="action-title">${escapeHtml((item.headline || 'Untitled').substring(0, 50))}${(item.headline || '').length > 50 ? '...' : ''}</div>
+          <div class="action-meta">
+            <span class="action-authority">${escapeHtml(item.authority || 'Unknown')}</span>
+            <span class="action-impact">${escapeHtml(impact)}</span>
+          </div>
+        </div>
+      </div>
+    `
+  }).join('')
+
+  return `
+    <div class="quick-actions-widget">
+      <div class="quick-actions-header">
+        <div class="quick-actions-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Priority Actions
+        </div>
+        <a href="/ai-intelligence" class="quick-actions-link">View All →</a>
+      </div>
+      <div class="quick-actions-body">
+        ${actionItems || '<div class="action-empty">No high-priority items</div>'}
+      </div>
+      <div class="quick-actions-footer">
+        <a href="/dashboard?impact=Significant" class="action-btn">Review High Impact</a>
+        <a href="/ai-intelligence" class="action-btn secondary">Intelligence Center</a>
       </div>
     </div>
   `

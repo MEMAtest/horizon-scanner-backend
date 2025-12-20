@@ -5,6 +5,11 @@
 
 const db = require('./dbService')
 
+function toNumber(value, fallback) {
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 class WatchListService {
   /**
    * Get all watch lists for a user
@@ -52,12 +57,49 @@ class WatchListService {
         authorities: data.authorities || [],
         sectors: data.sectors || [],
         alertOnMatch: data.alertOnMatch !== false,
-        alertThreshold: data.alertThreshold || 0.5,
-        autoAddToDossier: data.autoAddToDossier || false,
+        alertThreshold: toNumber(data.alertThreshold, 0.5),
+        autoAddToDossier: data.autoAddToDossier === true,
         targetDossierId: data.targetDossierId
       })
 
-      return { success: true, data: watchList }
+      let bulkMatchResult = null
+      const shouldBulkMatch = data.bulkMatch !== false
+      if (shouldBulkMatch) {
+        try {
+          bulkMatchResult = await this.bulkMatchWatchList(watchList.id, userId)
+        } catch (error) {
+          console.warn('[WatchListService] Bulk match on create failed:', error.message)
+        }
+      }
+
+      const refreshed = await db.getWatchListById(watchList.id, userId)
+
+      try {
+        const matchCount = bulkMatchResult?.data?.matchCount || 0
+        const title = `Watch list created: ${watchList.name}`
+        const message = matchCount
+          ? `${matchCount} matching updates found.`
+          : 'Ready to match new updates.'
+
+        await db.createNotification(userId, {
+          type: 'watch_list_created',
+          title,
+          message,
+          priority: matchCount ? 'high' : 'normal',
+          actionUrl: `/watch-lists?openMatches=${encodeURIComponent(watchList.id)}`,
+          actionLabel: matchCount ? 'View Matches' : 'Open Watch Lists',
+          referenceType: 'watch_list',
+          referenceId: String(watchList.id),
+          metadata: {
+            watchListId: watchList.id,
+            matchCount
+          }
+        })
+      } catch (error) {
+        console.warn('[WatchListService] Failed to create watch list notification:', error.message)
+      }
+
+      return { success: true, data: refreshed || watchList }
     } catch (error) {
       console.error('[WatchListService] Error creating watch list:', error)
       return { success: false, error: error.message }
@@ -101,8 +143,22 @@ class WatchListService {
    */
   async getWatchListMatches(watchListId, userId, options = {}) {
     try {
-      const matches = await db.getWatchListMatches(watchListId, userId, options)
-      return { success: true, data: matches }
+      const watchList = await db.getWatchListById(watchListId, userId)
+      if (!watchList) {
+        return { success: false, error: 'Watch list not found' }
+      }
+
+      const matches = await db.getWatchListMatches(watchListId, {
+        includeDismissed: options.includeDismissed === true,
+        limit: options.limit,
+        offset: options.offset
+      })
+
+      const filtered = options.unreviewedOnly
+        ? matches.filter(match => !match.reviewed)
+        : matches
+
+      return { success: true, data: filtered }
     } catch (error) {
       console.error('[WatchListService] Error getting matches:', error)
       return { success: false, error: error.message }
@@ -115,23 +171,44 @@ class WatchListService {
    */
   async matchUpdateAgainstWatchLists(updateId, updateData, userId) {
     try {
-      const matches = await db.matchUpdateAgainstWatchLists(updateId, updateData)
+      const watchLists = await db.getWatchLists(userId)
+      const matches = []
 
-      // Create notifications for high-score matches
-      for (const match of matches) {
-        if (match.match_score >= match.alert_threshold && match.alert_on_match) {
+      for (const watchList of watchLists) {
+        const matchResult = db.calculateMatchScore(watchList, updateData)
+        if (!matchResult || matchResult.score <= 0) continue
+
+        const threshold = watchList.alert_threshold || watchList.alertThreshold || 0.5
+        if (matchResult.score < threshold) continue
+
+        const match = await db.createWatchListMatch(watchList.id, updateId, {
+          matchScore: matchResult.score,
+          matchReasons: matchResult.reasons
+        })
+
+        matches.push({
+          ...match,
+          watch_list_name: watchList.name,
+          alert_threshold: watchList.alert_threshold,
+          alert_on_match: watchList.alert_on_match,
+          auto_add_to_dossier: watchList.auto_add_to_dossier,
+          target_dossier_id: watchList.target_dossier_id
+        })
+
+        const updateTitle = updateData.headline || updateData.title || match.update_title || 'Update'
+
+        if (matchResult.score >= (watchList.alert_threshold || 0.5) && watchList.alert_on_match) {
           await db.createWatchListMatchNotification(
             userId,
-            match.watch_list_name,
-            { id: updateId, title: updateData.title },
-            match.match_score
+            watchList.name,
+            { id: updateId, title: updateTitle, watchListId: watchList.id },
+            matchResult.score
           )
         }
 
-        // Auto-add to dossier if configured
-        if (match.auto_add_to_dossier && match.target_dossier_id) {
-          await db.addItemToDossier(match.target_dossier_id, updateId, {
-            notes: `Auto-added from watch list "${match.watch_list_name}" (${Math.round(match.match_score * 100)}% match)`,
+        if (watchList.auto_add_to_dossier && watchList.target_dossier_id) {
+          await db.addItemToDossier(watchList.target_dossier_id, updateId, {
+            notes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`,
             addedBy: 'system'
           })
         }
@@ -149,7 +226,7 @@ class WatchListService {
    */
   async markMatchReviewed(matchId, userId) {
     try {
-      const match = await db.markMatchReviewed(matchId, userId)
+      const match = await db.markWatchListMatchReviewed(matchId)
       if (!match) {
         return { success: false, error: 'Match not found' }
       }
@@ -165,11 +242,11 @@ class WatchListService {
    */
   async dismissMatch(matchId, userId) {
     try {
-      const match = await db.dismissMatch(matchId, userId)
-      if (!match) {
+      const dismissed = await db.dismissWatchListMatch(matchId)
+      if (!dismissed) {
         return { success: false, error: 'Match not found' }
       }
-      return { success: true, data: match }
+      return { success: true, data: { dismissed: true } }
     } catch (error) {
       console.error('[WatchListService] Error dismissing match:', error)
       return { success: false, error: error.message }
@@ -201,8 +278,7 @@ class WatchListService {
       let totalUnreviewed = 0
 
       for (const watchList of watchLists) {
-        const matches = await db.getWatchListMatches(watchList.id, userId, { unreviewedOnly: true })
-        totalUnreviewed += matches.length
+        totalUnreviewed += watchList.unreviewedCount || watchList.unreviewed_count || 0
       }
 
       return { success: true, data: { count: totalUnreviewed } }
@@ -223,20 +299,22 @@ class WatchListService {
       }
 
       // Get recent updates (last 30 days by default)
-      const updates = await db.getRecentUpdates(userId, { days: 30 })
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - 30)
+      const updates = await db.getEnhancedUpdates({
+        startDate: startDate.toISOString(),
+        limit: 1000
+      })
       const matches = []
 
       for (const update of updates) {
-        const updateData = {
-          title: update.title,
-          summary: update.summary || update.description,
-          authority: update.authority || update.source,
-          sector: update.sector || update.category
-        }
-
-        const score = db.calculateMatchScore(watchList, updateData)
-        if (score >= watchList.alert_threshold) {
-          const match = await db.createWatchListMatch(watchList.id, update.id, score)
+        const matchResult = db.calculateMatchScore(watchList, update)
+        if (!matchResult || matchResult.score <= 0) continue
+        if (matchResult.score >= (watchList.alert_threshold || 0.5)) {
+          const match = await db.createWatchListMatch(watchList.id, update.id, {
+            matchScore: matchResult.score,
+            matchReasons: matchResult.reasons
+          })
           matches.push(match)
         }
       }
@@ -267,14 +345,14 @@ class WatchListService {
       let topMatchCount = 0
 
       for (const watchList of watchLists) {
-        const allMatches = await db.getWatchListMatches(watchList.id, userId)
-        const unreviewed = allMatches.filter(m => !m.reviewed)
+        const matchCount = watchList.matchCount || 0
+        const unreviewedCount = watchList.unreviewedCount || watchList.unreviewed_count || 0
 
-        totalMatches += allMatches.length
-        unreviewedMatches += unreviewed.length
+        totalMatches += matchCount
+        unreviewedMatches += unreviewedCount
 
-        if (allMatches.length > topMatchCount) {
-          topMatchCount = allMatches.length
+        if (matchCount > topMatchCount) {
+          topMatchCount = matchCount
           topMatchingList = watchList.name
         }
       }

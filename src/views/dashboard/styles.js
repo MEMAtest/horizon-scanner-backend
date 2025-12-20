@@ -371,21 +371,21 @@ function getDashboardStyles() {
         gap: 16px;
       }
 
-      .update-card {
-        background: white;
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        border: 1px solid #e5e7eb;
-        transition: all 0.2s;
-        cursor: pointer;
-      }
+	      .update-card {
+	        background: white;
+	        padding: 25px;
+	        border-radius: 12px;
+	        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+	        border: 1px solid #e5e7eb;
+	        transition: all 0.2s;
+	        cursor: pointer;
+	      }
 
-      .update-card:hover {
-        background-color: #f9fafb;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        transform: translateY(-2px);
-      }
+	      .update-card:hover {
+	        background-color: #f9fafb;
+	        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+	        transform: translateY(-2px);
+	      }
 
       .update-card:last-child {
         margin-bottom: 0;
@@ -630,16 +630,21 @@ function getDashboardStyles() {
         box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
       }
 
-      .update-actions {
-        display: flex;
-        gap: 8px;
-        opacity: 0;
-        transition: opacity 0.2s;
-      }
+	      .update-actions {
+	        display: flex;
+	        gap: 8px;
+	        opacity: 1;
+	        transition: opacity 0.2s;
+	      }
 
-      .update-card:hover .update-actions {
-        opacity: 1;
-      }
+	      .update-actions .action-btn:not(.action-btn-bookmark) {
+	        display: none;
+	      }
+
+	      .update-card:hover .update-actions .action-btn:not(.action-btn-bookmark),
+	      .update-actions:focus-within .action-btn:not(.action-btn-bookmark) {
+	        display: inline-flex;
+	      }
 
       .action-btn {
         padding: 6px;
@@ -652,14 +657,35 @@ function getDashboardStyles() {
         color: #6b7280;
       }
 
-      .action-btn:hover {
-        background: #f3f4f6;
-        border-color: #9ca3af;
-      }
+	      .action-btn:hover {
+	        background: #f3f4f6;
+	        border-color: #9ca3af;
+	      }
 
-      .action-btn svg {
-        display: block;
-      }
+	      .action-btn-bookmark {
+	        display: inline-flex;
+	        align-items: center;
+	        justify-content: center;
+	        width: 28px;
+	        height: 28px;
+	        line-height: 1;
+	        font-size: 1rem;
+	      }
+
+	      .action-btn-bookmark.is-bookmarked {
+	        background: #fffbeb;
+	        border-color: rgba(245, 158, 11, 0.6);
+	        color: #f59e0b;
+	      }
+
+	      .action-btn-bookmark.is-bookmarked:hover {
+	        background: #fef3c7;
+	        border-color: #f59e0b;
+	      }
+
+	      .action-btn svg {
+	        display: block;
+	      }
 
       .action-btn-dossier:hover {
         background: #eef2ff;

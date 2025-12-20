@@ -31,7 +31,7 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
           action_url VARCHAR(1000),
           action_label VARCHAR(100),
           reference_type VARCHAR(50),
-          reference_id UUID,
+          reference_id TEXT,
           metadata JSONB DEFAULT '{}',
           expires_at TIMESTAMPTZ,
           created_at TIMESTAMPTZ DEFAULT NOW()
@@ -43,6 +43,22 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
         CREATE INDEX IF NOT EXISTS idx_notifications_type ON in_app_notifications(type);
         CREATE INDEX IF NOT EXISTS idx_notifications_created ON in_app_notifications(created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_notifications_reference ON in_app_notifications(reference_type, reference_id);
+      `)
+
+      try {
+        await this.pool.query(`
+          ALTER TABLE in_app_notifications
+          ALTER COLUMN reference_id TYPE TEXT
+          USING reference_id::text
+        `)
+      } catch (error) {
+        // Ignore if already migrated or unsupported in target environment
+      }
+
+      await this.pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_unique_watch_list_match
+        ON in_app_notifications(user_id, type, reference_type, reference_id)
+        WHERE type = 'watch_list_match' AND reference_type = 'watch_list_match'
       `)
 
       console.log('[DB] Notifications tables ensured')
@@ -138,16 +154,54 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
       } = data
 
       if (this.pool) {
+        const normalizedReferenceType = referenceType != null && String(referenceType).trim()
+          ? String(referenceType).trim()
+          : null
+        const normalizedReferenceId = referenceId != null && String(referenceId).trim()
+          ? String(referenceId).trim()
+          : null
+
+        if (type === 'watch_list_match' && normalizedReferenceType === 'watch_list_match' && normalizedReferenceId) {
+          const result = await this.pool.query(`
+            INSERT INTO in_app_notifications (
+              user_id, type, title, message, priority,
+              action_url, action_label, reference_type, reference_id,
+              metadata, expires_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (user_id, type, reference_type, reference_id)
+              WHERE type = 'watch_list_match' AND reference_type = 'watch_list_match'
+            DO UPDATE SET
+              title = EXCLUDED.title,
+              message = EXCLUDED.message,
+              priority = EXCLUDED.priority,
+              read = FALSE,
+              read_at = NULL,
+              dismissed = FALSE,
+              dismissed_at = NULL,
+              action_url = EXCLUDED.action_url,
+              action_label = EXCLUDED.action_label,
+              metadata = EXCLUDED.metadata,
+              expires_at = EXCLUDED.expires_at,
+              created_at = NOW()
+            RETURNING *
+          `, [
+            userId, type, title, message, priority,
+            actionUrl, actionLabel, normalizedReferenceType, normalizedReferenceId,
+            JSON.stringify(metadata), expiresAt
+          ])
+          return result.rows[0]
+        }
+
         const result = await this.pool.query(`
-          INSERT INTO in_app_notifications (
-            user_id, type, title, message, priority,
-            action_url, action_label, reference_type, reference_id,
-            metadata, expires_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-          RETURNING *
-        `, [
+            INSERT INTO in_app_notifications (
+              user_id, type, title, message, priority,
+              action_url, action_label, reference_type, reference_id,
+              metadata, expires_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING *
+          `, [
           userId, type, title, message, priority,
-          actionUrl, actionLabel, referenceType, referenceId,
+          actionUrl, actionLabel, normalizedReferenceType, normalizedReferenceId,
           JSON.stringify(metadata), expiresAt
         ])
         return result.rows[0]
@@ -221,6 +275,39 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
       return this.dismissAllNotificationsJSON(userId)
     },
 
+    async dismissBookmarkSavedNotifications(userId, { url, updateId } = {}) {
+      const normalizedUrl = url != null ? String(url).trim() : ''
+      const normalizedUpdateId = updateId != null ? String(updateId).trim() : ''
+
+      if (!normalizedUrl && !normalizedUpdateId) {
+        return { dismissedCount: 0 }
+      }
+
+      if (this.pool) {
+        const params = [userId, normalizedUrl || null, normalizedUpdateId || null]
+        const result = await this.pool.query(`
+          UPDATE in_app_notifications
+          SET dismissed = TRUE, dismissed_at = NOW()
+          WHERE user_id = $1
+            AND dismissed = FALSE
+            AND type = 'bookmark_saved'
+            AND (reference_type = 'bookmark' OR reference_type IS NULL)
+            AND (
+              ($2 IS NOT NULL AND reference_id = $2)
+              OR ($3 IS NOT NULL AND reference_id = $3)
+              OR ($2 IS NOT NULL AND metadata ->> 'url' = $2)
+            )
+          RETURNING id
+        `, params)
+        return { dismissedCount: result.rows.length }
+      }
+
+      return this.dismissBookmarkSavedNotificationsJSON(userId, {
+        url: normalizedUrl || null,
+        updateId: normalizedUpdateId || null
+      })
+    },
+
     // Delete old notifications (cleanup job)
     async cleanupOldNotifications(daysOld = 30) {
       if (this.pool) {
@@ -242,16 +329,22 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
 
     // Create watch list match notification
     async createWatchListMatchNotification(userId, watchListName, matchedUpdate, matchScore) {
+      const updateId = matchedUpdate && matchedUpdate.id != null ? String(matchedUpdate.id) : ''
+      const watchListId = matchedUpdate && matchedUpdate.watchListId != null ? String(matchedUpdate.watchListId) : null
+      const referenceId = watchListId ? `${watchListId}:${updateId}` : updateId
+
       return this.createNotification(userId, {
         type: 'watch_list_match',
         title: `New match in "${watchListName}"`,
         message: `"${matchedUpdate.title}" matches your watch list criteria (${Math.round(matchScore * 100)}% match)`,
         priority: matchScore >= 0.8 ? 'high' : 'normal',
-        actionUrl: `/dashboard?highlight=${matchedUpdate.id}`,
-        actionLabel: 'View Update',
-        referenceType: 'regulatory_change',
-        referenceId: matchedUpdate.id,
+        actionUrl: watchListId ? `/watch-lists?openMatches=${encodeURIComponent(watchListId)}` : `/update/${encodeURIComponent(updateId)}`,
+        actionLabel: watchListId ? 'View Matches' : 'View Update',
+        referenceType: 'watch_list_match',
+        referenceId,
         metadata: {
+          watchListId,
+          updateId,
           watchListName,
           matchScore,
           updateTitle: matchedUpdate.title
@@ -324,10 +417,10 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
         title: 'Item moved to new stage',
         message: `"${item.title}" moved from "${oldStage}" to "${newStage}"`,
         priority: 'low',
-        actionUrl: `/kanban?highlight=${item.id}`,
+        actionUrl: `/kanban?openItemId=${encodeURIComponent(item.id)}`,
         actionLabel: 'View in Kanban',
-        referenceType: 'regulatory_change',
-        referenceId: item.id,
+        referenceType: 'regulatory_change_item',
+        referenceId: String(item.id),
         metadata: {
           itemTitle: item.title,
           oldStage,
@@ -396,6 +489,47 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
 
     async createNotificationJSON(userId, data) {
       const notifications = await this.loadNotificationsData()
+      const normalizedReferenceType = data.referenceType != null && String(data.referenceType).trim()
+        ? String(data.referenceType).trim()
+        : null
+      const normalizedReferenceId = data.referenceId != null && String(data.referenceId).trim()
+        ? String(data.referenceId).trim()
+        : null
+      const shouldDedupe = data.type === 'watch_list_match' &&
+        normalizedReferenceType === 'watch_list_match' &&
+        normalizedReferenceId
+      const now = new Date().toISOString()
+
+      if (shouldDedupe) {
+        const existingIndex = notifications.findIndex(n =>
+          n.user_id === userId &&
+          n.type === data.type &&
+          n.reference_type === normalizedReferenceType &&
+          String(n.reference_id || '') === normalizedReferenceId
+        )
+        if (existingIndex >= 0) {
+          const existing = notifications[existingIndex]
+          const next = {
+            ...existing,
+            title: data.title,
+            message: data.message || null,
+            priority: data.priority || existing.priority || 'normal',
+            read: false,
+            read_at: null,
+            dismissed: false,
+            dismissed_at: null,
+            action_url: data.actionUrl || existing.action_url || null,
+            action_label: data.actionLabel || existing.action_label || null,
+            metadata: data.metadata || existing.metadata || {},
+            expires_at: data.expiresAt || existing.expires_at || null,
+            created_at: now
+          }
+          notifications[existingIndex] = next
+          await this.saveNotificationsData(notifications)
+          return next
+        }
+      }
+
       const notification = {
         id: require('crypto').randomUUID(),
         user_id: userId,
@@ -409,11 +543,11 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
         dismissed_at: null,
         action_url: data.actionUrl || null,
         action_label: data.actionLabel || null,
-        reference_type: data.referenceType || null,
-        reference_id: data.referenceId || null,
+        reference_type: normalizedReferenceType,
+        reference_id: normalizedReferenceId,
         metadata: data.metadata || {},
         expires_at: data.expiresAt || null,
-        created_at: new Date().toISOString()
+        created_at: now
       }
 
       notifications.push(notification)
@@ -474,6 +608,43 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
       })
 
       await this.saveNotificationsData(notifications)
+      return { dismissedCount }
+    },
+
+    async dismissBookmarkSavedNotificationsJSON(userId, { url, updateId } = {}) {
+      const normalizedUrl = url != null ? String(url).trim() : ''
+      const normalizedUpdateId = updateId != null ? String(updateId).trim() : ''
+
+      if (!normalizedUrl && !normalizedUpdateId) {
+        return { dismissedCount: 0 }
+      }
+
+      const notifications = await this.loadNotificationsData()
+      let dismissedCount = 0
+      const now = new Date().toISOString()
+
+      notifications.forEach(n => {
+        if (!n || typeof n !== 'object') return
+        if (n.user_id !== userId) return
+        if (n.dismissed) return
+        if (n.type !== 'bookmark_saved') return
+        if (n.reference_type && n.reference_type !== 'bookmark') return
+
+        const referenceId = n.reference_id != null ? String(n.reference_id) : ''
+        const metaUrl = n.metadata && typeof n.metadata === 'object' ? n.metadata.url : null
+        const matches = (normalizedUrl && (referenceId === normalizedUrl || metaUrl === normalizedUrl)) ||
+          (normalizedUpdateId && referenceId === normalizedUpdateId)
+
+        if (!matches) return
+
+        n.dismissed = true
+        n.dismissed_at = now
+        dismissedCount++
+      })
+
+      if (dismissedCount > 0) {
+        await this.saveNotificationsData(notifications)
+      }
       return { dismissedCount }
     },
 

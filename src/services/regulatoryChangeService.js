@@ -261,8 +261,9 @@ class RegulatoryChangeService {
       }
 
       // If workflow_template_id is provided, get the template and set initial stage
-      if (itemData.workflow_template_id) {
-        const template = await this.getWorkflowTemplateById(itemData.workflow_template_id, userId)
+      const workflowTemplateId = itemData.workflowTemplateId || itemData.workflow_template_id
+      if (workflowTemplateId) {
+        const template = await this.getWorkflowTemplateById(workflowTemplateId, userId)
         if (template && template.stages && template.stages.length > 0) {
           // Sort stages by order and get the first one
           const sortedStages = [...template.stages].sort((a, b) => a.order - b.order)

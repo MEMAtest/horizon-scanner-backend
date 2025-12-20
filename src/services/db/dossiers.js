@@ -13,33 +13,55 @@ function toIso(value) {
 
 function normalizeDossier(row) {
   if (!row) return null
+  const userId = row.user_id || row.userId
+  const category = row.category || row.topic || null
+  const relatedPolicyId = row.related_policy_id || row.relatedPolicyId || null
+  const itemCount = parseInt(row.item_count || row.itemCount) || 0
+  const createdAt = toIso(row.created_at || row.createdAt)
+  const updatedAt = toIso(row.updated_at || row.updatedAt)
   return {
     id: row.id,
-    userId: row.user_id,
+    userId,
+    user_id: userId,
     name: row.name,
     description: row.description || null,
-    category: row.category || null,
+    category,
+    topic: category,
     tags: Array.isArray(row.tags) ? row.tags : [],
     status: row.status || 'active',
-    relatedPolicyId: row.related_policy_id || null,
-    itemCount: parseInt(row.item_count) || 0,
-    createdAt: toIso(row.created_at),
-    updatedAt: toIso(row.updated_at)
+    relatedPolicyId,
+    related_policy_id: relatedPolicyId,
+    itemCount,
+    item_count: itemCount,
+    createdAt,
+    created_at: createdAt,
+    updatedAt,
+    updated_at: updatedAt
   }
 }
 
 function normalizeDossierItem(row) {
   if (!row) return null
+  const dossierId = row.dossier_id || row.dossierId
+  const regulatoryUpdateId = row.regulatory_update_id || row.regulatoryUpdateId
+  const userNotes = row.user_notes || row.userNotes || null
+  const relevanceRating = row.relevance_rating || row.relevanceRating || null
+  const addedAt = toIso(row.added_at || row.addedAt)
   return {
     id: row.id,
-    dossierId: row.dossier_id,
-    regulatoryUpdateId: row.regulatory_update_id,
-    userNotes: row.user_notes || null,
-    relevanceRating: row.relevance_rating || null,
-    addedAt: toIso(row.added_at),
+    dossierId,
+    dossier_id: dossierId,
+    regulatoryUpdateId,
+    regulatory_update_id: regulatoryUpdateId,
+    userNotes,
+    user_notes: userNotes,
+    relevanceRating,
+    relevance_rating: relevanceRating,
+    addedAt,
+    added_at: addedAt,
     // Include update details if joined
     update: row.headline ? {
-      id: row.regulatory_update_id,
+      id: regulatoryUpdateId,
       headline: row.headline,
       summary: row.summary || row.ai_summary,
       authority: row.authority,
@@ -48,6 +70,10 @@ function normalizeDossierItem(row) {
       publishedDate: toIso(row.published_date),
       url: row.url
     } : null
+    ,
+    update_title: row.headline || (row.update && row.update.headline) || null,
+    update_source: row.authority || (row.update && row.update.authority) || null,
+    update_url: row.url || (row.update && row.update.url) || null
   }
 }
 
@@ -555,13 +581,13 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
       }
 
       if (filters.category) {
-        filtered = filtered.filter(d => d.category === filters.category)
+        filtered = filtered.filter(d => (d.category || d.topic) === filters.category)
       }
 
-      return filtered.map(d => ({
-        ...d,
-        itemCount: items.filter(i => String(i.dossierId) === String(d.id)).length
-      }))
+      return filtered.map(d => {
+        const itemCount = items.filter(i => String(i.dossierId) === String(d.id)).length
+        return normalizeDossier({ ...d, itemCount })
+      })
     },
 
     async getDossierByIdJSON(dossierId, userId) {
@@ -574,10 +600,8 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
 
       if (!dossier) return null
 
-      return {
-        ...dossier,
-        itemCount: items.filter(i => String(i.dossierId) === String(dossier.id)).length
-      }
+      const itemCount = items.filter(i => String(i.dossierId) === String(dossier.id)).length
+      return normalizeDossier({ ...dossier, itemCount })
     },
 
     async createDossierJSON(userId, data) {
@@ -589,7 +613,8 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
         userId,
         name: data.name || 'New Research Dossier',
         description: data.description || null,
-        category: data.category || null,
+        category: data.category || data.topic || null,
+        topic: data.topic || data.category || null,
         tags: data.tags || [],
         status: 'active',
         relatedPolicyId: null,
@@ -599,7 +624,7 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
 
       dossiers.push(newDossier)
       await this.saveDossiersJSON(dossiers)
-      return { ...newDossier, itemCount: 0 }
+      return normalizeDossier({ ...newDossier, itemCount: 0 })
     },
 
     async updateDossierJSON(dossierId, userId, updates) {
@@ -615,7 +640,7 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
       })
 
       if (updated) await this.saveDossiersJSON(nextDossiers)
-      return updated
+      return updated ? normalizeDossier(updated) : null
     },
 
     async deleteDossierJSON(dossierId, userId) {
@@ -637,12 +662,33 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
     async getDossierItemsJSON(dossierId, options = {}) {
       const { limit = 100, offset = 0 } = options
       const items = await this.loadDossierItemsJSON()
+      const updates = await this.loadJSONData(this.updatesFile)
+      const updateMap = new Map((Array.isArray(updates) ? updates : []).map(update => [String(update.id), update]))
 
       const filtered = items
         .filter(i => String(i.dossierId) === String(dossierId))
         .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt))
 
-      return filtered.slice(offset, offset + limit)
+      return filtered.slice(offset, offset + limit).map(item => {
+        const updateId = item.regulatoryUpdateId || item.regulatory_update_id
+        const update = updateMap.get(String(updateId))
+        return normalizeDossierItem({
+          ...item,
+          dossier_id: item.dossierId,
+          regulatory_update_id: updateId,
+          user_notes: item.userNotes,
+          relevance_rating: item.relevanceRating,
+          added_at: item.addedAt,
+          headline: update?.headline,
+          summary: update?.summary,
+          ai_summary: update?.ai_summary,
+          authority: update?.authority,
+          sector: update?.sector,
+          impact_level: update?.impactLevel || update?.impact_level,
+          published_date: update?.publishedDate || update?.published_date || update?.fetchedDate || update?.createdAt,
+          url: update?.url
+        })
+      })
     },
 
     async addItemToDossierJSON(dossierId, updateId, data) {
@@ -686,7 +732,26 @@ module.exports = function applyDossiersMethods(EnhancedDBService) {
       })
       await this.saveDossiersJSON(nextDossiers)
 
-      return existingIndex >= 0 ? items[existingIndex] : newItem
+      const updates = await this.loadJSONData(this.updatesFile)
+      const updateMap = new Map((Array.isArray(updates) ? updates : []).map(update => [String(update.id), update]))
+      const update = updateMap.get(String(updateId))
+      const selected = existingIndex >= 0 ? items[existingIndex] : newItem
+      return normalizeDossierItem({
+        ...selected,
+        dossier_id: selected.dossierId,
+        regulatory_update_id: selected.regulatoryUpdateId,
+        user_notes: selected.userNotes,
+        relevance_rating: selected.relevanceRating,
+        added_at: selected.addedAt,
+        headline: update?.headline,
+        summary: update?.summary,
+        ai_summary: update?.ai_summary,
+        authority: update?.authority,
+        sector: update?.sector,
+        impact_level: update?.impactLevel || update?.impact_level,
+        published_date: update?.publishedDate || update?.published_date || update?.fetchedDate || update?.createdAt,
+        url: update?.url
+      })
     },
 
     async updateDossierItemJSON(itemId, updates) {

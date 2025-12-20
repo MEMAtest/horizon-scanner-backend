@@ -7,6 +7,61 @@ const {
 } = require('../../utils/sectorTaxonomy')
 
 function registerWorkspaceRoutes(router) {
+  function resolveUserId(req) {
+    const headerUser = req.headers['x-user-id']
+    if (headerUser && typeof headerUser === 'string' && headerUser.trim()) {
+      return headerUser.trim()
+    }
+    return 'default'
+  }
+
+  async function notifyBookmarkSaved(req, pinnedItem, fallbackTitle) {
+    try {
+      if (!pinnedItem || typeof pinnedItem !== 'object') return
+      if (typeof dbService.createNotification !== 'function') return
+
+      const userId = resolveUserId(req)
+      const metadata = pinnedItem.metadata && typeof pinnedItem.metadata === 'object' ? pinnedItem.metadata : {}
+      const collectionId = metadata.collectionId || metadata.collection_id || 'personal'
+      let collectionName = 'Personal'
+      try {
+        const collections = await dbService.getBookmarkCollections()
+        const match = Array.isArray(collections)
+          ? collections.find(c => c && String(c.id) === String(collectionId))
+          : null
+        if (match && match.name) collectionName = match.name
+      } catch {
+        // ignore
+      }
+
+      const title = pinnedItem.update_title || pinnedItem.updateTitle || pinnedItem.title || fallbackTitle || 'Update'
+      const updateId = metadata.updateId || metadata.update_id || pinnedItem.update_id || pinnedItem.updateId || null
+      const referenceId = (pinnedItem.update_url || pinnedItem.updateUrl || pinnedItem.url || '')
+        ? String(pinnedItem.update_url || pinnedItem.updateUrl || pinnedItem.url || '').trim()
+        : (updateId != null && String(updateId).trim() ? String(updateId).trim() : '')
+
+      await dbService.createNotification(userId, {
+        type: 'bookmark_saved',
+        title: '★ Saved to Profile Hub',
+        message: `"${title}" saved in ${collectionName}.`,
+        priority: 'low',
+        actionUrl: '/profile-hub',
+        actionLabel: 'Open Profile Hub',
+        referenceType: 'bookmark',
+        referenceId: referenceId || null,
+        metadata: {
+          collectionId,
+          collectionName,
+          updateId: updateId != null ? String(updateId) : null,
+          url: pinnedItem.update_url || pinnedItem.updateUrl || pinnedItem.url || null,
+          title
+        }
+      })
+    } catch (error) {
+      console.warn('[workspace] Failed to create bookmark notification:', error.message)
+    }
+  }
+
   router.get('/firm-profile', async (req, res) => {
   try {
     console.log('Firm API: Getting firm profile')
@@ -149,6 +204,90 @@ function registerWorkspaceRoutes(router) {
   }
   })
 
+  router.get('/workspace/bookmark-collections', async (req, res) => {
+  try {
+    const collections = await dbService.getBookmarkCollections()
+    res.json({
+      success: true,
+      collections,
+      count: collections.length,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error getting bookmark collections:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      collections: []
+    })
+  }
+  })
+
+  router.post('/workspace/bookmark-collections', async (req, res) => {
+  try {
+    const collection = await dbService.createBookmarkCollection(req.body?.name)
+    res.status(201).json({
+      success: true,
+      message: 'Collection created successfully',
+      collection,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error creating bookmark collection:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
+  router.put('/workspace/bookmark-collections/:id', async (req, res) => {
+  try {
+    const updated = await dbService.renameBookmarkCollection(req.params.id, req.body?.name)
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collection not found'
+      })
+    }
+    res.json({
+      success: true,
+      message: 'Collection updated successfully',
+      collection: updated,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error updating bookmark collection:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
+  router.delete('/workspace/bookmark-collections/:id', async (req, res) => {
+  try {
+    const deleted = await dbService.deleteBookmarkCollection(req.params.id)
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        error: 'Collection not found'
+      })
+    }
+    res.json({
+      success: true,
+      message: 'Collection deleted successfully',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error deleting bookmark collection:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
   router.post('/workspace/pin', async (req, res) => {
   try {
     console.log('Pin API: Pinning update', req.body)
@@ -163,7 +302,8 @@ function registerWorkspaceRoutes(router) {
       summary = '',
       published = '',
       metadata = {},
-      updateId
+      updateId,
+      topicArea
     } = req.body
 
     if (!url || !title) {
@@ -190,7 +330,8 @@ function registerWorkspaceRoutes(router) {
         summary: summary || (metadata && metadata.summary) || '',
         published: published || (metadata && metadata.published) || '',
         updateId: updateId || (metadata && metadata.updateId) || null,
-        authority: authority || (metadata && metadata.authority) || ''
+        authority: authority || (metadata && metadata.authority) || '',
+        topicArea: topicArea || (metadata && (metadata.topicArea || metadata.topic_area || metadata.topic)) || ''
       }
     )
 
@@ -202,6 +343,8 @@ function registerWorkspaceRoutes(router) {
       updateId,
       metadata: mergedMetadata
     })
+
+    await notifyBookmarkSaved(req, result, title)
 
     res.json({
       success: true,
@@ -218,6 +361,138 @@ function registerWorkspaceRoutes(router) {
   }
   })
 
+  // Legacy alias: some older clients POST to /api/workspace/pinned
+  router.post('/workspace/pinned', async (req, res) => {
+  try {
+    const {
+      url,
+      title,
+      authority,
+      notes,
+      sectors = [],
+      personas = [],
+      summary = '',
+      published = '',
+      metadata = {},
+      updateId,
+      topicArea
+    } = req.body || {}
+
+    if (!url || !title) {
+      return res.status(400).json({
+        success: false,
+        error: 'URL and title are required'
+      })
+    }
+
+    const normalizedSectors = Array.isArray(sectors)
+      ? Array.from(new Set(sectors.map(normalizeSectorName).filter(Boolean)))
+      : []
+
+    const normalizedPersonas = Array.isArray(personas)
+      ? personas.filter(Boolean)
+      : []
+
+    const mergedMetadata = Object.assign(
+      {},
+      metadata && typeof metadata === 'object' ? metadata : {},
+      {
+        sectors: normalizedSectors,
+        personas: normalizedPersonas,
+        summary: summary || (metadata && metadata.summary) || '',
+        published: published || (metadata && metadata.published) || '',
+        updateId: updateId || (metadata && metadata.updateId) || null,
+        authority: authority || (metadata && metadata.authority) || '',
+        topicArea: topicArea || (metadata && (metadata.topicArea || metadata.topic_area || metadata.topic)) || ''
+      }
+    )
+
+    const result = await dbService.addPinnedItem(url, title, notes, authority, {
+      sectors: normalizedSectors,
+      personas: normalizedPersonas,
+      summary,
+      published,
+      updateId,
+      metadata: mergedMetadata
+    })
+
+    await notifyBookmarkSaved(req, result, title)
+
+    res.json({
+      success: true,
+      message: 'Update pinned successfully',
+      item: result,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error pinning update (legacy route):', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
+  router.put('/workspace/pin/:url/collection', async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.url)
+    const { collectionId } = req.body || {}
+    if (!collectionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'collectionId is required'
+      })
+    }
+
+    const updated = await dbService.setPinnedItemCollection(url, collectionId)
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: 'Pinned item not found'
+      })
+    }
+
+    res.json({
+      success: true,
+      message: 'Bookmark collection updated',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error updating pinned item collection:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
+  router.put('/workspace/pin/:url/topic', async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.url)
+    const { topicArea, topic } = req.body || {}
+    const requested = topicArea != null ? topicArea : topic
+    const updated = await dbService.setPinnedItemTopicArea(url, requested)
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        error: 'Pinned item not found'
+      })
+    }
+
+    res.json({
+      success: true,
+      message: 'Bookmark topic updated',
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('X API Error updating pinned item topic:', error)
+    res.status(400).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
   router.delete('/workspace/pin/:url', async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url)
@@ -226,6 +501,13 @@ function registerWorkspaceRoutes(router) {
     const success = await dbService.removePinnedItem(url)
 
     if (success) {
+      try {
+        if (typeof dbService.dismissBookmarkSavedNotifications === 'function') {
+          await dbService.dismissBookmarkSavedNotifications(resolveUserId(req), { url })
+        }
+      } catch (error) {
+        console.warn('[workspace] Failed to dismiss bookmark notifications:', error.message)
+      }
       res.json({
         success: true,
         message: 'Update unpinned successfully',
@@ -239,6 +521,40 @@ function registerWorkspaceRoutes(router) {
     }
   } catch (error) {
     console.error('X API Error unpinning update:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+  })
+
+  // Legacy alias: some older clients DELETE /api/workspace/pinned/:url
+  router.delete('/workspace/pinned/:url', async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.url)
+    const success = await dbService.removePinnedItem(url)
+
+    if (success) {
+      try {
+        if (typeof dbService.dismissBookmarkSavedNotifications === 'function') {
+          await dbService.dismissBookmarkSavedNotifications(resolveUserId(req), { url })
+        }
+      } catch (error) {
+        console.warn('[workspace] Failed to dismiss bookmark notifications (legacy route):', error.message)
+      }
+      res.json({
+        success: true,
+        message: 'Update unpinned successfully',
+        timestamp: new Date().toISOString()
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Pinned item not found'
+      })
+    }
+  } catch (error) {
+    console.error('X API Error unpinning update (legacy route):', error)
     res.status(500).json({
       success: false,
       error: error.message

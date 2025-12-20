@@ -25,6 +25,16 @@ describe('WorkspaceModule client behaviour', () => {
         return ok({ success: true, items: pinnedItemsMock })
       }
 
+      if (url.startsWith('/api/workspace/bookmark-collections')) {
+        return ok({
+          success: true,
+          collections: [
+            { id: 'personal', name: 'Personal', isSystem: true },
+            { id: 'professional', name: 'Professional', isSystem: true }
+          ]
+        })
+      }
+
       if (url.startsWith('/api/workspace/searches')) {
         return ok({ success: true, searches: [] })
       }
@@ -120,7 +130,11 @@ describe('WorkspaceModule client behaviour', () => {
     await waitForInit()
     expect(window.WorkspaceModule).toBeDefined()
     expect(typeof window.WorkspaceModule.togglePin).toBe('function')
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/workspace/pinned')
+    expect(typeof window.WorkspaceModule.refresh).toBe('function')
+
+    const urls = fetchMock.mock.calls.map(call => call[0])
+    expect(urls).toContain('/api/workspace/bookmark-collections')
+    expect(urls).toContain('/api/workspace/pinned')
   })
 
   test('togglePin stores metadata and updates counts', async () => {

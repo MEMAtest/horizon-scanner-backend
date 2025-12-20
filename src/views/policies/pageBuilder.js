@@ -8,6 +8,7 @@ const {
   renderViewModal,
   renderLinkSelectorModal
 } = require('./components')
+const { getPoliciesIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../icons')
 
 function buildPoliciesPage({
   sidebar,
@@ -19,6 +20,8 @@ function buildPoliciesPage({
 }) {
   const policyStyles = getPolicyStyles()
   const policyScripts = getPolicyScripts({ policies, stats })
+  const canaryStyles = getCanaryAnimationStyles()
+  const pageIcon = wrapIconInContainer(getPoliciesIcon())
 
   return `
     <!DOCTYPE html>
@@ -29,15 +32,19 @@ function buildPoliciesPage({
       <title>Policy Library - RegCanary</title>
       ${commonStyles}
       ${policyStyles}
+      <style>${canaryStyles}</style>
     </head>
     <body>
       ${sidebar}
       <main class="main-content">
         <div class="policies-page">
           <header class="page-header">
-            <div>
-              <h1>Policy Library</h1>
-              <p class="subtitle">Manage your regulatory policies with version control and approval workflows</p>
+            <div class="page-header-left">
+              ${pageIcon}
+              <div>
+                <h1>Policy Library</h1>
+                <p class="subtitle">Manage your regulatory policies with version control and approval workflows</p>
+              </div>
             </div>
             <div class="header-actions">
               <button class="btn btn-primary" data-action="create">

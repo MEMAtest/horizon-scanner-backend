@@ -96,9 +96,22 @@ function getPolicyScripts({ policies, stats }) {
           },
 
           // Edit Policy
-          editPolicy: function(id) {
-            const policy = state.policies.find(p => p.id === id);
+          editPolicy: async function(id) {
+            let policy = state.policies.find(p => String(p.id) === String(id));
             if (!policy) return;
+
+            try {
+              const response = await fetch('/api/policies/' + id, {
+                headers: { 'x-user-id': 'default' }
+              });
+              const result = await response.json();
+              if (result.success) {
+                policy = { ...policy, ...result.data };
+                state.policies = state.policies.map(p => String(p.id) === String(id) ? policy : p);
+              }
+            } catch (error) {
+              console.warn('[Policies] Unable to load full policy for edit:', error);
+            }
 
             document.getElementById('policy-id').value = id;
             document.getElementById('title').value = policy.title || '';
@@ -715,7 +728,7 @@ function getPolicyScripts({ policies, stats }) {
                     'x-user-id': 'default'
                   },
                   body: JSON.stringify({
-                    regulatory_update_id: state.currentUpdateId,
+                    updateId: state.currentUpdateId,
                     notes: 'Linked from policy citation'
                   })
                 });

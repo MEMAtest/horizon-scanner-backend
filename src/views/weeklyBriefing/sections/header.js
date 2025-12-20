@@ -1,11 +1,22 @@
 const { briefingIcon, refreshIcon, printIcon } = require('../icons')
+const { getWeeklyRoundupIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../icons')
 
 function renderHeaderSection(metaHtml) {
+  const canaryStyles = getCanaryAnimationStyles()
+  const pageIcon = wrapIconInContainer(getWeeklyRoundupIcon())
+
   return `
+    <style>${canaryStyles}</style>
     <header class="report-header">
       <div class="report-header-content">
         <div class="report-title-section">
-          <span class="report-badge">Weekly Briefing</span>
+          <div class="report-title-row">
+            ${pageIcon}
+            <div>
+              <h1 class="report-title">Weekly Roundup</h1>
+              <p class="report-subtitle">Your weekly regulatory intelligence briefing</p>
+            </div>
+          </div>
           <div class="report-meta" id="briefingMeta">
             ${metaHtml}
           </div>

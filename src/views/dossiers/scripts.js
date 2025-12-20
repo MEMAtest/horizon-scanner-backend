@@ -583,12 +583,16 @@ function getDossierScripts({ dossiers, stats }) {
                 const policyResponse = await fetch('/api/policies/' + itemId, { headers: { 'x-user-id': 'default' } });
                 const policyResult = await policyResponse.json();
 
-                if (!policyResult.success || !policyResult.data.currentVersion) {
+                const currentVersion = policyResult?.data?.currentVersion || policyResult?.data?.current_version || null;
+                const versionId = (currentVersion && currentVersion.id)
+                  ? currentVersion.id
+                  : (policyResult?.data?.current_version_id || policyResult?.data?.currentVersionId || null);
+
+                if (!policyResult.success || !versionId) {
                   this.showToast('Policy has no active version', 'error');
                   return;
                 }
 
-                const versionId = policyResult.data.currentVersion.id;
                 response = await fetch('/api/policies/versions/' + versionId + '/citations', {
                   method: 'POST',
                   headers: {
@@ -596,9 +600,10 @@ function getDossierScripts({ dossiers, stats }) {
                     'x-user-id': 'default'
                   },
                   body: JSON.stringify({
-                    regulatoryUpdateId: updateId,
-                    citedText: 'Linked from Research Dossier',
-                    notes: ''
+                    updateId: updateId,
+                    citationType: 'reference',
+                    notes: 'Linked from Research Dossier',
+                    sectionReference: ''
                   })
                 });
               } else if (linkType === 'kanban') {

@@ -29,11 +29,31 @@ class PolicyService {
         return { success: false, error: 'Policy not found' }
       }
 
-      // Get the current version if it exists
-      if (policy.current_version_id) {
-        const currentVersion = await db.getPolicyVersionById(policy.current_version_id)
-        policy.currentVersion = currentVersion
-      }
+      const versions = await db.getPolicyVersions(policyId)
+      const currentVersionId = policy.current_version_id || policy.currentVersionId || null
+      const resolvedCurrent = currentVersionId
+        ? versions.find(v => String(v.id) === String(currentVersionId))
+        : (versions.length > 0 ? versions[0] : null)
+
+      const citations = resolvedCurrent
+        ? await db.getPolicyCitations(resolvedCurrent.id)
+        : []
+
+      const versionNumber = resolvedCurrent
+        ? (resolvedCurrent.version_number || resolvedCurrent.versionNumber || null)
+        : null
+
+      policy.current_version_id = resolvedCurrent ? resolvedCurrent.id : currentVersionId
+      policy.currentVersionId = policy.current_version_id
+      policy.current_version = versionNumber
+      policy.content = resolvedCurrent ? resolvedCurrent.content : null
+      policy.effective_date = resolvedCurrent
+        ? (resolvedCurrent.effective_date || resolvedCurrent.effectiveDate || null)
+        : null
+      policy.versions = versions
+      policy.citations = citations
+      policy.citation_count = Array.isArray(citations) ? citations.length : 0
+      policy.currentVersion = resolvedCurrent || null
 
       return { success: true, data: policy }
     } catch (error) {
@@ -52,29 +72,39 @@ class PolicyService {
         return { success: false, error: 'Policy title is required' }
       }
 
-      const policy = await db.createPolicy(userId, {
+      const created = await db.createPolicy(userId, {
         title: data.title,
-        description: data.description,
-        category: data.category,
-        department: data.department,
-        owner: data.owner,
-        reviewFrequencyDays: data.reviewFrequencyDays || 365,
-        tags: data.tags || [],
-        metadata: data.metadata || {}
+        name: data.title,
+        description: data.description || null,
+        category: data.category || null,
+        owner: data.owner || null,
+        ownerName: data.owner || null,
+        nextReviewDate: data.nextReviewDate || data.next_review_date || null
       })
 
-      // Create initial version if content provided
+      let currentVersion = null
       if (data.content) {
-        const version = await db.createPolicyVersion(policy.id, {
+        currentVersion = await db.createPolicyVersion(created.id, {
           content: data.content,
-          changeSummary: 'Initial version',
-          createdBy: userId,
-          isMajorChange: true
+          effectiveDate: data.effectiveDate || data.effective_date || null,
+          changeSummary: data.versionNotes || 'Initial version',
+          createdBy: userId
         })
-        policy.currentVersion = version
+
+        await db.updatePolicy(created.id, userId, { currentVersionId: currentVersion.id })
       }
 
-      return { success: true, data: policy }
+      if (data.nextReviewDate || data.next_review_date) {
+        await db.updatePolicy(created.id, userId, {
+          nextReviewDate: data.nextReviewDate || data.next_review_date
+        })
+      }
+
+      const result = await this.getPolicyById(created.id, userId)
+      if (result.success) {
+        result.data.currentVersion = currentVersion || result.data.currentVersion
+      }
+      return result
     } catch (error) {
       console.error('[PolicyService] Error creating policy:', error)
       return { success: false, error: error.message }
@@ -86,11 +116,61 @@ class PolicyService {
    */
   async updatePolicy(policyId, userId, updates) {
     try {
-      const policy = await db.updatePolicy(policyId, userId, updates)
-      if (!policy) {
+      const normalizedUpdates = { ...updates }
+
+      if (normalizedUpdates.name === undefined && normalizedUpdates.title !== undefined) {
+        normalizedUpdates.name = normalizedUpdates.title
+      }
+
+      if (normalizedUpdates.ownerName === undefined && normalizedUpdates.owner !== undefined) {
+        normalizedUpdates.ownerName = normalizedUpdates.owner
+      }
+
+      if (normalizedUpdates.nextReviewDate === undefined && normalizedUpdates.next_review_date !== undefined) {
+        normalizedUpdates.nextReviewDate = normalizedUpdates.next_review_date
+      }
+
+      if (normalizedUpdates.next_review_date === undefined && normalizedUpdates.nextReviewDate !== undefined) {
+        normalizedUpdates.next_review_date = normalizedUpdates.nextReviewDate
+      }
+
+      const metadataUpdates = {
+        ...(normalizedUpdates.name !== undefined ? { name: normalizedUpdates.name } : {}),
+        ...(normalizedUpdates.description !== undefined ? { description: normalizedUpdates.description } : {}),
+        ...(normalizedUpdates.category !== undefined ? { category: normalizedUpdates.category } : {}),
+        ...(normalizedUpdates.ownerName !== undefined ? { ownerName: normalizedUpdates.ownerName } : {}),
+        ...(normalizedUpdates.nextReviewDate !== undefined ? { nextReviewDate: normalizedUpdates.nextReviewDate } : {})
+      }
+
+      const updated = await db.updatePolicy(policyId, userId, metadataUpdates)
+      if (!updated) {
         return { success: false, error: 'Policy not found' }
       }
-      return { success: true, data: policy }
+
+      const hasContent = normalizedUpdates.content !== undefined && String(normalizedUpdates.content).trim() !== ''
+      const hasEffectiveDate = normalizedUpdates.effectiveDate !== undefined || normalizedUpdates.effective_date !== undefined
+
+      if (hasContent || hasEffectiveDate) {
+        const current = await this.getPolicyById(policyId, userId)
+        const existingContent = current.success ? (current.data.content || '') : ''
+        const nextContent = hasContent ? normalizedUpdates.content : existingContent
+        const nextEffectiveDate = normalizedUpdates.effectiveDate || normalizedUpdates.effective_date || (current.success ? current.data.effective_date : null)
+
+        const contentChanged = nextContent !== existingContent
+        const effectiveDateChanged = nextEffectiveDate !== (current.success ? current.data.effective_date : null)
+
+        if (contentChanged || effectiveDateChanged || normalizedUpdates.versionNotes) {
+          const version = await db.createPolicyVersion(policyId, {
+            content: nextContent,
+            effectiveDate: nextEffectiveDate || null,
+            changeSummary: normalizedUpdates.versionNotes || 'Updated version',
+            createdBy: userId
+          })
+          await db.updatePolicy(policyId, userId, { currentVersionId: version.id })
+        }
+      }
+
+      return this.getPolicyById(policyId, userId)
     } catch (error) {
       console.error('[PolicyService] Error updating policy:', error)
       return { success: false, error: error.message }
@@ -124,14 +204,30 @@ class PolicyService {
         return { success: false, error: 'Policy not found' }
       }
 
-      // Validate required fields
+      // Special case: update current version status (used by UI submit-for-approval)
+      if (!data.content && data.status) {
+        let currentVersionId = policy.current_version_id || policy.currentVersionId || null
+        if (!currentVersionId) {
+          const versions = await db.getPolicyVersions(policyId)
+          currentVersionId = versions.length > 0 ? versions[0].id : null
+        }
+        if (!currentVersionId) {
+          return { success: false, error: 'Policy has no active version' }
+        }
+        const updated = await db.updatePolicyVersion(currentVersionId, { approvalStatus: data.status })
+        return updated
+          ? { success: true, data: updated }
+          : { success: false, error: 'Version not found' }
+      }
+
       if (!data.content) {
         return { success: false, error: 'Version content is required' }
       }
 
       const version = await db.createPolicyVersion(policyId, {
         content: data.content,
-        changeSummary: data.changeSummary || 'No summary provided',
+        effectiveDate: data.effectiveDate || data.effective_date || null,
+        changeSummary: data.changeSummary || data.versionNotes || 'No summary provided',
         createdBy: userId,
         isMajorChange: data.isMajorChange || false
       })
@@ -206,16 +302,17 @@ class PolicyService {
       }
 
       // Check version is pending approval
-      if (version.status !== 'pending') {
+      if ((version.status || version.approval_status || version.approvalStatus) !== 'pending_approval') {
         return { success: false, error: 'Version is not pending approval' }
       }
 
       const approved = await db.approvePolicyVersion(versionId, approverName, userId)
 
       // Notify the version creator
-      if (version.created_by !== userId) {
+      const createdBy = version.created_by || version.createdBy
+      if (createdBy && createdBy !== userId) {
         await db.createPolicyApprovedNotification(
-          version.created_by,
+          createdBy,
           policy,
           approved,
           approverName
@@ -245,7 +342,7 @@ class PolicyService {
         return { success: false, error: 'Policy not found' }
       }
 
-      if (version.status !== 'pending') {
+      if ((version.status || version.approval_status || version.approvalStatus) !== 'pending_approval') {
         return { success: false, error: 'Version is not pending approval' }
       }
 
@@ -327,7 +424,8 @@ class PolicyService {
 
       // Calculate next review date based on review frequency
       const nextReviewDate = new Date()
-      nextReviewDate.setDate(nextReviewDate.getDate() + (policy.review_frequency_days || 365))
+      const reviewMonths = policy.review_frequency_months || policy.reviewFrequencyMonths || 12
+      nextReviewDate.setMonth(nextReviewDate.getMonth() + reviewMonths)
 
       const updated = await db.updatePolicy(policyId, userId, {
         lastReviewedAt: new Date().toISOString(),
@@ -350,13 +448,22 @@ class PolicyService {
     try {
       const policies = await db.getPolicies(userId)
       const policiesDue = await db.getPoliciesDueForReview(userId, 30)
+      let pendingApproval = 0
+
+      for (const policy of policies) {
+        const versions = await db.getPolicyVersions(policy.id)
+        if (versions.some(v => (v.status || v.approval_status || v.approvalStatus) === 'pending_approval')) {
+          pendingApproval += 1
+        }
+      }
 
       const stats = {
         totalPolicies: policies.length,
         activePolicies: 0,
         archivedPolicies: 0,
         draftPolicies: 0,
-        reviewsDue: policiesDue.length,
+        reviewDueSoon: policiesDue.length,
+        pendingApproval,
         byCategory: {},
         byDepartment: {}
       }

@@ -18,17 +18,24 @@ function getWatchListStyles() {
         margin-bottom: 24px;
       }
 
+      .page-header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
       .page-header h1 {
-        font-size: 24px;
-        font-weight: 600;
-        color: #1a1a1a;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
         margin: 0 0 4px 0;
       }
 
       .page-header .subtitle {
-        font-size: 14px;
-        color: #6b7280;
+        font-size: 0.9rem;
+        color: #64748b;
         margin: 0;
+        margin-top: 4px;
       }
 
       .header-actions {
@@ -265,8 +272,10 @@ function getWatchListStyles() {
         bottom: 0;
         background: rgba(0, 0, 0, 0.5);
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
+        padding: 24px;
+        overflow-y: auto;
         z-index: 1000;
         opacity: 0;
         visibility: hidden;
@@ -283,12 +292,13 @@ function getWatchListStyles() {
         border-radius: 16px;
         width: 90%;
         max-width: 600px;
-        max-height: 90vh;
-        overflow: hidden;
+        max-height: 85vh;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
         transform: scale(0.9);
         transition: transform 0.2s;
+        margin: 40px 0;
       }
 
       .modal-overlay.active .modal {
@@ -313,6 +323,10 @@ function getWatchListStyles() {
         padding: 24px;
         overflow-y: auto;
         flex: 1;
+        min-height: 0;
+        max-height: calc(85vh - 140px);
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
       }
 
       .modal-footer {

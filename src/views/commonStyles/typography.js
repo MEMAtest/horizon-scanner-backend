@@ -79,8 +79,15 @@ function getTypographyStyles() {
         .btn-primary {
             background: var(--accent-blue);
             color: var(--report-white);
+            -webkit-text-fill-color: var(--report-white);
             border-color: var(--accent-blue);
             box-shadow: var(--shadow-sm);
+        }
+
+        a.btn.btn-primary,
+        a.btn.btn-primary:visited {
+            color: var(--report-white);
+            -webkit-text-fill-color: var(--report-white);
         }
 
         .btn-primary:hover {

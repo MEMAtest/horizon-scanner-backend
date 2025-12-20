@@ -72,8 +72,27 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
         ]
 
         const result = await client.query(query, values)
-        console.log(`✅ Update saved to PostgreSQL with ID: ${result.rows[0].id}`)
-        return result.rows[0].id
+        const updateId = result.rows[0].id
+        console.log(`✅ Update saved to PostgreSQL with ID: ${updateId}`)
+
+        // Auto-match newly saved updates against watch lists (non-blocking)
+        try {
+          if (typeof this.matchUpdateAgainstWatchLists === 'function') {
+            const matchPayload = {
+              ...updateData,
+              summary: updateData.summary || updateData.impact,
+              ai_summary: updateData.ai_summary || updateData.impact
+            }
+            setImmediate(() => {
+              this.matchUpdateAgainstWatchLists(updateId, matchPayload)
+                .catch(error => console.warn('⚠️ Watch list auto-match failed:', error.message))
+            })
+          }
+        } catch (error) {
+          console.warn('⚠️ Watch list auto-match setup failed:', error.message)
+        }
+
+        return updateId
       } finally {
         client.release()
       }
@@ -114,6 +133,19 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
         updates.push(update)
         await this.saveJSONData(this.updatesFile, updates)
         console.log(`✅ Update saved to JSON with ID: ${newId}`)
+
+        // Auto-match newly saved updates against watch lists (non-blocking)
+        try {
+          if (typeof this.matchUpdateAgainstWatchLists === 'function') {
+            setImmediate(() => {
+              this.matchUpdateAgainstWatchLists(newId, update)
+                .catch(error => console.warn('⚠️ Watch list auto-match failed:', error.message))
+            })
+          }
+        } catch (error) {
+          console.warn('⚠️ Watch list auto-match setup failed:', error.message)
+        }
+
         return newId
       } catch (error) {
         console.error('❌ Error in saveUpdateJSON:', error)

@@ -13,6 +13,12 @@ function toIso(value) {
 
 function normalizeWatchList(row) {
   if (!row) return null
+  const alertOnMatch = row.alert_on_match !== false
+  const alertThreshold = Number.parseFloat(row.alert_threshold)
+  const normalizedThreshold = Number.isFinite(alertThreshold) ? alertThreshold : 0.5
+  const autoAddToDossier = row.auto_add_to_dossier === true
+  const targetDossierId = row.target_dossier_id || null
+  const unreviewedCount = parseInt(row.unreviewed_count) || 0
   return {
     id: row.id,
     userId: row.user_id,
@@ -23,6 +29,16 @@ function normalizeWatchList(row) {
     sectors: Array.isArray(row.sectors) ? row.sectors : [],
     isActive: row.is_active !== false,
     matchCount: parseInt(row.match_count) || 0,
+    unreviewedCount,
+    unreviewed_count: unreviewedCount,
+    alertOnMatch,
+    alert_on_match: alertOnMatch,
+    alertThreshold: normalizedThreshold,
+    alert_threshold: normalizedThreshold,
+    autoAddToDossier,
+    auto_add_to_dossier: autoAddToDossier,
+    targetDossierId,
+    target_dossier_id: targetDossierId,
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at)
   }
@@ -30,25 +46,44 @@ function normalizeWatchList(row) {
 
 function normalizeWatchListMatch(row) {
   if (!row) return null
+  const watchListId = row.watch_list_id || row.watchListId
+  const regulatoryUpdateId = row.regulatory_update_id || row.regulatoryUpdateId
+  const matchScore = parseFloat(row.match_score ?? row.matchScore) || 0
+  const matchReasons = row.match_reasons || row.matchReasons || {}
+  const dismissed = row.dismissed === true
+  const reviewed = row.reviewed === true
+  const matchedAt = toIso(row.created_at || row.createdAt)
+  const reviewedAt = toIso(row.reviewed_at || row.reviewedAt)
+  const update = row.headline ? {
+    id: regulatoryUpdateId,
+    headline: row.headline,
+    summary: row.summary || row.ai_summary,
+    authority: row.authority,
+    sector: row.sector,
+    impactLevel: row.impact_level,
+    publishedDate: toIso(row.published_date),
+    url: row.url
+  } : row.update || null
   return {
     id: row.id,
-    watchListId: row.watch_list_id,
-    regulatoryUpdateId: row.regulatory_update_id,
-    matchScore: parseFloat(row.match_score) || 0,
-    matchReasons: row.match_reasons || {},
-    dismissed: row.dismissed === true,
-    createdAt: toIso(row.created_at),
-    // Include update details if joined
-    update: row.headline ? {
-      id: row.regulatory_update_id,
-      headline: row.headline,
-      summary: row.summary || row.ai_summary,
-      authority: row.authority,
-      sector: row.sector,
-      impactLevel: row.impact_level,
-      publishedDate: toIso(row.published_date),
-      url: row.url
-    } : null
+    watchListId,
+    watch_list_id: watchListId,
+    regulatoryUpdateId,
+    regulatory_update_id: regulatoryUpdateId,
+    matchScore,
+    match_score: matchScore,
+    matchReasons,
+    match_reasons: matchReasons,
+    dismissed,
+    reviewed,
+    reviewedAt,
+    reviewed_at: reviewedAt,
+    matched_at: matchedAt,
+    createdAt: matchedAt,
+    update,
+    update_title: update ? update.headline : null,
+    update_source: update ? update.authority : null,
+    update_url: update ? update.url : null
   }
 }
 
@@ -72,10 +107,23 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
             keywords TEXT[] DEFAULT ARRAY[]::TEXT[],
             authorities TEXT[] DEFAULT ARRAY[]::TEXT[],
             sectors TEXT[] DEFAULT ARRAY[]::TEXT[],
+            alert_on_match BOOLEAN DEFAULT TRUE,
+            alert_threshold DECIMAL(3,2) DEFAULT 0.50,
+            auto_add_to_dossier BOOLEAN DEFAULT FALSE,
+            target_dossier_id BIGINT,
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
           )
+        `)
+
+        // Add config columns if they don't exist (for existing databases)
+        await client.query(`
+          ALTER TABLE watch_lists
+            ADD COLUMN IF NOT EXISTS alert_on_match BOOLEAN DEFAULT TRUE,
+            ADD COLUMN IF NOT EXISTS alert_threshold DECIMAL(3,2) DEFAULT 0.50,
+            ADD COLUMN IF NOT EXISTS auto_add_to_dossier BOOLEAN DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS target_dossier_id BIGINT
         `)
 
         await client.query(`
@@ -91,10 +139,19 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
             regulatory_update_id BIGINT NOT NULL,
             match_score DECIMAL(3,2) DEFAULT 0,
             match_reasons JSONB DEFAULT '{}',
+            reviewed BOOLEAN DEFAULT FALSE,
+            reviewed_at TIMESTAMP WITHOUT TIME ZONE,
             dismissed BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
             UNIQUE(watch_list_id, regulatory_update_id)
           )
+        `)
+
+        // Add review columns if they don't exist (for existing databases)
+        await client.query(`
+          ALTER TABLE watch_list_matches
+            ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITHOUT TIME ZONE
         `)
 
         await client.query(`
@@ -127,7 +184,8 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
         try {
           const result = await client.query(`
             SELECT w.*,
-              (SELECT COUNT(*) FROM watch_list_matches m WHERE m.watch_list_id = w.id AND m.dismissed = FALSE) as match_count
+              (SELECT COUNT(*) FROM watch_list_matches m WHERE m.watch_list_id = w.id AND m.dismissed = FALSE) as match_count,
+              (SELECT COUNT(*) FROM watch_list_matches m WHERE m.watch_list_id = w.id AND m.dismissed = FALSE AND m.reviewed = FALSE) as unreviewed_count
             FROM watch_lists w
             WHERE w.user_id = $1 AND w.is_active = TRUE
             ORDER BY w.created_at DESC
@@ -153,7 +211,8 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
         try {
           const result = await client.query(`
             SELECT w.*,
-              (SELECT COUNT(*) FROM watch_list_matches m WHERE m.watch_list_id = w.id AND m.dismissed = FALSE) as match_count
+              (SELECT COUNT(*) FROM watch_list_matches m WHERE m.watch_list_id = w.id AND m.dismissed = FALSE) as match_count,
+              (SELECT COUNT(*) FROM watch_list_matches m WHERE m.watch_list_id = w.id AND m.dismissed = FALSE AND m.reviewed = FALSE) as unreviewed_count
             FROM watch_lists w
             WHERE w.id = $1 AND w.user_id = $2
           `, [watchListId, userKey])
@@ -172,6 +231,24 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
     async createWatchList(userId = 'default', data = {}) {
       await this.initialize()
       const userKey = String(userId || 'default')
+      const alertOnMatch = data.alertOnMatch !== undefined
+        ? data.alertOnMatch !== false
+        : data.alert_on_match !== undefined
+          ? data.alert_on_match !== false
+          : true
+      const rawThreshold = data.alertThreshold !== undefined
+        ? data.alertThreshold
+        : data.alert_threshold !== undefined
+          ? data.alert_threshold
+          : 0.5
+      const parsedThreshold = Number.parseFloat(rawThreshold)
+      const alertThreshold = Number.isFinite(parsedThreshold) ? parsedThreshold : 0.5
+      const autoAddToDossier = data.autoAddToDossier !== undefined
+        ? data.autoAddToDossier === true
+        : data.auto_add_to_dossier !== undefined
+          ? data.auto_add_to_dossier === true
+          : false
+      const targetDossierId = data.targetDossierId || data.target_dossier_id || null
 
       if (this.usePostgres) {
         const client = await this.pool.connect()
@@ -179,8 +256,9 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
           const result = await client.query(`
             INSERT INTO watch_lists (
               user_id, name, description, keywords, authorities, sectors,
+              alert_on_match, alert_threshold, auto_add_to_dossier, target_dossier_id,
               is_active, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, NOW(), NOW())
             RETURNING *
           `, [
             userKey,
@@ -188,7 +266,11 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
             data.description || null,
             data.keywords || [],
             data.authorities || [],
-            data.sectors || []
+            data.sectors || [],
+            alertOnMatch,
+            alertThreshold,
+            autoAddToDossier,
+            targetDossierId
           ])
           return normalizeWatchList(result.rows[0])
         } catch (error) {
@@ -232,6 +314,27 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
           if (updates.sectors !== undefined) {
             setClauses.push(`sectors = $${++paramCount}`)
             params.push(updates.sectors)
+          }
+          if (updates.alertOnMatch !== undefined || updates.alert_on_match !== undefined) {
+            const next = updates.alertOnMatch !== undefined ? updates.alertOnMatch : updates.alert_on_match
+            setClauses.push(`alert_on_match = $${++paramCount}`)
+            params.push(next !== false)
+          }
+          if (updates.alertThreshold !== undefined || updates.alert_threshold !== undefined) {
+            const raw = updates.alertThreshold !== undefined ? updates.alertThreshold : updates.alert_threshold
+            const parsed = Number.parseFloat(raw)
+            setClauses.push(`alert_threshold = $${++paramCount}`)
+            params.push(Number.isFinite(parsed) ? parsed : 0.5)
+          }
+          if (updates.autoAddToDossier !== undefined || updates.auto_add_to_dossier !== undefined) {
+            const next = updates.autoAddToDossier !== undefined ? updates.autoAddToDossier : updates.auto_add_to_dossier
+            setClauses.push(`auto_add_to_dossier = $${++paramCount}`)
+            params.push(next === true)
+          }
+          if (updates.targetDossierId !== undefined || updates.target_dossier_id !== undefined) {
+            const next = updates.targetDossierId !== undefined ? updates.targetDossierId : updates.target_dossier_id
+            setClauses.push(`target_dossier_id = $${++paramCount}`)
+            params.push(next || null)
           }
 
           if (setClauses.length === 0) {
@@ -331,8 +434,8 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
         try {
           const result = await client.query(`
             INSERT INTO watch_list_matches (
-              watch_list_id, regulatory_update_id, match_score, match_reasons, dismissed, created_at
-            ) VALUES ($1, $2, $3, $4, FALSE, NOW())
+              watch_list_id, regulatory_update_id, match_score, match_reasons, reviewed, reviewed_at, dismissed, created_at
+            ) VALUES ($1, $2, $3, $4, FALSE, NULL, FALSE, NOW())
             ON CONFLICT (watch_list_id, regulatory_update_id) DO UPDATE SET
               match_score = EXCLUDED.match_score,
               match_reasons = EXCLUDED.match_reasons
@@ -353,6 +456,30 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
       }
 
       return this.createWatchListMatchJSON(watchListId, updateId, matchData)
+    },
+
+    async markWatchListMatchReviewed(matchId) {
+      await this.initialize()
+
+      if (this.usePostgres) {
+        const client = await this.pool.connect()
+        try {
+          const result = await client.query(`
+            UPDATE watch_list_matches
+            SET reviewed = TRUE, reviewed_at = NOW()
+            WHERE id = $1
+            RETURNING *
+          `, [matchId])
+          return result.rows.length > 0 ? normalizeWatchListMatch(result.rows[0]) : null
+        } catch (error) {
+          console.warn('📊 Falling back to JSON:', error.message)
+          return this.markWatchListMatchReviewedJSON(matchId)
+        } finally {
+          client.release()
+        }
+      }
+
+      return this.markWatchListMatchReviewedJSON(matchId)
     },
 
     async dismissWatchListMatch(matchId) {
@@ -432,15 +559,35 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
       // Get all active watch lists
       const watchLists = await this.getAllActiveWatchLists()
       const matches = []
+      const updateTitle = updateData?.headline || updateData?.title || updateData?.update_title || 'Update'
 
       for (const watchList of watchLists) {
         const matchResult = this.calculateMatchScore(watchList, updateData)
-        if (matchResult.score > 0) {
+        const threshold = Number.parseFloat(
+          watchList.alert_threshold !== undefined ? watchList.alert_threshold : watchList.alertThreshold
+        )
+        const normalizedThreshold = Number.isFinite(threshold) ? threshold : 0.5
+        if (matchResult.score >= normalizedThreshold) {
           const match = await this.createWatchListMatch(watchList.id, updateId, {
             matchScore: matchResult.score,
             matchReasons: matchResult.reasons
           })
           matches.push(match)
+
+          const alertEnabled = watchList.alertOnMatch !== false && watchList.alert_on_match !== false
+          const userId = watchList.userId || watchList.user_id || 'default'
+          if (alertEnabled && typeof this.createWatchListMatchNotification === 'function') {
+            try {
+              await this.createWatchListMatchNotification(
+                userId,
+                watchList.name || 'Watch List',
+                { id: updateId, title: updateTitle, watchListId: watchList.id },
+                matchResult.score
+              )
+            } catch (error) {
+              console.warn('[WatchLists] Failed to create match notification:', error.message)
+            }
+          }
         }
       }
 
@@ -565,6 +712,12 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
           ...l,
           matchCount: matches.filter(m =>
             String(m.watchListId) === String(l.id) && !m.dismissed
+          ).length,
+          unreviewedCount: matches.filter(m =>
+            String(m.watchListId) === String(l.id) && !m.dismissed && !m.reviewed
+          ).length,
+          unreviewed_count: matches.filter(m =>
+            String(m.watchListId) === String(l.id) && !m.dismissed && !m.reviewed
           ).length
         }))
     },
@@ -583,6 +736,12 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
         ...list,
         matchCount: matches.filter(m =>
           String(m.watchListId) === String(list.id) && !m.dismissed
+        ).length,
+        unreviewedCount: matches.filter(m =>
+          String(m.watchListId) === String(list.id) && !m.dismissed && !m.reviewed
+        ).length,
+        unreviewed_count: matches.filter(m =>
+          String(m.watchListId) === String(list.id) && !m.dismissed && !m.reviewed
         ).length
       }
     },
@@ -590,6 +749,18 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
     async createWatchListJSON(userId, data) {
       const lists = await this.loadWatchListsJSON()
       const now = new Date().toISOString()
+      const rawThreshold = data.alertThreshold !== undefined
+        ? data.alertThreshold
+        : data.alert_threshold !== undefined
+          ? data.alert_threshold
+          : 0.5
+      const parsedThreshold = Number.parseFloat(rawThreshold)
+      const alertThreshold = Number.isFinite(parsedThreshold) ? parsedThreshold : 0.5
+      const alertOnMatch = data.alertOnMatch !== undefined
+        ? data.alertOnMatch !== false
+        : data.alert_on_match !== undefined
+          ? data.alert_on_match !== false
+          : true
 
       const newList = {
         id: crypto.randomUUID ? crypto.randomUUID() : `wl-${Date.now()}`,
@@ -599,6 +770,14 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
         keywords: data.keywords || [],
         authorities: data.authorities || [],
         sectors: data.sectors || [],
+        alertOnMatch,
+        alert_on_match: alertOnMatch,
+        alertThreshold,
+        alert_threshold: alertThreshold,
+        autoAddToDossier: data.autoAddToDossier === true || data.auto_add_to_dossier === true,
+        auto_add_to_dossier: data.autoAddToDossier === true || data.auto_add_to_dossier === true,
+        targetDossierId: data.targetDossierId || data.target_dossier_id || null,
+        target_dossier_id: data.targetDossierId || data.target_dossier_id || null,
         isActive: true,
         createdAt: now,
         updatedAt: now
@@ -606,7 +785,7 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
 
       lists.push(newList)
       await this.saveWatchListsJSON(lists)
-      return { ...newList, matchCount: 0 }
+      return { ...newList, matchCount: 0, unreviewedCount: 0, unreviewed_count: 0 }
     },
 
     async updateWatchListJSON(watchListId, userId, updates) {
@@ -616,6 +795,36 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
       const nextLists = lists.map(l => {
         if (String(l.id) === String(watchListId) && l.userId === userId) {
           updated = { ...l, ...updates, updatedAt: new Date().toISOString() }
+          if (updates.alertOnMatch !== undefined) {
+            updated.alertOnMatch = updates.alertOnMatch !== false
+            updated.alert_on_match = updated.alertOnMatch
+          } else if (updates.alert_on_match !== undefined) {
+            updated.alert_on_match = updates.alert_on_match !== false
+            updated.alertOnMatch = updated.alert_on_match
+          }
+          if (updates.alertThreshold !== undefined) {
+            const parsed = Number.parseFloat(updates.alertThreshold)
+            updated.alertThreshold = Number.isFinite(parsed) ? parsed : (updated.alertThreshold || 0.5)
+            updated.alert_threshold = updated.alertThreshold
+          } else if (updates.alert_threshold !== undefined) {
+            const parsed = Number.parseFloat(updates.alert_threshold)
+            updated.alert_threshold = Number.isFinite(parsed) ? parsed : (updated.alert_threshold || 0.5)
+            updated.alertThreshold = updated.alert_threshold
+          }
+          if (updates.autoAddToDossier !== undefined) {
+            updated.autoAddToDossier = updates.autoAddToDossier === true
+            updated.auto_add_to_dossier = updated.autoAddToDossier
+          } else if (updates.auto_add_to_dossier !== undefined) {
+            updated.auto_add_to_dossier = updates.auto_add_to_dossier === true
+            updated.autoAddToDossier = updated.auto_add_to_dossier
+          }
+          if (updates.targetDossierId !== undefined) {
+            updated.targetDossierId = updates.targetDossierId || null
+            updated.target_dossier_id = updated.targetDossierId
+          } else if (updates.target_dossier_id !== undefined) {
+            updated.target_dossier_id = updates.target_dossier_id || null
+            updated.targetDossierId = updated.target_dossier_id
+          }
           return updated
         }
         return l
@@ -645,15 +854,39 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
       const { includeDismissed = false, limit = 50, offset = 0 } = options
       const matches = await this.loadWatchListMatchesJSON()
 
-      let filtered = matches.filter(m =>
-        String(m.watchListId) === String(watchListId) &&
-        (includeDismissed || !m.dismissed)
-      )
+      const updates = await this.loadJSONData(this.updatesFile)
+      const updateMap = new Map((Array.isArray(updates) ? updates : []).map(update => [String(update.id), update]))
+
+      let filtered = matches.filter(m => {
+        const matchWatchListId = m.watchListId || m.watch_list_id
+        return String(matchWatchListId) === String(watchListId) &&
+          (includeDismissed || !m.dismissed)
+      })
 
       // Sort by created date descending
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      filtered.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at))
 
-      return filtered.slice(offset, offset + limit)
+      return filtered.slice(offset, offset + limit).map(match => {
+        const updateId = match.regulatoryUpdateId || match.regulatory_update_id
+        const update = updateMap.get(String(updateId))
+        return normalizeWatchListMatch({
+          ...match,
+          watch_list_id: match.watchListId,
+          regulatory_update_id: updateId,
+          match_score: match.matchScore,
+          match_reasons: match.matchReasons,
+          reviewed_at: match.reviewedAt,
+          created_at: match.createdAt,
+          headline: update?.headline,
+          summary: update?.summary,
+          ai_summary: update?.ai_summary,
+          authority: update?.authority,
+          sector: update?.sector,
+          impact_level: update?.impactLevel || update?.impact_level,
+          published_date: update?.publishedDate || update?.published_date || update?.fetchedDate || update?.createdAt,
+          url: update?.url
+        })
+      })
     },
 
     async createWatchListMatchJSON(watchListId, updateId, matchData) {
@@ -672,6 +905,8 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
         regulatoryUpdateId: updateId,
         matchScore: matchData.matchScore || 0,
         matchReasons: matchData.matchReasons || {},
+        reviewed: false,
+        reviewedAt: null,
         dismissed: false,
         createdAt: now
       }
@@ -684,6 +919,22 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
 
       await this.saveWatchListMatchesJSON(matches)
       return newMatch
+    },
+
+    async markWatchListMatchReviewedJSON(matchId) {
+      const matches = await this.loadWatchListMatchesJSON()
+      let reviewed = null
+
+      const nextMatches = matches.map(m => {
+        if (String(m.id) === String(matchId)) {
+          reviewed = { ...m, reviewed: true, reviewedAt: new Date().toISOString() }
+          return reviewed
+        }
+        return m
+      })
+
+      if (reviewed) await this.saveWatchListMatchesJSON(nextMatches)
+      return reviewed
     },
 
     async dismissWatchListMatchJSON(matchId) {

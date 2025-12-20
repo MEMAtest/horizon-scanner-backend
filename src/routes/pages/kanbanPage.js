@@ -30,8 +30,12 @@ async function renderKanbanPage(req, res) {
     let selectedTemplate = null
     if (selectedTemplateId) {
       selectedTemplate = await regulatoryChangeService.getWorkflowTemplateById(selectedTemplateId, userId)
-    } else if (workflowTemplates.length > 0) {
-      // Use the first template if none selected
+    }
+    if (!selectedTemplate) {
+      selectedTemplate = await regulatoryChangeService.getDefaultTemplate(userId)
+    }
+    if (!selectedTemplate && workflowTemplates.length > 0) {
+      // Fallback to the first template if none selected/default
       selectedTemplate = workflowTemplates[0]
     }
 

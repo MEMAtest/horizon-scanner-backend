@@ -1,11 +1,128 @@
 const fs = require('fs').promises
+const crypto = require('crypto')
 const { normalizeSectorName } = require('../../utils/sectorTaxonomy')
+
+const DEFAULT_BOOKMARK_COLLECTIONS = [
+  { id: 'personal', name: 'Personal', isSystem: true },
+  { id: 'professional', name: 'Professional', isSystem: true }
+]
+
+const TOPIC_AREA_RULES = [
+  { topicArea: 'Consumer Duty', keywords: ['consumer duty', 'fair value', 'vulnerable customer', 'retail customer'] },
+  { topicArea: 'Operational Resilience', keywords: ['operational resilience', 'resilience', 'incident', 'outage', 'cyber', 'ict', 'dora'] },
+  { topicArea: 'Financial Crime / AML', keywords: ['anti-money laundering', 'money laundering', 'aml', 'terrorist financing', 'financial crime', 'fincrime'] },
+  { topicArea: 'Sanctions', keywords: ['sanctions', 'ofsi', 'financial sanctions', 'ukraine', 'russia', 'iran', 'north korea'] },
+  { topicArea: 'Capital & Liquidity', keywords: ['basel', 'capital requirements', 'capital', 'liquidity', 'crd', 'crr', 'icaap', 'pillar', 'lcr', 'nsfr'] },
+  { topicArea: 'Conduct & Market Abuse', keywords: ['market abuse', 'mar', 'insider dealing', 'conduct', 'mis-selling', 'product governance'] },
+  { topicArea: 'Payments', keywords: ['payments', 'payment', 'psr', 'psd', 'open banking', 'faster payments'] },
+  { topicArea: 'Data Protection', keywords: ['gdpr', 'data protection', 'privacy', 'personal data'] },
+  { topicArea: 'ESG / Sustainability', keywords: ['esg', 'sustainability', 'climate', 'greenwashing', 'tcfd', 'transition plan'] }
+]
+
+function normalizeTopicArea(value) {
+  if (value == null) return ''
+  const trimmed = String(value).trim()
+  return trimmed
+}
+
+function inferTopicArea({ title = '', summary = '', authority = '', sectors = [] } = {}) {
+  const haystack = [
+    title,
+    summary,
+    authority,
+    ...(Array.isArray(sectors) ? sectors : [])
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (!haystack) return null
+
+  for (const rule of TOPIC_AREA_RULES) {
+    if (!rule || !rule.topicArea || !Array.isArray(rule.keywords)) continue
+    if (rule.keywords.some(keyword => keyword && haystack.includes(String(keyword).toLowerCase()))) {
+      return rule.topicArea
+    }
+  }
+
+  return null
+}
+
+function ensurePinnedItemTopicArea(item) {
+  if (!item || typeof item !== 'object') return item
+  const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
+  const existing = normalizeTopicArea(metadata.topicArea || metadata.topic_area || metadata.topic)
+  if (existing) {
+    metadata.topicArea = existing
+  } else {
+    const inferred = inferTopicArea({
+      title: item.update_title || '',
+      summary: metadata.summary || '',
+      authority: item.update_authority || '',
+      sectors: Array.isArray(item.sectors) ? item.sectors : metadata.sectors
+    })
+    if (inferred) {
+      metadata.topicArea = inferred
+    }
+  }
+  delete metadata.topic_area
+  delete metadata.topic
+  return { ...item, metadata }
+}
+
+function ensureBookmarkCollections(rawCollections) {
+  const collections = Array.isArray(rawCollections) ? rawCollections : []
+  const byId = new Map()
+
+  for (const entry of collections) {
+    if (!entry || typeof entry !== 'object') continue
+    const id = entry.id != null ? String(entry.id).trim() : ''
+    const name = entry.name != null ? String(entry.name).trim() : ''
+    if (!id || !name) continue
+    byId.set(id, {
+      id,
+      name,
+      isSystem: entry.isSystem === true || entry.is_system === true
+    })
+  }
+
+  for (const fallback of DEFAULT_BOOKMARK_COLLECTIONS) {
+    if (!byId.has(fallback.id)) {
+      byId.set(fallback.id, { ...fallback })
+    }
+  }
+
+  const ordered = []
+  for (const fallback of DEFAULT_BOOKMARK_COLLECTIONS) {
+    const value = byId.get(fallback.id)
+    if (value) ordered.push(value)
+  }
+
+  for (const [id, value] of byId.entries()) {
+    if (DEFAULT_BOOKMARK_COLLECTIONS.some(item => item.id === id)) continue
+    ordered.push(value)
+  }
+
+  return ordered
+}
+
+function getDefaultBookmarkCollectionId(collections) {
+  const normalized = ensureBookmarkCollections(collections)
+  const personal = normalized.find(collection => collection.id === 'personal')
+  return personal ? personal.id : (normalized[0]?.id || 'personal')
+}
+
+function createBookmarkCollectionId() {
+  if (crypto.randomUUID) return crypto.randomUUID()
+  return `collection-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
 
 const createDefaultWorkspaceState = () => ({
   savedSearches: [],
   customAlerts: [],
   pinnedItems: [],
-  firmProfile: null
+  firmProfile: null,
+  bookmarkCollections: ensureBookmarkCollections()
 })
 
 const parseWorkspaceState = raw => {
@@ -19,7 +136,8 @@ const parseWorkspaceState = raw => {
       savedSearches: Array.isArray(data.savedSearches) ? data.savedSearches : [],
       customAlerts: Array.isArray(data.customAlerts) ? data.customAlerts : [],
       pinnedItems: Array.isArray(data.pinnedItems) ? data.pinnedItems : [],
-      firmProfile: data.firmProfile || null
+      firmProfile: data.firmProfile || null,
+      bookmarkCollections: ensureBookmarkCollections(data.bookmarkCollections || data.bookmark_collections)
     }
   } catch (error) {
     console.warn('[workspace] Invalid JSON cache, resetting workspace data:', error.message)
@@ -50,11 +168,213 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
         savedSearches: Array.isArray(state?.savedSearches) ? state.savedSearches : [],
         customAlerts: Array.isArray(state?.customAlerts) ? state.customAlerts : [],
         pinnedItems: Array.isArray(state?.pinnedItems) ? state.pinnedItems : [],
-        firmProfile: state?.firmProfile || null
+        firmProfile: state?.firmProfile || null,
+        bookmarkCollections: ensureBookmarkCollections(state?.bookmarkCollections || state?.bookmark_collections)
       }
 
       await fs.writeFile(this.workspaceFile, JSON.stringify(merged, null, 2))
       return merged
+    },
+
+    async getBookmarkCollections() {
+      const workspace = await this.loadWorkspaceState()
+      const normalized = ensureBookmarkCollections(workspace.bookmarkCollections)
+      if (!Array.isArray(workspace.bookmarkCollections) || workspace.bookmarkCollections.length !== normalized.length) {
+        workspace.bookmarkCollections = normalized
+        await this.saveWorkspaceState(workspace)
+      }
+      return normalized
+    },
+
+    async createBookmarkCollection(name) {
+      const collectionName = name != null ? String(name).trim() : ''
+      if (!collectionName) {
+        throw new Error('Collection name is required')
+      }
+
+      const workspace = await this.loadWorkspaceState()
+      const existing = ensureBookmarkCollections(workspace.bookmarkCollections)
+      const alreadyExists = existing.some(collection => collection.name.toLowerCase() === collectionName.toLowerCase())
+      if (alreadyExists) {
+        throw new Error('A collection with this name already exists')
+      }
+
+      const collection = {
+        id: createBookmarkCollectionId(),
+        name: collectionName,
+        isSystem: false
+      }
+
+      workspace.bookmarkCollections = [...existing, collection]
+      await this.saveWorkspaceState(workspace)
+      return collection
+    },
+
+    async renameBookmarkCollection(collectionId, name) {
+      const targetId = collectionId != null ? String(collectionId).trim() : ''
+      const nextName = name != null ? String(name).trim() : ''
+      if (!targetId || !nextName) {
+        throw new Error('Collection id and name are required')
+      }
+      if (DEFAULT_BOOKMARK_COLLECTIONS.some(collection => collection.id === targetId)) {
+        throw new Error('Default collections cannot be renamed')
+      }
+
+      const workspace = await this.loadWorkspaceState()
+      const collections = ensureBookmarkCollections(workspace.bookmarkCollections)
+      const exists = collections.find(collection => collection.id === targetId)
+      if (!exists) return null
+
+      if (collections.some(collection => collection.name.toLowerCase() === nextName.toLowerCase() && collection.id !== targetId)) {
+        throw new Error('A collection with this name already exists')
+      }
+
+      workspace.bookmarkCollections = collections.map(collection =>
+        collection.id === targetId
+          ? { ...collection, name: nextName }
+          : collection
+      )
+      await this.saveWorkspaceState(workspace)
+      return workspace.bookmarkCollections.find(collection => collection.id === targetId) || null
+    },
+
+    async deleteBookmarkCollection(collectionId) {
+      const targetId = collectionId != null ? String(collectionId).trim() : ''
+      if (!targetId) {
+        throw new Error('Collection id is required')
+      }
+      if (DEFAULT_BOOKMARK_COLLECTIONS.some(collection => collection.id === targetId)) {
+        throw new Error('Default collections cannot be deleted')
+      }
+
+      const workspace = await this.loadWorkspaceState()
+      const collections = ensureBookmarkCollections(workspace.bookmarkCollections)
+      const remaining = collections.filter(collection => collection.id !== targetId)
+      if (remaining.length === collections.length) return false
+
+      const fallbackId = getDefaultBookmarkCollectionId(remaining)
+
+      workspace.bookmarkCollections = remaining
+      workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
+        ? workspace.pinnedItems.map(item => {
+            if (!item || typeof item !== 'object') return item
+            const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
+            const current = metadata.collectionId || metadata.collection_id
+            if (String(current || '') !== targetId) return item
+            metadata.collectionId = fallbackId
+            delete metadata.collection_id
+            return { ...item, metadata }
+          })
+        : []
+
+      await this.saveWorkspaceState(workspace)
+      return true
+    },
+
+    async setPinnedItemCollection(updateUrl, collectionId) {
+      await this.initializeDatabase()
+      const url = updateUrl != null ? String(updateUrl) : ''
+      if (!url) throw new Error('Update URL is required')
+
+      const collections = await this.getBookmarkCollections()
+      const target = collections.find(collection => String(collection.id) === String(collectionId))
+      if (!target) throw new Error('Bookmark collection not found')
+
+      const normalizedCollectionId = target.id
+
+      let postgresUpdated = false
+      if (!this.fallbackMode) {
+        const client = await this.pool.connect()
+        try {
+          const result = await client.query(
+            `UPDATE pinned_items
+             SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('collectionId', $2)
+             WHERE update_url = $1`,
+            [url, normalizedCollectionId]
+          )
+          postgresUpdated = result.rowCount > 0
+        } catch (error) {
+          console.warn('📊 Using JSON fallback for pinned item collection update:', error.message)
+        } finally {
+          client.release()
+        }
+      }
+
+      const workspace = await this.loadWorkspaceState()
+      let updated = false
+
+      workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
+        ? workspace.pinnedItems.map(item => {
+            const itemUrl = item?.update_url || item?.updateUrl || item?.url
+            if (!itemUrl || String(itemUrl) !== url) return item
+            const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
+            metadata.collectionId = normalizedCollectionId
+            delete metadata.collection_id
+            updated = true
+            return { ...item, metadata }
+          })
+        : []
+
+      if (updated) {
+        await this.saveWorkspaceState(workspace)
+      }
+
+      return updated || postgresUpdated
+    },
+
+    async setPinnedItemTopicArea(updateUrl, topicArea) {
+      await this.initializeDatabase()
+      const url = updateUrl != null ? String(updateUrl) : ''
+      if (!url) throw new Error('Update URL is required')
+
+      const normalizedTopicArea = normalizeTopicArea(topicArea)
+
+      let postgresUpdated = false
+      if (!this.fallbackMode) {
+        const client = await this.pool.connect()
+        try {
+          const query = normalizedTopicArea
+            ? `UPDATE pinned_items
+               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
+               WHERE update_url = $1`
+            : `UPDATE pinned_items
+               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
+               WHERE update_url = $1`
+          const params = normalizedTopicArea ? [url, normalizedTopicArea] : [url]
+          const result = await client.query(query, params)
+          postgresUpdated = result.rowCount > 0
+        } catch (error) {
+          console.warn('📊 Using JSON fallback for pinned item topic update:', error.message)
+        } finally {
+          client.release()
+        }
+      }
+
+      const workspace = await this.loadWorkspaceState()
+      let updated = false
+
+      workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
+        ? workspace.pinnedItems.map(item => {
+            const itemUrl = item?.update_url || item?.updateUrl || item?.url
+            if (!itemUrl || String(itemUrl) !== url) return item
+            const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
+            if (normalizedTopicArea) {
+              metadata.topicArea = normalizedTopicArea
+            } else {
+              delete metadata.topicArea
+              delete metadata.topic_area
+              delete metadata.topic
+            }
+            updated = true
+            return { ...item, metadata }
+          })
+        : []
+
+      if (updated) {
+        await this.saveWorkspaceState(workspace)
+      }
+
+      return updated || postgresUpdated
     },
 
     async getSavedSearches() {
@@ -332,6 +652,7 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
           return result.rows
             .map(row => this.normalizePinnedItemRecord(row))
             .filter(Boolean)
+            .map(ensurePinnedItemTopicArea)
         } catch (error) {
           console.log('📊 Using JSON fallback for pinned items')
           return this.getPinnedItemsJSON()
@@ -350,6 +671,7 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
         return items
           .map(item => this.normalizePinnedItemRecord(item))
           .filter(Boolean)
+          .map(ensurePinnedItemTopicArea)
       } catch (error) {
         return []
       }
@@ -395,6 +717,34 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
         )
       }
 
+      const requestedCollectionId = metadata.collectionId || metadata.collection_id
+      try {
+        const workspace = await this.loadWorkspaceState()
+        const collections = ensureBookmarkCollections(workspace.bookmarkCollections)
+        const fallbackId = getDefaultBookmarkCollectionId(collections)
+        const normalizedRequested = requestedCollectionId != null ? String(requestedCollectionId).trim() : ''
+        metadata.collectionId = collections.some(collection => collection.id === normalizedRequested)
+          ? normalizedRequested
+          : fallbackId
+      } catch (error) {
+        metadata.collectionId = requestedCollectionId || 'personal'
+      }
+      delete metadata.collection_id
+
+      const explicitTopicArea = normalizeTopicArea(
+        metadata.topicArea || metadata.topic_area || metadata.topic || options.topicArea || options.topic_area
+      )
+      if (explicitTopicArea) {
+        metadata.topicArea = explicitTopicArea
+      } else {
+        const inferredTopicArea = inferTopicArea({ title, summary, authority, sectors })
+        if (inferredTopicArea) {
+          metadata.topicArea = inferredTopicArea
+        }
+      }
+      delete metadata.topic_area
+      delete metadata.topic
+
       const pinnedItem = {
         id: Date.now(),
         update_url: url,
@@ -413,6 +763,18 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       if (!this.fallbackMode) { // FIX: Not this.usePostgres
         const client = await this.pool.connect()
         try {
+          if (updateId != null && updateId !== '') {
+            try {
+              await client.query(
+                `DELETE FROM pinned_items
+                 WHERE metadata->>'updateId' = $1`,
+                [String(updateId)]
+              )
+            } catch (cleanupError) {
+              // Ignore metadata cleanup if legacy schema is in use
+            }
+          }
+
           try {
             const result = await client.query(`
                       INSERT INTO pinned_items (update_url, update_title, update_authority, notes, pinned_date, metadata, sectors)
@@ -435,16 +797,29 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
             pinnedItem.id = legacyResult.rows[0].id
             return this.normalizePinnedItemRecord(pinnedItem)
           }
+        } catch (error) {
+          console.warn('📊 Using JSON fallback for pinned items insert:', error.message)
         } finally {
           client.release()
         }
-      } else {
-        // JSON fallback
-        const workspace = await this.loadWorkspaceState()
-        workspace.pinnedItems.push(pinnedItem)
-        await this.saveWorkspaceState(workspace)
-        return this.normalizePinnedItemRecord(pinnedItem)
       }
+
+      // JSON fallback
+      const workspace = await this.loadWorkspaceState()
+      workspace.pinnedItems = Array.isArray(workspace.pinnedItems) ? workspace.pinnedItems : []
+      const normalizedUpdateId = updateId != null && updateId !== '' ? String(updateId) : ''
+      workspace.pinnedItems = workspace.pinnedItems.filter(item => {
+        if (!item || typeof item !== 'object') return false
+        const itemUrl = item.update_url || item.updateUrl || item.url
+        if (itemUrl && String(itemUrl) === url) return false
+        if (!normalizedUpdateId) return true
+        const meta = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
+        const itemUpdateId = meta.updateId || meta.update_id || item.update_id || item.updateId || null
+        return !itemUpdateId || String(itemUpdateId) !== normalizedUpdateId
+      })
+      workspace.pinnedItems.push(pinnedItem)
+      await this.saveWorkspaceState(workspace)
+      return this.normalizePinnedItemRecord(pinnedItem)
     },
 
     async removePinnedItem(url) {
@@ -458,17 +833,21 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
             [url]
           )
           return result.rowCount > 0
+        } catch (error) {
+          console.warn('📊 Using JSON fallback for pinned items delete:', error.message)
         } finally {
           client.release()
         }
-      } else {
-        // JSON fallback
-        const workspace = await this.loadWorkspaceState()
-        const initialLength = workspace.pinnedItems.length
-        workspace.pinnedItems = workspace.pinnedItems.filter(item => item.update_url !== url)
-        await this.saveWorkspaceState(workspace)
-        return workspace.pinnedItems.length < initialLength
       }
+
+      // JSON fallback
+      const workspace = await this.loadWorkspaceState()
+      const initialLength = Array.isArray(workspace.pinnedItems) ? workspace.pinnedItems.length : 0
+      workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
+        ? workspace.pinnedItems.filter(item => item && item.update_url !== url)
+        : []
+      await this.saveWorkspaceState(workspace)
+      return workspace.pinnedItems.length < initialLength
     },
 
     async updatePinnedItemNotes(updateUrl, notes) {

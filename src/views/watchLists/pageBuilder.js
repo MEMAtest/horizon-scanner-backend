@@ -7,6 +7,7 @@ const {
   renderMatchesModal,
   renderLinkSelectorModal
 } = require('./components')
+const { getWatchListsIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../icons')
 
 function buildWatchListsPage({
   sidebar,
@@ -18,6 +19,8 @@ function buildWatchListsPage({
 }) {
   const watchListStyles = getWatchListStyles()
   const watchListScripts = getWatchListScripts({ watchLists, stats })
+  const canaryStyles = getCanaryAnimationStyles()
+  const pageIcon = wrapIconInContainer(getWatchListsIcon())
 
   return `
     <!DOCTYPE html>
@@ -28,15 +31,19 @@ function buildWatchListsPage({
       <title>Watch Lists - RegCanary</title>
       ${commonStyles}
       ${watchListStyles}
+      <style>${canaryStyles}</style>
     </head>
     <body>
       ${sidebar}
       <main class="main-content">
         <div class="watch-lists-page">
           <header class="page-header">
-            <div>
-              <h1>Watch Lists</h1>
-              <p class="subtitle">Monitor regulatory updates matching your criteria</p>
+            <div class="page-header-left">
+              ${pageIcon}
+              <div>
+                <h1>Watch Lists</h1>
+                <p class="subtitle">Monitor regulatory updates matching your criteria</p>
+              </div>
             </div>
             <div class="header-actions">
               <button class="btn btn-primary" onclick="WatchListPage.openCreateModal()">

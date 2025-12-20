@@ -3,9 +3,12 @@
     const WorkspaceModule = (function() {
         // State management
         let pinnedUrls = new Set();
+        let pinnedUpdateIds = new Set();
         let pinnedItems = [];
         let savedSearches = [];
         let customAlerts = [];
+        let bookmarkCollections = [];
+        let selectedBookmarkCollectionId = 'personal';
         let firmProfile = null;
         let availableSectors = Array.isArray(window.availableSectors)
             ? Array.from(new Set(window.availableSectors))
@@ -36,6 +39,18 @@
             'Cryptocurrency',
             'Fintech',
             'Wealth Management'
+        ];
+
+        const DEFAULT_TOPIC_AREAS = [
+            'Consumer Duty',
+            'Operational Resilience',
+            'Financial Crime / AML',
+            'Sanctions',
+            'Capital & Liquidity',
+            'Conduct & Market Abuse',
+            'Payments',
+            'Data Protection',
+            'ESG / Sustainability'
         ];
 
         function getAliasMap() {
@@ -73,16 +88,345 @@
 
         function broadcastWorkspacePins() {
             const urls = Array.from(pinnedUrls);
+            const updateIds = Array.from(pinnedUpdateIds);
             const detail = {
                 urls,
+                updateIds,
                 items: pinnedItems.slice()
             };
             window.__workspacePinnedUrls = urls;
+            window.__workspacePinnedUpdateIds = updateIds;
             window.__workspacePinnedItems = detail.items;
             try {
                 window.dispatchEvent(new CustomEvent('workspace:pins', { detail }));
             } catch (error) {
                 console.warn('WorkspaceModule pin event failed:', error);
+            }
+        }
+
+        function normalizeCollectionId(value) {
+            return value == null ? '' : String(value).trim();
+        }
+
+        function normalizeBookmarkCollection(entry) {
+            if (!entry || typeof entry !== 'object') return null;
+            const id = normalizeCollectionId(entry.id);
+            const name = entry.name == null ? '' : String(entry.name).trim();
+            if (!id || !name) return null;
+            return {
+                id,
+                name,
+                isSystem: entry.isSystem === true || entry.is_system === true
+            };
+        }
+
+        function ensureBookmarkCollections(list) {
+            const normalized = Array.isArray(list)
+                ? list.map(normalizeBookmarkCollection).filter(Boolean)
+                : [];
+
+            const defaults = [
+                { id: 'personal', name: 'Personal', isSystem: true },
+                { id: 'professional', name: 'Professional', isSystem: true }
+            ];
+
+            const byId = new Map();
+            normalized.forEach(entry => byId.set(entry.id, entry));
+            defaults.forEach(entry => {
+                if (!byId.has(entry.id)) {
+                    byId.set(entry.id, entry);
+                }
+            });
+
+            const ordered = [];
+            defaults.forEach(entry => ordered.push(byId.get(entry.id)));
+            for (const [id, value] of byId.entries()) {
+                if (id === 'personal' || id === 'professional') continue;
+                ordered.push(value);
+            }
+
+            return ordered.filter(Boolean);
+        }
+
+        function getPinnedItemCollectionId(item) {
+            const metadata = item && item.metadata && typeof item.metadata === 'object'
+                ? item.metadata
+                : {};
+            const id = normalizeCollectionId(metadata.collectionId || metadata.collection_id);
+            return id || 'personal';
+        }
+
+        function normalizeTopicArea(value) {
+            return value == null ? '' : String(value).trim();
+        }
+
+        function getPinnedItemTopicArea(item) {
+            const metadata = item && item.metadata && typeof item.metadata === 'object'
+                ? item.metadata
+                : {};
+            const raw = metadata.topicArea || metadata.topic_area || metadata.topic || '';
+            return normalizeTopicArea(raw);
+        }
+
+        function getBookmarkCollectionName(collectionId) {
+            const target = normalizeCollectionId(collectionId);
+            const found = bookmarkCollections.find(collection => collection.id === target);
+            return found ? found.name : 'Personal';
+        }
+
+        async function loadBookmarkCollections() {
+            try {
+                const response = await fetch('/api/workspace/bookmark-collections');
+                if (response.ok) {
+                    const data = await response.json();
+                    bookmarkCollections = ensureBookmarkCollections(data.collections);
+                } else {
+                    bookmarkCollections = ensureBookmarkCollections([]);
+                }
+            } catch (error) {
+                console.error('Error loading bookmark collections:', error);
+                bookmarkCollections = ensureBookmarkCollections([]);
+            }
+
+            if (selectedBookmarkCollectionId !== 'all') {
+                const target = normalizeCollectionId(selectedBookmarkCollectionId) || 'personal';
+                if (!bookmarkCollections.some(collection => collection.id === target)) {
+                    selectedBookmarkCollectionId = bookmarkCollections.some(collection => collection.id === 'personal')
+                        ? 'personal'
+                        : (bookmarkCollections[0] ? bookmarkCollections[0].id : 'personal');
+                }
+            }
+        }
+
+        async function createBookmarkCollection(name) {
+            const collectionName = name == null ? '' : String(name).trim();
+            if (!collectionName) return null;
+            try {
+                const response = await fetch('/api/workspace/bookmark-collections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: collectionName })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to create collection');
+                }
+                await loadBookmarkCollections();
+                return data.collection || null;
+            } catch (error) {
+                console.error('Create collection error:', error);
+                showMessage(error.message || 'Failed to create collection', 'error');
+                return null;
+            }
+        }
+
+        async function renameBookmarkCollection(collectionId, name) {
+            const id = normalizeCollectionId(collectionId);
+            const nextName = name == null ? '' : String(name).trim();
+            if (!id || !nextName) return null;
+            try {
+                const response = await fetch('/api/workspace/bookmark-collections/' + encodeURIComponent(id), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nextName })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to rename collection');
+                }
+                await loadBookmarkCollections();
+                return data.collection || null;
+            } catch (error) {
+                console.error('Rename collection error:', error);
+                showMessage(error.message || 'Failed to rename collection', 'error');
+                return null;
+            }
+        }
+
+        async function deleteBookmarkCollection(collectionId) {
+            const id = normalizeCollectionId(collectionId);
+            if (!id) return false;
+            try {
+                const response = await fetch('/api/workspace/bookmark-collections/' + encodeURIComponent(id), {
+                    method: 'DELETE'
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to delete collection');
+                }
+                await loadBookmarkCollections();
+                return true;
+            } catch (error) {
+                console.error('Delete collection error:', error);
+                showMessage(error.message || 'Failed to delete collection', 'error');
+                return false;
+            }
+        }
+
+        async function updatePinnedItemCollection(updateUrl, collectionId) {
+            const url = String(updateUrl || '').trim();
+            const nextCollectionId = normalizeCollectionId(collectionId);
+            if (!url || !nextCollectionId) return false;
+
+            try {
+                const response = await fetch('/api/workspace/pin/' + encodeURIComponent(url) + '/collection', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ collectionId: nextCollectionId })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to move bookmark');
+                }
+
+                pinnedItems = Array.isArray(pinnedItems)
+                    ? pinnedItems.map(item => {
+                        if (!item || String(item.update_url || '') !== url) return item;
+                        const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {};
+                        metadata.collectionId = nextCollectionId;
+                        delete metadata.collection_id;
+                        return { ...item, metadata };
+                    })
+                    : [];
+
+                broadcastWorkspacePins();
+                return true;
+            } catch (error) {
+                console.error('Update pinned item collection error:', error);
+                showMessage(error.message || 'Failed to move bookmark', 'error');
+                return false;
+            }
+        }
+
+        async function updatePinnedItemTopicArea(updateUrl, topicArea) {
+            const url = String(updateUrl || '').trim();
+            if (!url) return false;
+            const nextTopicArea = normalizeTopicArea(topicArea);
+
+            try {
+                const response = await fetch('/api/workspace/pin/' + encodeURIComponent(url) + '/topic', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topicArea: nextTopicArea })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to update topic');
+                }
+
+                pinnedItems = Array.isArray(pinnedItems)
+                    ? pinnedItems.map(item => {
+                        if (!item || String(item.update_url || '') !== url) return item;
+                        const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {};
+                        if (nextTopicArea) {
+                            metadata.topicArea = nextTopicArea;
+                        } else {
+                            delete metadata.topicArea;
+                            delete metadata.topic_area;
+                            delete metadata.topic;
+                        }
+                        return { ...item, metadata };
+                    })
+                    : [];
+
+                broadcastWorkspacePins();
+                return true;
+            } catch (error) {
+                console.error('Update pinned item topic error:', error);
+                showMessage(error.message || 'Failed to update topic', 'error');
+                return false;
+            }
+        }
+
+        function getPreferredKanbanTemplateId() {
+            try {
+                const fromState = window.kanbanState && window.kanbanState.selectedTemplateId;
+                if (fromState) return String(fromState);
+            } catch (error) {}
+
+            try {
+                const params = new URLSearchParams(window.location.search || '');
+                const fromQuery = params.get('templateId');
+                if (fromQuery) return String(fromQuery);
+            } catch (error) {}
+
+            try {
+                const fromStorage = localStorage.getItem('kanbanLastTemplateId');
+                if (fromStorage) return String(fromStorage);
+            } catch (error) {}
+
+            return null;
+        }
+
+        function buildKanbanDeepLink(createdItem, fallbackTemplateId) {
+            const item = createdItem && typeof createdItem === 'object' ? createdItem : {};
+            const id = item.id || item.item_id || item.itemId || null;
+            const workflowTemplateId = item.workflow_template_id || item.workflowTemplateId || fallbackTemplateId || null;
+
+            try {
+                const url = new URL('/kanban', window.location.origin);
+                if (workflowTemplateId) url.searchParams.set('templateId', workflowTemplateId);
+                if (id != null) url.searchParams.set('openItemId', id);
+                return url.toString();
+            } catch (error) {
+                return '/kanban';
+            }
+        }
+
+        async function createKanbanActionFromPinnedItem(item) {
+            if (!item || typeof item !== 'object') return null;
+
+            const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+            const updateId = metadata.updateId || metadata.update_id || item.update_id || item.updateId || null;
+            const workflowTemplateId = getPreferredKanbanTemplateId();
+
+            const title = item.update_title || metadata.title || 'Regulatory Change';
+            const authority = item.update_authority || metadata.authority || 'Unknown';
+            const sourceUrl = item.update_url || '';
+            const description = metadata.summary || '';
+
+            try {
+                let response;
+
+                if (updateId) {
+                    response = await fetch('/api/regulatory-changes/from-update/' + encodeURIComponent(updateId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-user-id': 'default'
+                        },
+                        body: JSON.stringify(workflowTemplateId ? { workflow_template_id: workflowTemplateId } : {})
+                    });
+                } else {
+                    const payload = {
+                        title,
+                        description
+                    };
+                    if (workflowTemplateId) payload.workflow_template_id = workflowTemplateId;
+                    if (authority) payload.authority = authority;
+                    if (sourceUrl) payload.source_url = sourceUrl;
+                    response = await fetch('/api/regulatory-changes', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-user-id': 'default'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to create action');
+                }
+
+                return data.data || null;
+            } catch (error) {
+                console.error('Create action error:', error);
+                showMessage(error.message || 'Failed to create action', 'error');
+                return null;
             }
         }
 
@@ -151,6 +495,17 @@
                     : [];
             metadata.personas = personas;
 
+            if (!metadata.updateId && (item.update_id || item.updateId)) {
+                metadata.updateId = item.update_id || item.updateId;
+            }
+
+            if (!metadata.collectionId && metadata.collection_id) {
+                metadata.collectionId = metadata.collection_id;
+            }
+            if (!metadata.collectionId) {
+                metadata.collectionId = 'personal';
+            }
+
             return {
                 id: item.id || metadata.id || Date.now(),
                 update_url: item.update_url || item.updateUrl || item.url || '',
@@ -161,6 +516,39 @@
                 sectors,
                 metadata
             };
+        }
+
+        function getPinnedItemUpdateId(item) {
+            if (!item || typeof item !== 'object') return null;
+            const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+            return metadata.updateId || metadata.update_id || item.update_id || item.updateId || null;
+        }
+
+        function getPinnedItemUrl(item) {
+            if (!item || typeof item !== 'object') return '';
+            return String(item.update_url || item.updateUrl || item.url || '').trim();
+        }
+
+        function rebuildPinnedIndexes(items) {
+            const source = Array.isArray(items) ? items : pinnedItems;
+            pinnedUrls = new Set();
+            pinnedUpdateIds = new Set();
+            source.forEach(item => {
+                const url = getPinnedItemUrl(item);
+                if (url) pinnedUrls.add(url);
+                const updateId = getPinnedItemUpdateId(item);
+                if (updateId != null && updateId !== '') pinnedUpdateIds.add(String(updateId));
+            });
+        }
+
+        function deriveAuthorityFromUrl(url) {
+            try {
+                const parsed = new URL(String(url || ''), window.location.origin);
+                const host = String(parsed.hostname || '').trim();
+                return host.replace(/^www\./, '');
+            } catch (error) {
+                return '';
+            }
         }
 
         function showMessage(message, type = 'info') {
@@ -476,6 +864,8 @@
         // Load workspace data
         async function loadWorkspaceData() {
             try {
+                await loadBookmarkCollections();
+
                 // Load pinned items
                 const pinnedResponse = await fetch('/api/workspace/pinned');
                 if (pinnedResponse.ok) {
@@ -490,10 +880,17 @@
                             .map(item => item.update_url)
                             .filter(Boolean)
                     );
+                    pinnedUpdateIds = new Set(
+                        pinnedItems
+                            .map(getPinnedItemUpdateId)
+                            .filter(Boolean)
+                            .map(id => String(id))
+                    );
                     broadcastWorkspacePins();
                 } else {
                     pinnedItems = [];
                     pinnedUrls = new Set();
+                    pinnedUpdateIds = new Set();
                     broadcastWorkspacePins();
                 }
                 
@@ -559,6 +956,11 @@
                     : typeof context.persona === 'string'
                         ? [context.persona]
                         : [];
+                const resolvedAuthority = (() => {
+                    const candidate = (authority || context.authority || '').trim();
+                    if (candidate && candidate.toLowerCase() !== 'unknown') return candidate;
+                    return deriveAuthorityFromUrl(normalizedUrl) || candidate || 'Unknown';
+                })();
                 const metadata = Object.assign(
                     {
                         sectors: normalizedSectors,
@@ -566,7 +968,7 @@
                         summary: context.summary || '',
                         published: context.published || '',
                         updateId: context.updateId || context.id || null,
-                        authority: authority || context.authority || 'Unknown'
+                        authority: resolvedAuthority
                     },
                     typeof context.metadata === 'object' && context.metadata !== null
                         ? context.metadata
@@ -580,11 +982,20 @@
                     metadata.personas = personas;
                 }
 
-                const wasPinned = pinnedUrls.has(normalizedUrl);
+                const normalizedUpdateId = metadata.updateId != null && metadata.updateId !== ''
+                    ? String(metadata.updateId)
+                    : '';
+                const pinnedItemByUpdateId = normalizedUpdateId
+                    ? pinnedItems.find(item => String(getPinnedItemUpdateId(item) || '') === normalizedUpdateId)
+                    : null;
+                const wasPinned = Boolean(pinnedItemByUpdateId) || pinnedUrls.has(normalizedUrl);
+                const unpinUrl = pinnedItemByUpdateId && pinnedItemByUpdateId.update_url
+                    ? pinnedItemByUpdateId.update_url
+                    : normalizedUrl;
                 let response;
 
                 if (wasPinned) {
-                    response = await fetch(`/api/workspace/pin/${encodeURIComponent(normalizedUrl)}`, {
+                    response = await fetch(`/api/workspace/pin/${encodeURIComponent(unpinUrl)}`, {
                         method: 'DELETE'
                     });
                 } else {
@@ -594,7 +1005,7 @@
                         body: JSON.stringify({
                             url: normalizedUrl,
                             title: title || 'Untitled Update',
-                            authority: authority || context.authority || 'Unknown',
+                            authority: resolvedAuthority,
                             notes: context.notes || '',
                             sectors: normalizedSectors,
                             personas,
@@ -610,16 +1021,82 @@
                     throw new Error(wasPinned ? 'Failed to unpin' : 'Failed to pin');
                 }
 
-                await loadWorkspaceData();
-                const isPinnedNow = pinnedUrls.has(normalizedUrl);
+                let savedItem = null;
+                let savedUrl = normalizedUrl;
+                let savedUpdateId = normalizedUpdateId;
+
+                if (!wasPinned) {
+                    const payload = await response.json().catch(() => ({}));
+                    savedItem = normalizePinnedItem(payload.item || payload.data || {
+                        update_url: normalizedUrl,
+                        update_title: title || 'Untitled Update',
+                        update_authority: resolvedAuthority,
+                        metadata
+                    });
+                    savedUrl = getPinnedItemUrl(savedItem) || normalizedUrl;
+                    const responseUpdateId = getPinnedItemUpdateId(savedItem);
+                    if (responseUpdateId != null && responseUpdateId !== '') {
+                        savedUpdateId = String(responseUpdateId);
+                    }
+
+                    pinnedItems = Array.isArray(pinnedItems) ? pinnedItems : [];
+                    pinnedItems = pinnedItems.filter(item => {
+                        const itemUrl = getPinnedItemUrl(item);
+                        if (itemUrl && itemUrl === savedUrl) return false;
+                        const itemUpdateId = getPinnedItemUpdateId(item);
+                        if (savedUpdateId && itemUpdateId != null && String(itemUpdateId) === savedUpdateId) return false;
+                        return true;
+                    });
+                    pinnedItems.unshift(savedItem);
+                } else {
+                    const removeUrl = String(unpinUrl || '').trim();
+                    const removeUpdateId = pinnedItemByUpdateId ? getPinnedItemUpdateId(pinnedItemByUpdateId) : null;
+                    const normalizedRemoveUpdateId = removeUpdateId != null && removeUpdateId !== ''
+                        ? String(removeUpdateId)
+                        : savedUpdateId;
+
+                    pinnedItems = Array.isArray(pinnedItems) ? pinnedItems : [];
+                    pinnedItems = pinnedItems.filter(item => {
+                        const itemUrl = getPinnedItemUrl(item);
+                        if (removeUrl && itemUrl === removeUrl) return false;
+                        if (normalizedUrl && itemUrl === normalizedUrl) return false;
+                        const itemUpdateId = getPinnedItemUpdateId(item);
+                        if (normalizedRemoveUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedRemoveUpdateId) return false;
+                        return true;
+                    });
+                }
+
+                rebuildPinnedIndexes(pinnedItems);
+                broadcastWorkspacePins();
+
+                const isPinnedNow = savedUpdateId
+                    ? pinnedUpdateIds.has(String(savedUpdateId))
+                    : pinnedUrls.has(savedUrl);
 
                 updatePinButton(normalizedUrl);
+                if (unpinUrl !== normalizedUrl) {
+                    updatePinButton(unpinUrl);
+                }
                 await updateWorkspaceCounts({ skipFetch: true });
 
                 if (isPinnedNow && !wasPinned) {
-                    showMessage('Update pinned successfully', 'success');
+                    showMessage('★ Saved to Profile Hub', 'success');
+                    try {
+                        if (window.NotificationsModule && typeof window.NotificationsModule.refresh === 'function') {
+                            window.NotificationsModule.refresh({ silent: true });
+                        }
+                    } catch (error) {
+                        // ignore notification refresh issues
+                    }
                 } else if (!isPinnedNow && wasPinned) {
-                    showMessage('Update unpinned', 'info');
+                    showMessage('Bookmark removed from Profile Hub', 'info');
+                    try {
+                        if (window.NotificationsModule && typeof window.NotificationsModule.refresh === 'function') {
+                            window.NotificationsModule.refresh({ silent: true });
+                        }
+                    } catch (error) {
+                        // ignore notification refresh issues
+                    }
                 }
                 return true;
             } catch (error) {
@@ -667,9 +1144,18 @@
         
         // Show pinned items
         function showPinnedItems() {
-            console.log('📌 Opening pinned items view');
+            console.log('📌 Opening bookmarks view');
 
-            const modal = createModal('Pinned Updates');
+            const modal = createModal('Bookmarks');
+            const toolbar = document.createElement('div');
+            toolbar.className = 'pinned-toolbar';
+            toolbar.style.display = 'flex';
+            toolbar.style.flexWrap = 'wrap';
+            toolbar.style.alignItems = 'center';
+            toolbar.style.justifyContent = 'space-between';
+            toolbar.style.gap = '10px';
+            toolbar.style.marginBottom = '12px';
+
             const listContainer = document.createElement('div');
             listContainer.className = 'pinned-items-list';
 
@@ -687,14 +1173,150 @@
                 footer.appendChild(viewButton);
             }
 
+            const kanbanButton = document.createElement('button');
+            kanbanButton.className = 'btn btn-secondary';
+            kanbanButton.textContent = 'Open Change Board';
+            kanbanButton.onclick = () => {
+                window.location.href = '/kanban';
+            };
+            footer.appendChild(kanbanButton);
+
+            const hubButton = document.createElement('button');
+            hubButton.className = 'btn btn-secondary';
+            hubButton.textContent = 'Open Profile Hub';
+            hubButton.onclick = () => {
+                window.location.href = '/profile-hub';
+            };
+            footer.appendChild(hubButton);
+
             const closeButton = document.createElement('button');
             closeButton.className = 'button-small';
             closeButton.textContent = 'Close';
             closeButton.onclick = closeModal;
             footer.appendChild(closeButton);
 
+            modal.content.appendChild(toolbar);
             modal.content.appendChild(listContainer);
             modal.content.appendChild(footer);
+
+            function getFilteredPinnedItems() {
+                const allPinned = Array.isArray(pinnedItems) ? pinnedItems : [];
+                if (selectedBookmarkCollectionId === 'all') return allPinned;
+                const selected = normalizeCollectionId(selectedBookmarkCollectionId) || 'personal';
+                return allPinned.filter(item => getPinnedItemCollectionId(item) === selected);
+            }
+
+            function renderToolbarMeta() {
+                const existing = toolbar.querySelector('.pinned-toolbar-meta');
+                if (existing) existing.remove();
+
+                const meta = document.createElement('div');
+                meta.className = 'pinned-toolbar-meta';
+                meta.style.width = '100%';
+                meta.style.fontSize = '12px';
+                meta.style.color = '#6b7280';
+
+                const totalCount = Array.isArray(pinnedItems) ? pinnedItems.length : 0;
+                const visibleCount = getFilteredPinnedItems().length;
+
+                if (selectedBookmarkCollectionId === 'all') {
+                    meta.textContent = totalCount + ' bookmarked updates';
+                } else {
+                    meta.textContent = visibleCount + ' bookmarked updates in ' + getBookmarkCollectionName(selectedBookmarkCollectionId);
+                }
+
+                toolbar.appendChild(meta);
+            }
+
+            function renderToolbar() {
+                toolbar.innerHTML = '';
+
+                const left = document.createElement('div');
+                left.style.display = 'flex';
+                left.style.alignItems = 'center';
+                left.style.gap = '8px';
+
+                const label = document.createElement('span');
+                label.textContent = 'Collection:';
+                label.style.fontWeight = '600';
+                left.appendChild(label);
+
+                const select = document.createElement('select');
+                select.className = 'form-select';
+                select.style.minWidth = '220px';
+
+                const allOption = document.createElement('option');
+                allOption.value = 'all';
+                allOption.textContent = 'All collections';
+                select.appendChild(allOption);
+
+                ensureBookmarkCollections(bookmarkCollections).forEach(collection => {
+                    const option = document.createElement('option');
+                    option.value = collection.id;
+                    option.textContent = collection.name;
+                    select.appendChild(option);
+                });
+
+                select.value = selectedBookmarkCollectionId;
+                select.onchange = () => {
+                    selectedBookmarkCollectionId = select.value;
+                    renderPinnedList();
+                    renderToolbarMeta();
+                };
+
+                left.appendChild(select);
+                toolbar.appendChild(left);
+
+                const right = document.createElement('div');
+                right.style.display = 'flex';
+                right.style.alignItems = 'center';
+                right.style.gap = '8px';
+
+                const newButton = document.createElement('button');
+                newButton.className = 'btn-small';
+                newButton.textContent = 'New collection';
+                newButton.onclick = async () => {
+                    const name = prompt('New collection name:');
+                    if (!name) return;
+                    const created = await createBookmarkCollection(name);
+                    if (!created) return;
+                    selectedBookmarkCollectionId = created.id;
+                    renderToolbar();
+                    renderPinnedList();
+                };
+                right.appendChild(newButton);
+
+                const currentCollection = bookmarkCollections.find(collection => collection.id === selectedBookmarkCollectionId);
+                if (selectedBookmarkCollectionId !== 'all' && currentCollection && !currentCollection.isSystem) {
+                    const renameButton = document.createElement('button');
+                    renameButton.className = 'btn-small';
+                    renameButton.textContent = 'Rename';
+                    renameButton.onclick = async () => {
+                        const nextName = prompt('Rename collection:', currentCollection.name);
+                        if (!nextName) return;
+                        const updated = await renameBookmarkCollection(currentCollection.id, nextName);
+                        if (updated) renderToolbar();
+                    };
+                    right.appendChild(renameButton);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'btn-small btn-danger';
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.onclick = async () => {
+                        if (!confirm('Delete this collection? Bookmarks will move to Personal.')) return;
+                        const deleted = await deleteBookmarkCollection(currentCollection.id);
+                        if (!deleted) return;
+                        selectedBookmarkCollectionId = 'personal';
+                        await loadWorkspaceData();
+                        renderToolbar();
+                        renderPinnedList();
+                    };
+                    right.appendChild(deleteButton);
+                }
+
+                toolbar.appendChild(right);
+                renderToolbarMeta();
+            }
 
             function renderPinnedList() {
                 listContainer.innerHTML = '';
@@ -702,12 +1324,21 @@
                 if (!Array.isArray(pinnedItems) || pinnedItems.length === 0) {
                     const emptyState = document.createElement('div');
                     emptyState.className = 'empty-state';
-                    emptyState.textContent = 'No pinned updates yet. Pin an update to see it here.';
+                    emptyState.textContent = 'No bookmarks yet. Star an update to save it here.';
                     listContainer.appendChild(emptyState);
                     return;
                 }
 
-                pinnedItems.forEach(item => {
+                const visibleItems = getFilteredPinnedItems();
+                if (visibleItems.length === 0) {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'empty-state';
+                    emptyState.textContent = 'No bookmarks in this collection yet.';
+                    listContainer.appendChild(emptyState);
+                    return;
+                }
+
+                visibleItems.forEach(item => {
                     const metadata = item.metadata || {};
                     const card = document.createElement('div');
                     card.className = 'pinned-item-card';
@@ -718,7 +1349,12 @@
                     const titleLink = document.createElement('a');
                     titleLink.className = 'pinned-item-title';
                     titleLink.textContent = item.update_title || 'Untitled update';
-                    if (item.update_url) {
+                    const updateId = metadata.updateId || metadata.update_id || item.update_id || item.updateId;
+                    if (updateId != null && String(updateId).trim()) {
+                        titleLink.href = '/update/' + encodeURIComponent(String(updateId).trim());
+                        titleLink.target = '_blank';
+                        titleLink.rel = 'noopener';
+                    } else if (item.update_url) {
                         titleLink.href = item.update_url;
                         titleLink.target = '_blank';
                         titleLink.rel = 'noopener';
@@ -736,6 +1372,116 @@
                     }
 
                     card.appendChild(titleRow);
+
+                    const collectionRow = document.createElement('div');
+                    collectionRow.style.display = 'flex';
+                    collectionRow.style.alignItems = 'center';
+                    collectionRow.style.justifyContent = 'space-between';
+                    collectionRow.style.gap = '10px';
+                    collectionRow.style.marginTop = '8px';
+
+                    const collectionLabel = document.createElement('span');
+                    collectionLabel.style.fontSize = '12px';
+                    collectionLabel.style.color = '#6b7280';
+                    collectionLabel.textContent = 'Saved in ' + getBookmarkCollectionName(getPinnedItemCollectionId(item));
+                    collectionRow.appendChild(collectionLabel);
+
+                    const moveSelect = document.createElement('select');
+                    moveSelect.className = 'form-select';
+                    moveSelect.style.maxWidth = '220px';
+                    ensureBookmarkCollections(bookmarkCollections).forEach(collection => {
+                        const option = document.createElement('option');
+                        option.value = collection.id;
+                        option.textContent = collection.name;
+                        moveSelect.appendChild(option);
+                    });
+                    moveSelect.value = getPinnedItemCollectionId(item);
+                    moveSelect.onchange = async () => {
+                        const next = moveSelect.value;
+                        moveSelect.disabled = true;
+                        const ok = await updatePinnedItemCollection(item.update_url, next);
+                        moveSelect.disabled = false;
+                        if (!ok) {
+                            moveSelect.value = getPinnedItemCollectionId(item);
+                            return;
+                        }
+                        metadata.collectionId = next;
+                        collectionLabel.textContent = 'Saved in ' + getBookmarkCollectionName(next);
+                        renderToolbarMeta();
+                        if (selectedBookmarkCollectionId !== 'all' && next !== selectedBookmarkCollectionId) {
+                            renderPinnedList();
+                        }
+                    };
+                    collectionRow.appendChild(moveSelect);
+
+                    card.appendChild(collectionRow);
+
+                    const topicRow = document.createElement('div');
+                    topicRow.style.display = 'flex';
+                    topicRow.style.alignItems = 'center';
+                    topicRow.style.justifyContent = 'space-between';
+                    topicRow.style.gap = '10px';
+                    topicRow.style.marginTop = '8px';
+
+                    const topicLabel = document.createElement('span');
+                    topicLabel.style.fontSize = '12px';
+                    topicLabel.style.color = '#6b7280';
+                    const currentTopicArea = getPinnedItemTopicArea(item);
+                    topicLabel.textContent = 'Topic: ' + (currentTopicArea || 'Uncategorised');
+                    topicRow.appendChild(topicLabel);
+
+                    const topicSelect = document.createElement('select');
+                    topicSelect.className = 'form-select';
+                    topicSelect.style.maxWidth = '220px';
+
+                    const emptyTopic = document.createElement('option');
+                    emptyTopic.value = '';
+                    emptyTopic.textContent = 'Uncategorised';
+                    topicSelect.appendChild(emptyTopic);
+
+                    const topicChoices = DEFAULT_TOPIC_AREAS.slice();
+                    if (currentTopicArea && !topicChoices.some(topic => normalizeTopicArea(topic) === normalizeTopicArea(currentTopicArea))) {
+                        topicChoices.unshift(currentTopicArea);
+                    }
+
+                    topicChoices.forEach(topic => {
+                        const value = normalizeTopicArea(topic);
+                        if (!value) return;
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = topic;
+                        topicSelect.appendChild(option);
+                    });
+
+                    const customTopic = document.createElement('option');
+                    customTopic.value = '__custom__';
+                    customTopic.textContent = 'Custom…';
+                    topicSelect.appendChild(customTopic);
+
+                    topicSelect.value = currentTopicArea || '';
+                    topicSelect.onchange = async () => {
+                        const previous = getPinnedItemTopicArea(item);
+                        let next = topicSelect.value;
+                        if (next === '__custom__') {
+                            const custom = prompt('Topic area:', previous || '');
+                            if (custom == null) {
+                                topicSelect.value = previous || '';
+                                return;
+                            }
+                            next = String(custom).trim();
+                        }
+                        topicSelect.disabled = true;
+                        const ok = await updatePinnedItemTopicArea(item.update_url, next);
+                        topicSelect.disabled = false;
+                        if (!ok) {
+                            topicSelect.value = previous || '';
+                            return;
+                        }
+                        topicLabel.textContent = 'Topic: ' + (normalizeTopicArea(next) || 'Uncategorised');
+                    };
+
+                    topicRow.appendChild(topicSelect);
+                    card.appendChild(topicRow);
 
                     if (Array.isArray(item.sectors) && item.sectors.length > 0) {
                         const sectorsWrap = document.createElement('div');
@@ -769,6 +1515,30 @@
                     };
                     actions.appendChild(openButton);
 
+                    const actionButton = document.createElement('button');
+                    actionButton.className = 'btn-small';
+                    actionButton.textContent = 'Create Action';
+                    actionButton.onclick = async () => {
+                        actionButton.disabled = true;
+                        const previousText = actionButton.textContent;
+                        actionButton.textContent = 'Creating...';
+                    const created = await createKanbanActionFromPinnedItem(item);
+                    actionButton.disabled = false;
+                    actionButton.textContent = previousText;
+                    if (!created) return;
+                    showMessage('Action created in Regulatory Change Management', 'success');
+                    const deepLink = buildKanbanDeepLink(created, getPreferredKanbanTemplateId());
+                    if (window.location && String(window.location.pathname || '').startsWith('/kanban')) {
+                        closeModal();
+                        window.location.href = deepLink;
+                        return;
+                    }
+                    if (confirm('Open the new action on the Change Board now?')) {
+                        window.location.href = deepLink;
+                    }
+                };
+                actions.appendChild(actionButton);
+
                     const context = {
                         sectors: item.sectors || [],
                         summary: metadata.summary || '',
@@ -789,6 +1559,7 @@
                             unpinButton.textContent = 'Unpin';
                             return;
                         }
+                        renderToolbarMeta();
                         renderPinnedList();
                     };
                     actions.appendChild(unpinButton);
@@ -798,8 +1569,16 @@
                 });
             }
 
+            renderToolbar();
             renderPinnedList();
             document.body.appendChild(modal.overlay);
+
+            loadBookmarkCollections()
+                .then(() => {
+                    renderToolbar();
+                    renderPinnedList();
+                })
+                .catch(() => {});
         }
         
         // Show saved searches modal
@@ -1318,6 +2097,9 @@
         // Public API
         return {
             init,
+            refresh: function() {
+                return loadWorkspaceData();
+            },
             togglePin,
             updateWorkspaceCounts,
             showPinnedItems,
@@ -1342,6 +2124,9 @@
             exportData,
             getPinnedUrls: function() {
                 return Array.from(pinnedUrls);
+            },
+            getPinnedUpdateIds: function() {
+                return Array.from(pinnedUpdateIds);
             },
             getPinnedItems: function() {
                 return pinnedItems.slice();

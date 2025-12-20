@@ -20,7 +20,9 @@ async function getSidebar(currentPage = '', options = {}) {
       dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="13" y="4" width="7" height="4.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="13" y="10" width="7" height="9.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect><rect x="4" y="13" width="7" height="6.5" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
       analytics: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 15.5 9.5 11l3.2 3.5 6.3-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="9.5" cy="11" r="1.3" fill="currentColor"></circle><circle cx="18.5" cy="7.5" r="1.3" fill="currentColor"></circle></svg>',
       intelligence: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path d="M15.5 15.5 20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      profileHub: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path d="M4.5 20c1.6-4 13.4-4 15 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M17.8 5.8 19 4.6l1.2 1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>',
       roundup: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h7l4 4v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M14 4.5v4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M9 15h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
+      calendar: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"></rect><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.6"></line><circle cx="12" cy="16" r="1.5" fill="currentColor"></circle></svg>',
       enforcement: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5.5 13.5 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M10.5 3.5 17 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 13.5h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 15.5h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="16.5" width="10" height="2.5" rx="1.1" fill="none" stroke="currentColor" stroke-width="1.6"></rect></svg>',
       authority: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 4.5 7.5v11h15v-11L12 4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path><path d="M7.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M12 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M16.5 10.5v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M5 18.5h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
       sector: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M4.5 14.5h15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><rect x="4.5" y="5" width="15" height="14" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"></rect><path d="M9 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M15 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>',
@@ -97,6 +99,12 @@ async function getSidebar(currentPage = '', options = {}) {
                             ${recentCounts.unread > 0 ? `<span class="nav-badge">${recentCounts.unread}</span>` : ''}
                         </a>
                     </li>
+                    <li class="nav-item ${currentPage === 'profile-hub' ? 'active' : ''}">
+                        <a href="/profile-hub" class="nav-link">
+                            <span class="nav-icon">${icons.profileHub}</span>
+                            <span class="nav-text">Profile Hub</span>
+                        </a>
+                    </li>
                     <li class="nav-item ${currentPage === 'analytics' ? 'active' : ''}">
                         <a href="/analytics" class="nav-link">
                             <span class="nav-icon">${icons.analytics}</span>
@@ -115,6 +123,13 @@ async function getSidebar(currentPage = '', options = {}) {
                         <a href="/weekly-roundup" class="nav-link">
                             <span class="nav-icon">${icons.roundup}</span>
                             <span class="nav-text">Weekly Roundup</span>
+                        </a>
+                    </li>
+                    <li class="nav-item ${currentPage === 'calendar' ? 'active' : ''}">
+                        <a href="/regulatory-calendar" class="nav-link">
+                            <span class="nav-icon">${icons.calendar}</span>
+                            <span class="nav-text">Calendar</span>
+                            <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                     <li class="nav-item ${currentPage === 'kanban' ? 'active' : ''}">

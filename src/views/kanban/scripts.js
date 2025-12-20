@@ -39,6 +39,17 @@ function getKanbanScripts({ workflowTemplates, selectedTemplateId, selectedTempl
               const guidance = document.getElementById('kanban-guidance');
               if (guidance) guidance.classList.add('collapsed');
             }
+
+            // Remember last selected workflow for cross-page actions
+            try {
+              if (state.selectedTemplateId) {
+                localStorage.setItem('kanbanLastTemplateId', String(state.selectedTemplateId));
+              }
+            } catch (error) {
+              // ignore storage errors
+            }
+
+            this.openItemFromQuery();
           },
 
           // Guidance Panel Toggle
@@ -60,6 +71,72 @@ function getKanbanScripts({ workflowTemplates, selectedTemplateId, selectedTempl
               currentUrl.searchParams.delete('templateId');
             }
             window.location.href = currentUrl.toString();
+          },
+
+          openItemFromQuery: async function() {
+            const params = new URLSearchParams(window.location.search);
+            const openItemId = params.get('openItemId');
+            if (!openItemId) return;
+
+            const removeQueryParam = () => {
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('openItemId');
+                window.history.replaceState({}, '', url.toString());
+              } catch (error) {
+                // ignore URL errors
+              }
+            };
+
+            const highlightCard = (card) => {
+              if (!card) return;
+              card.classList.add('kanban-card-highlight');
+              try {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+              } catch (error) {
+                card.scrollIntoView();
+              }
+              setTimeout(() => card.classList.remove('kanban-card-highlight'), 4500);
+            };
+
+            const findCard = () => {
+              try {
+                const escaped = window.CSS && window.CSS.escape ? window.CSS.escape(openItemId) : openItemId.replace(/"/g, '\\"');
+                return document.querySelector('.kanban-card[data-item-id="' + escaped + '"]');
+              } catch (error) {
+                return document.querySelector('.kanban-card[data-item-id="' + openItemId + '"]');
+              }
+            };
+
+            const card = findCard();
+            if (card) {
+              highlightCard(card);
+              removeQueryParam();
+              await this.openItemDetail(openItemId);
+              return;
+            }
+
+            try {
+              const response = await fetch('/api/regulatory-changes/' + encodeURIComponent(openItemId), {
+                headers: { 'x-user-id': 'default' }
+              });
+              const result = await response.json().catch(() => ({}));
+              const item = result && result.success && result.data ? result.data : null;
+              const workflowTemplateId = item && (item.workflow_template_id || item.workflowTemplateId);
+              if (workflowTemplateId && String(workflowTemplateId) !== String(state.selectedTemplateId || '')) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('templateId', workflowTemplateId);
+                url.searchParams.set('openItemId', openItemId);
+                window.location.href = url.toString();
+                return;
+              }
+            } catch (error) {
+              console.warn('[Kanban] Failed to validate openItemId template:', error);
+            }
+
+            removeQueryParam();
+            await this.openItemDetail(openItemId);
+            highlightCard(findCard());
           },
 
           // Drag and Drop
@@ -431,14 +508,26 @@ function getKanbanScripts({ workflowTemplates, selectedTemplateId, selectedTempl
               \${item.source_url ? \`
                 <div class="detail-section">
                   <h3 class="detail-section-title">Source</h3>
-                  <a href="\${item.source_url}" target="_blank" class="btn btn-secondary btn-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/>
-                      <line x1="10" y1="14" x2="21" y2="3"/>
-                    </svg>
-                    View Source
-                  </a>
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="\${item.source_url}" target="_blank" class="btn btn-secondary btn-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/>
+                        <line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                      View Source
+                    </a>
+                    <button type="button"
+                            class="btn btn-secondary btn-sm kanban-bookmark-btn"
+                            data-bookmark-url="\${this.escapeHtml(item.source_url)}"
+                            data-bookmark-title="\${this.escapeHtml(item.title || '')}"
+                            data-bookmark-authority="\${this.escapeHtml(item.authority || '')}"
+                            data-bookmark-update-id="\${this.escapeHtml(item.regulatory_update_id || '')}"
+                            aria-pressed="false"
+                            title="Bookmark">
+                      ☆ Bookmark
+                    </button>
+                  </div>
                 </div>
               \` : ''}
 
@@ -496,6 +585,8 @@ function getKanbanScripts({ workflowTemplates, selectedTemplateId, selectedTempl
               </div>
             \`;
 
+            this.bindBookmarkButton(item);
+
             // Load all linked items
             this.loadAllLinkedItems(item.id);
 
@@ -532,6 +623,97 @@ function getKanbanScripts({ workflowTemplates, selectedTemplateId, selectedTempl
               <button class="btn btn-secondary" onclick="KanbanPage.closeItemDetail()">Close</button>
               \${stageButtons}
             \`;
+          },
+
+          getPinnedUrlSet: function() {
+            try {
+              if (window.WorkspaceModule && typeof WorkspaceModule.getPinnedUrls === 'function') {
+                return new Set(WorkspaceModule.getPinnedUrls().map(String));
+              }
+            } catch (error) {
+              // Ignore
+            }
+            if (Array.isArray(window.__workspacePinnedUrls)) {
+              return new Set(window.__workspacePinnedUrls.map(String));
+            }
+            return new Set();
+          },
+
+          getPinnedUpdateIdSet: function() {
+            try {
+              if (window.WorkspaceModule && typeof WorkspaceModule.getPinnedUpdateIds === 'function') {
+                return new Set(WorkspaceModule.getPinnedUpdateIds().map(String));
+              }
+            } catch (error) {
+              // Ignore
+            }
+            if (Array.isArray(window.__workspacePinnedUpdateIds)) {
+              return new Set(window.__workspacePinnedUpdateIds.map(String));
+            }
+            return new Set();
+          },
+
+          setBookmarkButtonState: function(button, bookmarked) {
+            if (!button) return;
+            button.classList.toggle('is-bookmarked', bookmarked);
+            button.setAttribute('aria-pressed', bookmarked ? 'true' : 'false');
+            button.textContent = bookmarked ? '★ Bookmarked' : '☆ Bookmark';
+            button.title = bookmarked ? 'Remove bookmark' : 'Bookmark';
+          },
+
+          syncBookmarkButton: function(button) {
+            if (!button) return;
+            const url = String(button.dataset.bookmarkUrl || '').trim();
+            const pinned = this.getPinnedUrlSet();
+            const updateId = String(button.dataset.bookmarkUpdateId || '').trim();
+            const pinnedIds = this.getPinnedUpdateIdSet();
+            this.setBookmarkButtonState(button, (!!url && pinned.has(url)) || (!!updateId && pinnedIds.has(updateId)));
+          },
+
+          bindBookmarkButton: function(item) {
+            const button = document.querySelector('#detail-modal-body .kanban-bookmark-btn');
+            if (!button) return;
+
+            if (button.dataset.bound === 'true') {
+              this.syncBookmarkButton(button);
+              return;
+            }
+
+            button.dataset.bound = 'true';
+            this.syncBookmarkButton(button);
+
+            button.addEventListener('click', async (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+
+              const url = String(button.dataset.bookmarkUrl || '').trim();
+              if (!url) {
+                this.showToast('Source URL missing', 'error');
+                return;
+              }
+
+              if (!window.WorkspaceModule || typeof WorkspaceModule.togglePin !== 'function') {
+                this.showToast('Bookmarks not ready yet', 'error');
+                return;
+              }
+
+              button.disabled = true;
+              try {
+                const title = button.dataset.bookmarkTitle || (item && item.title) || 'Regulatory Change';
+                const authority = button.dataset.bookmarkAuthority || (item && item.authority) || 'Unknown';
+                const updateId = button.dataset.bookmarkUpdateId
+                  || (item && (item.regulatory_update_id || item.regulatoryUpdateId))
+                  || null;
+
+                await WorkspaceModule.togglePin(url, title, authority, { updateId, authority });
+              } catch (error) {
+                console.error('[Kanban] Bookmark toggle error:', error);
+                this.showToast('Failed to update bookmark', 'error');
+              } finally {
+                button.disabled = false;
+                this.syncBookmarkButton(button);
+              }
+            });
           },
 
           closeItemDetail: function() {

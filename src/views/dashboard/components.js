@@ -267,7 +267,7 @@ function renderUpdateCard(update) {
   const impactLevel = update.impactLevel || update.impact_level || 'Informational'
   const urgency = update.urgency || 'Low'
   const publishedDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
-  const summaryText = truncateText(selectSummary(update), 800) || 'No summary available'
+  const summaryText = selectSummary(update) || 'No summary available'
   const details = buildDetailItems(update)
   const features = computeAIFeatures(update)
   const riskBadge = renderRiskScoreBadge(update, impactLevel)
@@ -297,7 +297,7 @@ function renderUpdateCard(update) {
             <button onclick="linkToPolicy('${escapeForInline(update.id)}')" class="action-btn action-btn-policy" title="Link to Policy">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
             </button>
-            <button onclick="bookmarkUpdate('${escapeForInline(update.id)}')" class="action-btn" title="Bookmark">Star</button>
+            <button onclick="bookmarkUpdate('${escapeForInline(update.id)}')" class="action-btn action-btn-bookmark" title="Bookmark" aria-pressed="false">☆</button>
             <button onclick="shareUpdate('${escapeForInline(update.id)}')" class="action-btn" title="Share">Link</button>
             <button onclick="viewDetails('${escapeForInline(update.id)}')" class="action-btn" title="Details">View</button>
           </div>

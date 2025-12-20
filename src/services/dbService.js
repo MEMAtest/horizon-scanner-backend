@@ -20,6 +20,7 @@ const applyPoliciesMethods = require('./db/policies')
 const applyNotificationsMethods = require('./db/notifications')
 const applyAuthMethods = require('./db/auth')
 const applyFirmPersonasMethods = require('./db/firmPersonas')
+const applyCalendarMethods = require('./db/calendar')
 
 class EnhancedDBService {
   constructor() {
@@ -69,5 +70,6 @@ applyPoliciesMethods(EnhancedDBService)
 applyNotificationsMethods(EnhancedDBService)
 applyAuthMethods(EnhancedDBService)
 applyFirmPersonasMethods(EnhancedDBService)
+applyCalendarMethods(EnhancedDBService)
 
 module.exports = new EnhancedDBService()

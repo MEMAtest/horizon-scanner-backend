@@ -8,6 +8,7 @@ const {
   renderAddItemModal,
   renderItemDetailModal
 } = require('./components')
+const { getKanbanIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../icons')
 
 function buildKanbanPage({
   sidebar,
@@ -28,6 +29,8 @@ function buildKanbanPage({
     itemsByStage,
     statistics
   })
+  const canaryStyles = getCanaryAnimationStyles()
+  const pageIcon = wrapIconInContainer(getKanbanIcon())
 
   return `
     <!DOCTYPE html>
@@ -38,6 +41,7 @@ function buildKanbanPage({
       <title>Regulatory Change Management - Horizon Scanner</title>
       ${commonStyles}
       ${kanbanStyles}
+      <style>${canaryStyles}</style>
     </head>
     <body>
       ${sidebar}
@@ -45,11 +49,17 @@ function buildKanbanPage({
         <div class="kanban-page">
           <header class="kanban-header">
             <div class="header-left">
-              <h1>Regulatory Change Management</h1>
-              <p class="header-subtitle">Track and manage regulatory changes through your workflow</p>
+              ${pageIcon}
+              <div>
+                <h1>Regulatory Change Management</h1>
+                <p class="header-subtitle">Track and manage regulatory changes through your workflow</p>
+              </div>
             </div>
             <div class="header-right">
               ${renderWorkflowSelector(workflowTemplates, selectedTemplateId)}
+              <button class="btn btn-secondary" onclick="WorkspaceModule.showPinnedItems()">
+                ☆ Bookmarks
+              </button>
               <button class="btn btn-primary" onclick="KanbanPage.openAddItemModal()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>

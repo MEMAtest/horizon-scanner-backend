@@ -33,6 +33,7 @@ function getClientScripts(options = {}) {
   const {
     includeWorkspaceModule = true,
     includeAliasBootstrap = true,
+    includeNotificationsModule = true,
     aliasMap
   } = options
 
@@ -56,6 +57,13 @@ function getClientScripts(options = {}) {
     scripts.push(`
     <!-- Include Workspace Module First -->
     <script src="/js/workspaceModule.js"></script>
+    `)
+  }
+
+  if (includeNotificationsModule) {
+    scripts.push(`
+    <!-- In-app Notifications -->
+    <script src="/js/notificationsModule.js"></script>
     `)
   }
 

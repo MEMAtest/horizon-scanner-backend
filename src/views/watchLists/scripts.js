@@ -34,6 +34,16 @@ function getWatchListScripts({ watchLists, stats }) {
         const WatchListPage = {
           init: function() {
             console.log('[WatchLists] Initialized with', state.watchLists.length, 'watch lists');
+
+            try {
+              const params = new URLSearchParams(window.location.search || '');
+              const openMatches = params.get('openMatches');
+              if (openMatches) {
+                this.viewMatches(openMatches);
+              }
+            } catch (error) {
+              // ignore URL parsing errors
+            }
           },
 
           // Modal Management
@@ -321,7 +331,7 @@ function getWatchListScripts({ watchLists, stats }) {
 
           // Edit Watch List
           editWatchList: async function(id) {
-            const watchList = state.watchLists.find(wl => wl.id === id);
+            const watchList = state.watchLists.find(wl => String(wl.id) === String(id));
             if (!watchList) return;
 
             document.getElementById('watch-list-id').value = id;
@@ -394,7 +404,7 @@ function getWatchListScripts({ watchLists, stats }) {
           // Matches Modal
           viewMatches: async function(id) {
             state.currentWatchListId = id;
-            const watchList = state.watchLists.find(wl => wl.id === id);
+            const watchList = state.watchLists.find(wl => String(wl.id) === String(id));
             document.getElementById('matches-modal-title').textContent =
               'Matches: ' + (watchList ? watchList.name : 'Watch List');
             document.getElementById('matches-modal').classList.add('active');
@@ -456,7 +466,7 @@ function getWatchListScripts({ watchLists, stats }) {
                     \${match.reviewed ? ' &bull; <span style="color: #10b981;">Reviewed</span>' : ''}
                   </div>
                   <div class="match-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='/dashboard?highlight=\${match.regulatory_update_id}'">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='/update/\${match.regulatory_update_id}'">
                       View Update
                     </button>
                     \${!match.reviewed ? \`
@@ -841,7 +851,7 @@ function getWatchListScripts({ watchLists, stats }) {
                     'x-user-id': 'default'
                   },
                   body: JSON.stringify({
-                    regulatoryUpdateId: updateId,
+                    updateId: updateId,
                     notes: 'Linked from Watch List match'
                   })
                 });
@@ -850,12 +860,16 @@ function getWatchListScripts({ watchLists, stats }) {
                 const policyResponse = await fetch('/api/policies/' + itemId, { headers: { 'x-user-id': 'default' } });
                 const policyResult = await policyResponse.json();
 
-                if (!policyResult.success || !policyResult.data.currentVersion) {
+                const currentVersion = policyResult?.data?.currentVersion || policyResult?.data?.current_version || null;
+                const versionId = (currentVersion && currentVersion.id)
+                  ? currentVersion.id
+                  : (policyResult?.data?.current_version_id || policyResult?.data?.currentVersionId || null);
+
+                if (!policyResult.success || !versionId) {
                   this.showToast('Policy has no active version', 'error');
                   return;
                 }
 
-                const versionId = policyResult.data.currentVersion.id;
                 response = await fetch('/api/policies/versions/' + versionId + '/citations', {
                   method: 'POST',
                   headers: {
@@ -863,9 +877,10 @@ function getWatchListScripts({ watchLists, stats }) {
                     'x-user-id': 'default'
                   },
                   body: JSON.stringify({
-                    regulatoryUpdateId: updateId,
-                    citedText: 'Linked from Watch List match',
-                    notes: ''
+                    updateId: updateId,
+                    citationType: 'reference',
+                    notes: 'Linked from Watch List match',
+                    sectionReference: ''
                   })
                 });
               } else if (linkType === 'kanban') {

@@ -155,21 +155,23 @@ function getKanbanStyles() {
         border-bottom: 1px solid #e2e8f0;
       }
 
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
       .kanban-header h1 {
-        font-size: 28px;
-        font-weight: 800;
-        color: #1e293b;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
         margin: 0;
-        background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
       }
 
       .header-subtitle {
         color: #64748b;
-        font-size: 15px;
-        margin: 8px 0 0 0;
+        font-size: 0.9rem;
+        margin: 4px 0 0 0;
         max-width: 600px;
         line-height: 1.5;
       }
@@ -424,6 +426,12 @@ function getKanbanStyles() {
         border: 1px solid #e2e8f0;
         cursor: grab;
         transition: all 0.2s;
+      }
+
+      .kanban-card.kanban-card-highlight {
+        outline: 3px solid rgba(59, 130, 246, 0.9);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18), 0 8px 20px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
       }
 
       .kanban-card:hover {

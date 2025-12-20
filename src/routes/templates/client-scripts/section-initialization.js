@@ -467,8 +467,8 @@ function renderInitializationSection() {
             const details = buildDetailItems(update);
             const sectorTags = renderSectorTags(update);
 
-            return (
-                '<div class="update-card" ' +
+	            return (
+	                '<div class="update-card" ' +
                     'data-id="' + idAttr + '" ' +
                     'data-url="' + urlAttr + '" ' +
                     'data-authority="' + authorityAttr + '" ' +
@@ -485,14 +485,14 @@ function renderInitializationSection() {
                             contentBadge +
                         '</div>' +
                         '<div class="update-meta-secondary">' +
-                            riskBadge +
-                            '<div class="update-actions">' +
-                                '<button class="action-btn update-action-btn bookmark-btn" data-update-id="' + idAttr + '" title="Bookmark" aria-label="Bookmark">Star</button>' +
-                                '<button class="action-btn update-action-btn share-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="Share" aria-label="Share">Link</button>' +
-                                '<button class="action-btn update-action-btn details-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="View details" aria-label="View details">View</button>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
+	                            riskBadge +
+	                            '<div class="update-actions">' +
+	                                '<button class="action-btn action-btn-bookmark update-action-btn bookmark-btn" data-update-id="' + idAttr + '" title="Bookmark" aria-label="Bookmark" aria-pressed="false">☆</button>' +
+	                                '<button class="action-btn update-action-btn share-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="Share" aria-label="Share">Link</button>' +
+	                                '<button class="action-btn update-action-btn details-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="View details" aria-label="View details">View</button>' +
+	                            '</div>' +
+	                        '</div>' +
+	                    '</div>' +
                     '<h3 class="update-headline">' +
                         '<a href="' + (update.url ? escapeAttribute(update.url) : '#') + '" target="_blank" rel="noopener">' +
                             escapeHtml(headline || 'Untitled update') +

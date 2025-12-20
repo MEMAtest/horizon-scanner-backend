@@ -92,6 +92,47 @@ function registerPolicyRoutes(router) {
     }
   })
 
+  // POST /api/policies/:id/citations - Add citation to the current version
+  router.post('/policies/:id/citations', async (req, res) => {
+    try {
+      const userId = req.headers['x-user-id'] || 'default'
+      const { updateId, citationType, notes, sectionReference, citationText } = req.body
+      if (!updateId) {
+        return res.status(400).json({ success: false, error: 'updateId is required' })
+      }
+
+      const policyResult = await policyService.getPolicyById(req.params.id, userId)
+      if (!policyResult.success) {
+        return res.status(404).json(policyResult)
+      }
+
+      const policy = policyResult.data || {}
+      const currentVersionId = (policy.currentVersion && policy.currentVersion.id) ||
+        policy.current_version_id ||
+        policy.currentVersionId ||
+        null
+
+      if (!currentVersionId) {
+        return res.status(400).json({ success: false, error: 'Policy has no active version' })
+      }
+
+      const result = await policyService.addCitation(currentVersionId, updateId, userId, {
+        citationType: citationType || 'reference',
+        notes: notes || citationText || null,
+        sectionReference
+      })
+
+      if (result.success) {
+        res.status(201).json(result)
+      } else {
+        res.status(404).json(result)
+      }
+    } catch (error) {
+      console.error('Error adding policy citation:', error)
+      res.status(500).json({ success: false, error: error.message })
+    }
+  })
+
   // PUT /api/policies/:id - Update policy metadata
   router.put('/policies/:id', async (req, res) => {
     try {

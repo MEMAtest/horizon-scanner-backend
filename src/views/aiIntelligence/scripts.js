@@ -867,7 +867,7 @@ function getAiIntelligenceScripts(snapshot) {
                 sources.push({ label: input.dataset.label, url: input.dataset.url || null });
               }
             });
-            const extraLines = (formData.get('extraSources') || '').split(/\n+/).map(line => line.trim()).filter(Boolean);
+            const extraLines = (formData.get('extraSources') || '').split(/\\n+/).map(line => line.trim()).filter(Boolean);
             extraLines.forEach(label => sources.push({ label, url: null }));
 
             const personas = Array.from(personaContainer.querySelectorAll('input[type="checkbox"]:checked')).map(input => input.value);

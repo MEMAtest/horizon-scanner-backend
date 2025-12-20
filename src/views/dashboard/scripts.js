@@ -85,26 +85,169 @@ function getDashboardScripts({ updates, stats, filterOptions, currentFilters }) 
         window.location.href = '/update/' + updateId;
       }
 
-      function bookmarkUpdate(updateId) {
-        console.log('[Dashboard] Bookmark update:', updateId);
-        // TODO: Implement bookmark functionality
-        alert('Bookmark feature coming soon!');
+      function normalizeId(value) {
+        return value == null ? '' : String(value);
+      }
+
+      function escapeCssValue(value) {
+        const raw = normalizeId(value);
+        if (!raw) return '';
+        if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+          return CSS.escape(raw);
+        }
+        return raw.replace(/["\\\\]/g, '\\\\$&');
+      }
+
+      function getUpdateById(updateId) {
+        const target = normalizeId(updateId);
+        if (!target) return null;
+
+        const sources = [
+          Array.isArray(window.initialUpdates) ? window.initialUpdates : [],
+          Array.isArray(window.dashboardInitialState?.updates) ? window.dashboardInitialState.updates : []
+        ];
+
+        for (const list of sources) {
+          const found = list.find(u => normalizeId(u && u.id) === target);
+          if (found) return found;
+        }
+
+        return null;
+      }
+
+      function getUpdateCardElement(updateId) {
+        const target = normalizeId(updateId);
+        if (!target) return null;
+        const safe = escapeCssValue(target);
+        return document.querySelector('.update-card[data-id="' + safe + '"]');
+      }
+
+      function getPinnedUrlSet() {
+        if (window.WorkspaceModule && typeof WorkspaceModule.getPinnedUrls === 'function') {
+          return new Set(WorkspaceModule.getPinnedUrls().map(String));
+        }
+        if (Array.isArray(window.__workspacePinnedUrls)) {
+          return new Set(window.__workspacePinnedUrls.map(String));
+        }
+        return new Set();
+      }
+
+      function getPinnedUpdateIdSet() {
+        if (window.WorkspaceModule && typeof WorkspaceModule.getPinnedUpdateIds === 'function') {
+          return new Set(WorkspaceModule.getPinnedUpdateIds().map(String));
+        }
+        if (Array.isArray(window.__workspacePinnedUpdateIds)) {
+          return new Set(window.__workspacePinnedUpdateIds.map(String));
+        }
+        return new Set();
+      }
+
+      function setBookmarkButtonState(button, bookmarked) {
+        if (!button) return;
+        button.classList.toggle('is-bookmarked', bookmarked);
+        button.setAttribute('aria-pressed', bookmarked ? 'true' : 'false');
+        button.textContent = bookmarked ? '★' : '☆';
+        button.title = bookmarked ? 'Remove bookmark' : 'Bookmark';
+      }
+
+      function syncBookmarkButtons(pinnedUrls, pinnedUpdateIds) {
+        const pinned = pinnedUrls instanceof Set ? pinnedUrls : getPinnedUrlSet();
+        const pinnedIds = pinnedUpdateIds instanceof Set ? pinnedUpdateIds : getPinnedUpdateIdSet();
+        document.querySelectorAll('.update-card').forEach(card => {
+          const url = card?.dataset?.url ? String(card.dataset.url) : '';
+          const id = normalizeId(card?.dataset?.id);
+          const button = card.querySelector('.action-btn-bookmark');
+          const bookmarked = (!!url && pinned.has(url)) || (!!id && pinnedIds.has(id));
+          setBookmarkButtonState(button, bookmarked);
+          card.classList.toggle('is-bookmarked', bookmarked);
+        });
+      }
+
+      function initBookmarkSync() {
+        syncBookmarkButtons();
+        window.addEventListener('workspace:pins', (event) => {
+          const urls = Array.isArray(event?.detail?.urls) ? new Set(event.detail.urls.map(String)) : null;
+          const ids = Array.isArray(event?.detail?.updateIds) ? new Set(event.detail.updateIds.map(String)) : null;
+          syncBookmarkButtons(urls || undefined, ids || undefined);
+        });
+
+        if (window.WorkspaceModule && typeof WorkspaceModule.ready === 'function') {
+          WorkspaceModule.ready().then(() => syncBookmarkButtons()).catch(() => {});
+        }
+      }
+
+      if (typeof document !== 'undefined') {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initBookmarkSync, { once: true });
+        } else {
+          initBookmarkSync();
+        }
+      }
+
+      async function bookmarkUpdate(updateId) {
+        const update = getUpdateById(updateId);
+        const card = getUpdateCardElement(updateId);
+        const cardTitle = card
+          ? ((card.querySelector('.update-headline a') && card.querySelector('.update-headline a').textContent) || '').trim()
+          : '';
+
+        const updateUrl = (update && update.url && update.url !== '#')
+          ? update.url
+          : (card && card.dataset && card.dataset.url)
+              ? card.dataset.url
+              : (window.location.origin + '/update/' + updateId);
+
+        const title = (update && update.headline) || cardTitle || 'Regulatory Update';
+        const authority = (update && update.authority) || (card && card.dataset && card.dataset.authority) || 'Unknown';
+
+        const context = {
+          updateId: update && update.id ? update.id : updateId,
+          authority,
+          summary: (update && (update.ai_summary || update.summary)) || '',
+          published: update ? (update.publishedDate || update.published_date || update.fetchedDate || update.createdAt || '') : '',
+          sectors: update
+            ? (update.primarySectors || update.firm_types_affected || (update.sector ? [update.sector] : []))
+            : []
+        };
+
+        try {
+          if (window.WorkspaceModule && typeof WorkspaceModule.togglePin === 'function') {
+            await WorkspaceModule.togglePin(updateUrl, title, authority, context);
+            return;
+          }
+
+          const pinned = getPinnedUrlSet();
+          const wasPinned = pinned.has(String(updateUrl));
+          const endpoint = wasPinned
+            ? '/api/workspace/pin/' + encodeURIComponent(updateUrl)
+            : '/api/workspace/pin';
+
+          const response = await fetch(endpoint, {
+            method: wasPinned ? 'DELETE' : 'POST',
+            headers: wasPinned ? undefined : { 'Content-Type': 'application/json' },
+            body: wasPinned ? undefined : JSON.stringify({ url: updateUrl, title, authority, metadata: context })
+          });
+
+          if (!response.ok) {
+            console.error('[Dashboard] Bookmark toggle failed:', response.status);
+          }
+        } catch (error) {
+          console.error('[Dashboard] Bookmark toggle error:', error);
+        } finally {
+          syncBookmarkButtons();
+        }
       }
 
       function shareUpdate(updateId) {
-        const update = window.initialUpdates.find(u => u.id === updateId);
-        if (!update) {
-          console.error('[Dashboard] Update not found:', updateId);
-          return;
-        }
+        const update = getUpdateById(updateId);
 
         const shareUrl = window.location.origin + '/update/' + updateId;
-        const shareText = update.headline || 'Regulatory Update';
+        const shareText = (update && update.headline) || 'Regulatory Update';
 
         if (navigator.share) {
           navigator.share({
             title: shareText,
-            text: update.summary || update.ai_summary || '',
+            text: update ? (update.summary || update.ai_summary || '') : '',
             url: shareUrl
           }).catch(err => console.log('[Dashboard] Share cancelled:', err));
         } else {
@@ -120,26 +263,26 @@ function getDashboardScripts({ updates, stats, filterOptions, currentFilters }) 
 
       // Add to Dossier function
       async function addToDossier(updateId) {
-        const update = window.initialUpdates.find(u => u.id === updateId);
-        if (!update) {
-          console.error('[Dashboard] Update not found:', updateId);
-          return;
-        }
+        const update = getUpdateById(updateId);
+        const card = getUpdateCardElement(updateId);
+        const cardTitle = card
+          ? ((card.querySelector('.update-headline a') && card.querySelector('.update-headline a').textContent) || '').trim()
+          : '';
 
         // Show dossier selector modal
-        openDossierModal(updateId, update.headline);
+        openDossierModal(updateId, (update && update.headline) || cardTitle || 'Selected Update');
       }
 
       // Link to Policy function
       async function linkToPolicy(updateId) {
-        const update = window.initialUpdates.find(u => u.id === updateId);
-        if (!update) {
-          console.error('[Dashboard] Update not found:', updateId);
-          return;
-        }
+        const update = getUpdateById(updateId);
+        const card = getUpdateCardElement(updateId);
+        const cardTitle = card
+          ? ((card.querySelector('.update-headline a') && card.querySelector('.update-headline a').textContent) || '').trim()
+          : '';
 
         // Show policy selector modal
-        openPolicyModal(updateId, update.headline);
+        openPolicyModal(updateId, (update && update.headline) || cardTitle || 'Selected Update');
       }
 
       // Dossier Modal

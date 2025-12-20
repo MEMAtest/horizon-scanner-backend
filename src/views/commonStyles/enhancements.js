@@ -272,6 +272,158 @@ function getEnhancementStyles() {
         .btn-danger-outline:hover {
             background: #fef2f2;
         }
+
+        /* In-app Notifications */
+        .notification-bell-container {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 10050;
+        }
+
+        .notification-bell {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .notification-bell:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+        }
+
+        .notification-bell svg {
+            width: 20px;
+            height: 20px;
+            color: #1e293b;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 20px;
+            text-align: center;
+            border: 2px solid white;
+        }
+
+        .notification-center {
+            position: fixed;
+            right: 22px;
+            bottom: 82px;
+            width: 380px;
+            max-width: calc(100vw - 44px);
+            max-height: min(70vh, 520px);
+            display: none;
+            flex-direction: column;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+            z-index: 10050;
+            overflow: hidden;
+        }
+
+        .notification-center.open {
+            display: flex;
+        }
+
+        .notification-header {
+            padding: 12px 14px;
+            border-bottom: 1px solid #eef2f7;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #fafafa;
+        }
+
+        .notification-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .notification-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .notification-list {
+            padding: 10px;
+            overflow: auto;
+        }
+
+        .notification-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 10px 10px 10px;
+            margin-bottom: 10px;
+            background: white;
+        }
+
+        .notification-item.unread {
+            border-color: rgba(59, 130, 246, 0.35);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+        }
+
+        .notification-title {
+            font-weight: 650;
+            font-size: 13px;
+            color: #111827;
+            margin: 0 0 4px 0;
+        }
+
+        .notification-message {
+            font-size: 12px;
+            color: #475569;
+            margin: 0 0 8px 0;
+            line-height: 1.4;
+        }
+
+        .notification-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 520px) {
+            .notification-center {
+                width: calc(100vw - 44px);
+            }
+        }
   `
 }
 

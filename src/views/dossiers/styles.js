@@ -17,16 +17,22 @@ function getDossierStyles() {
       }
 
       .page-header h1 {
-        font-size: 28px;
-        font-weight: 600;
-        color: var(--text-primary, #1a1a2e);
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
         margin: 0;
       }
 
       .page-header .subtitle {
-        color: var(--text-secondary, #6b7280);
+        color: #64748b;
         margin: 4px 0 0;
-        font-size: 14px;
+        font-size: 0.9rem;
+      }
+
+      .page-header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
       }
 
       .header-actions {

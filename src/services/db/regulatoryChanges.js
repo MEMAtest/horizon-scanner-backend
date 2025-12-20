@@ -28,29 +28,52 @@ function normalizeWorkflowTemplate(row) {
 
 function normalizeRegulatoryChangeItem(row) {
   if (!row) return null
+  const identifiedDate = toIso(row.identified_date)
+  const targetCompletionDate = toIso(row.target_completion_date)
+  const actualCompletionDate = toIso(row.actual_completion_date)
+  const createdAt = toIso(row.created_at)
+  const updatedAt = toIso(row.updated_at)
+  const stageHistory = row.stage_history || []
+  const summary = row.summary || null
+
   return {
     id: row.id,
     userId: row.user_id,
     businessLineProfileId: row.business_line_profile_id,
     workflowTemplateId: row.workflow_template_id,
+    workflow_template_id: row.workflow_template_id,
     regulatoryUpdateId: row.regulatory_update_id,
+    regulatory_update_id: row.regulatory_update_id,
     regulatoryUpdateUrl: row.regulatory_update_url,
+    regulatory_update_url: row.regulatory_update_url,
+    source_url: row.regulatory_update_url,
     title: row.title,
-    summary: row.summary || null,
+    summary,
+    description: summary,
     authority: row.authority || null,
     impactLevel: row.impact_level || null,
+    impact_level: row.impact_level || null,
     currentStageId: row.current_stage_id || null,
+    current_stage_id: row.current_stage_id || null,
     current_stage: row.current_stage_id || null,  // Alias for service layer compatibility
-    stageHistory: row.stage_history || [],
-    identifiedDate: toIso(row.identified_date),
-    targetCompletionDate: toIso(row.target_completion_date),
-    actualCompletionDate: toIso(row.actual_completion_date),
+    stageHistory,
+    stage_history: stageHistory,
+    identifiedDate,
+    identified_date: identifiedDate,
+    targetCompletionDate,
+    target_completion_date: targetCompletionDate,
+    due_date: targetCompletionDate,
+    actualCompletionDate,
+    actual_completion_date: actualCompletionDate,
+    completed_at: actualCompletionDate,
     status: row.status || 'active',
     priority: row.priority || 'medium',
     tags: Array.isArray(row.tags) ? row.tags : [],
     isActive: row.is_active !== false,
-    createdAt: toIso(row.created_at),
-    updatedAt: toIso(row.updated_at),
+    createdAt,
+    created_at: createdAt,
+    updatedAt,
+    updated_at: updatedAt,
     // New linking fields for dossiers, policies, and watch lists
     linkedDossierIds: row.linked_dossier_ids || [],
     linkedPolicyIds: row.linked_policy_ids || [],
@@ -73,6 +96,94 @@ function normalizeRegulatoryChangeAction(row) {
     attachments: row.attachments || [],
     metadata: row.metadata || {},
     createdAt: toIso(row.created_at)
+  }
+}
+
+function normalizeRegulatoryChangeItemInput(itemData = {}) {
+  const source = itemData && typeof itemData === 'object' ? itemData : {}
+  const stageHistory = source.stageHistory || source.stage_history
+
+  return {
+    businessLineProfileId: source.businessLineProfileId || source.business_line_profile_id || null,
+    workflowTemplateId: source.workflowTemplateId || source.workflow_template_id || null,
+    regulatoryUpdateId: source.regulatoryUpdateId || source.regulatory_update_id || source.source_update_id || null,
+    regulatoryUpdateUrl: source.regulatoryUpdateUrl || source.regulatory_update_url || source.source_url || null,
+    title: source.title,
+    summary: source.summary || source.description || null,
+    authority: source.authority || null,
+    impactLevel: source.impactLevel || source.impact_level || null,
+    currentStageId: source.currentStageId || source.current_stage_id || source.current_stage || null,
+    stageHistory: Array.isArray(stageHistory) ? stageHistory : [],
+    identifiedDate: source.identifiedDate || source.identified_date || null,
+    targetCompletionDate: source.targetCompletionDate || source.due_date || source.target_completion_date || null,
+    status: source.status || 'active',
+    priority: source.priority || 'medium',
+    tags: Array.isArray(source.tags) ? source.tags : [],
+    linkedDossierIds: source.linkedDossierIds || source.linked_dossier_ids || [],
+    linkedPolicyIds: source.linkedPolicyIds || source.linked_policy_ids || [],
+    watchListMatchIds: source.watchListMatchIds || source.watch_list_match_ids || []
+  }
+}
+
+function decorateRegulatoryChangeItem(item) {
+  if (!item || typeof item !== 'object') return null
+
+  const summary = item.summary || item.description || null
+  const workflowTemplateId = item.workflowTemplateId || item.workflow_template_id || null
+  const regulatoryUpdateId = item.regulatoryUpdateId || item.regulatory_update_id || item.source_update_id || null
+  const regulatoryUpdateUrl = item.regulatoryUpdateUrl || item.regulatory_update_url || item.source_url || null
+  const impactLevel = item.impactLevel || item.impact_level || null
+  const currentStageId = item.currentStageId || item.current_stage_id || item.current_stage || null
+  const stageHistory = Array.isArray(item.stageHistory)
+    ? item.stageHistory
+    : Array.isArray(item.stage_history)
+      ? item.stage_history
+      : []
+
+  const identifiedDate = toIso(item.identifiedDate || item.identified_date) || item.identifiedDate || item.identified_date || null
+  const targetCompletionDate = toIso(item.targetCompletionDate || item.due_date || item.target_completion_date)
+    || item.targetCompletionDate
+    || item.due_date
+    || item.target_completion_date
+    || null
+  const actualCompletionDate = toIso(item.actualCompletionDate || item.actual_completion_date || item.completed_at)
+    || item.actualCompletionDate
+    || item.actual_completion_date
+    || item.completed_at
+    || null
+  const createdAt = toIso(item.createdAt || item.created_at) || item.createdAt || item.created_at || null
+  const updatedAt = toIso(item.updatedAt || item.updated_at) || item.updatedAt || item.updated_at || null
+
+  return {
+    ...item,
+    workflowTemplateId,
+    workflow_template_id: workflowTemplateId,
+    regulatoryUpdateId,
+    regulatory_update_id: regulatoryUpdateId,
+    regulatoryUpdateUrl,
+    regulatory_update_url: regulatoryUpdateUrl,
+    source_url: regulatoryUpdateUrl,
+    summary,
+    description: summary,
+    impactLevel,
+    impact_level: impactLevel,
+    currentStageId,
+    current_stage_id: currentStageId,
+    current_stage: item.current_stage || currentStageId || null,
+    stageHistory,
+    stage_history: stageHistory,
+    identifiedDate,
+    identified_date: identifiedDate,
+    targetCompletionDate,
+    target_completion_date: targetCompletionDate,
+    due_date: targetCompletionDate,
+    actualCompletionDate,
+    actual_completion_date: actualCompletionDate,
+    completed_at: actualCompletionDate,
+    createdAt,
+    created_at: createdAt,
+    updatedAt,
+    updated_at: updatedAt
   }
 }
 
@@ -448,6 +559,7 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
     async createRegulatoryChangeItem(userId = 'default', itemData = {}) {
       await this.initialize()
       const userKey = String(userId || 'default')
+      const normalized = normalizeRegulatoryChangeItemInput(itemData)
 
       if (this.usePostgres) {
         const client = await this.pool.connect()
@@ -466,21 +578,21 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
             ) RETURNING *`,
             [
               userKey,
-              itemData.businessLineProfileId || null,
-              itemData.workflowTemplateId || null,
-              itemData.regulatoryUpdateId || null,
-              itemData.regulatoryUpdateUrl || null,
-              itemData.title,
-              itemData.summary || null,
-              itemData.authority || null,
-              itemData.impactLevel || null,
-              itemData.currentStageId || null,
-              JSON.stringify(itemData.stageHistory || []),
-              itemData.identifiedDate || new Date(),
-              itemData.targetCompletionDate || null,
-              itemData.status || 'active',
-              itemData.priority || 'medium',
-              itemData.tags || []
+              normalized.businessLineProfileId,
+              normalized.workflowTemplateId,
+              normalized.regulatoryUpdateId,
+              normalized.regulatoryUpdateUrl,
+              normalized.title,
+              normalized.summary,
+              normalized.authority,
+              normalized.impactLevel,
+              normalized.currentStageId,
+              JSON.stringify(normalized.stageHistory || []),
+              normalized.identifiedDate || new Date(),
+              normalized.targetCompletionDate,
+              normalized.status,
+              normalized.priority,
+              normalized.tags
             ]
           )
 
@@ -488,7 +600,7 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
           await this.createRegulatoryChangeAction(result.rows[0].id, userKey, {
             actionType: 'created',
             title: 'Item created',
-            description: `Regulatory change item "${itemData.title}" was created`
+            description: `Regulatory change item "${normalized.title}" was created`
           })
 
           return normalizeRegulatoryChangeItem(result.rows[0])
@@ -888,7 +1000,9 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
         filtered = filtered.slice(0, filters.limit)
       }
 
-      return filtered.map(i => ({ ...i }))
+      return filtered
+        .map(i => decorateRegulatoryChangeItem({ ...i }))
+        .filter(Boolean)
     },
 
     async getRegulatoryChangeItemByIdJSON(itemId, userId) {
@@ -896,36 +1010,37 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
       const item = items.find(i =>
         (String(i.id) === String(itemId)) && i.userId === userId
       )
-      return item ? { ...item } : null
+      return item ? decorateRegulatoryChangeItem({ ...item }) : null
     },
 
     async createRegulatoryChangeItemJSON(userId, itemData) {
       const items = await this.loadRegulatoryChangeItemsJSON()
       const now = new Date().toISOString()
+      const normalized = normalizeRegulatoryChangeItemInput(itemData)
 
       const newItem = {
         id: crypto.randomUUID ? crypto.randomUUID() : `rci-${Date.now()}`,
         userId,
-        businessLineProfileId: itemData.businessLineProfileId || null,
-        workflowTemplateId: itemData.workflowTemplateId || null,
-        regulatoryUpdateId: itemData.regulatoryUpdateId || null,
-        regulatoryUpdateUrl: itemData.regulatoryUpdateUrl || null,
-        title: itemData.title,
-        summary: itemData.summary || null,
-        authority: itemData.authority || null,
-        impactLevel: itemData.impactLevel || null,
-        currentStageId: itemData.currentStageId || null,
-        current_stage: itemData.currentStageId || null,  // Alias for service layer compatibility
-        stageHistory: itemData.stageHistory || [],
-        identifiedDate: itemData.identifiedDate || now,
-        targetCompletionDate: itemData.targetCompletionDate || null,
+        businessLineProfileId: normalized.businessLineProfileId,
+        workflowTemplateId: normalized.workflowTemplateId,
+        regulatoryUpdateId: normalized.regulatoryUpdateId,
+        regulatoryUpdateUrl: normalized.regulatoryUpdateUrl,
+        title: normalized.title,
+        summary: normalized.summary,
+        authority: normalized.authority,
+        impactLevel: normalized.impactLevel,
+        currentStageId: normalized.currentStageId,
+        current_stage: normalized.currentStageId || null,  // Alias for service layer compatibility
+        stageHistory: normalized.stageHistory || [],
+        identifiedDate: normalized.identifiedDate || now,
+        targetCompletionDate: normalized.targetCompletionDate,
         actualCompletionDate: null,
-        status: itemData.status || 'active',
-        priority: itemData.priority || 'medium',
-        tags: itemData.tags || [],
-        linkedDossierIds: itemData.linkedDossierIds || [],
-        linkedPolicyIds: itemData.linkedPolicyIds || [],
-        watchListMatchIds: itemData.watchListMatchIds || [],
+        status: normalized.status,
+        priority: normalized.priority,
+        tags: normalized.tags,
+        linkedDossierIds: normalized.linkedDossierIds,
+        linkedPolicyIds: normalized.linkedPolicyIds,
+        watchListMatchIds: normalized.watchListMatchIds,
         isActive: true,
         createdAt: now,
         updatedAt: now
@@ -941,7 +1056,7 @@ module.exports = function applyRegulatoryChangesMethods(EnhancedDBService) {
         description: `Regulatory change item "${itemData.title}" was created`
       })
 
-      return { ...newItem }
+      return decorateRegulatoryChangeItem({ ...newItem })
     },
 
     async updateRegulatoryChangeItemJSON(itemId, userId, updates) {

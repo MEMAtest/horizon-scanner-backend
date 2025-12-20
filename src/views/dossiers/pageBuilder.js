@@ -8,6 +8,7 @@ const {
   renderTimelineModal,
   renderLinkSelectorModal
 } = require('./components')
+const { getDossiersIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../icons')
 
 function buildDossiersPage({
   sidebar,
@@ -20,6 +21,9 @@ function buildDossiersPage({
   const dossierStyles = getDossierStyles()
   const dossierScripts = getDossierScripts({ dossiers, stats })
 
+  const canaryStyles = getCanaryAnimationStyles()
+  const pageIcon = wrapIconInContainer(getDossiersIcon())
+
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -29,15 +33,19 @@ function buildDossiersPage({
       <title>Research Dossiers - RegCanary</title>
       ${commonStyles}
       ${dossierStyles}
+      <style>${canaryStyles}</style>
     </head>
     <body>
       ${sidebar}
       <main class="main-content">
         <div class="dossiers-page">
           <header class="page-header">
-            <div>
-              <h1>Research Dossiers</h1>
-              <p class="subtitle">Collect and organize evidence for regulatory research</p>
+            <div class="page-header-left">
+              ${pageIcon}
+              <div>
+                <h1>Research Dossiers</h1>
+                <p class="subtitle">Collect and organize evidence for regulatory research</p>
+              </div>
             </div>
             <div class="header-actions">
               <button class="btn btn-primary" onclick="DossierPage.openCreateModal()">

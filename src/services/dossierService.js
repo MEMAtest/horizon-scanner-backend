@@ -53,7 +53,8 @@ class DossierService {
       const dossier = await db.createDossier(userId, {
         name: data.name,
         description: data.description,
-        topic: data.topic,
+        category: data.category || data.topic || null,
+        topic: data.topic || data.category || null,
         status: data.status || 'active',
         tags: data.tags || [],
         linkedWatchListId: data.linkedWatchListId
@@ -71,7 +72,16 @@ class DossierService {
    */
   async updateDossier(dossierId, userId, updates) {
     try {
-      const dossier = await db.updateDossier(dossierId, userId, updates)
+      const normalizedUpdates = { ...updates }
+      if (normalizedUpdates.category === undefined && normalizedUpdates.topic !== undefined) {
+        normalizedUpdates.category = normalizedUpdates.topic
+      }
+
+      if (normalizedUpdates.topic === undefined && normalizedUpdates.category !== undefined) {
+        normalizedUpdates.topic = normalizedUpdates.category
+      }
+
+      const dossier = await db.updateDossier(dossierId, userId, normalizedUpdates)
       if (!dossier) {
         return { success: false, error: 'Dossier not found' }
       }
@@ -112,7 +122,7 @@ class DossierService {
       // Check if item already exists in dossier
       const existingItems = await db.getDossierItems(dossierId)
       const alreadyExists = existingItems.some(item =>
-        String(item.regulatory_update_id) === String(updateId)
+        String(item.regulatory_update_id || item.regulatoryUpdateId) === String(updateId)
       )
 
       if (alreadyExists) {

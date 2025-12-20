@@ -18,6 +18,8 @@ const { renderRegulatoryAnalyticsPage } = require('./pages/regulatoryAnalyticsPa
 const { renderWatchListsPage } = require('./pages/watchListsPage')
 const { renderDossiersPage } = require('./pages/dossiersPage')
 const { renderPoliciesPage } = require('./pages/policiesPage')
+const { renderWorkspaceHubPage } = require('./pages/workspaceHubPage')
+const renderCalendarPage = require('./pages/calendarPage')
 
 const router = express.Router()
 
@@ -44,5 +46,7 @@ router.get('/regulatory-analytics', renderRegulatoryAnalyticsPage)
 router.get('/watch-lists', renderWatchListsPage)
 router.get('/dossiers', renderDossiersPage)
 router.get('/policies', renderPoliciesPage)
+router.get('/profile-hub', renderWorkspaceHubPage)
+router.get('/regulatory-calendar', renderCalendarPage)
 
 module.exports = router
