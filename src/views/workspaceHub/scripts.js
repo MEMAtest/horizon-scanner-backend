@@ -8,10 +8,13 @@ function serializeForScript(data) {
     .replace(/\u2029/g, '\\u2029')
 }
 
-function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
+function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearches, customAlerts, upcomingEvents, userId }) {
   const initialState = serializeForScript({
     pinnedItems: Array.isArray(pinnedItems) ? pinnedItems : [],
     bookmarkCollections: Array.isArray(bookmarkCollections) ? bookmarkCollections : [],
+    savedSearches: Array.isArray(savedSearches) ? savedSearches : [],
+    customAlerts: Array.isArray(customAlerts) ? customAlerts : [],
+    upcomingEvents: Array.isArray(upcomingEvents) ? upcomingEvents : [],
     userId: userId || 'default'
   })
 
@@ -24,6 +27,9 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
         const state = {
           pinnedItems: Array.isArray(window.workspaceHubInitialState?.pinnedItems) ? window.workspaceHubInitialState.pinnedItems : [],
           bookmarkCollections: Array.isArray(window.workspaceHubInitialState?.bookmarkCollections) ? window.workspaceHubInitialState.bookmarkCollections : [],
+          savedSearches: Array.isArray(window.workspaceHubInitialState?.savedSearches) ? window.workspaceHubInitialState.savedSearches : [],
+          customAlerts: Array.isArray(window.workspaceHubInitialState?.customAlerts) ? window.workspaceHubInitialState.customAlerts : [],
+          activityLog: [],
           selectedCollectionId: 'personal',
           searchQuery: ''
         };
@@ -208,6 +214,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
               throw new Error(data.error || 'Failed to create collection');
             }
             showMessage('Collection created', 'success');
+            logActivity('collection_created', { title: name });
             state.selectedCollectionId = data.collection?.id || state.selectedCollectionId;
             await refreshAll();
           } catch (error) {
@@ -318,6 +325,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
               throw new Error(data.error || 'Failed to remove bookmark');
             }
             showMessage('Bookmark removed', 'success');
+            logActivity('bookmark_removed', { title: 'Bookmark removed' });
             await refreshAll();
           } catch (error) {
             console.error('[ProfileHub] Remove bookmark error:', error);
@@ -374,6 +382,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
 	              throw new Error(data.error || 'Failed to bookmark URL');
 	            }
 	            showMessage('URL bookmarked in ' + getBookmarkCollectionName(collectionId), 'success');
+	            logActivity('bookmark_saved', { title: title });
 	            await refreshAll();
 	          } catch (error) {
 	            console.error('[ProfileHub] Add URL bookmark error:', error);
@@ -441,6 +450,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
             if (createdId) destination.searchParams.set('openItemId', createdId);
 
             showMessage('Action created in Change Management', 'success');
+            logActivity('action_created', { title: title, from: 'bookmark' });
             window.location.href = destination.toString();
           } catch (error) {
             console.error('[ProfileHub] Create action error:', error);
@@ -642,6 +652,232 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
         function render() {
           renderCollections();
           renderBookmarks();
+          renderActivityChart();
+        }
+
+        // Saved Searches Widget
+        async function runSavedSearch(searchId) {
+          const search = state.savedSearches.find(s => s.id === searchId);
+          if (!search) return;
+
+          try {
+            // Navigate to dashboard with search filters
+            const filterParams = search.filter_params || search.filterParams || {};
+            const queryString = new URLSearchParams(filterParams).toString();
+            window.location.href = '/dashboard' + (queryString ? '?' + queryString : '');
+          } catch (error) {
+            console.error('[ProfileHub] Run search error:', error);
+            showMessage('Failed to run search', 'error');
+          }
+        }
+
+        async function convertSearchToAlert(searchId) {
+          const search = state.savedSearches.find(s => s.id === searchId);
+          if (!search) return;
+
+          const name = search.search_name || search.searchName || 'Unnamed Search';
+
+          try {
+            const response = await fetch('/api/workspace/custom-alerts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                alertName: 'Alert: ' + name,
+                alertConditions: {
+                  type: 'saved_search',
+                  searchId: searchId,
+                  filterParams: search.filter_params || search.filterParams || {}
+                },
+                isActive: true
+              })
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || 'Failed to create alert');
+            }
+
+            showMessage('Alert created from search', 'success');
+            logActivity('alert_created', { title: 'Alert: ' + name, from: 'search' });
+          } catch (error) {
+            console.error('[ProfileHub] Create alert error:', error);
+            showMessage(error.message || 'Failed to create alert', 'error');
+          }
+        }
+
+        // Activity Timeline - 30-Day Line Graph
+        function logActivity(type, data) {
+          const activity = {
+            type,
+            ...data,
+            timestamp: new Date().toISOString()
+          };
+
+          state.activityLog.unshift(activity);
+          // Keep more activity for 30-day chart
+          if (state.activityLog.length > 500) {
+            state.activityLog = state.activityLog.slice(0, 500);
+          }
+
+          // Save to localStorage
+          try {
+            localStorage.setItem('profileHubActivity', JSON.stringify(state.activityLog));
+          } catch (error) {
+            console.warn('[ProfileHub] Failed to save activity:', error);
+          }
+
+          renderActivityChart();
+        }
+
+        function loadActivityLog() {
+          try {
+            const saved = localStorage.getItem('profileHubActivity');
+            if (saved) {
+              state.activityLog = JSON.parse(saved);
+            }
+          } catch (error) {
+            console.warn('[ProfileHub] Failed to load activity:', error);
+          }
+        }
+
+        function aggregateActivityByDay(days = 30) {
+          const counts = {};
+          const now = new Date();
+          now.setHours(23, 59, 59, 999);
+
+          // Initialize all days to 0
+          for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+            const key = date.toISOString().split('T')[0];
+            counts[key] = 0;
+          }
+
+          // Count activities per day
+          state.activityLog.forEach(activity => {
+            if (!activity.timestamp) return;
+            const key = new Date(activity.timestamp).toISOString().split('T')[0];
+            if (counts[key] !== undefined) {
+              counts[key]++;
+            }
+          });
+
+          return Object.entries(counts)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([date, count]) => ({ date, count }));
+        }
+
+        function renderActivityChart() {
+          const lineEl = document.getElementById('activityLine');
+          const areaEl = document.getElementById('activityArea');
+          const pointsEl = document.getElementById('activityPoints');
+          const peakEl = document.getElementById('activityPeak');
+          const avgEl = document.getElementById('activityAvg');
+          const totalEl = document.getElementById('activityTotal');
+          const startDateEl = document.getElementById('chartStartDate');
+          const endDateEl = document.getElementById('chartEndDate');
+
+          if (!lineEl || !areaEl) return;
+
+          const data = aggregateActivityByDay(30);
+          const counts = data.map(d => d.count);
+          const maxCount = Math.max(...counts, 1);
+          const total = counts.reduce((a, b) => a + b, 0);
+          const avg = (total / counts.length).toFixed(1);
+          const peak = Math.max(...counts);
+
+          // SVG dimensions
+          const width = 400;
+          const height = 100;
+          const padding = 5;
+
+          // Calculate points
+          const points = data.map((d, i) => {
+            const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+            const y = height - padding - (d.count / maxCount) * (height - 2 * padding);
+            return { x, y, date: d.date, count: d.count };
+          });
+
+          // Build line path
+          if (points.length > 0) {
+            const linePath = points.map((p, i) =>
+              (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)
+            ).join(' ');
+            lineEl.setAttribute('d', linePath);
+
+            // Build area path (line + bottom closure)
+            const areaPath = linePath +
+              ' L' + points[points.length - 1].x.toFixed(1) + ',' + (height - padding) +
+              ' L' + points[0].x.toFixed(1) + ',' + (height - padding) + ' Z';
+            areaEl.setAttribute('d', areaPath);
+          }
+
+          // Add hover points
+          if (pointsEl) {
+            pointsEl.innerHTML = points.map(p => {
+              const dateStr = new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              return \`<circle cx="\${p.x.toFixed(1)}" cy="\${p.y.toFixed(1)}" r="4"
+                class="chart-point" data-date="\${escapeHtml(dateStr)}" data-count="\${p.count}">
+                <title>\${escapeHtml(dateStr)}: \${p.count} action\${p.count !== 1 ? 's' : ''}</title>
+              </circle>\`;
+            }).join('');
+          }
+
+          // Update stats
+          if (peakEl) peakEl.textContent = peak;
+          if (avgEl) avgEl.textContent = avg;
+          if (totalEl) totalEl.textContent = total;
+
+          // Update date labels
+          if (startDateEl && data.length > 0) {
+            const startDate = new Date(data[0].date);
+            startDateEl.textContent = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          }
+          if (endDateEl) {
+            endDateEl.textContent = 'Today';
+          }
+        }
+
+        function bindSavedSearches() {
+          const container = document.getElementById('savedSearchesList');
+          if (!container) return;
+
+          container.addEventListener('click', async (event) => {
+            const btn = event.target.closest('button[data-action]');
+            if (!btn) return;
+
+            const item = btn.closest('.search-card');
+            if (!item) return;
+
+            const searchId = item.dataset.searchId;
+            if (!searchId) return;
+
+            const action = btn.dataset.action;
+
+            if (action === 'run') {
+              btn.disabled = true;
+              try {
+                await runSavedSearch(searchId);
+              } finally {
+                btn.disabled = false;
+              }
+            } else if (action === 'alert') {
+              btn.disabled = true;
+              try {
+                await convertSearchToAlert(searchId);
+              } finally {
+                btn.disabled = false;
+              }
+            }
+          });
+
+          // Save current search button
+          const saveBtn = document.getElementById('saveCurrentSearchBtn');
+          if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+              // Navigate to dashboard to save a search
+              window.location.href = '/dashboard';
+            });
+          }
         }
 
 	        function bindControls() {
@@ -676,10 +912,35 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, userId }) {
               renderBookmarks();
             });
           }
+
+          // Refresh All button
+          const refreshAllBtn = document.getElementById('hubRefreshAllBtn');
+          if (refreshAllBtn) {
+            refreshAllBtn.addEventListener('click', async (event) => {
+              event.preventDefault();
+              refreshAllBtn.disabled = true;
+              refreshAllBtn.innerHTML = '<span>Refreshing...</span>';
+              try {
+                await refreshAll();
+                showMessage('Data refreshed', 'success');
+              } finally {
+                refreshAllBtn.disabled = false;
+                refreshAllBtn.innerHTML = \`
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                  Refresh
+                \`;
+              }
+            });
+          }
         }
 
         function init() {
+          loadActivityLog();
           bindControls();
+          bindSavedSearches();
           render();
           refreshAll();
         }

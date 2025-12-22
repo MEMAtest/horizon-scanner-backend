@@ -171,6 +171,25 @@ async function renderCalendarPage(req, res) {
           </main>
         </div>
 
+        <!-- Event Hover Preview -->
+        <div class="event-hover-preview" id="event-preview">
+          <div class="preview-title" id="preview-title"></div>
+          <div class="preview-divider"></div>
+          <div class="preview-row">
+            <span class="preview-icon">📅</span>
+            <span class="preview-value" id="preview-date"></span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon">🏛️</span>
+            <span class="preview-value" id="preview-authority"></span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon" id="preview-priority-icon">🔴</span>
+            <span class="preview-value" id="preview-priority"></span>
+          </div>
+          <div class="preview-hint">Click for details →</div>
+        </div>
+
         <!-- Event Modal -->
         <div class="event-modal-overlay" id="event-modal">
           <div class="event-modal">
@@ -295,6 +314,84 @@ async function renderCalendarPage(req, res) {
             }
           });
 
+          // Hover preview functions
+          let previewTimeout = null;
+          const previewEl = document.getElementById('event-preview');
+
+          function showEventPreview(eventId, mouseX, mouseY) {
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+
+            // Clear any pending hide
+            if (previewTimeout) {
+              clearTimeout(previewTimeout);
+              previewTimeout = null;
+            }
+
+            // Populate preview content
+            const eventDate = new Date(event.eventDate);
+            const formattedDate = eventDate.toLocaleDateString('en-GB', {
+              weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+            });
+
+            document.getElementById('preview-title').textContent = event.title || 'Untitled Event';
+            document.getElementById('preview-date').textContent = formattedDate;
+            document.getElementById('preview-authority').textContent = event.authority || 'Unknown Authority';
+
+            const priority = event.priority || 'medium';
+            const priorityIcons = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' };
+            const priorityLabels = { critical: 'Critical Priority', high: 'High Priority', medium: 'Medium Priority', low: 'Low Priority' };
+            document.getElementById('preview-priority-icon').textContent = priorityIcons[priority] || '🟡';
+            document.getElementById('preview-priority').textContent = priorityLabels[priority] || 'Medium Priority';
+
+            // Position preview near cursor
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const previewWidth = 280;
+            const previewHeight = 160;
+
+            let left = mouseX + 15;
+            let top = mouseY - 20;
+
+            // Adjust if overflowing right edge
+            if (left + previewWidth > viewportWidth - 20) {
+              left = mouseX - previewWidth - 15;
+            }
+
+            // Adjust if overflowing bottom edge
+            if (top + previewHeight > viewportHeight - 20) {
+              top = viewportHeight - previewHeight - 20;
+            }
+
+            // Ensure not above viewport
+            if (top < 20) {
+              top = 20;
+            }
+
+            previewEl.style.left = left + 'px';
+            previewEl.style.top = top + 'px';
+            previewEl.classList.add('visible');
+          }
+
+          function hideEventPreview() {
+            // Small delay to allow moving to preview
+            previewTimeout = setTimeout(() => {
+              previewEl.classList.remove('visible');
+            }, 100);
+          }
+
+          // Keep preview visible when hovering over it
+          previewEl.addEventListener('mouseenter', () => {
+            if (previewTimeout) {
+              clearTimeout(previewTimeout);
+              previewTimeout = null;
+            }
+          });
+
+          previewEl.addEventListener('mouseleave', () => {
+            previewEl.classList.remove('visible');
+          });
+
           // Filter events
           document.getElementById('event-type-filter').addEventListener('change', (e) => {
             const type = e.target.value;
@@ -374,9 +471,12 @@ function generateCalendarGrid(year, month, events) {
     const dayEvents = eventsByDate[dateStr] || []
 
     const eventsHtml = dayEvents.slice(0, 3).map(event => {
-      const tooltipText = `${escapeHtml(event.title || 'Untitled Event')}\n${formatEventType(event.eventType || event.sourceType)} • ${event.authority || 'Unknown'}\n${event.priority || 'medium'} priority`
       return `
-      <div class="calendar-event ${event.eventType || event.sourceType}" onclick="showEventModal('${event.id}')" title="${tooltipText}">
+      <div class="calendar-event ${event.eventType || event.sourceType}"
+           data-event-id="${event.id}"
+           onclick="showEventModal('${event.id}')"
+           onmouseenter="showEventPreview('${event.id}', event.clientX, event.clientY)"
+           onmouseleave="hideEventPreview()">
         ${escapeHtml(truncate(event.title, 25))}
       </div>
     `
@@ -445,9 +545,12 @@ function generateAgendaView(events) {
     const dayEvents = eventsByDate[dateKey]
 
     const eventsHtml = dayEvents.map(event => {
-      const tooltipText = `${escapeHtml(event.title || 'Untitled Event')}\n${formatEventType(event.eventType || event.sourceType)} • ${event.authority || 'Unknown'}\n${event.priority || 'medium'} priority`
       return `
-      <div class="agenda-event" onclick="showEventModal('${event.id}')" title="${tooltipText}">
+      <div class="agenda-event"
+           data-event-id="${event.id}"
+           onclick="showEventModal('${event.id}')"
+           onmouseenter="showEventPreview('${event.id}', event.clientX, event.clientY)"
+           onmouseleave="hideEventPreview()">
         <div class="agenda-event-type" style="background: ${getEventColor(event.eventType)}"></div>
         <div class="agenda-event-content">
           <div class="agenda-event-title">${escapeHtml(event.title)}</div>

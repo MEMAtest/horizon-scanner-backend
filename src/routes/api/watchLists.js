@@ -131,7 +131,9 @@ function registerWatchListRoutes(router) {
   router.post('/watch-lists/:id/bulk-match', async (req, res) => {
     try {
       const userId = req.headers['x-user-id'] || 'default'
-      const result = await watchListService.bulkMatchWatchList(req.params.id, userId)
+      const windowDays = req.body.windowDays ?? req.query.windowDays
+      const pageSize = req.body.pageSize ?? req.query.pageSize
+      const result = await watchListService.bulkMatchWatchList(req.params.id, userId, { windowDays, pageSize })
       res.json(result)
     } catch (error) {
       console.error('Error bulk matching:', error)

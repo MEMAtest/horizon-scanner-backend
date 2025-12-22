@@ -214,6 +214,26 @@ function renderCreateModal() {
             <div class="form-group">
               <div class="toggle-group">
                 <label class="toggle-switch">
+                  <input type="checkbox" id="auto-add-to-dossier" name="autoAddToDossier"
+                         onchange="WatchListPage.toggleAutoAddToDossier(this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span>Auto-add matching updates to a dossier</span>
+              </div>
+              <p class="help-text">Automatically save matched updates into a research dossier to support triage and audit trail.</p>
+            </div>
+
+            <div class="form-group" id="target-dossier-group" style="display:none;">
+              <label for="target-dossier-id">Target dossier</label>
+              <select id="target-dossier-id" name="targetDossierId">
+                <option value="">Select a dossier...</option>
+              </select>
+              <p class="help-text">Matched updates will be added to this dossier. <a href="/dossiers" target="_blank" rel="noreferrer">Manage dossiers</a></p>
+            </div>
+
+            <div class="form-group">
+              <div class="toggle-group">
+                <label class="toggle-switch">
                   <input type="checkbox" id="alert-on-match" name="alertOnMatch" checked>
                   <span class="toggle-slider"></span>
                 </label>
@@ -269,6 +289,7 @@ function renderMatchesModal() {
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" onclick="WatchListPage.closeMatchesModal()">Close</button>
+          <button class="btn btn-secondary" onclick="WatchListPage.rescanMatches(90)">Rescan 90 days</button>
           <button class="btn btn-primary" onclick="WatchListPage.markAllReviewed()">Mark All Reviewed</button>
         </div>
       </div>

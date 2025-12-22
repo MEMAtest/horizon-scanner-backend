@@ -2,6 +2,7 @@ const { getSidebar } = require('../templates/sidebar')
 const { getClientScripts } = require('../templates/clientScripts')
 const { getCommonStyles } = require('../templates/commonStyles')
 const dbService = require('../../services/dbService')
+const calendarService = require('../../services/calendarService')
 const { buildWorkspaceHubPage } = require('../../views/workspaceHub/pageBuilder')
 
 function resolveUserId(req) {
@@ -21,12 +22,21 @@ async function renderWorkspaceHubPage(req, res) {
 
     const userId = resolveUserId(req)
 
-    const [pinnedItems, bookmarkCollections, savedSearches, customAlerts, firmProfile] = await Promise.all([
+    // Fetch all data in parallel
+    const [
+      pinnedItems,
+      bookmarkCollections,
+      savedSearches,
+      customAlerts,
+      firmProfile,
+      upcomingEvents
+    ] = await Promise.all([
       dbService.getPinnedItems(),
       dbService.getBookmarkCollections(),
       dbService.getSavedSearches(),
       dbService.getCustomAlerts(),
-      dbService.getFirmProfile()
+      dbService.getFirmProfile(),
+      calendarService.getUpcomingEvents(60, 50).catch(() => []) // 60 days, up to 50 events
     ])
 
     const stats = {
@@ -49,6 +59,9 @@ async function renderWorkspaceHubPage(req, res) {
       commonStyles,
       pinnedItems: Array.isArray(pinnedItems) ? pinnedItems : [],
       bookmarkCollections: Array.isArray(bookmarkCollections) ? bookmarkCollections : [],
+      savedSearches: Array.isArray(savedSearches) ? savedSearches : [],
+      customAlerts: Array.isArray(customAlerts) ? customAlerts : [],
+      upcomingEvents: Array.isArray(upcomingEvents) ? upcomingEvents : [],
       stats,
       userId
     })

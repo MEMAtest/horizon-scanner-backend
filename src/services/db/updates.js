@@ -270,9 +270,16 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
 
         query += ' ORDER BY published_date DESC'
 
-        if (filters.limit) {
+        const limit = Number.parseInt(filters.limit, 10)
+        if (Number.isFinite(limit)) {
           query += ` LIMIT $${++paramCount}`
-          params.push(filters.limit)
+          params.push(limit)
+        }
+
+        const offset = Number.parseInt(filters.offset, 10)
+        if (Number.isFinite(offset) && offset > 0) {
+          query += ` OFFSET $${++paramCount}`
+          params.push(offset)
         }
 
         console.log('[DEBUG] Final SQL query:', query)
@@ -396,9 +403,17 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
         return dateB - dateA
       })
 
-      // Apply limit
-      if (filters.limit) {
-        filtered = filtered.slice(0, filters.limit)
+      const offset = Number.parseInt(filters.offset, 10)
+      const limit = Number.parseInt(filters.limit, 10)
+      const normalizedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0
+      const normalizedLimit = Number.isFinite(limit) && limit > 0 ? limit : null
+
+      // Apply offset + limit
+      if (normalizedOffset || normalizedLimit) {
+        filtered = filtered.slice(
+          normalizedOffset,
+          normalizedLimit ? normalizedOffset + normalizedLimit : undefined
+        )
       }
 
       return filtered

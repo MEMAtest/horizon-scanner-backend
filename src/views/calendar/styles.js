@@ -698,6 +698,73 @@ function getCalendarStyles() {
       color: #059669;
     }
 
+    /* Event Hover Preview */
+    .event-hover-preview {
+      position: fixed;
+      z-index: 1000;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+      padding: 16px;
+      width: 280px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px);
+      transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+      pointer-events: none;
+      border: 1px solid #e2e8f0;
+    }
+
+    .event-hover-preview.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .event-hover-preview .preview-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+
+    .event-hover-preview .preview-divider {
+      height: 1px;
+      background: linear-gradient(90deg, #e2e8f0 0%, transparent 100%);
+      margin-bottom: 12px;
+    }
+
+    .event-hover-preview .preview-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .event-hover-preview .preview-icon {
+      font-size: 0.85rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .event-hover-preview .preview-value {
+      font-size: 0.85rem;
+      color: #475569;
+      font-weight: 500;
+    }
+
+    .event-hover-preview .preview-hint {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #f1f5f9;
+      font-size: 0.75rem;
+      color: #3b82f6;
+      font-weight: 500;
+      text-align: center;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       .calendar-header {
@@ -733,6 +800,11 @@ function getCalendarStyles() {
       .month-nav {
         flex-wrap: wrap;
         justify-content: center;
+      }
+
+      /* Hide hover preview on mobile (use click modal instead) */
+      .event-hover-preview {
+        display: none;
       }
     }
   `

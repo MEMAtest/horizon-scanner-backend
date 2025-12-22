@@ -10,6 +10,11 @@ function toNumber(value, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+function toInteger(value, fallback) {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 class WatchListService {
   /**
    * Get all watch lists for a user
@@ -208,8 +213,7 @@ class WatchListService {
 
         if (watchList.auto_add_to_dossier && watchList.target_dossier_id) {
           await db.addItemToDossier(watchList.target_dossier_id, updateId, {
-            notes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`,
-            addedBy: 'system'
+            userNotes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`
           })
         }
       }
@@ -291,39 +295,77 @@ class WatchListService {
   /**
    * Bulk match all existing updates against a newly created watch list
    */
-  async bulkMatchWatchList(watchListId, userId) {
+  async bulkMatchWatchList(watchListId, userId, options = {}) {
     try {
       const watchList = await db.getWatchListById(watchListId, userId)
       if (!watchList) {
         return { success: false, error: 'Watch list not found' }
       }
 
-      // Get recent updates (last 30 days by default)
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - 30)
-      const updates = await db.getEnhancedUpdates({
-        startDate: startDate.toISOString(),
-        limit: 1000
-      })
-      const matches = []
+      const windowDays = toInteger(options.windowDays, 90)
+      const pageSize = Math.min(toInteger(options.pageSize, 1000), 5000)
+      const maxPages = Math.min(toInteger(options.maxPages, 25), 250)
 
-      for (const update of updates) {
-        const matchResult = db.calculateMatchScore(watchList, update)
-        if (!matchResult || matchResult.score <= 0) continue
-        if (matchResult.score >= (watchList.alert_threshold || 0.5)) {
-          const match = await db.createWatchListMatch(watchList.id, update.id, {
-            matchScore: matchResult.score,
-            matchReasons: matchResult.reasons
-          })
-          matches.push(match)
+      // Get recent updates (last 90 days by default)
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - Math.max(windowDays, 1))
+
+      const threshold = watchList.alert_threshold || 0.5
+      const shouldAutoAddToDossier = watchList.auto_add_to_dossier === true && !!watchList.target_dossier_id
+      const matches = []
+      let itemsAddedToDossier = 0
+      let updatesScanned = 0
+      let offset = 0
+      let pageCount = 0
+
+      while (pageCount < maxPages) {
+        const updates = await db.getEnhancedUpdates({
+          startDate: startDate.toISOString(),
+          limit: pageSize,
+          offset
+        })
+
+        if (!updates || updates.length === 0) break
+
+        updatesScanned += updates.length
+        pageCount += 1
+
+        for (const update of updates) {
+          const matchResult = db.calculateMatchScore(watchList, update)
+          if (!matchResult || matchResult.score <= 0) continue
+          if (matchResult.score >= threshold) {
+            const match = await db.createWatchListMatch(watchList.id, update.id, {
+              matchScore: matchResult.score,
+              matchReasons: matchResult.reasons
+            })
+            matches.push(match)
+
+            if (shouldAutoAddToDossier && update.id != null) {
+              try {
+                await db.addItemToDossier(watchList.target_dossier_id, update.id, {
+                  userNotes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`
+                })
+                itemsAddedToDossier += 1
+              } catch (error) {
+                console.warn('[WatchListService] Auto-add to dossier failed:', error.message)
+              }
+            }
+          }
         }
+
+        if (updates.length < pageSize) break
+        offset += updates.length
       }
 
       return {
         success: true,
         data: {
           matchCount: matches.length,
-          updatesScanned: updates.length
+          updatesScanned,
+          windowDays,
+          pageSize,
+          itemsAddedToDossier: shouldAutoAddToDossier ? itemsAddedToDossier : 0,
+          targetDossierId: watchList.target_dossier_id || null
         }
       }
     } catch (error) {

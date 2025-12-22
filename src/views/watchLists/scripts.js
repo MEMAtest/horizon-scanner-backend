@@ -16,6 +16,8 @@ function getWatchListScripts({ watchLists, stats }) {
         currentLinkType: null,
         currentUpdateId: null,
         pendingUnlinkMatchId: null,
+        dossiers: [],
+        dossiersLoaded: false,
         tags: {
           keywords: [],
           authorities: [],
@@ -50,6 +52,8 @@ function getWatchListScripts({ watchLists, stats }) {
           openCreateModal: function() {
             this.resetForm();
             this.initializeDropdowns([], []);
+            this.toggleAutoAddToDossier(false);
+            this.ensureDossiersLoaded();
             document.getElementById('modal-title').textContent = 'Create Watch List';
             document.getElementById('submit-btn').textContent = 'Create Watch List';
             document.getElementById('create-modal').classList.add('active');
@@ -65,6 +69,11 @@ function getWatchListScripts({ watchLists, stats }) {
             document.getElementById('watch-list-id').value = '';
             state.tags = { keywords: [], authorities: [], sectors: [] };
             this.renderTags('keywords');
+            const autoAddToggle = document.getElementById('auto-add-to-dossier');
+            if (autoAddToggle) autoAddToggle.checked = false;
+            const targetSelect = document.getElementById('target-dossier-id');
+            if (targetSelect) targetSelect.value = '';
+            this.toggleAutoAddToDossier(false);
           },
 
           initializeDropdowns: function(selectedAuthorities = [], selectedSectors = []) {
@@ -292,6 +301,13 @@ function getWatchListScripts({ watchLists, stats }) {
             const id = document.getElementById('watch-list-id').value;
             const isEdit = !!id;
 
+            const autoAddToDossier = !!document.getElementById('auto-add-to-dossier')?.checked;
+            const targetDossierId = document.getElementById('target-dossier-id')?.value || null;
+            if (autoAddToDossier && !targetDossierId) {
+              this.showToast('Select a target dossier for auto-add', 'error');
+              return;
+            }
+
             const data = {
               name: form.name.value,
               description: form.description.value,
@@ -299,7 +315,9 @@ function getWatchListScripts({ watchLists, stats }) {
               authorities: this.getSelectedDropdownValues('authorities'),
               sectors: this.getSelectedDropdownValues('sectors'),
               alertThreshold: parseFloat(form.alertThreshold.value),
-              alertOnMatch: form.alertOnMatch.checked
+              alertOnMatch: form.alertOnMatch.checked,
+              autoAddToDossier,
+              targetDossierId: autoAddToDossier ? targetDossierId : null
             };
 
             try {
@@ -340,6 +358,15 @@ function getWatchListScripts({ watchLists, stats }) {
             document.getElementById('alert-threshold').value = watchList.alert_threshold || 0.5;
             document.getElementById('alert-on-match').checked = watchList.alert_on_match !== false;
 
+            const autoAddToDossier = watchList.auto_add_to_dossier === true || watchList.autoAddToDossier === true;
+            const targetDossierId = watchList.target_dossier_id || watchList.targetDossierId || '';
+            const autoAddToggle = document.getElementById('auto-add-to-dossier');
+            if (autoAddToggle) autoAddToggle.checked = autoAddToDossier;
+            this.toggleAutoAddToDossier(autoAddToDossier);
+            await this.ensureDossiersLoaded(targetDossierId);
+            const targetSelect = document.getElementById('target-dossier-id');
+            if (targetSelect) targetSelect.value = String(targetDossierId || '');
+
             state.tags.keywords = watchList.keywords || [];
             this.renderTags('keywords');
 
@@ -352,6 +379,64 @@ function getWatchListScripts({ watchLists, stats }) {
             document.getElementById('modal-title').textContent = 'Edit Watch List';
             document.getElementById('submit-btn').textContent = 'Save Changes';
             document.getElementById('create-modal').classList.add('active');
+          },
+
+          toggleAutoAddToDossier: function(enabled) {
+            const group = document.getElementById('target-dossier-group');
+            const select = document.getElementById('target-dossier-id');
+            if (group) group.style.display = enabled ? '' : 'none';
+            if (select) {
+              select.disabled = !enabled;
+              if (!enabled) select.value = '';
+            }
+            if (enabled) this.ensureDossiersLoaded(select ? select.value : null);
+          },
+
+          ensureDossiersLoaded: async function(selectedDossierId) {
+            if (state.dossiersLoaded) {
+              this.populateDossierSelect(state.dossiers, selectedDossierId);
+              return state.dossiers;
+            }
+
+            try {
+              const response = await fetch('/api/dossiers', { headers: { 'x-user-id': 'default' } });
+              const result = await response.json();
+              state.dossiers = result.success ? (result.data || []) : [];
+              state.dossiersLoaded = true;
+              this.populateDossierSelect(state.dossiers, selectedDossierId);
+              return state.dossiers;
+            } catch (error) {
+              console.error('[WatchLists] Failed to load dossiers:', error);
+              state.dossiers = [];
+              state.dossiersLoaded = true;
+              this.populateDossierSelect([], selectedDossierId, true);
+              return [];
+            }
+          },
+
+          populateDossierSelect: function(dossiers, selectedDossierId, loadFailed) {
+            const select = document.getElementById('target-dossier-id');
+            if (!select) return;
+
+            const selectedValue = selectedDossierId != null ? String(selectedDossierId) : '';
+
+            let options = '<option value="">Select a dossier...</option>';
+            if (loadFailed) {
+              options = '<option value="">Unable to load dossiers</option>';
+            } else if (!dossiers || dossiers.length === 0) {
+              options = '<option value="">No dossiers found (create one first)</option>';
+            } else {
+              options += dossiers
+                .map(d => {
+                  const id = d.id != null ? String(d.id) : '';
+                  const name = this.escapeHtml(d.name || d.title || 'Untitled');
+                  const selected = id && id === selectedValue ? ' selected' : '';
+                  return '<option value=\"' + this.escapeHtml(id) + '\"' + selected + '>' + name + '</option>';
+                })
+                .join('');
+            }
+
+            select.innerHTML = options;
           },
 
           // Delete Watch List
@@ -444,6 +529,90 @@ function getWatchListScripts({ watchLists, stats }) {
             }
           },
 
+          rescanMatches: async function(windowDays) {
+            const id = state.currentWatchListId;
+            if (!id) return;
+
+            const days = Number.isFinite(Number.parseInt(windowDays, 10))
+              ? Number.parseInt(windowDays, 10)
+              : 90;
+
+            try {
+              this.showToast('Rescanning last ' + days + ' days...', 'success');
+              const response = await fetch('/api/watch-lists/' + id + '/bulk-match?windowDays=' + encodeURIComponent(days), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-user-id': 'default'
+                }
+              });
+
+              const result = await response.json();
+              if (result.success) {
+                const data = result.data || {};
+                const scanned = data.updatesScanned != null ? data.updatesScanned : '?';
+                const matches = data.matchCount != null ? data.matchCount : '?';
+                this.showToast('Rescan complete: ' + matches + ' matches (' + scanned + ' scanned)', 'success');
+                await this.loadWatchLists();
+                this.viewMatches(id);
+              } else {
+                this.showToast('Rescan failed: ' + (result.error || 'Unknown error'), 'error');
+              }
+            } catch (error) {
+              console.error('[WatchLists] Rescan error:', error);
+              this.showToast('Failed to rescan watch list', 'error');
+            }
+          },
+
+          loadWatchLists: async function() {
+            try {
+              const [listsResponse, statsResponse] = await Promise.all([
+                fetch('/api/watch-lists', { headers: { 'x-user-id': 'default' } }),
+                fetch('/api/watch-lists/stats', { headers: { 'x-user-id': 'default' } })
+              ]);
+
+              const [listsResult, statsResult] = await Promise.all([
+                listsResponse.json(),
+                statsResponse.json()
+              ]);
+
+              if (!listsResult.success) return;
+              state.watchLists = listsResult.data || [];
+              if (statsResult && statsResult.success) {
+                state.stats = statsResult.data || {};
+              }
+
+              // Update stats cards if present
+              const statCards = document.querySelectorAll('.stats-row .stat-card');
+              if (statCards.length >= 4 && state.stats) {
+                const values = [
+                  state.stats.totalWatchLists || 0,
+                  state.stats.totalMatches || 0,
+                  state.stats.unreviewedMatches || 0,
+                  state.stats.topMatchingList || 'N/A'
+                ];
+                statCards.forEach((card, idx) => {
+                  const valueEl = card.querySelector('.stat-value');
+                  if (valueEl && values[idx] !== undefined) {
+                    valueEl.textContent = values[idx];
+                  }
+                });
+              }
+
+              // Update counts on existing watch list cards
+              state.watchLists.forEach(wl => {
+                const card = document.querySelector('.watch-list-card[data-id="' + wl.id + '"]');
+                if (!card) return;
+                const valueEls = card.querySelectorAll('.watch-list-stat .value');
+                if (valueEls[0]) valueEls[0].textContent = wl.matchCount || 0;
+                if (valueEls[1]) valueEls[1].textContent = wl.unreviewedCount || wl.unreviewed_count || 0;
+                if (valueEls[2]) valueEls[2].textContent = Math.round((wl.alert_threshold || 0.5) * 100) + '%';
+              });
+            } catch (error) {
+              console.error('[WatchLists] Failed to refresh watch lists:', error);
+            }
+          },
+
           renderMatches: function(matches) {
             if (!matches || matches.length === 0) {
               document.getElementById('matches-content').innerHTML =
@@ -465,6 +634,7 @@ function getWatchListScripts({ watchLists, stats }) {
                     \${match.matched_at ? new Date(match.matched_at).toLocaleDateString() : 'Unknown date'}
                     \${match.reviewed ? ' &bull; <span style="color: #10b981;">Reviewed</span>' : ''}
                   </div>
+                  \${this.renderMatchReasons(match)}
                   <div class="match-actions">
                     <button class="btn btn-secondary btn-sm" onclick="window.location.href='/update/\${match.regulatory_update_id}'">
                       View Update
@@ -520,6 +690,54 @@ function getWatchListScripts({ watchLists, stats }) {
             }).join('');
 
             document.getElementById('matches-content').innerHTML = html;
+          },
+
+          renderMatchReasons: function(match) {
+            const reasons = (match && (match.match_reasons || match.matchReasons)) || null;
+            if (!reasons) return '';
+
+            const matched = { keywords: [], authorities: [], sectors: [] };
+
+            if (Array.isArray(reasons)) {
+              reasons.forEach(item => {
+                if (!item || !item.type) return;
+                if (item.type === 'keyword') matched.keywords = Array.isArray(item.matched) ? item.matched : [];
+                if (item.type === 'authority') matched.authorities = Array.isArray(item.matched) ? item.matched : [];
+                if (item.type === 'sector') matched.sectors = Array.isArray(item.matched) ? item.matched : [];
+              });
+            } else if (typeof reasons === 'object') {
+              const next = reasons.matched || reasons.matches || {};
+              if (next.keywords) matched.keywords = Array.isArray(next.keywords) ? next.keywords : [];
+              if (next.authorities) matched.authorities = Array.isArray(next.authorities) ? next.authorities : [];
+              if (next.sectors) matched.sectors = Array.isArray(next.sectors) ? next.sectors : [];
+            }
+
+            const chips = [];
+
+            const formatList = (items, maxItems = 3) => {
+              const list = Array.isArray(items) ? items.filter(Boolean) : [];
+              if (list.length === 0) return '';
+              const shown = list.slice(0, maxItems).map(v => this.escapeHtml(String(v)));
+              const suffix = list.length > maxItems ? \` +\${list.length - maxItems} more\` : '';
+              return shown.join(', ') + suffix;
+            };
+
+            if (matched.keywords.length > 0) {
+              chips.push(\`<span class="match-reason-chip keyword">Keywords: \${formatList(matched.keywords)}</span>\`);
+            }
+            if (matched.authorities.length > 0) {
+              chips.push(\`<span class="match-reason-chip authority">Authority: \${formatList(matched.authorities, 2)}</span>\`);
+            }
+            if (matched.sectors.length > 0) {
+              chips.push(\`<span class="match-reason-chip sector">Sector: \${formatList(matched.sectors, 2)}</span>\`);
+            }
+
+            if (chips.length === 0 && typeof reasons === 'object' && reasons.warning) {
+              chips.push(\`<span class="match-reason-chip warning">\${this.escapeHtml(String(reasons.warning))}</span>\`);
+            }
+
+            if (chips.length === 0) return '';
+            return '<div class="match-reasons">' + chips.join('') + '</div>';
           },
 
           closeMatchesModal: function() {

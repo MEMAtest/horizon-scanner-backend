@@ -546,6 +546,49 @@ function getWatchListStyles() {
         margin-bottom: 12px;
       }
 
+      .match-reasons {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: -4px 0 12px 0;
+      }
+
+      .match-reason-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+        color: #374151;
+        line-height: 1.4;
+      }
+
+      .match-reason-chip.keyword {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+      }
+
+      .match-reason-chip.authority {
+        background: #f0fdf4;
+        border-color: #86efac;
+        color: #166534;
+      }
+
+      .match-reason-chip.sector {
+        background: #fefce8;
+        border-color: #fde68a;
+        color: #92400e;
+      }
+
+      .match-reason-chip.warning {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
+      }
+
       .match-actions {
         display: flex;
         gap: 8px;
