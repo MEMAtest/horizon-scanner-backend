@@ -552,7 +552,9 @@ function getWatchListScripts({ watchLists, stats }) {
                 const data = result.data || {};
                 const scanned = data.updatesScanned != null ? data.updatesScanned : '?';
                 const matches = data.matchCount != null ? data.matchCount : '?';
-                this.showToast('Rescan complete: ' + matches + ' matches (' + scanned + ' scanned)', 'success');
+                const added = data.itemsAddedToDossier != null ? data.itemsAddedToDossier : 0;
+                const addedSuffix = added ? (' • ' + added + ' added to dossier') : '';
+                this.showToast('Rescan complete: ' + matches + ' matches (' + scanned + ' scanned)' + addedSuffix, 'success');
                 await this.loadWatchLists();
                 this.viewMatches(id);
               } else {

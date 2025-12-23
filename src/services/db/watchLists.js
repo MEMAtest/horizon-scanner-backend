@@ -692,6 +692,20 @@ module.exports = function applyWatchListsMethods(EnhancedDBService) {
               console.warn('[WatchLists] Failed to create match notification:', error.message)
             }
           }
+
+          const shouldAutoAdd = (watchList.autoAddToDossier === true || watchList.auto_add_to_dossier === true) &&
+            (watchList.targetDossierId || watchList.target_dossier_id)
+          if (shouldAutoAdd && typeof this.addItemToDossier === 'function') {
+            try {
+              await this.addItemToDossier(
+                watchList.targetDossierId || watchList.target_dossier_id,
+                updateId,
+                { userNotes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)` }
+              )
+            } catch (error) {
+              console.warn('[WatchLists] Auto-add to dossier failed:', error.message)
+            }
+          }
         }
       }
 

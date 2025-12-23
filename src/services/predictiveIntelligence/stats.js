@@ -16,6 +16,7 @@ function applyStatsMethods(ServiceClass) {
           topicStats.set(token, {
             keyword: token,
             weeks: new Map(),
+            days: new Map(),
             authorities: new Map(),
             sectors: new Map(),
             firstSeen: update.parsedDate,
@@ -37,6 +38,9 @@ function applyStatsMethods(ServiceClass) {
         stats.lastSeen = update.parsedDate > stats.lastSeen ? update.parsedDate : stats.lastSeen
 
         stats.weeks.set(weekKey, (stats.weeks.get(weekKey) || 0) + 1)
+
+        const dayKey = this.startOfDay(update.parsedDate).toISOString().slice(0, 10)
+        stats.days.set(dayKey, (stats.days.get(dayKey) || 0) + 1)
 
         authorities.forEach(authority => {
           if (!stats.authorities.has(authority)) {

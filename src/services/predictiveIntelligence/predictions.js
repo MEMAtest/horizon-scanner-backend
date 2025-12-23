@@ -79,29 +79,55 @@ function applyPredictionMethods(ServiceClass) {
   }
 
   ServiceClass.prototype.calculateTopicMetrics = function(stats, now) {
-    const weeks = Array.from(stats.weeks.entries())
-      .map(([weekKey, count]) => ({ week: new Date(weekKey), count }))
-      .sort((a, b) => b.week - a.week)
+    const windowCounts = [0, 0, 0, 0]
+    const windowSize = Math.max(1, RECENT_WINDOW_DAYS)
 
-    if (!weeks.length) return null
+    const parseLocalDay = dayKey => {
+      if (!dayKey) return null
+      const [year, month, day] = String(dayKey).split('-').map(Number)
+      if (!year || !month || !day) return null
+      const parsed = new Date(year, month - 1, day)
+      return Number.isNaN(parsed.getTime()) ? null : parsed
+    }
 
-    const weekCounts = [0, 0, 0, 0]
-    weeks.forEach(({ week, count }) => {
-      const diff = Math.floor((now - week) / (7 * 24 * 60 * 60 * 1000))
-      if (diff >= 0 && diff < weekCounts.length) {
-        weekCounts[diff] += count
+    const dayEntries = stats.days instanceof Map ? Array.from(stats.days.entries()) : []
+    dayEntries.forEach(([dayKey, count]) => {
+      const day = parseLocalDay(dayKey)
+      if (!day) return
+      const diff = this.daysBetween(now, day)
+      if (diff < 0) return
+      const bucket = Math.floor(diff / windowSize)
+      if (bucket >= 0 && bucket < windowCounts.length) {
+        windowCounts[bucket] += count
       }
     })
 
-    const recent = weekCounts[0]
-    const lastWeek = weekCounts[1]
-    const previousMean = (weekCounts[1] + weekCounts[2] + weekCounts[3]) / 3 || 0.1
-    const monthWindow = weekCounts[0] + weekCounts[1] + weekCounts[2]
+    const hasWindowCounts = windowCounts.some(count => count > 0)
+    if (!hasWindowCounts) {
+      const weeks = Array.from(stats.weeks.entries())
+        .map(([weekKey, count]) => ({ week: parseLocalDay(weekKey) || new Date(weekKey), count }))
+        .filter(entry => entry.week && !Number.isNaN(entry.week.getTime()))
+        .sort((a, b) => b.week - a.week)
+
+      if (!weeks.length) return null
+
+      weeks.forEach(({ week, count }) => {
+        const diff = Math.floor((now - week) / (7 * 24 * 60 * 60 * 1000))
+        if (diff >= 0 && diff < windowCounts.length) {
+          windowCounts[diff] += count
+        }
+      })
+    }
+
+    const recent = windowCounts[0]
+    const lastWeek = windowCounts[1]
+    const previousMean = (windowCounts[1] + windowCounts[2] + windowCounts[3]) / 3 || 0.1
+    const monthWindow = windowCounts[0] + windowCounts[1] + windowCounts[2]
 
     const stdDev = Math.sqrt([
-      Math.pow(weekCounts[1] - previousMean, 2),
-      Math.pow(weekCounts[2] - previousMean, 2),
-      Math.pow(weekCounts[3] - previousMean, 2)
+      Math.pow(windowCounts[1] - previousMean, 2),
+      Math.pow(windowCounts[2] - previousMean, 2),
+      Math.pow(windowCounts[3] - previousMean, 2)
     ].reduce((sum, val) => sum + val, 0) / 3)
 
     const acceleration = previousMean > 0 ? recent / previousMean : recent
