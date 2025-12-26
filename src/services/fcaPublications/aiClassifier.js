@@ -1,10 +1,11 @@
 /**
  * FCA Publications AI Classifier
  *
- * Uses Claude/GPT to analyze enforcement notices and extract structured data
+ * Uses Claude/GPT/DeepSeek to analyze enforcement notices and extract structured data
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
+const axios = require('axios');
 const {
   AI_CONFIG,
   RATE_LIMITS,
@@ -18,9 +19,15 @@ class AIClassifier {
     this.db = database;
     this.progressTracker = progressTracker;
 
-    // Initialize AI client
-    this.provider = options.provider || AI_CONFIG.provider;
-    this.model = options.model || AI_CONFIG.model;
+    // Initialize AI client - prefer DeepSeek if API key present
+    if (process.env.DEEPSEEK_API_KEY) {
+      this.provider = 'deepseek';
+      this.model = 'deepseek-chat';
+      console.log('[AIClassifier] Using DeepSeek API');
+    } else {
+      this.provider = options.provider || AI_CONFIG.provider;
+      this.model = options.model || AI_CONFIG.model;
+    }
 
     if (this.provider === 'anthropic') {
       this.client = new Anthropic({
@@ -150,6 +157,38 @@ IMPORTANT:
     const prompt = this.buildPrompt(truncatedContent, documentType);
 
     try {
+      if (this.provider === 'deepseek') {
+        const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+          model: this.model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: AI_CONFIG.maxTokens,
+          temperature: AI_CONFIG.temperature
+        }, {
+          headers: {
+            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 120000 // 2 minute timeout for AI calls
+        });
+
+        const responseText = response.data.choices[0].message.content;
+
+        // Parse JSON response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No valid JSON in response');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          success: true,
+          data: parsed,
+          model: this.model,
+          inputTokens: response.data.usage?.prompt_tokens,
+          outputTokens: response.data.usage?.completion_tokens
+        };
+      }
+
       if (this.provider === 'anthropic') {
         const response = await this.client.messages.create({
           model: this.model,
@@ -238,14 +277,30 @@ IMPORTANT:
    * Transform AI response to database format
    */
   transformToDbFormat(aiData, publication) {
+    // Valid values for constraints
+    const validOutcomeTypes = ['fine', 'prohibition', 'cancellation', 'restriction', 'censure',
+      'public_statement', 'warning', 'supervisory_notice', 'voluntary_requirement', 'other'];
+
+    // Normalize entity type to valid values (firm/individual/null)
+    let entityType = aiData.firm_or_individual?.type?.toLowerCase() || null;
+    if (entityType && !['firm', 'individual'].includes(entityType)) {
+      entityType = entityType.includes('individual') ? 'individual' : 'firm';
+    }
+
+    // Normalize outcome type to valid values
+    let outcomeType = aiData.outcome?.type?.toLowerCase()?.replace(/ /g, '_') || 'other';
+    if (!validOutcomeTypes.includes(outcomeType)) {
+      outcomeType = 'other';
+    }
+
     return {
       publicationId: publication.publication_id,
       entityName: aiData.firm_or_individual?.name || publication.title,
-      entityType: aiData.firm_or_individual?.type || null,
+      entityType: entityType,
       frn: aiData.firm_or_individual?.frn || null,
       tradingNames: aiData.firm_or_individual?.trading_names || [],
 
-      outcomeType: aiData.outcome?.type || 'other',
+      outcomeType: outcomeType,
       fineAmount: aiData.outcome?.fine_amount || null,
       fineDiscounted: aiData.outcome?.fine_discounted || false,
       discountPercentage: aiData.outcome?.discount_percentage || null,
@@ -297,7 +352,10 @@ IMPORTANT:
    * Process a single publication
    */
   async processPublication(publication) {
-    const { publication_id, document_type, full_text } = publication;
+    // Handle both camelCase and snake_case field names (DB returns snake_case)
+    const publication_id = publication.publicationId || publication.publication_id;
+    const document_type = publication.documentType || publication.document_type;
+    const full_text = publication.fullText || publication.full_text;
 
     if (!full_text || full_text.length < 100) {
       console.log(`[AIClassifier] Insufficient text for ${publication_id}`);
@@ -351,10 +409,11 @@ IMPORTANT:
   }
 
   /**
-   * Process batch of publications
+   * Process batch of publications with parallel processing
    */
   async processBatch(publications, options = {}) {
     const { onProgress = null, jobId = null } = options;
+    const concurrency = RATE_LIMITS.maxConcurrentAICalls || 8;
 
     const results = {
       successful: 0,
@@ -362,30 +421,35 @@ IMPORTANT:
       skipped: 0
     };
 
-    for (let i = 0; i < publications.length; i++) {
-      const pub = publications[i];
-      const result = await this.processPublication(pub);
+    // Process in parallel chunks
+    for (let i = 0; i < publications.length; i += concurrency) {
+      const chunk = publications.slice(i, i + concurrency);
 
-      if (result.success) {
-        results.successful++;
-      } else if (result.reason === 'insufficient_text') {
-        results.skipped++;
-      } else {
-        results.failed++;
+      const chunkResults = await Promise.all(
+        chunk.map(pub => this.processPublication(pub))
+      );
+
+      for (const result of chunkResults) {
+        if (result.success) {
+          results.successful++;
+        } else if (result.reason === 'insufficient_text') {
+          results.skipped++;
+        } else {
+          results.failed++;
+        }
       }
 
       if (onProgress) {
         onProgress({
-          processed: i + 1,
+          processed: Math.min(i + concurrency, publications.length),
           total: publications.length,
-          current: pub.publication_id,
           ...results
         });
       }
 
       if (this.progressTracker && jobId) {
         await this.progressTracker.updateProgress(jobId, {
-          processedItems: i + 1,
+          processedItems: Math.min(i + concurrency, publications.length),
           failedItems: results.failed
         });
       }

@@ -136,7 +136,10 @@ class PDFDownloader {
    * Download single PDF
    */
   async downloadPdf(publication) {
-    const { publicationId, pdfUrl, documentType } = publication;
+    // Handle both camelCase and snake_case field names (DB returns snake_case)
+    const publicationId = publication.publicationId || publication.publication_id;
+    const pdfUrl = publication.pdfUrl || publication.pdf_url;
+    const documentType = publication.documentType || publication.document_type;
 
     if (!pdfUrl) {
       console.log(`[PDFDownloader] No PDF URL for ${publicationId}`);

@@ -1,0 +1,327 @@
+/* Enforcement Modal */
+.enforcement-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.enforcement-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.enforcement-modal {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.enforcement-modal-overlay.active .enforcement-modal {
+    transform: scale(1) translateY(0);
+}
+
+.enforcement-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.enforcement-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.enforcement-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    color: #64748b;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.enforcement-modal-close:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.enforcement-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(85vh - 140px);
+}
+
+.enforcement-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+}
+
+/* Firm Cards in Modal */
+.firm-cards-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.firm-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.firm-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #3b82f6;
+}
+
+.firm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.firm-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.repeat-badge {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.firm-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.firm-stat {
+    text-align: center;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.firm-stat-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.firm-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.firm-stat-value.amount {
+    color: #059669;
+}
+
+.firm-timeline {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 16px;
+}
+
+.firm-timeline-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+
+.timeline-entry {
+    display: grid;
+    grid-template-columns: 100px 1fr auto;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    align-items: center;
+}
+
+.timeline-entry:last-child {
+    border-bottom: none;
+}
+
+.timeline-date {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.timeline-breach {
+    font-size: 0.85rem;
+    color: #374151;
+}
+
+.timeline-fine-amount {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #059669;
+}
+
+.view-notice-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    color: #3b82f6;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.view-notice-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+/* Fines List in Modal */
+.fines-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fine-item {
+    display: grid;
+    grid-template-columns: 120px 1fr auto;
+    gap: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    align-items: center;
+}
+
+.fine-item-date {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.fine-item-firm {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.fine-item-amount {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #059669;
+}
+
+/* Empty State */
+.modal-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+}
+
+.modal-empty-state svg {
+    width: 48px;
+    height: 48px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+}
+
+.modal-empty-state p {
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header-title {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .search-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-wrapper canvas {
+        height: 240px !important;
+    }
+
+    .playbook-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-table {
+        font-size: 0.875rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 10px 8px;
+    }
+
+    .timeline-bars {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .firm-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .fine-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .enforcement-modal {
+        width: 95%;
+        max-height: 90vh;
+    }
+}
+

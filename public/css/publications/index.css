@@ -1,0 +1,29 @@
+/**
+ * Publications Dashboard CSS - Index
+ * Split from components.css (4,625 lines) into modular partials
+ *
+ * File Structure:
+ * - _base.css          - Filters, tables, badges, pagination, modals, buttons
+ * - _widgets.css       - Widget cards, top fines, recent notices
+ * - _charts.css        - Chart callouts, filters, insight cards, outcome bars
+ * - _insights.css      - Breach rankings, takeaways, fines, deep insights
+ * - _case-studies.css  - Case study spotlight, breach type grid
+ * - _outcome-analysis.css - Outcome accordion, triggers, risk indicators
+ * - _yearly.css        - Yearly breakdown, reoffenders section
+ * - _entity-modal.css  - Entity history modal, timeline, action cards
+ * - _year-modal.css    - Year summary modal
+ * - _handbook-cards.css - Handbook rule cards (enhanced)
+ * - _print.css         - @media print styles
+ */
+
+@import '_base.css';
+@import '_widgets.css';
+@import '_charts.css';
+@import '_insights.css';
+@import '_case-studies.css';
+@import '_outcome-analysis.css';
+@import '_yearly.css';
+@import '_entity-modal.css';
+@import '_year-modal.css';
+@import '_handbook-cards.css';
+@import '_print.css';

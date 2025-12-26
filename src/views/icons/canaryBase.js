@@ -729,6 +729,74 @@ function getCanaryBird(options = {}) {
   return ''
 }
 
+/**
+ * 14. Reg Notices - Document with canary perched on top
+ * Official notice/document with seal, canary reading or perched
+ */
+function getRegNoticesCanary() {
+  return `<svg viewBox="0 0 50 50" class="canary-icon-animated" aria-hidden="true">
+    ${getCanaryGradients()}
+    <defs>
+      <linearGradient id="docGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#f8fafc"/>
+        <stop offset="100%" style="stop-color:#e2e8f0"/>
+      </linearGradient>
+      <linearGradient id="sealGold" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#fbbf24"/>
+        <stop offset="100%" style="stop-color:#d97706"/>
+      </linearGradient>
+    </defs>
+    <!-- Document shadow -->
+    <rect x="11" y="17" width="28" height="34" rx="2" fill="#94a3b8" opacity="0.3"/>
+    <!-- Main document -->
+    <g class="document">
+      <rect x="9" y="15" width="28" height="34" rx="2" fill="url(#docGradient)" stroke="#cbd5e1" stroke-width="1"/>
+      <!-- Document lines -->
+      <line x1="14" y1="22" x2="32" y2="22" stroke="#94a3b8" stroke-width="1.5"/>
+      <line x1="14" y1="27" x2="28" y2="27" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="14" y1="31" x2="30" y2="31" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="14" y1="35" x2="26" y2="35" stroke="#cbd5e1" stroke-width="1"/>
+      <!-- Official seal -->
+      <circle class="doc-seal" cx="28" cy="42" r="5" fill="url(#sealGold)"/>
+      <circle cx="28" cy="42" r="3" fill="#fef3c7"/>
+      <text x="28" y="43.5" font-size="4" fill="#92400e" text-anchor="middle" font-weight="bold">FCA</text>
+      <!-- Corner fold -->
+      <path d="M31 15 L37 15 L37 21 Z" fill="#e2e8f0"/>
+      <path d="M31 15 L37 21 L31 21 Z" fill="#cbd5e1"/>
+    </g>
+    <!-- Canary body - perched on top of document -->
+    <g class="canary-body">
+      <ellipse cx="35" cy="10" rx="6" ry="4.5" fill="url(#canaryGold)"/>
+      <ellipse cx="35" cy="11" rx="3" ry="2" fill="#FFF3B0" opacity="0.6"/>
+    </g>
+    <!-- Wings -->
+    <g class="canary-wing">
+      <ellipse cx="31" cy="9" rx="3" ry="4" fill="url(#canaryOrange)" transform="rotate(-15 31 9)"/>
+    </g>
+    <ellipse cx="39" cy="9" rx="2.5" ry="3.5" fill="url(#canaryOrange)" transform="rotate(15 39 9)"/>
+    <!-- Tail -->
+    <polygon points="40,12 44,17 40,15 37,17" fill="url(#canaryOrange)"/>
+    <!-- Head - reading pose, looking down -->
+    <g class="canary-head">
+      <circle cx="33" cy="5" r="5" fill="url(#canaryGold)"/>
+      <!-- Eyes looking down at document -->
+      <circle cx="31" cy="5" r="1.3" fill="white"/>
+      <circle class="canary-eye" cx="31" cy="5.5" r="0.7" fill="#1a1a2e"/>
+      <circle cx="35" cy="5" r="1.3" fill="white"/>
+      <circle class="canary-eye" cx="35" cy="5.5" r="0.7" fill="#1a1a2e"/>
+      <!-- Beak pointing down -->
+      <polygon points="33,7 36,8.5 33,10" fill="#FF6B00"/>
+      <!-- Crest -->
+      <path d="M31 1 Q29 -2 32 0 Q33 -3 35 0" fill="url(#canaryOrange)"/>
+    </g>
+    <!-- Feet on document edge -->
+    <g fill="#FF6B00">
+      <path d="M33 14 L33 15 M32 15 L34 15" stroke="#FF6B00" stroke-width="1" stroke-linecap="round"/>
+      <path d="M37 14 L37 15 M36 15 L38 15" stroke="#FF6B00" stroke-width="1" stroke-linecap="round"/>
+    </g>
+  </svg>`
+}
+
 module.exports = {
   getCanaryGradients,
   getCanaryBird,
@@ -746,5 +814,6 @@ module.exports = {
   getPredictiveCanary,
   getEnforcementCanary,
   getSpotlightCanary,
-  getIntelligenceCanary
+  getIntelligenceCanary,
+  getRegNoticesCanary
 }

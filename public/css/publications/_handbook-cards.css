@@ -1,0 +1,190 @@
+
+/* ==========================================================================
+   HANDBOOK RULE CARDS (Enhanced)
+   ========================================================================== */
+
+#handbook-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.handbook-rule-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.handbook-rule-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.rule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rule-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rule-case-count {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.rule-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.rule-card-summary {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.rule-card-bar-wrap {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.rule-card-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.rule-card-implications {
+  font-size: 13px;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.rule-card-implications strong {
+  color: #475569;
+}
+
+.rule-card-stats {
+  display: flex;
+  gap: 20px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.rule-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rule-stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.rule-stat-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rule-card-breaches {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.rule-breaches-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.rule-breaches-list {
+  list-style: disc;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.rule-breaches-list li {
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.rule-breaches-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Handbook Insight Box Enhancement */
+.handbook-insight-content {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.handbook-insight-content svg {
+  flex-shrink: 0;
+  color: #3b82f6;
+}
+
+.handbook-insight-content p {
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.handbook-insight-content p:last-child {
+  margin-bottom: 0;
+}
+
+.insight-action {
+  font-size: 13px;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #handbook-bars {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-card-stats {
+    flex-wrap: wrap;
+  }
+}
+

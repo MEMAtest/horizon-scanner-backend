@@ -1,0 +1,259 @@
+/* ============================================================================
+   FIRM COMPARISON STYLES (Phase 5)
+   ============================================================================ */
+
+/* Firm Search Container */
+.firm-search-container {
+  position: relative;
+  margin: 16px 0;
+}
+
+.firm-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.firm-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Search Results Dropdown */
+.firm-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: none;
+}
+
+.firm-search-result {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.firm-search-result:last-child {
+  border-bottom: none;
+}
+
+.firm-search-result:hover:not(.disabled) {
+  background-color: #f8fafc;
+}
+
+.firm-search-result.selected {
+  background-color: #eff6ff;
+}
+
+.firm-search-result.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.firm-search-result-name {
+  font-weight: 500;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.firm-search-result-meta {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.firm-search-result-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.firm-search-result-badge-disabled {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: #cbd5e1;
+  color: #64748b;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.firm-search-no-results,
+.firm-search-error {
+  padding: 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.firm-search-error {
+  color: #ef4444;
+}
+
+/* Selected Firms Chips */
+.selected-firms-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+  min-height: 48px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  align-items: center;
+}
+
+.no-firms-selected {
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.firm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.firm-chip-name {
+  font-weight: 500;
+}
+
+.firm-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.firm-chip-remove:hover {
+  color: #ef4444;
+}
+
+/* Comparison Actions */
+.firm-comparison-actions {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.firm-comparison-actions button {
+  flex: 1;
+}
+
+/* Comparison Results */
+#comparison-results {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #e2e8f0;
+}
+
+.comparison-table-wrapper {
+  margin-bottom: 32px;
+  overflow-x: auto;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.comparison-table thead {
+  background: #f8fafc;
+}
+
+.comparison-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 2px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.comparison-table th:first-child {
+  border-top-left-radius: 8px;
+}
+
+.comparison-table th:last-child {
+  border-top-right-radius: 8px;
+}
+
+.comparison-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comparison-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.comparison-table .metric-label {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.comparison-chart-wrapper {
+  background: white;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.no-comparison-data {
+  text-align: center;
+  padding: 32px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .firm-comparison-actions {
+    flex-direction: column;
+  }
+
+  .comparison-table {
+    font-size: 13px;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 10px 12px;
+  }
+
+  .comparison-chart-wrapper {
+    padding: 16px;
+  }
+}
+

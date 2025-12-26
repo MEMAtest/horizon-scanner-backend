@@ -35,20 +35,20 @@ const SEARCH_CONFIG = {
 const RATE_LIMITS = {
   // Delays between requests (milliseconds)
   searchPageDelay: 2000,        // 2 seconds between search page requests
-  pdfDownloadDelay: 3000,       // 3 seconds between PDF downloads
-  aiProcessingDelay: 1500,      // 1.5 seconds between AI calls
+  pdfDownloadDelay: 1000,       // 1 second between PDF downloads (increased speed)
+  aiProcessingDelay: 200,       // 200ms between AI calls (fast mode)
   retryDelay: 5000,             // 5 seconds before retry
   errorBackoff: 30000,          // 30 seconds after error burst
 
   // Concurrent limits
-  maxConcurrentDownloads: 3,
-  maxConcurrentAICalls: 2,
+  maxConcurrentDownloads: 3,    // Reduced to prevent DB overload
+  maxConcurrentAICalls: 8,      // Increased for faster processing
   maxConcurrentParses: 5,
 
-  // Hourly limits
-  maxRequestsPerHour: 500,
-  maxPdfDownloadsPerHour: 200,
-  maxAICallsPerHour: 100,
+  // Hourly limits (disabled for backfill - set very high)
+  maxRequestsPerHour: 100000,   // Effectively disabled
+  maxPdfDownloadsPerHour: 100000, // Effectively disabled for fast backfill
+  maxAICallsPerHour: 50000,     // High limit for DeepSeek backfill
 
   // Retry configuration
   maxRetries: 3,
@@ -61,7 +61,7 @@ const BATCH_SIZES = {
   indexBatch: 100,              // Records to index before checkpoint
   downloadBatch: 50,            // PDFs to download in one batch
   parseBatch: 50,               // PDFs to parse in one batch
-  aiBatch: 25,                  // Documents for AI processing
+  aiBatch: 100,                 // Documents for AI processing (increased for speed)
   dbInsertBatch: 100            // Records to insert at once
 };
 
@@ -179,7 +179,7 @@ const USER_AGENT = process.env.FCA_USER_AGENT ||
 
 // HTTP request configuration
 const HTTP_CONFIG = {
-  timeout: 30000,               // 30 second timeout
+  timeout: 60000,               // 60 second timeout (increased for FCA's slower responses)
   maxRedirects: 5,
   headers: {
     'User-Agent': USER_AGENT,
@@ -195,9 +195,9 @@ const HTTP_CONFIG = {
 const AI_CONFIG = {
   provider: process.env.AI_PROVIDER || 'anthropic',  // anthropic, openai
   model: process.env.AI_MODEL || 'claude-sonnet-4-20250514',
-  maxTokens: 4096,
-  temperature: 0.1,  // Low temperature for consistent extraction
-  maxContentLength: 15000,  // Max chars to send to AI
+  maxTokens: 2048,             // Reduced for cost savings
+  temperature: 0.1,            // Low temperature for consistent extraction
+  maxContentLength: 8000,      // Reduced from 15000 for cost savings
 
   // Fallback models
   fallbackModels: [

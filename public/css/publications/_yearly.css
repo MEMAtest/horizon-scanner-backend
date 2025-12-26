@@ -1,0 +1,618 @@
+/* ========================================
+   RISK INDICATORS SECTION - Ranked Bar Design
+   ======================================== */
+
+.risk-indicators-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.risk-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.risk-bar-row:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.risk-bar-row:hover .risk-view-btn {
+  opacity: 1;
+  background: #3b82f6;
+  color: white;
+}
+
+.risk-bar-rank {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.risk-bar-row:nth-child(1) .risk-bar-rank {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+
+.risk-bar-row:nth-child(2) .risk-bar-rank {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  color: #475569;
+}
+
+.risk-bar-row:nth-child(3) .risk-bar-rank {
+  background: linear-gradient(135deg, #fed7aa, #fdba74);
+  color: #9a3412;
+}
+
+.risk-bar-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 12px;
+}
+
+.risk-bar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.risk-bar-badges {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.risk-case-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.risk-fine-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+  background: #fffbeb;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.risk-bar-track {
+  position: relative;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.risk-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease-out;
+}
+
+.risk-bar-pct {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.risk-view-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  opacity: 0.5;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.risk-view-btn:hover {
+  background: #2563eb;
+}
+
+.risk-indicators-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* Empty state */
+.risk-indicators-list .empty-deep {
+  padding: 30px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ========================================
+   OUTCOME ACCORDION STYLES
+   ======================================== */
+
+/* Override the previous outcome-row styles */
+.outcome-analysis-grid .outcome-row {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.outcome-analysis-grid .outcome-row:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.outcome-analysis-grid .outcome-row.expanded {
+  border-color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.outcome-analysis-grid .outcome-row.selected {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.outcome-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.expand-toggle {
+  font-size: 11px;
+  color: #64748b;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.outcome-row.expanded .expand-toggle {
+  color: #3b82f6;
+}
+
+.outcome-header .outcome-info {
+  flex: 0 0 180px;
+  min-width: 0;
+}
+
+.outcome-header .outcome-info .outcome-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  display: block;
+}
+
+.outcome-header .outcome-info .outcome-desc {
+  font-size: 11px;
+  color: #64748b;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outcome-header .outcome-bar-container {
+  flex: 1;
+  height: 20px;
+  min-width: 100px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.outcome-header .outcome-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease-out;
+}
+
+.outcome-header .outcome-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.outcome-header .outcome-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.outcome-header .outcome-pct {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Filter button */
+.filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #dbeafe;
+  color: #2563eb;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.filter-btn:hover {
+  background: #bfdbfe;
+}
+
+.filter-btn svg {
+  flex-shrink: 0;
+}
+
+.outcome-filter-btn {
+  margin-left: auto;
+}
+
+/* Breach breakdown section */
+.breach-breakdown {
+  padding: 16px 20px 16px 52px;
+  background: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+}
+
+.breach-loading,
+.breach-empty {
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.breach-list-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.breach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breach-item {
+  display: grid;
+  grid-template-columns: 140px 1fr 60px 50px 32px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.breach-item:hover {
+  background: #f8fafc;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.breach-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.breach-mini-bar-container {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.breach-mini-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 4px;
+  transition: width 0.5s ease-out;
+}
+
+.breach-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: right;
+}
+
+.breach-pct {
+  font-size: 12px;
+  color: #64748b;
+  text-align: right;
+}
+
+.breach-filter-btn {
+  width: 28px;
+  height: 28px;
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.breach-filter-btn:hover {
+  background: #c7d2fe;
+}
+
+/* Responsive for outcome analysis */
+@media (max-width: 900px) {
+  .outcome-header {
+    grid-template-columns: 24px 1fr 40px;
+    gap: 10px;
+  }
+
+  .outcome-header .outcome-bar-container {
+    display: none;
+  }
+
+  .outcome-header .outcome-stats {
+    display: none;
+  }
+
+  .outcome-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .breach-breakdown {
+    padding-left: 20px;
+  }
+
+  .breach-item {
+    grid-template-columns: 1fr 60px 32px;
+  }
+
+  .breach-item .breach-mini-bar-container {
+    display: none;
+  }
+
+  .breach-item .breach-pct {
+    display: none;
+  }
+}
+
+/* ========================================
+   YEARLY BREAKDOWN SECTION
+   ======================================== */
+
+.yearly-breakdown-container {
+  padding: 0;
+}
+
+/* Year Summary Stats */
+.year-summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .year-summary-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.year-stat {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.year-stat-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.year-stat-label {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* Yearly Breakdown Grid */
+.yearly-breakdown-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Yearly Row - Matches JS class names */
+.yearly-row {
+  display: grid;
+  grid-template-columns: 100px 180px 160px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.yearly-row:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .yearly-row {
+    grid-template-columns: 100px 1fr 120px;
+    gap: 12px;
+  }
+  .yearly-row .yearly-breakdown-summary {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .yearly-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.yearly-year {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.year-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}
+
+.view-summary-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #eff6ff;
+  color: #3b82f6;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.view-summary-link:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.yearly-bar-container {
+  height: 20px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.yearly-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 10px;
+  transition: width 0.6s ease-out;
+}
+
+.yearly-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.yearly-count {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.yearly-fines {
+  font-size: 17px;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.yearly-breakdown-summary {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.yearly-biggest-case {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #fef3c7, #fffbeb);
+  border-radius: 8px;
+  border-left: 3px solid #f59e0b;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.biggest-label {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.biggest-entity {
+  color: #78350f;
+  font-weight: 500;
+}
+
+.biggest-fine {
+  color: #d97706;
+  font-weight: 700;
+  margin-left: auto;
+}
+

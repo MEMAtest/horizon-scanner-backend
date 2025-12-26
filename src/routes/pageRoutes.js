@@ -20,6 +20,8 @@ const { renderDossiersPage } = require('./pages/dossiersPage')
 const { renderPoliciesPage } = require('./pages/policiesPage')
 const { renderWorkspaceHubPage } = require('./pages/workspaceHubPage')
 const renderCalendarPage = require('./pages/calendarPage')
+const renderPublicationsPage = require('./pages/publicationsPage')
+const renderSummaryPage = require('./pages/summaryPage')
 
 const router = express.Router()
 
@@ -48,5 +50,7 @@ router.get('/dossiers', renderDossiersPage)
 router.get('/policies', renderPoliciesPage)
 router.get('/profile-hub', renderWorkspaceHubPage)
 router.get('/regulatory-calendar', renderCalendarPage)
+router.get('/publications', renderPublicationsPage)
+router.get('/publications/summary/:year', renderSummaryPage)
 
 module.exports = router

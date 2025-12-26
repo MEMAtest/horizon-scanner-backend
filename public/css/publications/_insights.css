@@ -1,0 +1,500 @@
+/* Breach Rankings */
+.breach-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.breach-rank-item:last-child {
+  border-bottom: none;
+}
+
+.breach-rank {
+  width: 24px;
+  height: 24px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.breach-rank-item:nth-child(1) .breach-rank {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.breach-rank-item:nth-child(2) .breach-rank {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.breach-rank-item:nth-child(3) .breach-rank {
+  background: #fed7aa;
+  color: #c2410c;
+}
+
+.breach-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.breach-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.breach-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.breach-percent {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+/* Insight Callouts */
+.insight-callout {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.insight-highlight {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-radius: 8px;
+  border-left: 3px solid #f59e0b;
+}
+
+.insight-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.insight-text {
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+.insight-text strong {
+  color: #92400e;
+}
+
+/* Key Takeaways */
+.takeaway-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.takeaway-item:last-child {
+  border-bottom: none;
+}
+
+.takeaway-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.takeaway-content {
+  flex: 1;
+}
+
+.takeaway-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.takeaway-detail {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Takeaways Panel - Full Width */
+.takeaways-full {
+  margin-top: 20px;
+}
+
+.takeaways-panel .insight-card-body {
+  padding: 16px 20px;
+}
+
+/* Takeaways Grid */
+.takeaways-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .takeaways-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .takeaways-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Takeaway Cards */
+.takeaway-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.takeaway-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: white;
+  border-left: 3px solid #64748b;
+}
+
+.takeaway-card-icon {
+  font-size: 16px;
+}
+
+.takeaway-card-category {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.takeaway-card-body {
+  padding: 12px 14px;
+}
+
+.takeaway-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.takeaway-card-detail {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* ========================================
+   FINES ANALYSIS
+   ======================================== */
+.fines-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fine-metric {
+  text-align: center;
+  padding: 12px 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.fine-metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fine-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.fines-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fine-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fine-band-label {
+  width: 80px;
+  font-size: 11px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.fine-band-bar-wrapper {
+  flex: 1;
+  height: 16px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.fine-band-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
+}
+
+.fine-band-count {
+  width: 40px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ========================================
+   DEEP INSIGHTS SECTION
+   ======================================== */
+.deep-insights-section {
+  margin-bottom: 32px;
+}
+
+.deep-insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.deep-insights-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.deep-insights-subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Insight Tabs */
+.insights-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.insight-tab {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.insight-tab:hover {
+  color: #0f172a;
+}
+
+.insight-tab.active {
+  background: white;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Tab Content */
+.insights-tab-content {
+  margin-bottom: 24px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Quick Stats Row */
+.quick-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1200px) {
+  .quick-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .quick-stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quick-stat {
+  background: white;
+  padding: 14px 16px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.quick-stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.quick-stat-label {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* Deep Cards */
+.deep-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.deep-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.deep-card-header svg {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.deep-card-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  flex: 1;
+}
+
+.header-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.deep-card-body {
+  padding: 16px;
+}
+
+.loading-deep,
+.empty-deep {
+  text-align: center;
+  padding: 20px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Overview Grid */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1000px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Deep Top Fines */
+.deep-fine-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.deep-fine-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.deep-fine-item:first-child {
+  padding-top: 0;
+}
+
+.deep-fine-rank {
+  width: 28px;
+  height: 28px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.deep-fine-item:nth-child(1) .deep-fine-rank {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+

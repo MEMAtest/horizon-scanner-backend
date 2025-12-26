@@ -1,0 +1,23 @@
+/**
+ * Enforcement Dashboard CSS - Index
+ * Split from components.css (2,441 lines) into modular partials
+ *
+ * File Structure:
+ * - _base.css          - Trends search, metrics, tables, base styles
+ * - _timeline.css      - Fines timeline, stat cards
+ * - _modals.css        - Enforcement modal, firm cards, fines list
+ * - _database.css      - Fines database, risk badges, pagination
+ * - _search.css        - Firm search, dropdown, comparison chips
+ * - _benchmarking.css  - Firm details, percentile track, quartiles
+ * - _leaderboard.css   - Leaderboard controls, table, rankings
+ * - _responsive.css    - All responsive/media query styles
+ */
+
+@import '_base.css';
+@import '_timeline.css';
+@import '_modals.css';
+@import '_database.css';
+@import '_search.css';
+@import '_benchmarking.css';
+@import '_leaderboard.css';
+@import '_responsive.css';

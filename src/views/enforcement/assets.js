@@ -1,6 +1,6 @@
 const styles = [
   '/css/enforcement/layout.css',
-  '/css/enforcement/components.css',
+  '/css/enforcement/index.css',
   '/css/enforcement/modals.css'
 ]
 

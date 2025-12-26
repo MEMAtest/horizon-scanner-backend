@@ -157,6 +157,13 @@ async function getSidebar(currentPage = '', options = {}) {
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
+                    <li class="nav-item ${currentPage === 'publications' ? 'active' : ''}">
+                        <a href="/publications" class="nav-link">
+                            <span class="nav-icon">${icons.policy}</span>
+                            <span class="nav-text">Publications</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
                     <li class="nav-item ${currentPage === 'authority-spotlight' ? 'active' : ''}">
                         <a href="/authority-spotlight/FCA" class="nav-link">
                             <span class="nav-icon">${icons.authority}</span>
@@ -231,7 +238,7 @@ async function getSidebar(currentPage = '', options = {}) {
         <style>
             /* Clean Sidebar Styles */
             .sidebar {
-                width: 260px;
+                width: 280px;
                 background: #ffffff;
                 border-right: 1px solid #e5e7eb;
                 height: 100vh;
@@ -777,9 +784,9 @@ async function getSidebar(currentPage = '', options = {}) {
                 .sidebar {
                     transform: translateX(-100%);
                     transition: transform 0.3s ease;
-                    width: 260px;
+                    width: 280px;
                 }
-                
+
                 .sidebar.mobile-open {
                     transform: translateX(0);
                 }

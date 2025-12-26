@@ -1,0 +1,220 @@
+/* ============================================================================
+   PEER BENCHMARKING STYLES (Phase 6)
+   ============================================================================ */
+
+/* Firm Details Wrapper */
+.firm-details-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Benchmarking Section */
+.firm-benchmarking-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.benchmarking-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.benchmarking-header svg {
+  color: #3b82f6;
+}
+
+.benchmarking-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Tier Badge */
+.benchmarking-tier {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tier-badge {
+  display: inline-flex;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+}
+
+.tier-rank {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* Percentile Track */
+.percentile-track-container {
+  margin-bottom: 24px;
+}
+
+.percentile-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.percentile-track {
+  position: relative;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.percentile-track-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+.percentile-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.percentile-marker-dot {
+  width: 20px;
+  height: 20px;
+  background: white;
+  border: 3px solid #1e293b;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.percentile-marker-label {
+  position: absolute;
+  top: -28px;
+  background: #1e293b;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.percentile-marker-label::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #1e293b;
+}
+
+/* Quartile Indicators */
+.percentile-quartiles {
+  display: flex;
+  margin-top: 6px;
+}
+
+.quartile {
+  flex: 1;
+  height: 4px;
+  border-right: 1px solid white;
+}
+
+.quartile:last-child {
+  border-right: none;
+}
+
+.quartile.q1 {
+  background: #0891b2;
+  border-radius: 2px 0 0 2px;
+}
+
+.quartile.q2 {
+  background: #0d9488;
+}
+
+.quartile.q3 {
+  background: #65a30d;
+}
+
+.quartile.q4 {
+  background: #dc2626;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Comparison Cards */
+.benchmarking-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.comparison-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.comparison-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.comparison-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.comparison-diff {
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .firm-benchmarking-section {
+    padding: 16px;
+  }
+
+  .benchmarking-comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-card {
+    padding: 12px;
+  }
+
+  .comparison-value {
+    font-size: 16px;
+  }
+
+  .percentile-marker-label {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+}
+

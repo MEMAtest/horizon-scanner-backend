@@ -194,8 +194,10 @@ class PublicationsDatabase {
 
   /**
    * Get publications pending AI processing
+   * Only processes enforcement-type documents for cost efficiency
    */
   async getPendingAIProcessing(limit = 50) {
+    const enforcementTypes = ['final_notice', 'decision_notice', 'warning_notice', 'supervisory_notice'];
     const query = `
       SELECT pi.*,
              pft.full_text
@@ -204,10 +206,11 @@ class PublicationsDatabase {
       WHERE pi.status = $1
         AND pi.raw_text_length > 100
         AND pi.retry_count < 3
+        AND pi.document_type = ANY($3)
       ORDER BY pi.parsed_at ASC
       LIMIT $2
     `;
-    const result = await this.pool.query(query, [PROCESSING_STATUS.PARSED, limit]);
+    const result = await this.pool.query(query, [PROCESSING_STATUS.PARSED, limit, enforcementTypes]);
     return result.rows;
   }
 
@@ -316,7 +319,7 @@ class PublicationsDatabase {
         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
         $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
         $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
-        $41, $42, $43, $44, $45, $46, $47, $48, $49, $50
+        $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51
       )
       ON CONFLICT (publication_id) DO UPDATE SET
         entity_name = EXCLUDED.entity_name,

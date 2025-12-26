@@ -1,0 +1,137 @@
+/* ==========================================================================
+   PRINT STYLES - YEAR SUMMARY MODAL
+   ========================================================================== */
+
+@media print {
+  /* Hide everything except the modal content */
+  body > *:not(.year-summary-modal-overlay) {
+    display: none !important;
+  }
+
+  .year-summary-modal-overlay {
+    position: static !important;
+    display: block !important;
+    background: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .year-summary-modal-content {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+
+  /* Hide interactive elements */
+  .year-modal-close-btn,
+  .year-modal-actions,
+  .year-modal-export-btn,
+  .year-modal-print-btn {
+    display: none !important;
+  }
+
+  /* Prevent page breaks inside sections */
+  .year-modal-section,
+  .year-modal-stats,
+  .year-modal-biggest,
+  .year-modal-breakdown,
+  .year-summary-narrative {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Add page breaks between major sections */
+  .year-modal-breakdown {
+    page-break-before: auto;
+  }
+
+  /* Ensure colors print properly */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Modal header styling for print */
+  .year-modal-header {
+    border-bottom: 2px solid #1e293b;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+
+  .year-modal-header h2 {
+    font-size: 28px;
+    color: #1e293b;
+  }
+
+  /* Stats grid for print */
+  .year-modal-stat-grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+  }
+
+  .year-modal-stat-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* Breakdown items for print */
+  .breakdown-item {
+    border: 1px solid #e2e8f0 !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Narrative section for print */
+  .year-summary-narrative {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 20px !important;
+  }
+}
+
+/* ==========================================================================
+   PRINT STYLES - ENTITY HISTORY MODAL
+   ========================================================================== */
+
+@media print {
+  .entity-history-modal {
+    position: static !important;
+    display: block !important;
+    background: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .entity-history-content {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white !important;
+    margin: 0 !important;
+  }
+
+  .entity-history-modal .modal-close-btn {
+    display: none !important;
+  }
+
+  .entity-history-timeline .timeline-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #e2e8f0 !important;
+    margin-bottom: 12px !important;
+  }
+}

@@ -13,12 +13,16 @@ const {
   PROCESSING_STATUS
 } = require('./constants');
 
-// Dynamic import for pdf-parse (CommonJS)
-let pdfParse;
+// pdf-parse exports PDFParse class
+let PDFParseClass;
 try {
-  pdfParse = require('pdf-parse');
-} catch {
-  console.warn('[PDFParser] pdf-parse not installed. Run: npm install pdf-parse');
+  const pdfModule = require('pdf-parse');
+  PDFParseClass = pdfModule.PDFParse;
+  if (!PDFParseClass) {
+    console.warn('[PDFParser] pdf-parse PDFParse class not found');
+  }
+} catch (err) {
+  console.warn('[PDFParser] pdf-parse not installed. Run: npm install pdf-parse', err.message);
 }
 
 class PDFParser {
@@ -33,21 +37,27 @@ class PDFParser {
    * Parse a single PDF file
    */
   async parsePdf(filePath) {
-    if (!pdfParse) {
+    if (!PDFParseClass) {
       throw new Error('pdf-parse library not available');
     }
 
     try {
       const dataBuffer = await fs.readFile(filePath);
-      const data = await pdfParse(dataBuffer, {
-        max: 0 // Parse all pages
+
+      // PDFParse is a class that takes options with data and verbosity
+      const parser = new PDFParseClass({
+        data: dataBuffer,
+        verbosity: 0 // Suppress warnings
       });
+
+      // getText() returns an object with { text, pages, total }
+      const result = await parser.getText();
 
       return {
         success: true,
-        text: data.text,
-        pageCount: data.numpages,
-        info: data.info,
+        text: result.text,
+        pageCount: result.total,
+        info: {},
         method: 'pdf-parse'
       };
     } catch (error) {
@@ -239,7 +249,10 @@ class PDFParser {
    * Process a single publication
    */
   async processPublication(publication) {
-    const { publication_id, pdf_local_path, document_type } = publication;
+    // Handle both camelCase and snake_case field names (DB returns snake_case)
+    const publication_id = publication.publicationId || publication.publication_id;
+    const pdf_local_path = publication.pdfLocalPath || publication.pdf_local_path;
+    const document_type = publication.documentType || publication.document_type;
 
     if (!pdf_local_path) {
       console.log(`[PDFParser] No local path for ${publication_id}`);

@@ -1,5 +1,82 @@
+/**
+ * Workspace Module - Phase 1.3 Complete Implementation
+ *
+ * IIFE Module Pattern (2,143 lines)
+ * Manages user workspace: pins, bookmarks, searches, alerts, annotations
+ *
+ * ============================================================
+ * MODULE STRUCTURE
+ * ============================================================
+ *
+ * STATE (L5-28)
+ * - pinnedUrls, pinnedUpdateIds, pinnedItems
+ * - savedSearches, customAlerts, bookmarkCollections
+ * - firmProfile, annotations, annotationGroups
+ *
+ * CONSTANTS (L30-54)
+ * - DEFAULT_SECTORS, DEFAULT_TOPIC_AREAS
+ *
+ * SECTORS & ALIASES (L56-87)
+ * - getAliasMap(), setAliasMap(), normalizeSector()
+ * - setAvailableSectors(), getAvailableSectors()
+ *
+ * PINS CORE (L89-106, L468-542)
+ * - broadcastWorkspacePins(), normalizePinnedItem()
+ * - getPinnedItemUpdateId(), getPinnedItemUrl()
+ * - rebuildPinnedIndexes(), deriveAuthorityFromUrl()
+ *
+ * BOOKMARKS & COLLECTIONS (L107-341)
+ * - normalizeCollectionId(), normalizeBookmarkCollection()
+ * - ensureBookmarkCollections(), loadBookmarkCollections()
+ * - createBookmarkCollection(), renameBookmarkCollection()
+ * - deleteBookmarkCollection(), updatePinnedItemCollection()
+ * - updatePinnedItemTopicArea()
+ *
+ * KANBAN INTEGRATION (L343-431)
+ * - getPreferredKanbanTemplateId(), buildKanbanDeepLink()
+ * - createKanbanActionFromPinnedItem()
+ *
+ * STATS & MESSAGES (L433-573)
+ * - broadcastWorkspaceStats(), applyWorkspaceStats()
+ * - showMessage(), formatDateTime()
+ *
+ * ANNOTATIONS (L575-827)
+ * - buildAnnotationGroups(), getAnnotationSummary()
+ * - updateAnnotationBadge(), loadAnnotations()
+ * - refreshAnnotations(), renderAnnotationSections()
+ * - showAnnotations(), openAnnotation()
+ * - completeAnnotation(), deleteAnnotation()
+ *
+ * INITIALIZATION (L830-916)
+ * - runInitialization(), init(), loadWorkspaceData()
+ * - loadFirmProfile()
+ *
+ * PINS UI (L942-1584)
+ * - togglePin(), updatePinButton(), updateWorkspaceCounts()
+ * - showPinnedItems(), getFilteredPinnedItems()
+ * - renderToolbarMeta(), renderToolbar(), renderPinnedList()
+ *
+ * SAVED SEARCHES (L1585-1742)
+ * - showSavedSearches(), saveCurrentSearch()
+ * - loadSearch(), deleteSearch()
+ *
+ * CUSTOM ALERTS (L1743-1862)
+ * - showCustomAlerts(), createNewAlert()
+ * - submitNewAlert(), toggleAlert(), deleteAlert()
+ *
+ * FIRM PROFILE (L1864-2022)
+ * - showFirmProfile(), saveFirmProfile(), clearFirmProfile()
+ * - displayFirmProfileBadge(), removeFirmProfileBadge()
+ *
+ * MODAL & UTILITIES (L2024-2084)
+ * - createModal(), closeModal(), exportData()
+ *
+ * AUTO-INIT (L2085-2143)
+ * - autoInit(), public API return object
+ *
+ * ============================================================
+ */
 
-    // Workspace Module - Phase 1.3 Complete Implementation
     const WorkspaceModule = (function() {
         // State management
         let pinnedUrls = new Set();
