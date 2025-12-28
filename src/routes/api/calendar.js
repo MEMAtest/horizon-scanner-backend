@@ -5,6 +5,7 @@
 
 const calendarService = require('../../services/calendarService')
 const db = require('../../services/dbService')
+const analyticsService = require('../../services/analyticsService')
 
 function registerCalendarRoutes(router) {
 
@@ -257,6 +258,124 @@ function registerCalendarRoutes(router) {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch critical events'
+      })
+    }
+  })
+
+  // ============================================
+  // CALENDAR INSIGHTS ENDPOINTS
+  // ============================================
+
+  /**
+   * GET /api/calendar/insights/workload
+   * Get workload distribution - events per week/month
+   */
+  router.get('/calendar/insights/workload', async (req, res) => {
+    try {
+      const months = parseInt(req.query.months) || 6
+
+      const workload = await analyticsService.getCalendarWorkload({ months })
+
+      res.json({
+        success: true,
+        ...workload
+      })
+    } catch (err) {
+      console.error('Error fetching calendar workload:', err)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch calendar workload'
+      })
+    }
+  })
+
+  /**
+   * GET /api/calendar/insights/risk-matrix
+   * Get impact vs urgency matrix
+   */
+  router.get('/calendar/insights/risk-matrix', async (req, res) => {
+    try {
+      const urgentDays = parseInt(req.query.urgentDays) || 30
+
+      const matrix = await analyticsService.getCalendarRiskMatrix({ urgentDays })
+
+      res.json({
+        success: true,
+        ...matrix
+      })
+    } catch (err) {
+      console.error('Error fetching risk matrix:', err)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch risk matrix'
+      })
+    }
+  })
+
+  /**
+   * GET /api/calendar/insights/authority-activity
+   * Get authority activity trends
+   */
+  router.get('/calendar/insights/authority-activity', async (req, res) => {
+    try {
+      const months = parseInt(req.query.months) || 12
+
+      const trends = await analyticsService.getAuthorityActivityTrends({ months })
+
+      res.json({
+        success: true,
+        ...trends
+      })
+    } catch (err) {
+      console.error('Error fetching authority activity:', err)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch authority activity'
+      })
+    }
+  })
+
+  /**
+   * GET /api/calendar/insights/sector-exposure
+   * Get sector exposure analysis
+   */
+  router.get('/calendar/insights/sector-exposure', async (req, res) => {
+    try {
+      const { sectors } = req.query
+      const sectorList = sectors ? sectors.split(',') : []
+
+      const exposure = await analyticsService.getSectorExposure({ sectors: sectorList })
+
+      res.json({
+        success: true,
+        ...exposure
+      })
+    } catch (err) {
+      console.error('Error fetching sector exposure:', err)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch sector exposure'
+      })
+    }
+  })
+
+  /**
+   * GET /api/calendar/insights/summary
+   * Get calendar insights summary for dashboard
+   */
+  router.get('/calendar/insights/summary', async (req, res) => {
+    try {
+      const summary = await analyticsService.getCalendarInsightsSummary()
+
+      res.json({
+        success: true,
+        ...summary
+      })
+    } catch (err) {
+      console.error('Error fetching insights summary:', err)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch insights summary'
       })
     }
   })

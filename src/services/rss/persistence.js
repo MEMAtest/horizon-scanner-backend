@@ -60,6 +60,18 @@ function applyPersistenceMethods(ServiceClass, { dbService, aiAnalyzer }) {
               update.aiModelUsed = aiData.aiModelUsed
               update.enhancedAt = aiData.enhancedAt
 
+              // New calendar date fields
+              update.consultationEndDate = aiData.consultationEndDate
+              update.consultation_end_date = aiData.consultation_end_date
+              update.implementationDate = aiData.implementationDate
+              update.implementation_date = aiData.implementation_date
+              update.effectiveDate = aiData.effectiveDate
+              update.effective_date = aiData.effective_date
+              update.reviewDate = aiData.reviewDate
+              update.review_date = aiData.review_date
+              update.allCalendarDates = aiData.allCalendarDates
+              update.all_calendar_dates = aiData.all_calendar_dates
+
               this.processingStats.aiAnalysisSuccess++
             }
           } catch (aiError) {
@@ -69,9 +81,23 @@ function applyPersistenceMethods(ServiceClass, { dbService, aiAnalyzer }) {
 
         update.fetchedDate = update.fetchedDate || new Date()
 
-        await dbService.saveUpdate(update)
+        const savedId = await dbService.saveUpdate(update)
         savedCount++
         this.processingStats.processed++
+
+        // Auto-create calendar events from extracted dates
+        const updateId = savedId?.id || savedId // Handle both object and direct id returns
+        if (updateId) {
+          const updateWithId = { ...update, id: updateId }
+          if (updateWithId.compliance_deadline || updateWithId.consultation_end_date ||
+              updateWithId.implementation_date || updateWithId.all_calendar_dates?.length) {
+            try {
+              await dbService.createEventsFromUpdate(updateWithId)
+            } catch (calErr) {
+              console.warn('⚠️ Could not auto-create calendar events:', calErr.message)
+            }
+          }
+        }
       } catch (error) {
         console.error('❌ Failed to save update:', error.message)
         this.processingStats.errors++

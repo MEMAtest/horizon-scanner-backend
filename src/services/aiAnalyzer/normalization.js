@@ -23,6 +23,11 @@ function applyNormalizationMethods(ServiceClass) {
       : (analysis.business_impact_score || this.calculateBusinessImpactScore(analysis, aiSummary))
     const aiConfidenceScore = analysis.aiConfidenceScore || analysis.ai_confidence_score || analysis.confidence || 0.75
     const complianceDeadline = analysis.complianceDeadline || analysis.compliance_deadline || this.extractComplianceDeadline(keyDates)
+    const consultationEndDate = analysis.consultationEndDate || analysis.consultation_end_date || null
+    const implementationDate = analysis.implementationDate || analysis.implementation_date || null
+    const effectiveDate = analysis.effectiveDate || analysis.effective_date || null
+    const reviewDate = analysis.reviewDate || analysis.review_date || null
+    const allCalendarDates = analysis.allCalendarDates || analysis.all_calendar_dates || []
     const enhancedAt = analysis.enhancedAt || new Date().toISOString()
     const aiModelUsed = analysis.aiModelUsed || this.currentModel
 
@@ -64,6 +69,16 @@ function applyNormalizationMethods(ServiceClass) {
       required_resources: requiredResources,
       complianceDeadline,
       compliance_deadline: complianceDeadline,
+      consultationEndDate,
+      consultation_end_date: consultationEndDate,
+      implementationDate,
+      implementation_date: implementationDate,
+      effectiveDate,
+      effective_date: effectiveDate,
+      reviewDate,
+      review_date: reviewDate,
+      allCalendarDates,
+      all_calendar_dates: allCalendarDates,
       aiModelUsed,
       fallbackAnalysis: analysis.fallbackAnalysis || false,
       enhancedAt,

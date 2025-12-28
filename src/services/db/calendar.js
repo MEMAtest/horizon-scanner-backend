@@ -151,6 +151,19 @@ function applyCalendarMethods(DBService) {
     if (!pool) return []
 
     try {
+      // First check if the table exists
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'policies'
+        )
+      `)
+
+      if (!tableCheck.rows[0].exists) {
+        return []
+      }
+
       const result = await pool.query(`
         SELECT
           id, name as title, description, next_review_date as event_date,
@@ -163,16 +176,20 @@ function applyCalendarMethods(DBService) {
         ORDER BY next_review_date ASC
       `, [startDate, endDate])
 
-      return result.rows.map(row => ({
-        ...normalizeCalendarEvent(row, 'policy_review'),
-        eventType: 'policy_review',
-        priority: 'medium',
-        metadata: {
-          ...normalizeCalendarEvent(row, 'policy_review').metadata,
-          ownerName: row.owner_name,
-          reviewFrequency: row.review_frequency_months
+      return result.rows.map(row => {
+        const normalized = normalizeCalendarEvent(row, 'policy_review')
+        return {
+          ...normalized,
+          eventType: 'policy_review',
+          authority: 'Internal Policy',  // Policy reviews are internal
+          priority: 'medium',
+          metadata: {
+            ...normalized.metadata,
+            ownerName: row.owner_name,
+            reviewFrequency: row.review_frequency_months
+          }
         }
-      }))
+      })
     } catch (err) {
       console.error('Error fetching policy review dates:', err.message)
       return []
@@ -251,7 +268,9 @@ function applyCalendarMethods(DBService) {
       const result = await pool.query(`
         SELECT
           id, title, description, event_date, event_type,
-          priority, status, notification_dates, created_at
+          priority, status, notification_dates, created_at,
+          metadata->>'authority' as authority,
+          tags as sector
         FROM compliance_events
         WHERE is_active = true
           AND event_date >= $1
@@ -274,9 +293,22 @@ function applyCalendarMethods(DBService) {
     if (!pool) return []
 
     try {
+      // First check if the table exists
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'regulatory_change_items'
+        )
+      `)
+
+      if (!tableCheck.rows[0].exists) {
+        return []
+      }
+
       const result = await pool.query(`
         SELECT
-          id, title, description, target_completion_date as event_date,
+          id, title, target_completion_date as event_date,
           authority, impact_level, status, created_at
         FROM regulatory_change_items
         WHERE is_active = true
@@ -305,10 +337,24 @@ function applyCalendarMethods(DBService) {
     if (!pool) return []
 
     try {
+      // First check if the table exists
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = 'public'
+          AND table_name = 'regulatory_alerts'
+        )
+      `)
+
+      if (!tableCheck.rows[0].exists) {
+        return []
+      }
+
       const result = await pool.query(`
         SELECT
           id, title, deadline as event_date, severity as priority,
-          alert_type as event_type, urgency_score, status, created_at
+          alert_type as event_type, urgency_score, status, created_at,
+          COALESCE(authority, 'System Alert') as authority
         FROM regulatory_alerts
         WHERE is_active = true
           AND deadline IS NOT NULL
@@ -320,10 +366,14 @@ function applyCalendarMethods(DBService) {
       return result.rows.map(row => ({
         ...normalizeCalendarEvent(row, 'alert'),
         eventType: 'alert',
+        authority: row.authority || 'System Alert',
         priority: row.severity || calculatePriority(row)
       }))
     } catch (err) {
-      console.error('Error fetching alert deadlines:', err.message)
+      // Table might not exist or have different schema - fail gracefully
+      if (!err.message.includes('does not exist')) {
+        console.error('Error fetching alert deadlines:', err.message)
+      }
       return []
     }
   }
@@ -448,6 +498,252 @@ function applyCalendarMethods(DBService) {
     }
 
     return summary
+  }
+
+  /**
+   * Create a compliance event
+   * Used for importing regulatory initiatives and other compliance milestones
+   */
+  DBService.prototype.createComplianceEvent = async function(event) {
+    const pool = this.pool
+    if (!pool) {
+      console.warn('No database pool available for createComplianceEvent')
+      return null
+    }
+
+    try {
+      const result = await pool.query(`
+        INSERT INTO compliance_events (
+          title, description, event_type, event_date, priority, status,
+          tags, metadata, compliance_requirements, milestones, is_active,
+          notification_dates, implementation_phases, business_impact,
+          estimated_effort, dependencies, assignees, progress,
+          risk_factors, documents
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10, $11,
+          $12, $13, $14,
+          $15, $16, $17, $18,
+          $19, $20
+        )
+        RETURNING *
+      `, [
+        event.title,
+        event.description,
+        event.event_type || 'deadline',
+        event.event_date,
+        event.priority || 'medium',
+        event.status || 'pending',
+        event.tags || '[]',
+        event.metadata || '{}',
+        event.compliance_requirements || '[]',
+        event.milestones || '[]',
+        event.is_active !== false,
+        event.notification_dates || '[]',
+        event.implementation_phases || '[]',
+        event.business_impact || '{}',
+        event.estimated_effort || '{}',
+        event.dependencies || '[]',
+        event.assignees || '[]',
+        event.progress || 0,
+        event.risk_factors || '[]',
+        event.documents || '[]'
+      ])
+
+      return result.rows[0]
+    } catch (err) {
+      console.error('Error creating compliance event:', err.message)
+      throw err
+    }
+  }
+
+  /**
+   * Check if a compliance event already exists
+   */
+  DBService.prototype.complianceEventExists = async function(title, authority, source) {
+    const pool = this.pool
+    if (!pool) return false
+
+    try {
+      const result = await pool.query(`
+        SELECT id FROM compliance_events
+        WHERE title = $1
+          AND metadata->>'authority' = $2
+          AND metadata->>'source' = $3
+        LIMIT 1
+      `, [title, authority, source])
+
+      return result.rows.length > 0
+    } catch (err) {
+      console.error('Error checking compliance event existence:', err.message)
+      return false
+    }
+  }
+
+  /**
+   * Create calendar events from a regulatory update with extracted dates
+   * Called after saving a regulatory_update to auto-generate calendar events
+   */
+  DBService.prototype.createEventsFromUpdate = async function(update) {
+    const pool = this.pool
+    if (!pool) {
+      console.warn('No database pool available for createEventsFromUpdate')
+      return { created: 0, skipped: 0 }
+    }
+
+    const results = { created: 0, skipped: 0 }
+
+    try {
+      // Collect all dates to process
+      const datesToProcess = []
+
+      // Primary compliance deadline
+      if (update.compliance_deadline) {
+        datesToProcess.push({
+          date: update.compliance_deadline,
+          type: 'deadline',
+          context: 'Compliance deadline'
+        })
+      }
+
+      // Consultation end date
+      if (update.consultation_end_date) {
+        datesToProcess.push({
+          date: update.consultation_end_date,
+          type: 'consultation',
+          context: 'Consultation closes'
+        })
+      }
+
+      // Implementation date
+      if (update.implementation_date) {
+        datesToProcess.push({
+          date: update.implementation_date,
+          type: 'implementation',
+          context: 'Implementation effective'
+        })
+      }
+
+      // Review date
+      if (update.review_date) {
+        datesToProcess.push({
+          date: update.review_date,
+          type: 'review',
+          context: 'Review period'
+        })
+      }
+
+      // All extracted calendar dates
+      if (update.all_calendar_dates && Array.isArray(update.all_calendar_dates)) {
+        for (const dateEntry of update.all_calendar_dates) {
+          // Avoid duplicates with the primary dates
+          const exists = datesToProcess.some(d => d.date === dateEntry.date)
+          if (!exists) {
+            datesToProcess.push({
+              date: dateEntry.date,
+              type: dateEntry.type || 'deadline',
+              context: dateEntry.context || 'Extracted date'
+            })
+          }
+        }
+      }
+
+      // Process each date
+      for (const dateInfo of datesToProcess) {
+        try {
+          // Check if event already exists for this update + date
+          const existsResult = await pool.query(`
+            SELECT id FROM compliance_events
+            WHERE metadata->>'source_update_id' = $1
+              AND event_date::date = $2::date
+            LIMIT 1
+          `, [String(update.id), dateInfo.date])
+
+          if (existsResult.rows.length > 0) {
+            results.skipped++
+            continue
+          }
+
+          // Determine event type and priority
+          const eventType = dateInfo.type === 'consultation' ? 'consultation' :
+                           dateInfo.type === 'implementation' ? 'implementation' :
+                           dateInfo.type === 'review' ? 'review' : 'deadline'
+
+          const priority = update.impact_level === 'Significant' ? 'high' :
+                          update.impact_level === 'Moderate' ? 'medium' : 'low'
+
+          // Create the event
+          const title = eventType === 'consultation'
+            ? `Consultation closes: ${update.headline || update.title || 'Regulatory Update'}`
+            : eventType === 'implementation'
+            ? `Effective: ${update.headline || update.title || 'Regulatory Update'}`
+            : `${update.headline || update.title || 'Regulatory Update'}`
+
+          const metadata = {
+            source: 'auto_extracted',
+            source_update_id: String(update.id),
+            source_url: update.url,
+            authority: update.authority,
+            date_type: dateInfo.type,
+            date_context: dateInfo.context,
+            impact_level: update.impact_level
+          }
+
+          await pool.query(`
+            INSERT INTO compliance_events (
+              title, description, event_type, event_date, priority, status,
+              tags, metadata, is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `, [
+            title.substring(0, 500),
+            (update.ai_summary || update.description || dateInfo.context || '').substring(0, 2000),
+            eventType,
+            dateInfo.date,
+            priority,
+            'pending',
+            JSON.stringify([update.sector || 'General']),
+            JSON.stringify(metadata),
+            true
+          ])
+
+          results.created++
+        } catch (insertErr) {
+          console.warn(`Could not create event for date ${dateInfo.date}:`, insertErr.message)
+          results.skipped++
+        }
+      }
+
+      if (results.created > 0) {
+        console.log(`📅 Auto-created ${results.created} calendar event(s) from update ${update.id}`)
+      }
+
+      return results
+    } catch (err) {
+      console.error('Error creating events from update:', err.message)
+      return results
+    }
+  }
+
+  /**
+   * Check if a calendar event exists for a specific update and date
+   */
+  DBService.prototype.calendarEventExistsForUpdate = async function(updateId, eventDate) {
+    const pool = this.pool
+    if (!pool) return false
+
+    try {
+      const result = await pool.query(`
+        SELECT id FROM compliance_events
+        WHERE metadata->>'source_update_id' = $1
+          AND event_date::date = $2::date
+        LIMIT 1
+      `, [String(updateId), eventDate])
+
+      return result.rows.length > 0
+    } catch (err) {
+      console.error('Error checking calendar event for update:', err.message)
+      return false
+    }
   }
 }
 

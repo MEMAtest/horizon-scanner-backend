@@ -369,6 +369,162 @@ const feedSources = [
     recencyDays: 30,
     sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Law Enforcement']
   },
+  // ============================================
+  // NEW REGULATORS - Added December 2025
+  // ============================================
+  {
+    name: 'SRA Recent Decisions',
+    authority: 'SRA',
+    url: 'https://www.sra.org.uk/contact-centre/rss/recent-decisions/',
+    type: 'rss',
+    description: 'Solicitors Regulation Authority - Recent Enforcement Decisions',
+    priority: 'high',
+    recencyDays: 30,
+    sectors: ['Legal Services', 'Professional Conduct', 'Enforcement']
+  },
+  {
+    name: 'SRA Press Releases',
+    authority: 'SRA',
+    url: 'https://www.sra.org.uk/news/news/',
+    type: 'web_scraping',
+    description: 'Solicitors Regulation Authority - News and Press Releases',
+    priority: 'medium',
+    recencyDays: 60,
+    sectors: ['Legal Services', 'Professional Conduct']
+  },
+  {
+    name: 'Gambling Commission News',
+    authority: 'GAMBLING_COMMISSION',
+    url: 'https://www.gamblingcommission.gov.uk/news/latest',
+    type: 'web_scraping',
+    description: 'UK Gambling Commission - News and Enforcement',
+    priority: 'high',
+    recencyDays: 30,
+    sectors: ['Gambling', 'Consumer Protection', 'Licensing']
+  },
+  {
+    name: 'HSE Press Releases',
+    authority: 'HSE',
+    url: 'https://press.hse.gov.uk/',
+    type: 'web_scraping',
+    description: 'Health and Safety Executive - Press Releases',
+    priority: 'medium',
+    recencyDays: 30,
+    sectors: ['Health & Safety', 'Workplace', 'Enforcement']
+  },
+  {
+    name: 'Ofcom News',
+    authority: 'OFCOM',
+    url: 'https://www.ofcom.org.uk/news-and-updates',
+    type: 'web_scraping',
+    description: 'Ofcom - Communications Regulator News',
+    priority: 'medium',
+    recencyDays: 30,
+    sectors: ['Telecommunications', 'Broadcasting', 'Digital']
+  },
+  {
+    name: 'ASA News',
+    authority: 'ASA',
+    url: 'https://www.asa.org.uk/advice-and-resources/news.html',
+    type: 'puppeteer',
+    description: 'Advertising Standards Authority - News and Rulings',
+    priority: 'medium',
+    recencyDays: 30,
+    sectors: ['Advertising', 'Consumer Protection', 'Marketing']
+  },
+  // ============================================
+  // CALENDAR-FOCUSED SOURCES - Added for deadline extraction
+  // ============================================
+  {
+    name: 'FCA Consultation Papers',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications/search-results?category=policy%20and%20guidance-consultation%20papers&sort_by=dmetaZ',
+    type: 'web_scraping',
+    selector: '.search-item',
+    titleSelector: '.search-item__clickthrough',
+    linkSelector: '.search-item__clickthrough',
+    dateSelector: '.meta-item.published-date',
+    summarySelector: '.search-item__body',
+    description: 'FCA Consultation Papers - Active consultations with response deadlines',
+    priority: 'high',
+    recencyDays: 90,
+    extractDates: true,
+    useGeneric: true,
+    sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit']
+  },
+  {
+    name: 'FCA Discussion Papers',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications/search-results?category=policy%20and%20guidance-discussion%20papers&sort_by=dmetaZ',
+    type: 'web_scraping',
+    selector: '.search-item',
+    titleSelector: '.search-item__clickthrough',
+    linkSelector: '.search-item__clickthrough',
+    dateSelector: '.meta-item.published-date',
+    summarySelector: '.search-item__body',
+    description: 'FCA Discussion Papers - Early stage policy discussions',
+    priority: 'medium',
+    recencyDays: 90,
+    extractDates: true,
+    useGeneric: true,
+    sectors: ['Multi-sector', 'Banking', 'Insurance']
+  },
+  {
+    name: 'PRA Consultation Papers',
+    authority: 'PRA',
+    url: 'https://www.bankofengland.co.uk/rss/prudential-regulation-publications',
+    type: 'rss',
+    titlePrefix: ['CP'],
+    description: 'PRA Consultation Papers - Prudential regulation consultations',
+    priority: 'high',
+    recencyDays: 90,
+    extractDates: true,
+    sectors: ['Banking', 'Insurance', 'Prudential Regulation']
+  },
+  {
+    name: 'PRA Policy Statements',
+    authority: 'PRA',
+    url: 'https://www.bankofengland.co.uk/rss/prudential-regulation-publications',
+    type: 'rss',
+    titlePrefix: ['PS'],
+    description: 'PRA Policy Statements - Final rules with implementation dates',
+    priority: 'high',
+    recencyDays: 90,
+    extractDates: true,
+    sectors: ['Banking', 'Insurance', 'Prudential Regulation']
+  },
+  {
+    name: 'ICO Consultations',
+    authority: 'ICO',
+    url: 'https://ico.org.uk/about-the-ico/consultations/',
+    type: 'web_scraping',
+    selector: '.consultation-item',
+    titleSelector: '.consultation-item__title a',
+    linkSelector: '.consultation-item__title a',
+    dateSelector: '.consultation-item__date',
+    summarySelector: '.consultation-item__excerpt',
+    description: 'ICO Consultations - Data protection and privacy consultations',
+    priority: 'medium',
+    recencyDays: 90,
+    extractDates: true,
+    sectors: ['Data Protection', 'Privacy', 'GDPR']
+  },
+  {
+    name: 'TPR Consultations',
+    authority: 'The Pensions Regulator',
+    url: 'https://www.thepensionsregulator.gov.uk/en/document-library/consultations',
+    type: 'web_scraping',
+    selector: '.listing__item',
+    titleSelector: '.listing__item-title a',
+    linkSelector: '.listing__item-title a',
+    dateSelector: '.listing__item-date',
+    summarySelector: '.listing__item-summary',
+    description: 'TPR Consultations - Pensions regulation consultations',
+    priority: 'medium',
+    recencyDays: 90,
+    extractDates: true,
+    sectors: ['Pensions']
+  },
   {
     name: 'Demo Regulatory Updates',
     authority: 'Demo Authority',
