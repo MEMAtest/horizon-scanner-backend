@@ -1,0 +1,30 @@
+# Large data files
+data/pdfs/
+data/*.json
+
+# Development files
+tmp/
+docs/
+tests/
+test-results/
+*.test.js
+*.spec.js
+
+# Git
+.git/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env
+.env.local
+.env.development
+
+# Misc
+*.md
+!README.md
