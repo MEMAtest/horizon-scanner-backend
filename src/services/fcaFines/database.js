@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const notificationService = require('../notificationService')
 
 function applyDatabaseMethods(ServiceClass) {
   ServiceClass.prototype.initializeDatabase = async function() {
@@ -89,6 +90,30 @@ function applyDatabaseMethods(ServiceClass) {
         fine.source_url,
         fine.processing_status
       ])
+
+      const savedFine = { ...fine, id: result.rows[0].id }
+
+      // Trigger notifications for new fines
+      try {
+        // Only notify for recent fines (within last 30 days)
+        const fineDate = new Date(fine.date_issued)
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+        if (fineDate >= thirtyDaysAgo) {
+          // Create general enforcement notification
+          await notificationService.notifyNewEnforcementFine(savedFine)
+
+          // Check watch list matches
+          await notificationService.checkEnforcementWatchListMatch(savedFine)
+
+          // Check for large fine threshold (£5M+)
+          await notificationService.notifyLargeFine(savedFine, 5000000)
+        }
+      } catch (notifyError) {
+        console.warn('⚠️ Failed to create enforcement notification:', notifyError.message)
+        // Don't fail the save operation if notification fails
+      }
 
       return { isNew: true, id: result.rows[0].id }
     } catch (error) {

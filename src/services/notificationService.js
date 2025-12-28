@@ -284,6 +284,209 @@ class NotificationService {
       return { success: false, error: error.message }
     }
   }
+
+  // ============================================
+  // ENFORCEMENT NOTIFICATIONS
+  // ============================================
+
+  /**
+   * Create notification for new FCA enforcement fine
+   * Broadcasts to all users (system notification)
+   */
+  async notifyNewEnforcementFine(fine) {
+    try {
+      const isLargeFine = fine.amount >= 1000000 // £1M threshold
+      const priority = isLargeFine ? 'high' : 'normal'
+
+      const amountFormatted = fine.amount
+        ? `£${(fine.amount / 1000000).toFixed(1)}M`
+        : fine.amount_text || 'undisclosed amount'
+
+      const notification = {
+        type: 'enforcement_fine',
+        title: `New FCA Fine: ${fine.firm_individual}`,
+        message: `${fine.firm_individual} fined ${amountFormatted} for ${fine.breach_type || 'regulatory breach'}`,
+        priority,
+        actionUrl: `/enforcement?firm=${encodeURIComponent(fine.firm_individual)}`,
+        actionLabel: 'View Details',
+        referenceType: 'fca_fine',
+        referenceId: fine.id,
+        metadata: {
+          fineId: fine.id,
+          firmName: fine.firm_individual,
+          amount: fine.amount,
+          amountText: fine.amount_text,
+          breachType: fine.breach_type,
+          breachCategories: fine.breach_categories,
+          dateIssued: fine.date_issued,
+          isLargeFine
+        }
+      }
+
+      // Create system-wide notification (userId = 'system' for all users)
+      const result = await db.createNotification('system', notification)
+
+      console.log(`📢 Enforcement notification created: ${fine.firm_individual} - ${amountFormatted}`)
+      return { success: true, data: result }
+    } catch (error) {
+      console.error('[NotificationService] Error creating enforcement notification:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Check if a new fine matches any watch lists and notify
+   */
+  async checkEnforcementWatchListMatch(fine) {
+    try {
+      // Get all watch lists that might match this fine
+      const watchLists = await db.getAllActiveWatchLists()
+      const matches = []
+
+      for (const watchList of watchLists) {
+        const criteria = watchList.criteria || {}
+        let isMatch = false
+        let matchReason = []
+
+        // Check firm name match
+        if (criteria.firms && Array.isArray(criteria.firms)) {
+          const firmMatch = criteria.firms.some(f =>
+            fine.firm_individual.toLowerCase().includes(f.toLowerCase())
+          )
+          if (firmMatch) {
+            isMatch = true
+            matchReason.push('Firm name match')
+          }
+        }
+
+        // Check keywords match
+        if (criteria.keywords && Array.isArray(criteria.keywords)) {
+          const content = `${fine.firm_individual} ${fine.summary || ''} ${fine.breach_type || ''}`.toLowerCase()
+          const keywordMatch = criteria.keywords.some(k => content.includes(k.toLowerCase()))
+          if (keywordMatch) {
+            isMatch = true
+            matchReason.push('Keyword match')
+          }
+        }
+
+        // Check breach category match
+        if (criteria.breachCategories && Array.isArray(criteria.breachCategories) && fine.breach_categories) {
+          const fineCategories = Array.isArray(fine.breach_categories)
+            ? fine.breach_categories
+            : JSON.parse(fine.breach_categories || '[]')
+          const categoryMatch = criteria.breachCategories.some(c =>
+            fineCategories.some(fc => fc.toLowerCase().includes(c.toLowerCase()))
+          )
+          if (categoryMatch) {
+            isMatch = true
+            matchReason.push('Breach category match')
+          }
+        }
+
+        // Check amount threshold
+        if (criteria.minAmount && fine.amount >= criteria.minAmount) {
+          isMatch = true
+          matchReason.push(`Amount exceeds £${(criteria.minAmount / 1000000).toFixed(1)}M threshold`)
+        }
+
+        if (isMatch && watchList.user_id) {
+          matches.push({ watchList, matchReason })
+
+          // Create notification for watch list owner
+          await db.createNotification(watchList.user_id, {
+            type: 'enforcement_watch_match',
+            title: `Watch List Alert: ${watchList.name}`,
+            message: `New FCA fine matches your watch list: ${fine.firm_individual} - ${matchReason.join(', ')}`,
+            priority: 'high',
+            actionUrl: `/enforcement?firm=${encodeURIComponent(fine.firm_individual)}`,
+            actionLabel: 'View Fine',
+            referenceType: 'fca_fine',
+            referenceId: fine.id,
+            metadata: {
+              watchListId: watchList.id,
+              watchListName: watchList.name,
+              fineId: fine.id,
+              firmName: fine.firm_individual,
+              matchReason,
+              amount: fine.amount
+            }
+          })
+        }
+      }
+
+      if (matches.length > 0) {
+        console.log(`🔔 Enforcement fine matched ${matches.length} watch list(s)`)
+      }
+
+      return { success: true, data: { matches: matches.length } }
+    } catch (error) {
+      console.error('[NotificationService] Error checking watch list match:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Notify about large fine (>threshold)
+   */
+  async notifyLargeFine(fine, threshold = 5000000) {
+    if (fine.amount < threshold) return { success: true, skipped: true }
+
+    try {
+      const amountFormatted = `£${(fine.amount / 1000000).toFixed(1)}M`
+
+      const notification = {
+        type: 'enforcement_large_fine',
+        title: `Major Fine Alert: ${amountFormatted}`,
+        message: `${fine.firm_individual} received a significant fine of ${amountFormatted} - one of the largest this year`,
+        priority: 'urgent',
+        actionUrl: `/enforcement?firm=${encodeURIComponent(fine.firm_individual)}`,
+        actionLabel: 'View Details',
+        referenceType: 'fca_fine',
+        referenceId: fine.id,
+        metadata: {
+          fineId: fine.id,
+          firmName: fine.firm_individual,
+          amount: fine.amount,
+          threshold
+        }
+      }
+
+      const result = await db.createNotification('system', notification)
+      console.log(`🚨 Large fine notification: ${fine.firm_individual} - ${amountFormatted}`)
+      return { success: true, data: result }
+    } catch (error) {
+      console.error('[NotificationService] Error creating large fine notification:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  /**
+   * Get enforcement notification summary
+   */
+  async getEnforcementSummary(userId) {
+    try {
+      const notifications = await db.getNotifications(userId, {
+        types: ['enforcement_fine', 'enforcement_watch_match', 'enforcement_large_fine'],
+        limit: 20
+      })
+
+      const unread = notifications.filter(n => !n.read_at)
+      const highPriority = notifications.filter(n => n.priority === 'high' || n.priority === 'urgent')
+
+      return {
+        success: true,
+        data: {
+          total: notifications.length,
+          unread: unread.length,
+          highPriority: highPriority.length,
+          recent: notifications.slice(0, 5)
+        }
+      }
+    } catch (error) {
+      console.error('[NotificationService] Error getting enforcement summary:', error)
+      return { success: false, error: error.message }
+    }
+  }
 }
 
 module.exports = new NotificationService()
