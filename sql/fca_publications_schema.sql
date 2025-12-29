@@ -376,6 +376,88 @@ INSERT INTO fca_breach_taxonomy (breach_code, breach_name, breach_category, seve
 ON CONFLICT (breach_code) DO NOTHING;
 
 -- ============================================================
+-- TABLE 5: Entity Summaries Cache (AI-generated summaries for repeat offenders)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS entity_summaries (
+    id SERIAL PRIMARY KEY,
+    entity_name VARCHAR(500) UNIQUE NOT NULL,
+
+    -- Summary content
+    summary TEXT,
+    summary_html TEXT,
+
+    -- Entity statistics
+    enforcement_count INTEGER DEFAULT 0,
+    total_fines DECIMAL(15,2) DEFAULT 0,
+    breach_types JSONB DEFAULT '[]'::jsonb,
+    years JSONB DEFAULT '[]'::jsonb,
+
+    -- AI generation metadata
+    ai_model_used VARCHAR(100),
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_hash VARCHAR(64),  -- Hash of source data to detect staleness
+
+    -- Cache control
+    is_stale BOOLEAN DEFAULT FALSE,
+    last_accessed_at TIMESTAMP,
+    access_count INTEGER DEFAULT 0,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_entity_summaries_name ON entity_summaries(entity_name);
+CREATE INDEX IF NOT EXISTS idx_entity_summaries_generated ON entity_summaries(generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_entity_summaries_stale ON entity_summaries(is_stale);
+
+-- ============================================================
+-- TABLE 6: Annual Summaries Cache (Year-by-year enforcement summaries)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS fca_annual_summaries (
+    id SERIAL PRIMARY KEY,
+    year INTEGER UNIQUE NOT NULL,
+
+    -- Summary content
+    summary_html TEXT,
+    summary_text TEXT,
+
+    -- Statistics snapshot
+    total_fines DECIMAL(15,2),
+    total_cases INTEGER,
+    top_breaches JSONB DEFAULT '[]'::jsonb,
+    top_entities JSONB DEFAULT '[]'::jsonb,
+    key_themes JSONB DEFAULT '[]'::jsonb,
+
+    -- AI generation metadata
+    model_used VARCHAR(100),
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_hash VARCHAR(64),  -- Hash of source data to detect staleness
+
+    -- Cache control
+    is_stale BOOLEAN DEFAULT FALSE,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_annual_summaries_year ON fca_annual_summaries(year DESC);
+
+-- Triggers for new tables
+DROP TRIGGER IF EXISTS trg_entity_summaries_timestamp ON entity_summaries;
+CREATE TRIGGER trg_entity_summaries_timestamp
+    BEFORE UPDATE ON entity_summaries
+    FOR EACH ROW EXECUTE FUNCTION update_publications_timestamp();
+
+DROP TRIGGER IF EXISTS trg_annual_summaries_timestamp ON fca_annual_summaries;
+CREATE TRIGGER trg_annual_summaries_timestamp
+    BEFORE UPDATE ON fca_annual_summaries
+    FOR EACH ROW EXECUTE FUNCTION update_publications_timestamp();
+
+-- ============================================================
 -- GRANTS (adjust based on your setup)
 -- ============================================================
 
