@@ -616,3 +616,40 @@
   margin-left: auto;
 }
 
+/* View Summary Button */
+.view-summary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #eff6ff;
+  color: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-summary-btn:hover {
+  background: #3b82f6;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Selected Year Row State */
+.yearly-row.selected {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+}
+
+.yearly-row.selected .year-number {
+  color: #1d4ed8;
+}
+
+.yearly-row.selected .view-summary-btn {
+  background: #3b82f6;
+  color: white;
+}
+

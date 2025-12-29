@@ -16,6 +16,23 @@ function sanitizeAliasMap(map) {
   return JSON.stringify(source).replace(/</g, '\u003c')
 }
 
+function getWorkspaceModuleScripts() {
+  const modules = [
+    '/js/workspace/state.js',
+    '/js/workspace/events.js',
+    '/js/workspace/ui.js',
+    '/js/workspace/bookmarks.js',
+    '/js/workspace/pins.js',
+    '/js/workspace/searches.js',
+    '/js/workspace/alerts.js',
+    '/js/workspace/annotations.js',
+    '/js/workspace/profile.js',
+    '/js/workspace/init.js'
+  ]
+
+  return modules.map(src => `    <script src="${src}"></script>`).join('\n')
+}
+
 function getWorkspaceBootstrapScripts(aliasMap) {
   const aliasMapJson = sanitizeAliasMap(aliasMap)
 
@@ -24,6 +41,7 @@ function getWorkspaceBootstrapScripts(aliasMap) {
     <script>
         window.__sectorAliasMap = window.__sectorAliasMap || ${aliasMapJson};
     </script>
+${getWorkspaceModuleScripts()}
     <!-- Include Workspace Module First -->
     <script src="/js/workspaceModule.js"></script>
   `
@@ -56,6 +74,7 @@ function getClientScripts(options = {}) {
   if (includeWorkspaceModule) {
     scripts.push(`
     <!-- Include Workspace Module First -->
+    ${getWorkspaceModuleScripts()}
     <script src="/js/workspaceModule.js"></script>
     `)
   }

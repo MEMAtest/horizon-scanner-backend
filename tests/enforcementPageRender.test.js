@@ -29,7 +29,8 @@ describe('enforcementPage render', () => {
 
     const links = $('link[rel="stylesheet"]').map((_, el) => $(el).attr('href')).get()
     expect(links).toContain('/css/enforcement/layout.css')
-    expect(links).toContain('/css/enforcement/components.css')
+    expect(links).toContain('/css/enforcement/index.css')
+    expect(links).toContain('/css/enforcement/modals.css')
 
     const scripts = $('script').map((_, el) => ({
       src: $(el).attr('src'),

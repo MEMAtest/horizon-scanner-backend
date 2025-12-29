@@ -12,11 +12,21 @@ function applyWebMethods(ServiceClass, {
   scrapeBoE,
   scrapePRA,
   scrapeEBA,
+  // New regulators - December 2025
+  scrapeGamblingCommission,
+  scrapeHSE,
+  scrapeOfcom,
+  scrapeSRA,
   normalizeAuthority
 }) {
   ServiceClass.prototype.fetchWebScraping = async function fetchWebScraping(source) {
     try {
       console.log(`🌐 Web scraping for ${source.name} (${source.authority})...`)
+
+      if (source.useGeneric) {
+        console.log(`ℹ️ Using generic HTML parsing for ${source.name}`)
+        return await this.genericWebScraping(source)
+      }
 
       let scraperResults = []
 
@@ -62,6 +72,23 @@ function applyWebMethods(ServiceClass, {
         case 'EBA':
         case 'European Banking Authority':
           scraperResults = await scrapeEBA()
+          break
+        // New regulators - December 2025
+        case 'GAMBLING_COMMISSION':
+        case 'Gambling Commission':
+          scraperResults = await scrapeGamblingCommission()
+          break
+        case 'HSE':
+        case 'Health and Safety Executive':
+          scraperResults = await scrapeHSE()
+          break
+        case 'OFCOM':
+        case 'Ofcom':
+          scraperResults = await scrapeOfcom()
+          break
+        case 'SRA':
+        case 'Solicitors Regulation Authority':
+          scraperResults = await scrapeSRA()
           break
         default:
           console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`)

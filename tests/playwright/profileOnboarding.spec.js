@@ -65,22 +65,48 @@ test.describe('AI Intelligence profile surfaces', () => {
     personaBriefings: {}
   }
 
+  async function disableReload(page) {
+    await page.addInitScript(() => {
+      try {
+        Object.defineProperty(Location.prototype, 'reload', {
+          configurable: true,
+          value: function() {
+            window.__profileReloaded = true
+          }
+        })
+      } catch (error) {
+        try {
+          window.location.reload = () => {
+            window.__profileReloaded = true
+          }
+        } catch (innerError) {
+          // Ignore if the environment blocks overrides.
+        }
+      }
+    })
+  }
+
   function renderPage(snapshotOverrides = {}) {
     const snapshot = {
       ...baseSnapshot,
       ...snapshotOverrides
     }
 
-    return buildAiIntelligencePage({
+    const html = buildAiIntelligencePage({
       sidebar: '<nav></nav>',
       snapshot,
       workspaceBootstrapScripts: '<script></script>',
       clientScripts: '',
       commonStyles: '<style></style>'
     })
+
+    return html
+      .replace('<head>', '<head><base href="http://localhost/">')
+      .replace('window.location.reload();', 'window.__profileReloaded = true;')
   }
 
   test('shows profile banner and workflow cards', async ({ page }) => {
+    await disableReload(page)
     const html = renderPage({
       profile: {
         serviceType: 'payments',
@@ -121,6 +147,8 @@ test.describe('AI Intelligence profile surfaces', () => {
       recommendedWorkflows: []
     })
 
+    await disableReload(page)
+
     await page.route('**/api/profile', route => {
       route.fulfill({ status: 200, body: JSON.stringify({ success: true, profile: {} }) })
     })
@@ -130,11 +158,8 @@ test.describe('AI Intelligence profile surfaces', () => {
     })
 
     await page.setContent(html, { waitUntil: 'domcontentloaded' })
-
     await page.evaluate(() => {
-      window.location.reload = () => {
-        window.__profileReloaded = true
-      }
+      window.__profileReloaded = false
     })
 
     const onboarding = page.locator('[data-onboarding-root]')
@@ -149,5 +174,6 @@ test.describe('AI Intelligence profile surfaces', () => {
     await page.getByRole('button', { name: 'Save profile' }).click()
     await savePromise
     await expect(onboarding).not.toHaveClass(/is-visible/)
+    await expect.poll(() => page.evaluate(() => window.__profileReloaded)).toBe(true)
   })
 })

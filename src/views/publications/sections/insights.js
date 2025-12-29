@@ -47,6 +47,92 @@ function renderInsightsSection() {
             </div>
           </div>
 
+          <!-- Charts Section (moved from main layout) -->
+          <div class="widgets-row widgets-row-single">
+            <div class="widget-card widget-card-wide">
+              <div class="widget-header">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <h3>Recent Enforcement Actions</h3>
+              </div>
+              <div class="widget-content" id="recent-notices-list">
+                <div class="loading-widget">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <!-- Outcome Distribution Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">Outcome Distribution</h3>
+                  <span class="chart-subtitle">By enforcement outcome type</span>
+                </div>
+                <div class="chart-filters chart-filters-mini">
+                  <select id="outcome-year-filter" class="chart-filter-select">
+                    <option value="">All Years</option>
+                  </select>
+                </div>
+                <div class="chart-callout" id="outcome-callout"></div>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="outcomeChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Breach Categories Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">Breach Categories</h3>
+                  <span class="chart-subtitle">Primary breach type breakdown</span>
+                </div>
+                <div class="chart-filters chart-filters-mini">
+                  <select id="breach-year-filter" class="chart-filter-select">
+                    <option value="">All Years</option>
+                  </select>
+                </div>
+                <div class="chart-callout" id="breach-callout"></div>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="breachChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Risk Score Distribution -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">Risk Score Distribution</h3>
+                  <span class="chart-subtitle">Notices by risk level</span>
+                </div>
+                <div class="chart-callout" id="risk-callout"></div>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="riskChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Processing Status Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <div>
+                  <h3 class="chart-title">Processing Status</h3>
+                  <span class="chart-subtitle">Pipeline progress</span>
+                </div>
+                <div class="chart-callout" id="status-callout"></div>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="statusChart"></canvas>
+              </div>
+            </div>
+          </div>
+
           <!-- Outcome Analysis (Full Width) -->
           <div class="deep-card outcome-analysis-card">
             <div class="deep-card-header">
@@ -118,6 +204,137 @@ function renderInsightsSection() {
               </div>
             </div>
           </div>
+
+          <!-- Table Section (moved from main layout) -->
+          <div class="table-section">
+            <div class="table-header">
+              <h2 class="section-title">Enforcement Notices</h2>
+              <p class="section-subtitle">AI-processed FCA publications</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-row">
+              <div class="filter-group filter-group-search">
+                <label for="search-input">Search</label>
+                <input type="text" id="search-input" class="filter-input" placeholder="Search by firm or individual name...">
+              </div>
+              <div class="filter-group">
+                <label for="outcome-filter">Outcome Type</label>
+                <select id="outcome-filter" class="filter-select">
+                  <option value="">All Outcomes</option>
+                  <option value="cancellation">Cancellation</option>
+                  <option value="prohibition">Prohibition</option>
+                  <option value="fine">Fine</option>
+                  <option value="restriction">Restriction</option>
+                  <option value="censure">Public Censure</option>
+                  <option value="public_statement">Public Statement</option>
+                  <option value="warning">Warning</option>
+                  <option value="supervisory_notice">Supervisory Notice</option>
+                  <option value="voluntary_requirement">Voluntary Requirement</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="breach-filter">Breach Category</label>
+                <select id="breach-filter" class="filter-select">
+                  <option value="">All Categories</option>
+                  <option value="PRINCIPLES">Principles</option>
+                  <option value="AML">Anti-Money Laundering</option>
+                  <option value="SYSTEMS_CONTROLS">Systems & Controls</option>
+                  <option value="MARKET_ABUSE">Market Abuse</option>
+                  <option value="MIS_SELLING">Mis-selling</option>
+                  <option value="CLIENT_MONEY">Client Money</option>
+                  <option value="CONDUCT">Conduct</option>
+                  <option value="PRUDENTIAL">Prudential</option>
+                  <option value="REPORTING">Reporting</option>
+                  <option value="GOVERNANCE">Governance</option>
+                  <option value="FINANCIAL_CRIME">Financial Crime</option>
+                  <option value="COMPLAINTS">Complaints</option>
+                  <option value="FINANCIAL_PROMOTIONS">Financial Promotions</option>
+                  <option value="APPROVED_PERSONS">Approved Persons</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="risk-filter">Risk Level</label>
+                <select id="risk-filter" class="filter-select">
+                  <option value="">All Levels</option>
+                  <option value="high">High (70+)</option>
+                  <option value="medium">Medium (40-69)</option>
+                  <option value="low">Low (0-39)</option>
+                </select>
+              </div>
+              <div class="filter-actions">
+                <button class="btn btn-secondary" id="reset-filters">Reset</button>
+                <button class="btn btn-primary" id="apply-filters">Apply</button>
+              </div>
+            </div>
+
+            <!-- Results count -->
+            <div class="results-info" id="results-info">
+              <span id="results-count">Loading...</span>
+            </div>
+
+            <!-- Table -->
+            <div class="table-wrapper">
+              <table class="data-table" id="notices-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-sort="entity_name">Entity Name</th>
+                    <th class="sortable" data-sort="frn">FRN</th>
+                    <th class="sortable" data-sort="outcome_type">Outcome</th>
+                    <th class="sortable" data-sort="fine_amount">Fine Amount</th>
+                    <th class="sortable" data-sort="primary_breach_type">Breach Type</th>
+                    <th class="sortable" data-sort="risk_score">Risk Score</th>
+                    <th class="sortable" data-sort="notice_date">Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="notices-tbody">
+                  <tr class="loading-row">
+                    <td colspan="8">
+                      <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <span>Loading notices...</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+              <div class="pagination-info">
+                <span id="pagination-showing">Showing 0-0 of 0</span>
+              </div>
+              <div class="pagination-controls">
+                <button class="pagination-btn" id="prev-page" disabled>&larr; Previous</button>
+                <span class="pagination-pages" id="page-numbers"></span>
+                <button class="pagination-btn" id="next-page">Next &rarr;</button>
+              </div>
+              <div class="pagination-size">
+                <label for="page-size">Per page:</label>
+                <select id="page-size" class="pagination-select">
+                  <option value="10">10</option>
+                  <option value="20" selected>20</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detail Modal -->
+          <div class="modal-overlay" id="detail-modal" style="display: none;">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h2 class="modal-title" id="modal-entity-name">Entity Details</h2>
+                <button class="modal-close" id="close-modal">&times;</button>
+              </div>
+              <div class="modal-body" id="modal-body">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- YEARLY TAB -->
@@ -136,6 +353,102 @@ function renderInsightsSection() {
               <div class="year-stat">
                 <span class="year-stat-value" id="peak-fines-year">-</span>
                 <span class="year-stat-label">Highest Fines Year</span>
+              </div>
+            </div>
+
+            <!-- Year Detail Panel (shown when a year is selected) - POSITIONED ABOVE GRID -->
+            <div class="year-detail-panel" id="year-detail-panel" style="display: none;">
+              <div class="year-detail-header">
+                <h3 class="year-detail-title">
+                  <span id="year-detail-year">2024</span> Enforcement Activity
+                </h3>
+                <button class="year-detail-close" id="close-year-detail">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Monthly Timeline Bar -->
+              <div class="year-timeline-section" id="year-timeline-section">
+                <div class="timeline-label">Monthly Activity</div>
+                <div class="year-timeline-bar" id="year-timeline-bar">
+                  <div class="timeline-month" data-month="1"><span>J</span></div>
+                  <div class="timeline-month" data-month="2"><span>F</span></div>
+                  <div class="timeline-month" data-month="3"><span>M</span></div>
+                  <div class="timeline-month" data-month="4"><span>A</span></div>
+                  <div class="timeline-month" data-month="5"><span>M</span></div>
+                  <div class="timeline-month" data-month="6"><span>J</span></div>
+                  <div class="timeline-month" data-month="7"><span>J</span></div>
+                  <div class="timeline-month" data-month="8"><span>A</span></div>
+                  <div class="timeline-month" data-month="9"><span>S</span></div>
+                  <div class="timeline-month" data-month="10"><span>O</span></div>
+                  <div class="timeline-month" data-month="11"><span>N</span></div>
+                  <div class="timeline-month" data-month="12"><span>D</span></div>
+                </div>
+              </div>
+
+              <!-- Year Summary Narrative -->
+              <div class="year-detail-summary" id="year-detail-summary">
+                <!-- AI-generated or pre-generated summary text goes here -->
+              </div>
+
+              <!-- Year Stats Row -->
+              <div class="year-detail-stats" id="year-detail-stats">
+                <div class="year-detail-stat">
+                  <span class="stat-value" id="year-detail-actions">-</span>
+                  <span class="stat-label">Enforcement Actions</span>
+                </div>
+                <div class="year-detail-stat">
+                  <span class="stat-value" id="year-detail-fines">-</span>
+                  <span class="stat-label">Total Fines</span>
+                </div>
+                <div class="year-detail-stat">
+                  <span class="stat-value" id="year-detail-cases-with-fines">-</span>
+                  <span class="stat-label">Cases with Fines</span>
+                </div>
+                <div class="year-detail-stat">
+                  <span class="stat-value" id="year-detail-avg-fine">-</span>
+                  <span class="stat-label">Avg Fine</span>
+                </div>
+              </div>
+
+              <!-- Biggest Case Highlight -->
+              <div class="year-detail-biggest" id="year-detail-biggest" style="display: none;">
+                <h4>Largest Fine of the Year</h4>
+                <div class="biggest-case-card">
+                  <span class="biggest-entity" id="year-detail-biggest-entity">-</span>
+                  <span class="biggest-amount" id="year-detail-biggest-amount">-</span>
+                  <span class="biggest-breach" id="year-detail-biggest-breach">-</span>
+                </div>
+              </div>
+
+              <!-- Charts Grid -->
+              <div class="year-detail-charts">
+                <div class="year-chart-card">
+                  <h4>Monthly Activity</h4>
+                  <div class="chart-wrapper">
+                    <canvas id="year-page-monthly-chart"></canvas>
+                  </div>
+                </div>
+                <div class="year-chart-card">
+                  <h4>Outcome Distribution</h4>
+                  <div class="chart-wrapper">
+                    <canvas id="year-page-outcome-chart"></canvas>
+                  </div>
+                </div>
+                <div class="year-chart-card">
+                  <h4>Breach Types</h4>
+                  <div class="chart-wrapper">
+                    <canvas id="year-page-breach-chart"></canvas>
+                  </div>
+                </div>
+                <div class="year-chart-card">
+                  <h4>Year-over-Year Comparison</h4>
+                  <div class="chart-wrapper">
+                    <canvas id="year-page-comparison-chart"></canvas>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -240,6 +553,37 @@ function renderInsightsSection() {
         <!-- BREACH ANALYSIS TAB -->
         <div class="tab-panel" id="breaches-panel">
           <div class="breach-analysis-container">
+            <!-- Breach Analysis Charts -->
+            <div class="breach-charts-row" id="breach-charts-row">
+              <div class="breach-chart-card">
+                <h4>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                  </svg>
+                  Breach Type Distribution
+                </h4>
+                <div class="chart-wrapper">
+                  <canvas id="breach-treemap-chart"></canvas>
+                </div>
+              </div>
+              <div class="breach-chart-card">
+                <h4>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="20" x2="12" y2="10"/>
+                    <line x1="18" y1="20" x2="18" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="16"/>
+                  </svg>
+                  Total Fines by Breach Type
+                </h4>
+                <div class="chart-wrapper">
+                  <canvas id="breach-fines-bar-chart"></canvas>
+                </div>
+              </div>
+            </div>
+
             <!-- Breach Type Cards -->
             <div class="breach-type-grid" id="breach-type-grid">
               <div class="loading-deep">Loading breach analysis...</div>

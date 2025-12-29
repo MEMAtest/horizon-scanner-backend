@@ -253,6 +253,86 @@
   color: #dc2626;
 }
 
+/* Breach Theme Badge */
+.case-breach-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 24px;
+  margin-bottom: 16px;
+}
+
+.breach-theme-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.breach-theme-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: #0369a1;
+  fill: none;
+  stroke-width: 2;
+}
+
+.breach-theme-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0369a1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Theme-specific colors */
+.case-breach-theme[data-theme="AML"],
+.case-breach-theme[data-theme="FINANCIAL_CRIME"] {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fecaca;
+}
+.case-breach-theme[data-theme="AML"] .breach-theme-icon svg,
+.case-breach-theme[data-theme="FINANCIAL_CRIME"] .breach-theme-icon svg,
+.case-breach-theme[data-theme="AML"] .breach-theme-label,
+.case-breach-theme[data-theme="FINANCIAL_CRIME"] .breach-theme-label {
+  stroke: #dc2626;
+  color: #dc2626;
+}
+
+.case-breach-theme[data-theme="SYSTEMS_CONTROLS"] {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border-color: #ddd6fe;
+}
+.case-breach-theme[data-theme="SYSTEMS_CONTROLS"] .breach-theme-icon svg,
+.case-breach-theme[data-theme="SYSTEMS_CONTROLS"] .breach-theme-label {
+  stroke: #7c3aed;
+  color: #7c3aed;
+}
+
+.case-breach-theme[data-theme="CLIENT_MONEY"] {
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  border-color: #fde047;
+}
+.case-breach-theme[data-theme="CLIENT_MONEY"] .breach-theme-icon svg,
+.case-breach-theme[data-theme="CLIENT_MONEY"] .breach-theme-label {
+  stroke: #ca8a04;
+  color: #ca8a04;
+}
+
+.case-breach-theme[data-theme="CONDUCT"] {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #bbf7d0;
+}
+.case-breach-theme[data-theme="CONDUCT"] .breach-theme-icon svg,
+.case-breach-theme[data-theme="CONDUCT"] .breach-theme-label {
+  stroke: #16a34a;
+  color: #16a34a;
+}
+
 .case-spotlight-entity {
   font-size: 24px;
   font-weight: 700;
@@ -499,3 +579,275 @@
 .breach-type-card:hover {
   border-color: #3b82f6;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Breach Type Card Header with Icon */
+.breach-type-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.breach-type-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.breach-type-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: #3b82f6;
+  fill: none;
+}
+
+.breach-type-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.breach-type-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  display: block;
+}
+
+.breach-type-cases {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  display: block;
+}
+
+.breach-type-fines {
+  margin-bottom: 12px;
+}
+
+.breach-type-total {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  display: block;
+}
+
+.breach-type-pct {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.breach-type-example {
+  font-size: 12px;
+  color: #64748b;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.breach-example-label {
+  font-weight: 500;
+  color: #475569;
+}
+
+.breach-expand-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #3b82f6;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.breach-expand-btn:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+/* ========================================
+   SIMILAR CASES & INDUSTRY IMPACT
+   ======================================== */
+
+.case-similar-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.case-similar-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+}
+
+.case-similar-loading .loading-dot {
+  width: 6px;
+  height: 6px;
+  background: #94a3b8;
+  border-radius: 50%;
+  animation: dotPulse 1.4s infinite ease-in-out both;
+}
+
+.case-similar-loading .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.case-similar-loading .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+.case-similar-loading .loading-dot:nth-child(3) { animation-delay: 0; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Similar Cases Block */
+.similar-cases-block {
+  margin-bottom: 20px;
+}
+
+.similar-cases-block h4,
+.industry-impact-block h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px 0;
+}
+
+.similar-cases-block h4 svg,
+.industry-impact-block h4 svg {
+  color: #64748b;
+}
+
+.similar-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.similar-case-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.2s;
+}
+
+.similar-case-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.similar-case-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.similar-case-entity {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-case-fine {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.similar-case-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.similar-case-year {
+  font-weight: 500;
+}
+
+.similar-case-outcome {
+  text-transform: capitalize;
+}
+
+/* Industry Impact Block */
+.industry-impact-block {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.impact-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 16px;
+  text-align: center;
+}
+
+.impact-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.impact-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(3, 105, 161, 0.1);
+  border-radius: 10px;
+  margin-bottom: 2px;
+}
+
+.impact-icon svg {
+  color: #0369a1;
+  stroke: #0369a1;
+}
+
+.impact-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0369a1;
+}
+
+.impact-label {
+  font-size: 11px;
+  color: #0284c7;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 600px) {
+  .similar-cases-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

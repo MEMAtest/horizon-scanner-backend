@@ -1,0 +1,37 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renderHomePage renders the home page summary and widgets 1`] = `
+"
+                        <div class="status-header">
+                            <div class="status-title">
+                                <div class="status-icon status-icon-3d"><svg viewBox="0 0 50 50" class="canary-icon-animated" aria-hidden="true"><defs><linearGradient id="canaryGold" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FFE066"></stop><stop offset="50%" style="stop-color:#FFD93D"></stop><stop offset="100%" style="stop-color:#F4C430"></stop></linearGradient><linearGradient id="canaryOrange" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#FFB347"></stop><stop offset="100%" style="stop-color:#FF8C00"></stop></linearGradient><linearGradient id="shieldBlue" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3b82f6"></stop><stop offset="100%" style="stop-color:#1d4ed8"></stop></linearGradient></defs><path class="shield-glow" d="M25 4 L42 10 L42 24 C42 34 34 42 25 46 C16 42 8 34 8 24 L8 10 Z" fill="url(#shieldBlue)" opacity="0.15"></path><path d="M25 6 L40 11 L40 24 C40 33 33 40 25 44 C17 40 10 33 10 24 L10 11 Z" fill="none" stroke="url(#shieldBlue)" stroke-width="1.5" opacity="0.4"></path><g class="canary-body"><ellipse cx="25" cy="28" rx="11" ry="9" fill="url(#canaryGold)"></ellipse><ellipse cx="25" cy="30" rx="7" ry="5" fill="#FFF3B0" opacity="0.6"></ellipse></g><g class="canary-wing"><ellipse cx="30" cy="27" rx="6" ry="4" fill="url(#canaryOrange)" transform="rotate(-15 30 27)"></ellipse><path d="M28 25 Q34 23 36 27 Q34 29 28 28 Z" fill="#E6A500"></path></g><polygon points="14,28 6,32 8,28 6,24" fill="url(#canaryOrange)"></polygon><g class="canary-head"><circle cx="32" cy="18" r="7" fill="url(#canaryGold)"></circle><circle cx="34" cy="20" r="2.5" fill="#FFB347" opacity="0.5"></circle><polygon points="38,17 44,16 38,19" fill="#FF6B00"></polygon><circle cx="34" cy="16" r="2.2" fill="white"></circle><circle class="canary-eye" cx="34.5" cy="15.5" r="1.3" fill="#1a1a2e"></circle><circle cx="35" cy="15" r="0.5" fill="white"></circle><path d="M29 12 Q28 8 30 10 Q29 7 32 9 Q32 6 34 9" fill="url(#canaryOrange)" stroke="#E6A500" stroke-width="0.5"></path></g><g fill="#FF6B00"><path d="M22 36 L22 40 M20 40 L24 40" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"></path><path d="M28 36 L28 40 M26 40 L30 40" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"></path></g></svg></div>
+                                <div class="status-info">
+                                    <h1>RegCanary</h1>
+                                    <p class="status-subtitle">Prioritised regulatory intelligence and actions for financial services teams.</p>
+                                </div>
+                            </div>
+                            <div class="status-actions">
+                                <a class="primary-action" href="/ai-intelligence">Open Intelligence Center</a>
+                                <a class="secondary-action" href="/weekly-roundup">Open Weekly Brief</a>
+                            </div>
+                        </div>
+                        <div class="status-meta-grid">
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">Status</span>
+                                <span class="status-meta-value"><span class="status-dot"></span>Operational</span>
+                            </div>
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">Total updates</span>
+                                <span class="status-meta-value">120</span>
+                            </div>
+                            <div class="status-meta-card">
+                                <span class="status-meta-label">Active authorities</span>
+                                <span class="status-meta-value">8</span>
+                            </div>
+                            <div class="status-meta-card">
+                        <span class="status-meta-label">High-impact items</span>
+                        <span class="status-meta-value">12</span>
+                    </div>
+                </div>
+            "
+`;

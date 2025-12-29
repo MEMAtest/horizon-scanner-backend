@@ -259,6 +259,11 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
         if (typeof this.ensureFirmPersonasTable === 'function') {
           await this.ensureFirmPersonasTable()
         }
+
+        // Create handbook registry tables
+        if (typeof this.ensureHandbookTables === 'function') {
+          await this.ensureHandbookTables()
+        }
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
       }

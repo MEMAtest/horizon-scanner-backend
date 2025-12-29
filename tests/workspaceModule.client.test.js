@@ -5,6 +5,18 @@ const path = require('path')
 
 describe('WorkspaceModule client behaviour', () => {
   const scriptPath = path.resolve(__dirname, '../public/js/workspaceModule.js')
+  const modulePaths = [
+    path.resolve(__dirname, '../public/js/workspace/state.js'),
+    path.resolve(__dirname, '../public/js/workspace/events.js'),
+    path.resolve(__dirname, '../public/js/workspace/ui.js'),
+    path.resolve(__dirname, '../public/js/workspace/bookmarks.js'),
+    path.resolve(__dirname, '../public/js/workspace/pins.js'),
+    path.resolve(__dirname, '../public/js/workspace/searches.js'),
+    path.resolve(__dirname, '../public/js/workspace/alerts.js'),
+    path.resolve(__dirname, '../public/js/workspace/annotations.js'),
+    path.resolve(__dirname, '../public/js/workspace/profile.js'),
+    path.resolve(__dirname, '../public/js/workspace/init.js')
+  ]
 
   let pinnedItemsMock
   let fetchMock
@@ -107,10 +119,12 @@ describe('WorkspaceModule client behaviour', () => {
     `
 
     jest.resetModules()
+    delete window.__WorkspaceModuleRegistry
     // Evaluate script in jsdom context
-    const scriptSource = fs.readFileSync(scriptPath, 'utf8')
+    const sources = modulePaths.map(filePath => fs.readFileSync(filePath, 'utf8'))
+    sources.push(fs.readFileSync(scriptPath, 'utf8'))
     // eslint-disable-next-line no-eval
-    eval(scriptSource)
+    eval(sources.join('\n'))
   })
 
   afterEach(() => {

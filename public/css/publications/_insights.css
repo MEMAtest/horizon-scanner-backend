@@ -11,6 +11,62 @@
   border-bottom: none;
 }
 
+/* Breach Icon Styling */
+.breach-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.breach-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke: #475569;
+  fill: none;
+}
+
+/* Icon color variations by rank */
+.breach-rank-item:nth-child(1) .breach-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+.breach-rank-item:nth-child(1) .breach-icon svg {
+  stroke: #d97706;
+}
+
+.breach-rank-item:nth-child(2) .breach-icon {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+}
+.breach-rank-item:nth-child(2) .breach-icon svg {
+  stroke: #64748b;
+}
+
+.breach-rank-item:nth-child(3) .breach-icon {
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+}
+.breach-rank-item:nth-child(3) .breach-icon svg {
+  stroke: #c2410c;
+}
+
+.breach-rank-item:nth-child(4) .breach-icon {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+.breach-rank-item:nth-child(4) .breach-icon svg {
+  stroke: #2563eb;
+}
+
+.breach-rank-item:nth-child(5) .breach-icon {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+}
+.breach-rank-item:nth-child(5) .breach-icon svg {
+  stroke: #9333ea;
+}
+
+/* Legacy support for .breach-rank (if still used elsewhere) */
 .breach-rank {
   width: 24px;
   height: 24px;
@@ -23,21 +79,6 @@
   font-weight: 600;
   color: #64748b;
   flex-shrink: 0;
-}
-
-.breach-rank-item:nth-child(1) .breach-rank {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.breach-rank-item:nth-child(2) .breach-rank {
-  background: #e2e8f0;
-  color: #64748b;
-}
-
-.breach-rank-item:nth-child(3) .breach-rank {
-  background: #fed7aa;
-  color: #c2410c;
 }
 
 .breach-details {

@@ -16,6 +16,11 @@ const {
   scrapeBoE,
   scrapePRA,
   scrapeEBA,
+  // New regulators - December 2025
+  scrapeGamblingCommission,
+  scrapeHSE,
+  scrapeOfcom,
+  scrapeSRA,
   normalizeAuthority
 } = require('./webScraper')
 const puppeteerScraper = require('../scrapers/puppeteerScraper')
@@ -126,6 +131,11 @@ applyWebMethods(EnhancedRSSFetcher, {
   scrapeBoE,
   scrapePRA,
   scrapeEBA,
+  // New regulators - December 2025
+  scrapeGamblingCommission,
+  scrapeHSE,
+  scrapeOfcom,
+  scrapeSRA,
   normalizeAuthority
 })
 applyPuppeteerMethods(EnhancedRSSFetcher, { puppeteerScraper })

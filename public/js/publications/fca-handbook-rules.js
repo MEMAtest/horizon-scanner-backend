@@ -529,6 +529,149 @@ const FCA_HANDBOOK_RULES = {
     implications: 'Breaches involve unfair treatment of those in difficulty, excessive charges, or aggressive collections.',
     typicalBreaches: ['Unfair collections', 'Excessive charges', 'Lack of forbearance'],
     relatedRules: ['PRIN 6', 'DISP', 'Consumer Duty']
+  },
+
+  // ============================================
+  // FEES MANUAL (FEES)
+  // ============================================
+  'FEES 1': {
+    title: 'Fees Overview',
+    category: 'FEES',
+    summary: 'Overview of the FCA fee structure and how fees are calculated and collected.',
+    fullDescription: 'FEES 1 provides the overview and introduction to the FCA fees manual, explaining the regulatory fee structure, who must pay fees, and how they are used to fund regulatory activities.',
+    implications: 'Understanding the overall fee framework helps firms plan for regulatory costs.',
+    typicalBreaches: ['General fee non-compliance'],
+    relatedRules: ['FEES 2', 'FEES 3', 'FEES 4']
+  },
+  'FEES 2': {
+    title: 'General Provisions',
+    category: 'FEES',
+    summary: 'General rules about fee payment, calculation methods, due dates and refund policies.',
+    fullDescription: 'FEES 2 sets out the general provisions applicable to all FCA fees including how fees are calculated, when they are due, payment methods, late payment interest, and the circumstances under which refunds may be given.',
+    implications: 'Breaches involve late payment, non-payment, or incorrect calculation of regulatory fees.',
+    typicalBreaches: ['Late fee payment', 'Non-payment of fees', 'Incorrect fee calculation', 'Missed due dates'],
+    relatedRules: ['FEES 1', 'FEES 3', 'FEES 4', 'SUP 16']
+  },
+  'FEES 3': {
+    title: 'Application, Notification and Vetting Fees',
+    category: 'FEES',
+    summary: 'Fees payable when applying for FCA authorisation, varying permissions, or notifying the FCA of changes.',
+    fullDescription: 'FEES 3 covers all one-off fees payable to the FCA including application fees for authorisation, fees for variation of permission, approved persons applications (now Senior Manager applications under SM&CR), and change in control notifications.',
+    implications: 'Breaches involve failure to pay application fees or submitting applications without required payment.',
+    typicalBreaches: ['Unpaid application fees', 'Late application fee payment', 'Incorrect application fee category'],
+    relatedRules: ['FEES 2', 'SUP 6', 'SUP 10A', 'SUP 15']
+  },
+  'FEES 4': {
+    title: 'Periodic Fees',
+    category: 'FEES',
+    summary: 'Annual periodic fees payable by authorised firms based on their regulated activities and tariff data.',
+    fullDescription: 'FEES 4 sets out the annual regulatory fees that authorised firms must pay. Fees are calculated based on the firm\'s fee block (determined by regulated activities) and tariff data (such as annual income, number of approved persons, or assets under management). Fee rates are set annually in the FCA\'s fees policy statement.',
+    implications: 'Breaches involve failure to pay annual fees, late payment, or providing incorrect tariff data.',
+    typicalBreaches: ['Non-payment of periodic fees', 'Late periodic fee payment', 'Incorrect tariff data submission', 'Under-reporting of fee base'],
+    relatedRules: ['FEES 2', 'FEES 3', 'SUP 16']
+  },
+  'FEES 5': {
+    title: 'Financial Ombudsman Service Funding',
+    category: 'FEES',
+    summary: 'Levies payable by firms to fund the Financial Ombudsman Service (FOS).',
+    fullDescription: 'FEES 5 sets out the levies that firms must pay to fund the FOS. This includes the general levy (annual fee based on firm type and size) and case fees (charged when consumers bring complaints to FOS). Firms are allocated to industry blocks based on their regulated activities.',
+    implications: 'Breaches involve failure to pay FOS levies or case fees.',
+    typicalBreaches: ['Non-payment of FOS levy', 'Late FOS levy payment', 'Failure to pay case fees'],
+    relatedRules: ['FEES 2', 'FEES 4', 'DISP']
+  },
+  'FEES 6': {
+    title: 'Financial Services Compensation Scheme Funding',
+    category: 'FEES',
+    summary: 'Levies payable by firms to fund the Financial Services Compensation Scheme (FSCS).',
+    fullDescription: 'FEES 6 sets out the levies that firms must pay to fund the FSCS, which provides compensation to eligible claimants when authorised firms fail. Levies include the base cost levy (for running the scheme) and specific cost levy (for compensation payments). Firms are placed in funding classes based on their regulated activities.',
+    implications: 'Breaches involve failure to pay FSCS levies or providing incorrect tariff data for levy calculation.',
+    typicalBreaches: ['Non-payment of FSCS levy', 'Late FSCS levy payment', 'Incorrect funding class declaration', 'Under-reporting of levy base'],
+    relatedRules: ['FEES 2', 'FEES 4', 'COMP']
+  },
+  'FEES 7': {
+    title: 'Temporary Product Intervention Rules Fees',
+    category: 'FEES',
+    summary: 'Fees relating to temporary product intervention measures.',
+    fullDescription: 'FEES 7 covers fees associated with temporary product intervention rules that the FCA may impose to address consumer protection concerns with specific products.',
+    implications: 'Applicable when FCA imposes temporary product interventions.',
+    typicalBreaches: ['Non-payment of intervention-related fees'],
+    relatedRules: ['FEES 2', 'COBS']
+  },
+  'FEES 8': {
+    title: 'Money and Pensions Service Levy',
+    category: 'FEES',
+    summary: 'Levies payable to fund the Money and Pensions Service (formerly Money Advice Service).',
+    fullDescription: 'FEES 8 sets out the levies that firms must pay to fund the Money and Pensions Service, which provides free money guidance to consumers. Levies are calculated based on the firm\'s fee block and tariff data.',
+    implications: 'Breaches involve failure to pay the money guidance levy.',
+    typicalBreaches: ['Non-payment of MaPS levy', 'Late levy payment'],
+    relatedRules: ['FEES 2', 'FEES 4']
+  },
+  'FEES 9': {
+    title: 'Pensions Guidance Levy',
+    category: 'FEES',
+    summary: 'Levies payable to fund pension guidance services.',
+    fullDescription: 'FEES 9 sets out levies payable by certain firms to fund the provision of pension guidance, helping consumers understand their pension options at retirement.',
+    implications: 'Breaches involve failure to pay pensions guidance levy.',
+    typicalBreaches: ['Non-payment of pensions guidance levy', 'Late levy payment'],
+    relatedRules: ['FEES 2', 'FEES 8', 'COBS 19']
+  },
+  'FEES 10': {
+    title: 'Payment Systems Regulator Annual Funding',
+    category: 'FEES',
+    summary: 'Fees payable by payment systems operators and participants to fund the Payment Systems Regulator.',
+    fullDescription: 'FEES 10 sets out the annual fees that operators and participants in regulated payment systems must pay to fund the Payment Systems Regulator (PSR). Fees are calculated based on the participant\'s role and transaction volumes in the payment system.',
+    implications: 'Applicable to payment systems operators and participants subject to PSR oversight.',
+    typicalBreaches: ['Non-payment of PSR fees', 'Late PSR fee payment'],
+    relatedRules: ['FEES 2', 'Payment Services Regulations']
+  },
+  'FEES 11': {
+    title: 'Illegal Money Lending Levy',
+    category: 'FEES',
+    summary: 'Levies to fund enforcement activities against illegal money lending.',
+    fullDescription: 'FEES 11 sets out levies payable by consumer credit firms to fund the Illegal Money Lending Teams that investigate and prosecute loan sharks operating outside the regulated market.',
+    implications: 'Applicable to consumer credit firms.',
+    typicalBreaches: ['Non-payment of IML levy'],
+    relatedRules: ['FEES 2', 'CONC']
+  },
+  'FEES 12': {
+    title: 'Devolved Authorities Levy',
+    category: 'FEES',
+    summary: 'Levies to fund debt advice services in the devolved nations.',
+    fullDescription: 'FEES 12 sets out levies payable to fund debt advice services provided by the devolved administrations in Scotland, Wales and Northern Ireland.',
+    implications: 'Applicable to certain consumer credit and debt-related firms.',
+    typicalBreaches: ['Non-payment of DA levy'],
+    relatedRules: ['FEES 2', 'FEES 8', 'CONC']
+  },
+  'FEES 13': {
+    title: 'Temporary Permissions Regime Fees',
+    category: 'FEES',
+    summary: 'Fees payable by EEA firms operating under the Temporary Permissions Regime post-Brexit.',
+    fullDescription: 'FEES 13 covers fees payable by EEA firms that entered the UK\'s Temporary Permissions Regime (TPR) following Brexit. These firms must pay fees while they complete their full UK authorisation applications.',
+    implications: 'Applicable to EEA firms in the TPR awaiting full UK authorisation.',
+    typicalBreaches: ['Non-payment of TPR fees', 'Late TPR fee payment'],
+    relatedRules: ['FEES 2', 'FEES 4', 'SUP']
+  },
+
+  // ============================================
+  // DISPUTE RESOLUTION (DISP)
+  // ============================================
+  'DISP 1': {
+    title: 'Complaints Handling',
+    category: 'DISP',
+    summary: 'Firms must have effective and transparent procedures for handling complaints.',
+    fullDescription: 'DISP 1 requires firms to establish, implement and maintain effective complaints handling procedures. Firms must acknowledge complaints promptly, investigate fairly, and provide clear final responses within specified timeframes.',
+    implications: 'Breaches involve inadequate complaints procedures, delayed responses, or unfair complaint outcomes.',
+    typicalBreaches: ['Delayed complaint responses', 'Inadequate complaints procedures', 'Unfair complaint outcomes', 'Failure to identify complaints'],
+    relatedRules: ['PRIN 6', 'FEES 5', 'Consumer Duty']
+  },
+  'DISP 2': {
+    title: 'Jurisdiction of the Financial Ombudsman Service',
+    category: 'DISP',
+    summary: 'Rules on which complaints the Financial Ombudsman Service can consider.',
+    fullDescription: 'DISP 2 sets out the scope of the FOS jurisdiction including eligible complainants, types of activities covered, and territorial scope.',
+    implications: 'Understanding FOS jurisdiction helps firms identify which complaints may be escalated.',
+    typicalBreaches: ['Failure to signpost FOS rights'],
+    relatedRules: ['DISP 1', 'FEES 5']
   }
 }
 

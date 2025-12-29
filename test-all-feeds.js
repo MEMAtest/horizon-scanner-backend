@@ -13,21 +13,39 @@ const results = {
   working: 0,
   failed: 0,
   disabled: 0,
+  skipped: 0,
   byType: {},
   byAuthority: {},
   failures: []
 }
 
-function makeHttpRequest(url) {
+const DEFAULT_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,application/rss+xml,application/atom+xml,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.8',
+  'Accept-Encoding': 'identity',
+  Connection: 'keep-alive',
+  'Upgrade-Insecure-Requests': '1'
+}
+
+function makeHttpRequest(url, options = {}) {
+  const { maxRedirects = 3, redirects = [] } = options
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https') ? https : http
 
     const req = client.get(url, {
-      headers: {
-        'User-Agent': 'RegCanary-FeedChecker/1.0'
-      },
+      headers: DEFAULT_HEADERS,
       timeout: 10000
     }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+        const nextUrl = new URL(res.headers.location, url).toString()
+        res.resume()
+        return resolve(makeHttpRequest(nextUrl, {
+          maxRedirects: maxRedirects - 1,
+          redirects: redirects.concat([nextUrl])
+        }))
+      }
+
       let data = ''
       res.on('data', chunk => data += chunk)
       res.on('end', () => {
@@ -35,7 +53,9 @@ function makeHttpRequest(url) {
           status: res.statusCode,
           headers: res.headers,
           body: data,
-          redirected: res.statusCode >= 300 && res.statusCode < 400
+          redirected: redirects.length > 0,
+          redirects,
+          finalUrl: url
         })
       })
     })
@@ -53,6 +73,10 @@ async function testFeed(feed) {
   // Skip disabled/demo feeds
   if (feed.priority === 'disabled' || feed.type === 'demo') {
     return { status: 'skipped', reason: 'disabled' }
+  }
+
+  if (feed.type === 'puppeteer') {
+    return { status: 'skipped', reason: 'puppeteer-only' }
   }
 
   try {
@@ -75,10 +99,6 @@ async function testFeed(feed) {
       }
 
       return { status: 'failed', reason: 'Empty response', statusCode: 200 }
-    }
-
-    if (response.redirected) {
-      return { status: 'redirect', statusCode: response.status, location: response.headers.location }
     }
 
     return { status: 'failed', reason: 'HTTP error', statusCode: response.status }
@@ -122,18 +142,12 @@ async function runFeedHealthCheck() {
       console.log(`     Content-Type: ${result.contentType}`)
       console.log(`     Size: ${(result.size / 1024).toFixed(2)} KB`)
     } else if (result.status === 'skipped') {
-      results.disabled++
+      if (result.reason === 'disabled') {
+        results.disabled++
+      } else {
+        results.skipped++
+      }
       console.log(`  ⏭️  STATUS: Skipped (${result.reason})`)
-    } else if (result.status === 'redirect') {
-      results.failed++
-      console.log(`  ⚠️  STATUS: Redirect (${result.statusCode})`)
-      console.log(`     Location: ${result.location || 'Not specified'}`)
-      results.failures.push({
-        feed: feed.name,
-        url: feed.url,
-        reason: `Redirect ${result.statusCode}`,
-        details: result.location
-      })
     } else {
       results.failed++
       console.log(`  ❌ STATUS: Failed`)
@@ -161,7 +175,10 @@ async function runFeedHealthCheck() {
   console.log(`  ✅ Working: ${results.working}`)
   console.log(`  ❌ Failed: ${results.failed}`)
   console.log(`  ⏭️  Disabled: ${results.disabled}`)
-  console.log(`  📊 Success Rate: ${((results.working / (results.total - results.disabled)) * 100).toFixed(1)}%`)
+  console.log(`  ⏭️  Skipped: ${results.skipped}`)
+  const eligibleCount = results.total - results.disabled - results.skipped
+  const successRate = eligibleCount > 0 ? ((results.working / eligibleCount) * 100).toFixed(1) : '0.0'
+  console.log(`  📊 Success Rate: ${successRate}%`)
   console.log()
 
   console.log('By Feed Type:')

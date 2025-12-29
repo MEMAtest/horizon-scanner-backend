@@ -1,8 +1,7 @@
 const { renderHeaderSection } = require('./sections/header')
 const { renderStatsSection } = require('./sections/stats')
 const { renderInsightsSection } = require('./sections/insights')
-const { renderChartsSection } = require('./sections/charts')
-const { renderTableSection } = require('./sections/table')
+// Charts and Table are now rendered inside the Overview tab in insights.js
 const {
   getPublicationsStyles,
   getPublicationsHeadScripts,
@@ -32,8 +31,6 @@ function renderPublicationsPage({
             ${renderHeaderSection()}
             ${renderStatsSection()}
             ${renderInsightsSection()}
-            ${renderChartsSection()}
-            ${renderTableSection()}
           </main>
         </div>
         ${commonClientScripts}

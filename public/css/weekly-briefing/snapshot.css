@@ -1,0 +1,33 @@
+/* ========================================
+   Clickable Snapshot Stats
+   ======================================== */
+
+.stat-item-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.stat-item-clickable:hover {
+    transform: translateX(4px);
+    background: rgba(59, 130, 246, 0.05);
+    border-left: 3px solid #3b82f6;
+    padding-left: 1rem;
+}
+
+.stat-arrow {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.stat-item-clickable:hover .stat-arrow {
+    opacity: 1;
+    transform: translateY(-50%) translateX(2px);
+}
+

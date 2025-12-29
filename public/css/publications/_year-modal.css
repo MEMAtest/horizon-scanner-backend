@@ -21,7 +21,7 @@
   background: white;
   border-radius: 16px;
   width: 100%;
-  max-width: 700px;
+  max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
@@ -300,5 +300,528 @@
   .biggest-case-detail {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ========================================
+   YEAR MODAL CHARTS
+   ======================================== */
+
+.year-modal-charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 24px 32px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.year-chart-card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.year-chart-card h4 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-chart-card canvas {
+  width: 100% !important;
+  height: 180px !important;
+}
+
+/* Loading State */
+.year-modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+  gap: 16px;
+  color: #64748b;
+}
+
+.year-modal-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.year-modal-loading span {
+  font-size: 14px;
+}
+
+/* Mobile Responsive for Charts */
+@media (max-width: 640px) {
+  .year-modal-charts {
+    grid-template-columns: 1fr;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+
+  .year-chart-card {
+    padding: 12px;
+  }
+
+  .year-chart-card canvas {
+    height: 150px !important;
+  }
+
+  .year-summary-modal-content {
+    max-width: 100%;
+  }
+}
+
+/* ========================================
+   INLINE YEAR DETAIL PANEL (On Page)
+   ======================================== */
+
+.year-detail-panel {
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  animation: slideDownFade 0.4s ease-out;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.year-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: white;
+}
+
+.year-detail-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-detail-title span {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.year-detail-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.year-detail-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+/* Year Summary Narrative */
+.year-detail-summary {
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.year-detail-summary .summary-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-detail-summary .summary-title svg {
+  width: 16px;
+  height: 16px;
+}
+
+.year-detail-summary .summary-text {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #334155;
+}
+
+.year-detail-summary .summary-text strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.year-detail-summary .summary-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.year-detail-summary .summary-loading::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Enhanced Summary Styles */
+.year-detail-summary .summary-text p {
+  margin: 0 0 12px 0;
+  line-height: 1.7;
+}
+
+.year-detail-summary .summary-text p:last-child {
+  margin-bottom: 0;
+}
+
+.year-detail-summary .summary-highlight {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.year-detail-summary .summary-highlight em {
+  color: #92400e;
+}
+
+.year-detail-summary .summary-insight {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #1e40af;
+}
+
+/* Year Timeline Section */
+.year-timeline-section {
+  padding: 16px 32px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timeline-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 12px;
+}
+
+.year-timeline-bar {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 60px;
+}
+
+.timeline-month {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  position: relative;
+}
+
+.timeline-month::before {
+  content: '';
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  transition: all 0.3s ease;
+  min-height: 4px;
+}
+
+.timeline-month[data-activity="0"]::before { height: 4px; background: #334155; }
+.timeline-month[data-activity="1"]::before { height: 10px; }
+.timeline-month[data-activity="2"]::before { height: 18px; }
+.timeline-month[data-activity="3"]::before { height: 26px; }
+.timeline-month[data-activity="4"]::before { height: 34px; }
+.timeline-month[data-activity="5"]::before { height: 42px; background: linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%); }
+
+.timeline-month:hover::before {
+  transform: scaleY(1.1);
+  filter: brightness(1.2);
+}
+
+.timeline-month span {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.timeline-month:hover span {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.timeline-month .tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  margin-bottom: 4px;
+}
+
+.timeline-month:hover .tooltip {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .year-timeline-section {
+    padding: 12px 20px;
+  }
+
+  .year-timeline-bar {
+    height: 40px;
+  }
+
+  .timeline-month span {
+    font-size: 8px;
+  }
+}
+
+/* Year Stats Row */
+.year-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.year-detail-stat {
+  background: white;
+  padding: 24px;
+  text-align: center;
+}
+
+.year-detail-stat .stat-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.year-detail-stat .stat-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Biggest Case Highlight */
+.year-detail-biggest {
+  padding: 24px 32px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.year-detail-biggest h4 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ef4444;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-detail-biggest h4::before {
+  content: '🏆';
+  font-size: 16px;
+}
+
+.year-detail-biggest .biggest-case-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%);
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+}
+
+.year-detail-biggest .biggest-entity {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.year-detail-biggest .biggest-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.year-detail-biggest .biggest-breach {
+  padding: 4px 12px;
+  background: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+/* Charts Grid */
+.year-detail-charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  padding: 24px 32px 32px;
+}
+
+.year-detail-charts .year-chart-card {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.year-detail-charts .year-chart-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.year-detail-charts .year-chart-card h4 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-detail-charts .chart-wrapper {
+  height: 200px;
+  position: relative;
+}
+
+.year-detail-charts canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .year-detail-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .year-detail-charts {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .year-detail-header {
+    padding: 20px;
+  }
+
+  .year-detail-title {
+    font-size: 1rem;
+  }
+
+  .year-detail-title span {
+    font-size: 1.5rem;
+  }
+
+  .year-detail-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .year-detail-stat {
+    padding: 16px;
+  }
+
+  .year-detail-stat .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .year-detail-biggest .biggest-case-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .year-detail-charts {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .year-detail-charts .chart-wrapper {
+    height: 160px;
   }
 }

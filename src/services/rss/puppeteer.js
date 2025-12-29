@@ -23,6 +23,10 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
         case 'JMLSG':
           scraperResults = await puppeteerScraper.scrapeJMLSG()
           break
+        case 'ASA':
+        case 'Advertising Standards Authority':
+          scraperResults = await puppeteerScraper.scrapeASA()
+          break
         default:
           console.log(`⚠️ No Puppeteer scraper configured for ${source.authority}`)
           return []

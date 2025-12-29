@@ -33,6 +33,17 @@ function applyRssMethods(ServiceClass, { axios, cheerio }) {
           })
 
           if (title && link) {
+            if (source.titlePrefix) {
+              const prefixes = Array.isArray(source.titlePrefix)
+                ? source.titlePrefix
+                : [source.titlePrefix]
+              const normalizedTitle = title.toLowerCase()
+              const matchesPrefix = prefixes.some(prefix =>
+                normalizedTitle.startsWith(String(prefix).toLowerCase())
+              )
+              if (!matchesPrefix) return
+            }
+
             const parsedDate = this.parseDate(pubDate)
 
             if (this.isRecent(parsedDate, source.recencyDays || 30)) {

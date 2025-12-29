@@ -1,0 +1,7 @@
+const DAILY_AUTHORITY_CAP = 10
+const RISK_PULSE_FLOOR = 1.5
+
+module.exports = {
+  DAILY_AUTHORITY_CAP,
+  RISK_PULSE_FLOOR
+}
