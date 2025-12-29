@@ -281,6 +281,183 @@ function getSidebarScripts() {
             
             // Auto-refresh counters every 30 seconds
             setInterval(updateLiveCounters, 30000);
+
+            // ==========================================
+            // NOTIFICATION BELL FUNCTIONS
+            // ==========================================
+
+            window.notificationDropdownOpen = false;
+
+            // Toggle notification dropdown
+            window.toggleNotificationDropdown = function() {
+                const dropdown = document.getElementById('notificationDropdown');
+                if (dropdown) {
+                    window.notificationDropdownOpen = !window.notificationDropdownOpen;
+                    dropdown.style.display = window.notificationDropdownOpen ? 'block' : 'none';
+                    if (window.notificationDropdownOpen) {
+                        loadNotifications();
+                    }
+                }
+            };
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                const bell = document.getElementById('notificationBell');
+                const dropdown = document.getElementById('notificationDropdown');
+                if (bell && dropdown && !bell.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                    window.notificationDropdownOpen = false;
+                }
+            });
+
+            // Load notifications from API
+            window.loadNotifications = async function() {
+                try {
+                    const response = await fetch('/api/notifications?limit=10&unreadOnly=false');
+                    if (!response.ok) throw new Error('Failed to fetch');
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        renderNotifications(result.data);
+                    }
+                } catch (error) {
+                    console.log('Could not load notifications:', error);
+                }
+            };
+
+            // Render notifications in dropdown
+            window.renderNotifications = function(notifications) {
+                const list = document.getElementById('notificationList');
+                if (!list) return;
+
+                if (!notifications || notifications.length === 0) {
+                    list.innerHTML = '<div class="notification-empty">No notifications</div>';
+                    return;
+                }
+
+                list.innerHTML = notifications.map(n => {
+                    const timeAgo = formatTimeAgo(n.created_at);
+                    const unreadClass = n.read_at ? '' : 'unread';
+                    const priorityClass = (n.priority === 'high' || n.priority === 'urgent') ? 'high-priority' : '';
+                    const typeClass = n.type?.includes('enforcement') ? 'enforcement' :
+                                     n.type?.includes('watch') ? 'watch-match' : '';
+
+                    return \`
+                        <div class="notification-item \${unreadClass} \${priorityClass}"
+                             onclick="handleNotificationClick('\${n.id}', '\${n.action_url || ''}')"
+                             data-id="\${n.id}">
+                            <div class="notification-item-header">
+                                <span class="notification-item-title">\${escapeHtml(n.title || 'Notification')}</span>
+                                <span class="notification-item-time">\${timeAgo}</span>
+                            </div>
+                            <div class="notification-item-message">\${escapeHtml(n.message || '')}</div>
+                            \${n.type ? \`<span class="notification-item-type \${typeClass}">\${formatType(n.type)}</span>\` : ''}
+                        </div>
+                    \`;
+                }).join('');
+            };
+
+            // Handle notification click
+            window.handleNotificationClick = async function(id, actionUrl) {
+                try {
+                    // Mark as read
+                    await fetch(\`/api/notifications/\${id}/read\`, { method: 'POST' });
+
+                    // Update UI
+                    const item = document.querySelector(\`[data-id="\${id}"]\`);
+                    if (item) item.classList.remove('unread');
+
+                    // Navigate if there's an action URL
+                    if (actionUrl) {
+                        window.location.href = actionUrl;
+                    }
+
+                    // Refresh badge count
+                    updateNotificationBadge();
+                } catch (error) {
+                    console.log('Error handling notification:', error);
+                }
+            };
+
+            // Mark all as read
+            window.markAllNotificationsRead = async function() {
+                try {
+                    await fetch('/api/notifications/mark-all-read', { method: 'POST' });
+
+                    // Update UI
+                    document.querySelectorAll('.notification-item.unread').forEach(item => {
+                        item.classList.remove('unread');
+                    });
+
+                    updateNotificationBadge();
+                } catch (error) {
+                    console.log('Error marking all read:', error);
+                }
+            };
+
+            // Update badge count
+            window.updateNotificationBadge = async function() {
+                try {
+                    const response = await fetch('/api/notifications/unread-count');
+                    if (!response.ok) return;
+                    const result = await response.json();
+
+                    const badge = document.getElementById('notificationBadge');
+                    if (badge && result.success) {
+                        const count = result.data?.count || 0;
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.style.display = count > 0 ? 'flex' : 'none';
+                    }
+                } catch (error) {
+                    console.log('Could not update notification badge:', error);
+                }
+            };
+
+            // Helper: Format time ago
+            window.formatTimeAgo = function(dateStr) {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+
+                if (diffMins < 1) return 'just now';
+                if (diffMins < 60) return \`\${diffMins}m ago\`;
+                if (diffHours < 24) return \`\${diffHours}h ago\`;
+                if (diffDays < 7) return \`\${diffDays}d ago\`;
+                return date.toLocaleDateString();
+            };
+
+            // Helper: Format notification type
+            window.formatType = function(type) {
+                const typeMap = {
+                    'enforcement_fine': 'Enforcement',
+                    'enforcement_watch_match': 'Watch Match',
+                    'enforcement_large_fine': 'Large Fine',
+                    'watch_list_match': 'Watch List',
+                    'policy_review': 'Policy Review',
+                    'policy_approval': 'Approval'
+                };
+                return typeMap[type] || type.replace(/_/g, ' ');
+            };
+
+            // Helper: Escape HTML
+            window.escapeHtml = function(str) {
+                if (!str) return '';
+                return str.replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;');
+            };
+
+            // Initialize: Load badge count on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                updateNotificationBadge();
+                // Refresh badge every 60 seconds
+                setInterval(updateNotificationBadge, 60000);
+            });
         </script>`
 }
 
