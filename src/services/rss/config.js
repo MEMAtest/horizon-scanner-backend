@@ -710,12 +710,12 @@ const feedSources = [
   // Financial regulators focus (no data protection)
   // ============================================
 
-  // US - OFAC (Sanctions) - RSS feed available
+  // US - OFAC (Sanctions) - RSS broken, using web scraping
   {
     name: 'OFAC Sanctions Updates',
     authority: 'OFAC',
-    url: 'https://ofac.treasury.gov/recent-actions/rss.xml',
-    type: 'rss',
+    url: 'https://ofac.treasury.gov/recent-actions',
+    type: 'web_scraping',
     description: 'US Treasury OFAC - Sanctions listings, SDN updates, enforcement',
     priority: 'high',
     recencyDays: 30,
@@ -791,11 +791,12 @@ const feedSources = [
     region: 'Europe',
     sectors: ['Capital Markets', 'Investment Management', 'Consumer Protection']
   },
+  // DNB - RSS returns 403, using web scraping
   {
     name: 'DNB News (Netherlands)',
     authority: 'DNB',
-    url: 'https://www.dnb.nl/en/rss/',
-    type: 'rss',
+    url: 'https://www.dnb.nl/en/general-news/',
+    type: 'web_scraping',
     description: 'De Nederlandsche Bank - Prudential supervision',
     priority: 'high',
     recencyDays: 30,
@@ -804,12 +805,12 @@ const feedSources = [
     sectors: ['Banking', 'Insurance', 'Pension Funds', 'Financial Stability']
   },
 
-  // SPAIN
+  // SPAIN - RSS timeout, using web scraping
   {
     name: 'CNMV News (Spain)',
     authority: 'CNMV',
-    url: 'https://www.cnmv.es/portal/RSS/RSS.asmx/GetDatos?iID=1',
-    type: 'rss',
+    url: 'https://www.cnmv.es/portal/Comunicaciones/Comunicaciones.aspx?lang=en',
+    type: 'web_scraping',
     description: 'Comisión Nacional del Mercado de Valores - Securities regulator',
     priority: 'high',
     recencyDays: 30,
