@@ -710,12 +710,12 @@ const feedSources = [
   // Financial regulators focus (no data protection)
   // ============================================
 
-  // US - OFAC (Sanctions)
+  // US - OFAC (Sanctions) - RSS feed available
   {
     name: 'OFAC Sanctions Updates',
     authority: 'OFAC',
-    url: 'https://ofac.treasury.gov/recent-actions',
-    type: 'puppeteer',
+    url: 'https://ofac.treasury.gov/recent-actions/rss.xml',
+    type: 'rss',
     description: 'US Treasury OFAC - Sanctions listings, SDN updates, enforcement',
     priority: 'high',
     recencyDays: 30,
@@ -728,8 +728,8 @@ const feedSources = [
   {
     name: 'AMF News (France)',
     authority: 'AMF',
-    url: 'https://www.amf-france.org/en/news-publications/news-releases',
-    type: 'puppeteer',
+    url: 'https://www.amf-france.org/en/flux-rss/display/21',
+    type: 'rss',
     description: 'Autorité des Marchés Financiers - News, warnings, sanctions',
     priority: 'high',
     recencyDays: 30,
@@ -741,8 +741,8 @@ const feedSources = [
     name: 'ACPR News (France)',
     authority: 'ACPR',
     url: 'https://acpr.banque-france.fr/en/news',
-    type: 'puppeteer',
-    description: 'Autorité de Contrôle Prudentiel - Banking/Insurance supervision',
+    type: 'web_scraping',
+    description: 'Autorité de Contrôle Prudentiel - Banking/Insurance supervision (no RSS)',
     priority: 'high',
     recencyDays: 30,
     country: 'France',
@@ -754,8 +754,8 @@ const feedSources = [
   {
     name: 'BaFin Publications (Germany)',
     authority: 'BAFIN',
-    url: 'https://www.bafin.de/EN/PublikationenDaten/Publikationen/publikationen_node_en.html',
-    type: 'puppeteer',
+    url: 'https://www.bafin.de/EN/Service/TopNavigation/RSS/_function/rssnewsfeed.xml',
+    type: 'rss',
     description: 'Bundesanstalt für Finanzdienstleistungsaufsicht - All publications',
     priority: 'high',
     recencyDays: 30,
@@ -768,8 +768,8 @@ const feedSources = [
   {
     name: 'Central Bank of Ireland News',
     authority: 'CBI',
-    url: 'https://www.centralbank.ie/news-media',
-    type: 'puppeteer',
+    url: 'https://www.centralbank.ie/feeds/news-media-feed',
+    type: 'rss',
     description: 'Central Bank of Ireland - News, enforcement, speeches',
     priority: 'high',
     recencyDays: 30,
@@ -782,8 +782,8 @@ const feedSources = [
   {
     name: 'AFM News (Netherlands)',
     authority: 'AFM',
-    url: 'https://www.afm.nl/nl-nl/nieuws',
-    type: 'puppeteer',
+    url: 'https://www.afm.nl/en/rss-feed/nieuws-professionals',
+    type: 'rss',
     description: 'Autoriteit Financiële Markten - Market conduct supervision',
     priority: 'high',
     recencyDays: 30,
@@ -794,8 +794,8 @@ const feedSources = [
   {
     name: 'DNB News (Netherlands)',
     authority: 'DNB',
-    url: 'https://www.dnb.nl/nieuws/',
-    type: 'puppeteer',
+    url: 'https://www.dnb.nl/en/rss/',
+    type: 'rss',
     description: 'De Nederlandsche Bank - Prudential supervision',
     priority: 'high',
     recencyDays: 30,
@@ -808,8 +808,8 @@ const feedSources = [
   {
     name: 'CNMV News (Spain)',
     authority: 'CNMV',
-    url: 'https://www.cnmv.es/portal/home.aspx?lang=en',
-    type: 'puppeteer',
+    url: 'https://www.cnmv.es/portal/RSS/RSS.asmx/GetDatos?iID=1',
+    type: 'rss',
     description: 'Comisión Nacional del Mercado de Valores - Securities regulator',
     priority: 'high',
     recencyDays: 30,
@@ -818,14 +818,14 @@ const feedSources = [
     sectors: ['Capital Markets', 'Investment Management', 'Listed Companies']
   },
 
-  // ITALY
+  // ITALY - No RSS available, using web scraping
   {
     name: 'CONSOB Press Releases (Italy)',
     authority: 'CONSOB',
     url: 'https://www.consob.it/web/consob-and-its-activities/press-releases',
-    type: 'puppeteer',
+    type: 'web_scraping',
     description: 'Commissione Nazionale per le Società e la Borsa - Securities',
-    priority: 'high',
+    priority: 'medium',
     recencyDays: 30,
     country: 'Italy',
     region: 'Europe',
@@ -836,8 +836,8 @@ const feedSources = [
   {
     name: 'Finansinspektionen (Sweden)',
     authority: 'FI_SWEDEN',
-    url: 'https://www.fi.se/en/published/',
-    type: 'puppeteer',
+    url: 'https://www.fi.se/en/published/all-published-material/rss',
+    type: 'rss',
     description: 'Swedish Financial Supervisory Authority - All publications',
     priority: 'high',
     recencyDays: 30,
@@ -846,14 +846,14 @@ const feedSources = [
     sectors: ['Banking', 'Insurance', 'Capital Markets', 'Consumer Credit']
   },
 
-  // EU CROSS-BORDER
+  // EU CROSS-BORDER - No RSS available, using web scraping
   {
     name: 'EU Council Sanctions',
     authority: 'EU_COUNCIL',
     url: 'https://www.consilium.europa.eu/en/policies/sanctions/',
-    type: 'puppeteer',
+    type: 'web_scraping',
     description: 'EU Council - Sanctions packages, listings changes',
-    priority: 'high',
+    priority: 'medium',
     recencyDays: 30,
     country: 'EU',
     region: 'Europe',
