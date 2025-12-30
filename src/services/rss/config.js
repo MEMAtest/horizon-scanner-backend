@@ -805,14 +805,14 @@ const feedSources = [
     sectors: ['Banking', 'Insurance', 'Pension Funds', 'Financial Stability']
   },
 
-  // SPAIN - Requires Puppeteer (403 bot protection)
+  // SPAIN - Puppeteer RSS (works locally, 403 on direct HTTP)
   {
     name: 'CNMV News (Spain)',
     authority: 'CNMV',
-    url: 'https://www.cnmv.es/portal/Comunicaciones/Comunicaciones.aspx?lang=en',
+    url: 'https://www.cnmv.es/portal/RSS/RSS.asmx/GetDatos?iID=1',
     type: 'puppeteer',
-    description: 'Comisión Nacional del Mercado de Valores - Securities regulator',
-    priority: 'disabled', // Bot protection - needs local Puppeteer run
+    description: 'Comisión Nacional del Mercado de Valores - Press releases RSS',
+    priority: 'medium', // Works with local Puppeteer
     recencyDays: 30,
     country: 'Spain',
     region: 'Europe',
