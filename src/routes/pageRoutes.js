@@ -22,6 +22,8 @@ const { renderWorkspaceHubPage } = require('./pages/workspaceHubPage')
 const renderCalendarPage = require('./pages/calendarPage')
 const renderPublicationsPage = require('./pages/publicationsPage')
 const renderSummaryPage = require('./pages/summaryPage')
+const { renderSettingsPage } = require('./pages/settingsPage')
+const { renderHandbookPage } = require('./pages/handbookPage')
 
 const router = express.Router()
 
@@ -52,5 +54,7 @@ router.get('/profile-hub', renderWorkspaceHubPage)
 router.get('/regulatory-calendar', renderCalendarPage)
 router.get('/publications', renderPublicationsPage)
 router.get('/publications/summary/:year', renderSummaryPage)
+router.get('/settings', renderSettingsPage)
+router.get('/handbook', renderHandbookPage)
 
 module.exports = router

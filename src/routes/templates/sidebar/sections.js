@@ -116,6 +116,12 @@ function renderNavigation({ currentPage, icons, recentCounts }) {
                             <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
+                    <li class="nav-item ${currentPage === 'handbook' ? 'active' : ''}">
+                        <a href="/handbook" class="nav-link">
+                            <span class="nav-icon">${icons.handbook}</span>
+                            <span class="nav-text">FCA Handbook</span>
+                        </a>
+                    </li>
                     <li class="nav-item ${currentPage === 'authority-spotlight' ? 'active' : ''}">
                         <a href="/authority-spotlight/FCA" class="nav-link">
                             <span class="nav-icon">${icons.authority}</span>
@@ -151,6 +157,16 @@ function renderNavigation({ currentPage, icons, recentCounts }) {
                             <span class="nav-icon">${icons.policy}</span>
                             <span class="nav-text">Policy Library</span>
                             <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="nav-section-title">ACCOUNT</div>
+                <ul class="nav-list">
+                    <li class="nav-item ${currentPage === 'settings' ? 'active' : ''}">
+                        <a href="/settings" class="nav-link">
+                            <span class="nav-icon">${icons.settings}</span>
+                            <span class="nav-text">Settings</span>
                         </a>
                     </li>
                 </ul>
