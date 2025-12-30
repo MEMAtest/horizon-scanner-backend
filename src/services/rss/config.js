@@ -710,14 +710,14 @@ const feedSources = [
   // Financial regulators focus (no data protection)
   // ============================================
 
-  // US - OFAC (Sanctions) - RSS broken, using web scraping
+  // US - OFAC (Sanctions) - Requires Puppeteer (bot protection)
   {
     name: 'OFAC Sanctions Updates',
     authority: 'OFAC',
     url: 'https://ofac.treasury.gov/recent-actions',
-    type: 'web_scraping',
+    type: 'puppeteer',
     description: 'US Treasury OFAC - Sanctions listings, SDN updates, enforcement',
-    priority: 'high',
+    priority: 'disabled', // Bot protection - needs local Puppeteer run
     recencyDays: 30,
     country: 'US',
     region: 'Americas',
@@ -791,28 +791,28 @@ const feedSources = [
     region: 'Europe',
     sectors: ['Capital Markets', 'Investment Management', 'Consumer Protection']
   },
-  // DNB - RSS returns 403, using web scraping
+  // DNB - Requires Puppeteer (403 bot protection)
   {
     name: 'DNB News (Netherlands)',
     authority: 'DNB',
     url: 'https://www.dnb.nl/en/general-news/',
-    type: 'web_scraping',
+    type: 'puppeteer',
     description: 'De Nederlandsche Bank - Prudential supervision',
-    priority: 'high',
+    priority: 'disabled', // Bot protection - needs local Puppeteer run
     recencyDays: 30,
     country: 'Netherlands',
     region: 'Europe',
     sectors: ['Banking', 'Insurance', 'Pension Funds', 'Financial Stability']
   },
 
-  // SPAIN - RSS timeout, using web scraping
+  // SPAIN - Requires Puppeteer (403 bot protection)
   {
     name: 'CNMV News (Spain)',
     authority: 'CNMV',
     url: 'https://www.cnmv.es/portal/Comunicaciones/Comunicaciones.aspx?lang=en',
-    type: 'web_scraping',
+    type: 'puppeteer',
     description: 'Comisión Nacional del Mercado de Valores - Securities regulator',
-    priority: 'high',
+    priority: 'disabled', // Bot protection - needs local Puppeteer run
     recencyDays: 30,
     country: 'Spain',
     region: 'Europe',
