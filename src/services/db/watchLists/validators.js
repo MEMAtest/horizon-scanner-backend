@@ -8,27 +8,57 @@ function normalizeCompact(value) {
 }
 
 const AUTHORITY_ALIASES = {
+  // UK Regulators
   fca: ['fca', 'financial conduct authority'],
   pra: ['pra', 'prudential regulation authority'],
   boe: ['bank of england', 'boe'],
-  ecb: ['ecb', 'european central bank'],
-  eba: ['eba', 'european banking authority'],
-  esma: ['esma', 'european securities and markets authority'],
-  eiopa: ['eiopa', 'european insurance and occupational pensions authority'],
   hmt: ['hm treasury', 'hmt', 'treasury', 'his majesty treasury'],
   ico: ['ico', "information commissioner's office", 'information commissioners office', 'information commissioner'],
   cma: ['cma', 'competition and markets authority', 'competition & markets authority'],
-  sec: ['sec', 'securities and exchange commission'],
-  cftc: ['cftc', 'commodity futures trading commission'],
-  finra: ['finra', 'financial industry regulatory authority'],
-  fatf: ['fatf', 'financial action task force'],
-  fsb: ['fsb', 'financial stability board'],
   tpr: ['tpr', 'the pensions regulator', 'pensions regulator'],
   frc: ['frc', 'financial reporting council'],
   fos: ['fos', 'financial ombudsman service'],
   jmlsg: ['jmlsg', 'joint money laundering steering group'],
   sfo: ['sfo', 'serious fraud office'],
-  hmg: ['hm government', 'uk government', 'his majesty government']
+  hmg: ['hm government', 'uk government', 'his majesty government'],
+  sra: ['sra', 'solicitors regulation authority'],
+  gambling_commission: ['gambling commission', 'ukgc', 'uk gambling commission'],
+  hse: ['hse', 'health and safety executive'],
+  ofcom: ['ofcom', 'office of communications'],
+  asa: ['asa', 'advertising standards authority'],
+  aquis: ['aquis', 'aquis exchange', 'aquis stock exchange'],
+  lse: ['lse', 'london stock exchange'],
+  nca: ['nca', 'national crime agency'],
+  fscs: ['fscs', 'financial services compensation scheme'],
+  dbt: ['dbt', 'department for business and trade'],
+  ofsi: ['ofsi', 'office of financial sanctions implementation'],
+  payuk: ['pay.uk', 'payuk', 'pay uk'],
+  hmrc: ['hmrc', 'hm revenue and customs', 'hm revenue & customs'],
+
+  // US Regulators
+  sec: ['sec', 'securities and exchange commission', 'us sec'],
+  cftc: ['cftc', 'commodity futures trading commission'],
+  finra: ['finra', 'financial industry regulatory authority'],
+  federal_reserve: ['federal reserve', 'fed', 'federal reserve board', 'frb', 'us federal reserve'],
+  occ: ['occ', 'office of the comptroller of the currency'],
+
+  // EU Regulators
+  ecb: ['ecb', 'european central bank'],
+  eba: ['eba', 'european banking authority'],
+  esma: ['esma', 'european securities and markets authority'],
+  eiopa: ['eiopa', 'european insurance and occupational pensions authority'],
+
+  // APAC Regulators
+  mas: ['mas', 'monetary authority of singapore'],
+  hkma: ['hkma', 'hong kong monetary authority'],
+  asic: ['asic', 'australian securities and investments commission'],
+
+  // International Bodies
+  fatf: ['fatf', 'financial action task force'],
+  fsb: ['fsb', 'financial stability board'],
+  bis: ['bis', 'bank for international settlements'],
+  iosco: ['iosco', 'international organization of securities commissions'],
+  bcbs: ['bcbs', 'basel committee on banking supervision', 'basel committee']
 }
 
 const AUTHORITY_ALIAS_LOOKUP = (() => {

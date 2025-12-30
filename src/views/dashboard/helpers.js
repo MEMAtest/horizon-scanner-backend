@@ -51,24 +51,60 @@ function formatDate(value) {
   return formatDateDisplay(value)
 }
 
-function truncateText(text, maxLength = 200) {
+function truncateText(text, maxLength = 280) {
   if (!text) return ''
   if (text.length <= maxLength) return text
-  return `${text.substring(0, maxLength).trim()}...`
+
+  const truncated = text.substring(0, maxLength)
+
+  // Try to end at sentence boundary (. ! ?)
+  const lastSentenceEnd = Math.max(
+    truncated.lastIndexOf('. '),
+    truncated.lastIndexOf('? '),
+    truncated.lastIndexOf('! '),
+    truncated.lastIndexOf('.\n'),
+    truncated.lastIndexOf('?\n'),
+    truncated.lastIndexOf('!\n')
+  )
+
+  // Use sentence boundary if it's past 50% of max length
+  if (lastSentenceEnd > maxLength * 0.5) {
+    return truncated.substring(0, lastSentenceEnd + 1).trim()
+  }
+
+  // Fallback: truncate at last word boundary + ellipsis
+  const lastSpace = truncated.lastIndexOf(' ')
+  if (lastSpace > maxLength * 0.7) {
+    return truncated.substring(0, lastSpace).trim() + '...'
+  }
+
+  return truncated.trim() + '...'
 }
 
-function isFallbackSummary(summary) {
+function isFallbackSummary(summary, title = '') {
   if (!summary) return true
-  const normalized = summary.toLowerCase()
+  const normalized = summary.toLowerCase().trim()
+  const normalizedTitle = (title || '').toLowerCase().trim()
+
+  // Check if summary essentially equals or starts with the title
+  if (normalizedTitle && normalizedTitle.length > 20) {
+    const titlePrefix = normalizedTitle.substring(0, Math.min(50, normalizedTitle.length))
+    if (normalized.startsWith(titlePrefix) || normalized === normalizedTitle) {
+      return true
+    }
+  }
+
   return (
     normalized.startsWith('informational regulatory update:') ||
     normalized.startsWith('significant regulatory development') ||
     normalized.startsWith('regulatory update:') ||
     normalized.startsWith('regulatory impact overview:') ||
+    normalized.startsWith('regulatory update impacting') ||
     normalized === 'summary not available' ||
     normalized === 'no summary available' ||
     normalized.includes('summary not available') ||
-    normalized.includes('no summary available')
+    normalized.includes('no summary available') ||
+    normalized.length < 30
   )
 }
 
@@ -128,12 +164,14 @@ function formatFilterOptions(rawOptions = {}) {
 }
 
 function selectSummary(update) {
+  const title = update.headline || update.title || ''
+
   const aiSummary = update.ai_summary ? update.ai_summary.trim() : ''
-  const useFallbackSummary = isFallbackSummary(aiSummary)
+  const useFallbackSummary = isFallbackSummary(aiSummary, title)
   if (!useFallbackSummary && aiSummary) return aiSummary
 
   const summary = update.summary ? update.summary.trim() : ''
-  if (summary && !isFallbackSummary(summary)) return summary
+  if (summary && !isFallbackSummary(summary, title)) return summary
 
   const altFields = [
     update.description,
@@ -150,12 +188,14 @@ function selectSummary(update) {
   for (const value of altFields) {
     if (!value) continue
     const trimmed = String(value).trim()
-    if (trimmed && !isFallbackSummary(trimmed)) {
+    if (trimmed && !isFallbackSummary(trimmed, title)) {
       return trimmed
     }
   }
 
-  if (update.impact && update.impact.trim()) return update.impact.trim()
+  if (update.impact && update.impact.trim() && !isFallbackSummary(update.impact.trim(), title)) {
+    return update.impact.trim()
+  }
   return ''
 }
 

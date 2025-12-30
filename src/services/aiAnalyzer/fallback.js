@@ -34,8 +34,18 @@ function applyFallbackMethods(ServiceClass) {
       }
     })
 
+    // Use source-configured sectors as fallback before defaulting
     if (detectedSectors.length === 0) {
-      detectedSectors.push('Banking')
+      const sourceSectors = metadata.sectors || metadata.sourceSectors || []
+      if (Array.isArray(sourceSectors) && sourceSectors.length > 0) {
+        // Use up to 2 sectors from source configuration
+        detectedSectors.push(...sourceSectors.slice(0, 2))
+        console.log(`📋 Using source sectors as fallback: ${detectedSectors.join(', ')}`)
+      } else {
+        // Final fallback - generic sector
+        detectedSectors.push('General Regulation')
+        console.log('⚠️ No sectors detected, using General Regulation')
+      }
     }
 
     const sectorRelevanceScores = {}

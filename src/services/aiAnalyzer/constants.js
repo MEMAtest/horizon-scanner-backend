@@ -10,10 +10,19 @@ const FALLBACK_MODELS = [
 ]
 
 const INDUSTRY_SECTORS = [
+  // Core Financial Services
   'Banking', 'Investment Management', 'Insurance', 'Payment Services',
   'Fintech', 'Credit Unions', 'Pension Funds', 'Real Estate Finance',
   'Consumer Credit', 'Capital Markets', 'Private Equity', 'Hedge Funds',
-  'Cryptocurrency', 'RegTech', 'Wealth Management', 'Corporate Finance'
+  'Cryptocurrency', 'RegTech', 'Wealth Management', 'Corporate Finance',
+  // Markets & Trading
+  'Market Infrastructure', 'Listed Companies', 'Securities Regulation',
+  'Derivatives', 'Broker-Dealer', 'Trading',
+  // Professional Services
+  'Legal Services', 'Professional Conduct', 'Accounting',
+  // Other Regulated Sectors
+  'Gambling', 'Telecommunications', 'Data Protection', 'Health & Safety',
+  'Consumer Protection', 'Licensing', 'Financial Stability', 'Monetary Policy'
 ]
 
 const DEFAULT_MAX_RETRIES = 3

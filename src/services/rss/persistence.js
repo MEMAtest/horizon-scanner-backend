@@ -15,10 +15,22 @@ function applyPersistenceMethods(ServiceClass, { dbService, aiAnalyzer }) {
             const aiData = analysisResult?.data || analysisResult
 
             if (analysisResult?.success && aiData) {
+              // Store original source sectors before AI overwrites
+              const originalSectors = update.sectors || []
+              const originalSector = update.sector || ''
+
               update.aiAnalysis = aiData
               update.businessImpact = analysisResult.businessImpact || aiData.ai_summary
               update.confidence = analysisResult.confidence || aiData.ai_confidence_score
-              update.sectors = analysisResult.sectors || aiData.primarySectors || update.sectors
+
+              // Preserve source sectors if AI returns nothing meaningful
+              const aiSectors = analysisResult.sectors?.length > 0
+                ? analysisResult.sectors
+                : aiData.primarySectors?.length > 0
+                  ? aiData.primarySectors
+                  : null
+              update.sectors = aiSectors || originalSectors
+
               update.category = analysisResult.category || aiData.area
               update.urgency = analysisResult.urgency || aiData.urgency
 
@@ -30,9 +42,11 @@ function applyPersistenceMethods(ServiceClass, { dbService, aiAnalyzer }) {
               update.ai_tags = aiData.ai_tags
               update.aiTags = aiData.aiTags
               update.ai_confidence_score = aiData.ai_confidence_score
-              update.sector = aiData.sector || update.sector
-              update.primarySectors = aiData.primarySectors
-              update.primary_sectors = aiData.primary_sectors
+
+              // Preserve source sector if AI returns nothing meaningful
+              update.sector = aiData.sector || originalSector
+              update.primarySectors = aiData.primarySectors?.length > 0 ? aiData.primarySectors : originalSectors
+              update.primary_sectors = aiData.primary_sectors?.length > 0 ? aiData.primary_sectors : originalSectors
               update.complianceDeadline = aiData.complianceDeadline
               update.compliance_deadline = aiData.compliance_deadline
               update.sectorRelevanceScores = aiData.sectorRelevanceScores

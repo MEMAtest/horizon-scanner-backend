@@ -525,6 +525,172 @@ const feedSources = [
     extractDates: true,
     sectors: ['Pensions']
   },
+  // ============================================
+  // INTERNATIONAL REGULATORS - Added December 2025
+  // ============================================
+
+  // US REGULATORS
+  {
+    name: 'SEC Press Releases',
+    authority: 'SEC',
+    url: 'https://www.sec.gov/news/pressreleases.rss',
+    type: 'rss',
+    description: 'US Securities and Exchange Commission - Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'US',
+    sectors: ['Capital Markets', 'Investment Management', 'Corporate Finance', 'Securities Regulation']
+  },
+  {
+    name: 'CFTC Press Releases',
+    authority: 'CFTC',
+    url: 'https://www.cftc.gov/PressRoom/PressReleases/rss.xml',
+    type: 'rss',
+    description: 'US Commodity Futures Trading Commission - Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'US',
+    sectors: ['Derivatives', 'Capital Markets', 'Trading', 'Cryptocurrency']
+  },
+  {
+    name: 'FINRA News Releases',
+    authority: 'FINRA',
+    url: 'https://www.finra.org/rss/news',
+    type: 'rss',
+    description: 'Financial Industry Regulatory Authority - News',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'US',
+    sectors: ['Investment Management', 'Broker-Dealer', 'Capital Markets']
+  },
+  {
+    name: 'Federal Reserve Press Releases',
+    authority: 'FEDERAL_RESERVE',
+    url: 'https://www.federalreserve.gov/feeds/press_all.xml',
+    type: 'rss',
+    description: 'US Federal Reserve - All Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'US',
+    sectors: ['Banking', 'Monetary Policy', 'Financial Stability', 'Capital Markets']
+  },
+  {
+    name: 'OCC News Releases',
+    authority: 'OCC',
+    url: 'https://www.occ.gov/rss/occ-news-releases.xml',
+    type: 'rss',
+    description: 'Office of the Comptroller of the Currency - News Releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'US',
+    sectors: ['Banking', 'Consumer Protection', 'Licensing']
+  },
+
+  // APAC REGULATORS
+  {
+    name: 'MAS Media Releases',
+    authority: 'MAS',
+    url: 'https://www.mas.gov.sg/rss/news',
+    type: 'rss',
+    description: 'Monetary Authority of Singapore - Media Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Singapore',
+    sectors: ['Banking', 'Insurance', 'Capital Markets', 'Payment Services', 'Fintech']
+  },
+  {
+    name: 'HKMA Press Releases',
+    authority: 'HKMA',
+    url: 'https://www.hkma.gov.hk/eng/news-and-media/press-releases/',
+    type: 'web_scraping',
+    description: 'Hong Kong Monetary Authority - Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Hong Kong',
+    sectors: ['Banking', 'Financial Stability', 'Payment Services']
+  },
+  {
+    name: 'ASIC Media Releases',
+    authority: 'ASIC',
+    url: 'https://asic.gov.au/about-asic/news-centre/news-items/',
+    type: 'web_scraping',
+    description: 'Australian Securities and Investments Commission - Media Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Australia',
+    sectors: ['Capital Markets', 'Consumer Protection', 'Investment Management']
+  },
+
+  // EU ADDITIONAL
+  {
+    name: 'ECB Press Releases',
+    authority: 'ECB',
+    url: 'https://www.ecb.europa.eu/rss/press.html',
+    type: 'rss',
+    description: 'European Central Bank - Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'EU',
+    sectors: ['Banking', 'Monetary Policy', 'Financial Stability']
+  },
+  {
+    name: 'EIOPA News',
+    authority: 'EIOPA',
+    url: 'https://www.eiopa.europa.eu/rss.xml',
+    type: 'rss',
+    description: 'European Insurance and Occupational Pensions Authority - News',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'EU',
+    sectors: ['Insurance', 'Pension Funds', 'Consumer Protection']
+  },
+  {
+    name: 'EBA News',
+    authority: 'EBA',
+    url: 'https://www.eba.europa.eu/rss.xml',
+    type: 'rss',
+    description: 'European Banking Authority - News',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'EU',
+    sectors: ['Banking', 'Capital Requirements', 'Consumer Protection']
+  },
+
+  // INTERNATIONAL BODIES
+  {
+    name: 'BIS Press Releases',
+    authority: 'BIS',
+    url: 'https://www.bis.org/rss/press_releases.rss',
+    type: 'rss',
+    description: 'Bank for International Settlements - Press Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'International',
+    sectors: ['Banking', 'Financial Stability', 'Monetary Policy']
+  },
+  {
+    name: 'IOSCO Media Releases',
+    authority: 'IOSCO',
+    url: 'https://www.iosco.org/rss/news.xml',
+    type: 'rss',
+    description: 'International Organization of Securities Commissions - Media Releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'International',
+    sectors: ['Capital Markets', 'Securities Regulation', 'Investment Management']
+  },
+  {
+    name: 'BCBS Publications',
+    authority: 'BCBS',
+    url: 'https://www.bis.org/rss/bcbs.rss',
+    type: 'rss',
+    description: 'Basel Committee on Banking Supervision - Publications',
+    priority: 'high',
+    recencyDays: 60,
+    country: 'International',
+    sectors: ['Banking', 'Capital Requirements', 'Prudential Regulation']
+  },
+
   {
     name: 'Demo Regulatory Updates',
     authority: 'Demo Authority',
