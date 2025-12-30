@@ -95,6 +95,10 @@ function applyPersistenceMethods(ServiceClass, { dbService, aiAnalyzer }) {
 
         update.fetchedDate = update.fetchedDate || new Date()
 
+        // Copy country/region from source config for international filtering
+        update.country = update.country || source.country || 'UK'
+        update.region = update.region || source.region || 'UK'
+
         const savedId = await dbService.saveUpdate(update)
         savedCount++
         this.processingStats.processed++

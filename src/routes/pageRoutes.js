@@ -24,6 +24,7 @@ const renderPublicationsPage = require('./pages/publicationsPage')
 const renderSummaryPage = require('./pages/summaryPage')
 const { renderSettingsPage } = require('./pages/settingsPage')
 const { renderHandbookPage } = require('./pages/handbookPage')
+const renderInternationalPage = require('./pages/internationalPage')
 
 const router = express.Router()
 
@@ -56,5 +57,6 @@ router.get('/publications', renderPublicationsPage)
 router.get('/publications/summary/:year', renderSummaryPage)
 router.get('/settings', renderSettingsPage)
 router.get('/handbook', renderHandbookPage)
+router.get('/international', renderInternationalPage)
 
 module.exports = router

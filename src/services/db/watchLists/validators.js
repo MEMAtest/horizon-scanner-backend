@@ -58,7 +58,36 @@ const AUTHORITY_ALIASES = {
   fsb: ['fsb', 'financial stability board'],
   bis: ['bis', 'bank for international settlements'],
   iosco: ['iosco', 'international organization of securities commissions'],
-  bcbs: ['bcbs', 'basel committee on banking supervision', 'basel committee']
+  bcbs: ['bcbs', 'basel committee on banking supervision', 'basel committee'],
+
+  // US Additional
+  ofac: ['ofac', 'office of foreign assets control', 'us treasury ofac', 'treasury sanctions'],
+
+  // European National Regulators - France
+  amf: ['amf', 'autorité des marchés financiers', 'amf france', 'french amf'],
+  acpr: ['acpr', 'autorité de contrôle prudentiel et de résolution', 'acpr france', 'french prudential authority'],
+
+  // European National Regulators - Germany
+  bafin: ['bafin', 'bundesanstalt für finanzdienstleistungsaufsicht', 'german financial regulator', 'german bafin'],
+
+  // European National Regulators - Ireland
+  cbi: ['cbi', 'central bank of ireland', 'irish central bank', 'cbi ireland'],
+
+  // European National Regulators - Netherlands
+  afm: ['afm', 'autoriteit financiële markten', 'netherlands afm', 'dutch afm'],
+  dnb: ['dnb', 'de nederlandsche bank', 'dutch central bank', 'netherlands dnb'],
+
+  // European National Regulators - Spain
+  cnmv: ['cnmv', 'comisión nacional del mercado de valores', 'spanish securities regulator', 'spain cnmv'],
+
+  // European National Regulators - Italy
+  consob: ['consob', 'commissione nazionale per le società e la borsa', 'italian securities regulator', 'italy consob'],
+
+  // European National Regulators - Sweden
+  fi_sweden: ['fi', 'finansinspektionen', 'swedish fsa', 'swedish financial supervisory authority', 'sweden fi'],
+
+  // EU Cross-Border
+  eu_council: ['eu council', 'council of the european union', 'eu sanctions', 'european council']
 }
 
 const AUTHORITY_ALIAS_LOOKUP = (() => {

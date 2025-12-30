@@ -27,6 +27,7 @@ const registerAuthRoutes = require('./api/auth')
 const registerFirmPersonaRoutes = require('./api/firmPersonas')
 const registerCalendarRoutes = require('./api/calendar')
 const registerHandbookRoutes = require('./api/handbook')
+const registerInternationalRoutes = require('./api/international')
 
 const router = express.Router()
 
@@ -57,5 +58,6 @@ registerAuthRoutes(router)
 registerFirmPersonaRoutes(router)
 registerCalendarRoutes(router)
 registerHandbookRoutes(router)
+registerInternationalRoutes(router)
 
 module.exports = router

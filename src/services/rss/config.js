@@ -539,6 +539,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'US',
+    region: 'Americas',
     sectors: ['Capital Markets', 'Investment Management', 'Corporate Finance', 'Securities Regulation']
   },
   {
@@ -550,6 +551,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'US',
+    region: 'Americas',
     sectors: ['Derivatives', 'Capital Markets', 'Trading', 'Cryptocurrency']
   },
   {
@@ -561,6 +563,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'US',
+    region: 'Americas',
     sectors: ['Investment Management', 'Broker-Dealer', 'Capital Markets']
   },
   {
@@ -572,6 +575,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'US',
+    region: 'Americas',
     sectors: ['Banking', 'Monetary Policy', 'Financial Stability', 'Capital Markets']
   },
   {
@@ -583,6 +587,7 @@ const feedSources = [
     priority: 'medium',
     recencyDays: 30,
     country: 'US',
+    region: 'Americas',
     sectors: ['Banking', 'Consumer Protection', 'Licensing']
   },
 
@@ -596,6 +601,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'Singapore',
+    region: 'Asia-Pacific',
     sectors: ['Banking', 'Insurance', 'Capital Markets', 'Payment Services', 'Fintech']
   },
   {
@@ -607,6 +613,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'Hong Kong',
+    region: 'Asia-Pacific',
     sectors: ['Banking', 'Financial Stability', 'Payment Services']
   },
   {
@@ -618,6 +625,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'Australia',
+    region: 'Asia-Pacific',
     sectors: ['Capital Markets', 'Consumer Protection', 'Investment Management']
   },
 
@@ -631,6 +639,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'EU',
+    region: 'Europe',
     sectors: ['Banking', 'Monetary Policy', 'Financial Stability']
   },
   {
@@ -642,6 +651,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'EU',
+    region: 'Europe',
     sectors: ['Insurance', 'Pension Funds', 'Consumer Protection']
   },
   {
@@ -653,6 +663,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'EU',
+    region: 'Europe',
     sectors: ['Banking', 'Capital Requirements', 'Consumer Protection']
   },
 
@@ -666,6 +677,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'International',
+    region: 'International',
     sectors: ['Banking', 'Financial Stability', 'Monetary Policy']
   },
   {
@@ -677,6 +689,7 @@ const feedSources = [
     priority: 'high',
     recencyDays: 30,
     country: 'International',
+    region: 'International',
     sectors: ['Capital Markets', 'Securities Regulation', 'Investment Management']
   },
   {
@@ -688,7 +701,163 @@ const feedSources = [
     priority: 'high',
     recencyDays: 60,
     country: 'International',
+    region: 'International',
     sectors: ['Banking', 'Capital Requirements', 'Prudential Regulation']
+  },
+
+  // ============================================
+  // EUROPEAN NATIONAL REGULATORS - Added December 2025
+  // Financial regulators focus (no data protection)
+  // ============================================
+
+  // US - OFAC (Sanctions)
+  {
+    name: 'OFAC Sanctions Updates',
+    authority: 'OFAC',
+    url: 'https://ofac.treasury.gov/recent-actions',
+    type: 'puppeteer',
+    description: 'US Treasury OFAC - Sanctions listings, SDN updates, enforcement',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'US',
+    region: 'Americas',
+    sectors: ['Sanctions', 'AML & Financial Crime', 'Banking', 'Compliance']
+  },
+
+  // FRANCE
+  {
+    name: 'AMF News (France)',
+    authority: 'AMF',
+    url: 'https://www.amf-france.org/en/news-publications/news-releases',
+    type: 'puppeteer',
+    description: 'Autorité des Marchés Financiers - News, warnings, sanctions',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'France',
+    region: 'Europe',
+    sectors: ['Capital Markets', 'Investment Management', 'Consumer Protection']
+  },
+  {
+    name: 'ACPR News (France)',
+    authority: 'ACPR',
+    url: 'https://acpr.banque-france.fr/en/news',
+    type: 'puppeteer',
+    description: 'Autorité de Contrôle Prudentiel - Banking/Insurance supervision',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'France',
+    region: 'Europe',
+    sectors: ['Banking', 'Insurance', 'Prudential Regulation', 'AML & Financial Crime']
+  },
+
+  // GERMANY
+  {
+    name: 'BaFin Publications (Germany)',
+    authority: 'BAFIN',
+    url: 'https://www.bafin.de/EN/PublikationenDaten/Publikationen/publikationen_node_en.html',
+    type: 'puppeteer',
+    description: 'Bundesanstalt für Finanzdienstleistungsaufsicht - All publications',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Germany',
+    region: 'Europe',
+    sectors: ['Banking', 'Insurance', 'Capital Markets', 'Consumer Protection']
+  },
+
+  // IRELAND
+  {
+    name: 'Central Bank of Ireland News',
+    authority: 'CBI',
+    url: 'https://www.centralbank.ie/news-media',
+    type: 'puppeteer',
+    description: 'Central Bank of Ireland - News, enforcement, speeches',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Ireland',
+    region: 'Europe',
+    sectors: ['Banking', 'Insurance', 'Capital Markets', 'AML & Financial Crime']
+  },
+
+  // NETHERLANDS
+  {
+    name: 'AFM News (Netherlands)',
+    authority: 'AFM',
+    url: 'https://www.afm.nl/nl-nl/nieuws',
+    type: 'puppeteer',
+    description: 'Autoriteit Financiële Markten - Market conduct supervision',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Netherlands',
+    region: 'Europe',
+    sectors: ['Capital Markets', 'Investment Management', 'Consumer Protection']
+  },
+  {
+    name: 'DNB News (Netherlands)',
+    authority: 'DNB',
+    url: 'https://www.dnb.nl/nieuws/',
+    type: 'puppeteer',
+    description: 'De Nederlandsche Bank - Prudential supervision',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Netherlands',
+    region: 'Europe',
+    sectors: ['Banking', 'Insurance', 'Pension Funds', 'Financial Stability']
+  },
+
+  // SPAIN
+  {
+    name: 'CNMV News (Spain)',
+    authority: 'CNMV',
+    url: 'https://www.cnmv.es/portal/home.aspx?lang=en',
+    type: 'puppeteer',
+    description: 'Comisión Nacional del Mercado de Valores - Securities regulator',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Spain',
+    region: 'Europe',
+    sectors: ['Capital Markets', 'Investment Management', 'Listed Companies']
+  },
+
+  // ITALY
+  {
+    name: 'CONSOB Press Releases (Italy)',
+    authority: 'CONSOB',
+    url: 'https://www.consob.it/web/consob-and-its-activities/press-releases',
+    type: 'puppeteer',
+    description: 'Commissione Nazionale per le Società e la Borsa - Securities',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Italy',
+    region: 'Europe',
+    sectors: ['Capital Markets', 'Corporate Governance', 'Listed Companies']
+  },
+
+  // SWEDEN
+  {
+    name: 'Finansinspektionen (Sweden)',
+    authority: 'FI_SWEDEN',
+    url: 'https://www.fi.se/en/published/',
+    type: 'puppeteer',
+    description: 'Swedish Financial Supervisory Authority - All publications',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Sweden',
+    region: 'Europe',
+    sectors: ['Banking', 'Insurance', 'Capital Markets', 'Consumer Credit']
+  },
+
+  // EU CROSS-BORDER
+  {
+    name: 'EU Council Sanctions',
+    authority: 'EU_COUNCIL',
+    url: 'https://www.consilium.europa.eu/en/policies/sanctions/',
+    type: 'puppeteer',
+    description: 'EU Council - Sanctions packages, listings changes',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'EU',
+    region: 'Europe',
+    sectors: ['Sanctions', 'AML & Financial Crime', 'Compliance']
   },
 
   {

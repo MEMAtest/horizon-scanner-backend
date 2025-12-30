@@ -41,12 +41,13 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
       try {
         const query = `
                   INSERT INTO regulatory_updates (
-                      headline, summary, url, authority, published_date, 
+                      headline, summary, url, authority, published_date,
                       impact_level, urgency, sector, area,
-                      ai_summary, business_impact_score, ai_tags, 
+                      ai_summary, business_impact_score, ai_tags,
                       firm_types_affected, compliance_deadline, ai_confidence_score,
-                      sector_relevance_scores, implementation_phases, required_resources
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                      sector_relevance_scores, implementation_phases, required_resources,
+                      country, region
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                   RETURNING id
               `
 
@@ -68,7 +69,9 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
           updateData.aiConfidenceScore || updateData.ai_confidence_score || 0.0,
           JSON.stringify(updateData.sectorRelevanceScores || updateData.sector_relevance_scores || {}),
           JSON.stringify(updateData.implementationPhases || updateData.implementation_phases || []),
-          JSON.stringify(updateData.requiredResources || updateData.required_resources || {})
+          JSON.stringify(updateData.requiredResources || updateData.required_resources || {}),
+          updateData.country || 'UK',
+          updateData.region || 'UK'
         ]
 
         const result = await client.query(query, values)
@@ -177,7 +180,8 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
                       impact_level, urgency, sector, area,
                       ai_summary, content_type, business_impact_score, ai_tags,
                       firm_types_affected, compliance_deadline, ai_confidence_score,
-                      sector_relevance_scores, implementation_phases, required_resources
+                      sector_relevance_scores, implementation_phases, required_resources,
+                      country, region
                   FROM regulatory_updates
                   WHERE 1=1
               `
@@ -256,6 +260,28 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
           if (dateFilter) {
             query += ` AND published_date >= $${++paramCount}`
             params.push(dateFilter)
+          }
+        }
+
+        // Country filter (for international page)
+        if (filters.country) {
+          if (Array.isArray(filters.country)) {
+            query += ` AND country = ANY($${++paramCount})`
+            params.push(filters.country)
+          } else {
+            query += ` AND country = $${++paramCount}`
+            params.push(filters.country)
+          }
+        }
+
+        // Region filter (for international page)
+        if (filters.region) {
+          if (Array.isArray(filters.region)) {
+            query += ` AND region = ANY($${++paramCount})`
+            params.push(filters.region)
+          } else {
+            query += ` AND region = $${++paramCount}`
+            params.push(filters.region)
           }
         }
 
@@ -388,6 +414,24 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
             const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt)
             return updateDate >= dateFilter
           })
+        }
+      }
+
+      // Country filter (for international page)
+      if (filters.country) {
+        if (Array.isArray(filters.country)) {
+          filtered = filtered.filter(u => filters.country.includes(u.country))
+        } else {
+          filtered = filtered.filter(u => u.country === filters.country)
+        }
+      }
+
+      // Region filter (for international page)
+      if (filters.region) {
+        if (Array.isArray(filters.region)) {
+          filtered = filtered.filter(u => filters.region.includes(u.region))
+        } else {
+          filtered = filtered.filter(u => u.region === filters.region)
         }
       }
 
