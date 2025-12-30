@@ -710,14 +710,14 @@ const feedSources = [
   // Financial regulators focus (no data protection)
   // ============================================
 
-  // US - OFAC (Sanctions) - Requires Puppeteer (bot protection)
+  // US - OFAC (Sanctions) - Puppeteer (works locally, bot protection)
   {
     name: 'OFAC Sanctions Updates',
     authority: 'OFAC',
     url: 'https://ofac.treasury.gov/recent-actions',
     type: 'puppeteer',
     description: 'US Treasury OFAC - Sanctions listings, SDN updates, enforcement',
-    priority: 'disabled', // Bot protection - needs local Puppeteer run
+    priority: 'medium', // Works with local Puppeteer
     recencyDays: 30,
     country: 'US',
     region: 'Americas',
@@ -791,14 +791,14 @@ const feedSources = [
     region: 'Europe',
     sectors: ['Capital Markets', 'Investment Management', 'Consumer Protection']
   },
-  // DNB - Requires Puppeteer (403 bot protection)
+  // DNB - Puppeteer (works locally, bot protection)
   {
     name: 'DNB News (Netherlands)',
     authority: 'DNB',
     url: 'https://www.dnb.nl/en/general-news/',
     type: 'puppeteer',
     description: 'De Nederlandsche Bank - Prudential supervision',
-    priority: 'disabled', // Bot protection - needs local Puppeteer run
+    priority: 'medium', // Works with local Puppeteer
     recencyDays: 30,
     country: 'Netherlands',
     region: 'Europe',
