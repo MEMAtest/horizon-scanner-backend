@@ -1,16 +1,10 @@
 const { feedSources } = require('../../services/rss/config')
+const dbService = require('../../services/dbService')
 
 function registerInternationalRoutes(router) {
   // Get international updates with region/country filtering
   router.get('/international/updates', async (req, res) => {
     try {
-      const dbService = req.app.locals.dbService
-      if (!dbService) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database service not available'
-        })
-      }
 
       const filters = {
         limit: parseInt(req.query.limit) || 50,
@@ -74,13 +68,6 @@ function registerInternationalRoutes(router) {
   // Get statistics by region and country
   router.get('/international/stats', async (req, res) => {
     try {
-      const dbService = req.app.locals.dbService
-      if (!dbService) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database service not available'
-        })
-      }
 
       // Get all updates to calculate stats
       const allUpdates = await dbService.getEnhancedUpdates({ limit: 10000 })
