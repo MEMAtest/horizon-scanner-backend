@@ -76,6 +76,13 @@ function getPoliciesIcon() {
 }
 
 /**
+ * Handbook Icon - Reading canary
+ */
+function getHandbookIcon() {
+  return getWeeklyRoundupCanary()
+}
+
+/**
  * Kanban Icon - Card arranging canary
  */
 function getKanbanIcon() {
@@ -137,6 +144,7 @@ function getPageIcon(pageName) {
     'watch-lists': getWatchListsIcon,
     dossiers: getDossiersIcon,
     policies: getPoliciesIcon,
+    handbook: getHandbookIcon,
     kanban: getKanbanIcon,
     'change-management': getKanbanIcon,
     enforcement: getEnforcementIcon,
@@ -159,6 +167,7 @@ module.exports = {
   getWatchListsIcon,
   getDossiersIcon,
   getPoliciesIcon,
+  getHandbookIcon,
   getKanbanIcon,
   getPredictiveIcon,
   getEnforcementIcon,

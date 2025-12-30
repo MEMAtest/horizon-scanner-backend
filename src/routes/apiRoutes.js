@@ -26,6 +26,7 @@ const registerLinkedItemsRoutes = require('./api/linkedItems')
 const registerAuthRoutes = require('./api/auth')
 const registerFirmPersonaRoutes = require('./api/firmPersonas')
 const registerCalendarRoutes = require('./api/calendar')
+const registerHandbookRoutes = require('./api/handbook')
 
 const router = express.Router()
 
@@ -55,5 +56,6 @@ registerLinkedItemsRoutes(router)
 registerAuthRoutes(router)
 registerFirmPersonaRoutes(router)
 registerCalendarRoutes(router)
+registerHandbookRoutes(router)
 
 module.exports = router

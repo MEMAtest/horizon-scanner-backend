@@ -298,6 +298,120 @@ module.exports = function applyHandbookMethods(EnhancedDBService) {
       }
     },
 
+    async getHandbookOutlineBySourcebookId(sourcebookId, versionId) {
+      ensurePostgres(this)
+      if (!sourcebookId) return { versionId: null, chapters: [] }
+
+      let resolvedVersionId = versionId
+      if (!resolvedVersionId) {
+        const latest = await this.getLatestHandbookVersion(sourcebookId)
+        resolvedVersionId = latest?.id
+      }
+      if (!resolvedVersionId) {
+        return { versionId: null, chapters: [] }
+      }
+
+      const client = await this.pool.connect()
+      try {
+        const result = await client.query(
+          `SELECT id, parent_id, level, section_number, section_title,
+                  canonical_ref, anchor, path, order_index
+           FROM reg_document_sections
+           WHERE version_id = $1
+           ORDER BY level, order_index, id`,
+          [resolvedVersionId]
+        )
+
+        const chapters = []
+        const chapterMap = new Map()
+        let sectionsCount = 0
+
+        result.rows.forEach(row => {
+          if (row.level === 1) {
+            const chapter = {
+              id: row.id,
+              parentId: row.parent_id,
+              level: row.level,
+              ref: row.canonical_ref,
+              sectionNumber: row.section_number,
+              title: row.section_title,
+              anchor: row.anchor,
+              path: row.path,
+              orderIndex: row.order_index,
+              sections: []
+            }
+            chapters.push(chapter)
+            chapterMap.set(row.id, chapter)
+          } else if (row.level === 2) {
+            const section = {
+              id: row.id,
+              parentId: row.parent_id,
+              level: row.level,
+              ref: row.canonical_ref,
+              sectionNumber: row.section_number,
+              title: row.section_title,
+              anchor: row.anchor,
+              path: row.path,
+              orderIndex: row.order_index
+            }
+            sectionsCount += 1
+            const parent = chapterMap.get(row.parent_id)
+            if (parent) {
+              parent.sections.push(section)
+            }
+          }
+        })
+
+        return {
+          versionId: resolvedVersionId,
+          chapters,
+          sectionsCount
+        }
+      } finally {
+        client.release()
+      }
+    },
+
+    async getHandbookSectionById(sectionId) {
+      ensurePostgres(this)
+      if (!sectionId) return null
+      const client = await this.pool.connect()
+      try {
+        const result = await client.query(
+          `SELECT s.*, v.id AS version_id, v.ingested_at,
+             v.sourcebook_id,
+             sb.code AS sourcebook_code, sb.title AS sourcebook_title
+           FROM reg_document_sections s
+           JOIN reg_document_versions v ON v.id = s.version_id
+           JOIN reg_document_sourcebooks sb ON sb.id = v.sourcebook_id
+           WHERE s.id = $1
+           LIMIT 1`,
+          [sectionId]
+        )
+        return result.rows[0] || null
+      } finally {
+        client.release()
+      }
+    },
+
+    async getHandbookParagraphsBySectionId(sectionId) {
+      ensurePostgres(this)
+      if (!sectionId) return []
+      const client = await this.pool.connect()
+      try {
+        const result = await client.query(
+          `SELECT id, paragraph_number, canonical_ref, anchor, text, html
+           FROM reg_document_paragraphs
+           WHERE section_id = $1
+           ORDER BY id`,
+          [sectionId]
+        )
+        return result.rows
+      } finally {
+        client.release()
+      }
+    },
+
     async createHandbookVersion(sourcebookId, {
       versionLabel,
       effectiveDate,
