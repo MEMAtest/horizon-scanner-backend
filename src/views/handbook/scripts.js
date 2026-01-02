@@ -5,10 +5,13 @@ function getHandbookScripts() {
         const state = {
           sourcebooks: [],
           outline: null,
+          outlineByCode: {},
           latestIngest: null,
           currentCode: null,
           activeSectionId: null,
-          searchResults: []
+          searchResults: [],
+          sectionCache: {},
+          referenceCache: {}
         };
 
         const ui = {};
@@ -63,6 +66,12 @@ function getHandbookScripts() {
           } else {
             ui.searchResults.classList.remove('active');
           }
+        }
+
+        function clearSearchResults() {
+          state.searchResults = [];
+          ui.searchResultsBody.innerHTML = '';
+          setSearchResultsVisible(false);
         }
 
         function renderSourcebooks() {
@@ -160,6 +169,26 @@ function getHandbookScripts() {
           ui.contentMeta.textContent = subtitle || '';
         }
 
+        function renderSectionContent(section, paragraphs) {
+          renderContentHeader(section.canonical_ref || section.section_number || 'Section', section.section_title || '');
+          ui.contentBody.innerHTML = paragraphs.length
+            ? renderParagraphs(paragraphs)
+            : '<div class="content-placeholder">No provisions available for this section.</div>';
+        }
+
+        function renderReferenceContent(item, paragraphs, ref) {
+          renderContentHeader(item.canonical_ref || ref, item.section_title || item.sourcebook_title || '');
+          if (paragraphs.length) {
+            ui.contentBody.innerHTML = renderParagraphs(paragraphs);
+          } else if (item.html) {
+            ui.contentBody.innerHTML = '<div class="provision-body">' + item.html + '</div>';
+          } else if (item.text) {
+            ui.contentBody.innerHTML = '<div class="provision-body"><p>' + escapeHtml(item.text) + '</p></div>';
+          } else {
+            ui.contentBody.innerHTML = '<div class="content-placeholder">No content available.</div>';
+          }
+        }
+
         async function loadSourcebooks() {
           setStatus('Loading sourcebooks...', false);
           try {
@@ -181,10 +210,16 @@ function getHandbookScripts() {
 
         async function loadOutline() {
           if (!state.currentCode) return;
+          if (state.outlineByCode[state.currentCode]) {
+            state.outline = state.outlineByCode[state.currentCode];
+            renderOutline();
+            return;
+          }
           setOutlineLoading('Loading outline...');
           try {
             const response = await fetchJson('/api/handbook/sourcebooks/' + encodeURIComponent(state.currentCode) + '/outline');
             state.outline = response.data;
+            state.outlineByCode[state.currentCode] = response.data;
             renderOutline();
           } catch (error) {
             console.error('[Handbook] Outline load failed:', error);
@@ -195,15 +230,18 @@ function getHandbookScripts() {
         async function loadSection(sectionId) {
           if (!sectionId) return;
           setActiveSection(sectionId);
+          const cached = state.sectionCache[sectionId];
+          if (cached) {
+            renderSectionContent(cached.section, cached.paragraphs);
+            return;
+          }
           setContentLoading('Loading section content...');
           try {
             const response = await fetchJson('/api/handbook/sections/' + sectionId + '?includeParagraphs=true');
             const section = response.data || {};
             const paragraphs = response.paragraphs || [];
-            renderContentHeader(section.canonical_ref || section.section_number || 'Section', section.section_title || '');
-            ui.contentBody.innerHTML = paragraphs.length
-              ? renderParagraphs(paragraphs)
-              : '<div class="content-placeholder">No provisions available for this section.</div>';
+            state.sectionCache[sectionId] = { section, paragraphs };
+            renderSectionContent(section, paragraphs);
           } catch (error) {
             console.error('[Handbook] Section load failed:', error);
             setContentLoading('Failed to load section.');
@@ -212,22 +250,18 @@ function getHandbookScripts() {
 
         async function loadReference(ref) {
           if (!ref) return;
+          const cached = state.referenceCache[ref];
+          if (cached) {
+            renderReferenceContent(cached.item, cached.paragraphs, ref);
+            return;
+          }
           setContentLoading('Loading reference...');
           try {
             const response = await fetchJson('/api/handbook/reference/' + encodeURIComponent(ref) + '?includeParagraphs=true');
             const item = response.data || {};
             const paragraphs = response.paragraphs || [];
-            renderContentHeader(item.canonical_ref || ref, item.section_title || item.sourcebook_title || '');
-
-            if (paragraphs.length) {
-              ui.contentBody.innerHTML = renderParagraphs(paragraphs);
-            } else if (item.html) {
-              ui.contentBody.innerHTML = '<div class="provision-body">' + item.html + '</div>';
-            } else if (item.text) {
-              ui.contentBody.innerHTML = '<div class="provision-body"><p>' + escapeHtml(item.text) + '</p></div>';
-            } else {
-              ui.contentBody.innerHTML = '<div class="content-placeholder">No content available.</div>';
-            }
+            state.referenceCache[ref] = { item, paragraphs };
+            renderReferenceContent(item, paragraphs, ref);
           } catch (error) {
             console.error('[Handbook] Reference load failed:', error);
             setContentLoading('Failed to load reference.');
@@ -239,7 +273,10 @@ function getHandbookScripts() {
           ui.searchResultsBody.innerHTML = '<div class="loading-state">Searching...</div>';
           setSearchResultsVisible(true);
           try {
-            const response = await fetchJson('/api/handbook/search?q=' + encodeURIComponent(query));
+            const sourcebookParam = state.currentCode
+              ? '&sourcebook=' + encodeURIComponent(state.currentCode)
+              : '';
+            const response = await fetchJson('/api/handbook/search?q=' + encodeURIComponent(query) + sourcebookParam);
             state.searchResults = response.data || [];
             renderSearchResults();
           } catch (error) {
@@ -251,6 +288,7 @@ function getHandbookScripts() {
         function bindEvents() {
           ui.sourcebookSelect.addEventListener('change', async event => {
             state.currentCode = event.target.value;
+            clearSearchResults();
             await loadOutline();
           });
 
@@ -263,9 +301,7 @@ function getHandbookScripts() {
 
           ui.clearSearch.addEventListener('click', () => {
             ui.searchInput.value = '';
-            state.searchResults = [];
-            ui.searchResultsBody.innerHTML = '';
-            setSearchResultsVisible(false);
+            clearSearchResults();
           });
 
           ui.outline.addEventListener('click', event => {

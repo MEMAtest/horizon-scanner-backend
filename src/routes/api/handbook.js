@@ -102,9 +102,15 @@ function registerHandbookRoutes(router) {
       const authority = resolveAuthority(req)
       const limit = parseNumber(req.query.limit, 20)
       const offset = parseNumber(req.query.offset, 0)
-      const results = await db.searchHandbook(query, { authority, limit, offset })
+      const sourcebookCode = (req.query.sourcebook || req.query.sourcebookCode || '').toString().trim() || null
+      const results = await db.searchHandbook(query, {
+        authority,
+        limit,
+        offset,
+        sourcebookCode
+      })
 
-      res.json({ success: true, data: results, limit, offset })
+      res.json({ success: true, data: results, limit, offset, sourcebook: sourcebookCode || null })
     } catch (error) {
       console.error('Error searching handbook:', error)
       res.status(500).json({ success: false, error: error.message })

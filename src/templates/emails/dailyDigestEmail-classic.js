@@ -1,5 +1,7 @@
 // src/templates/emails/dailyDigestEmail-classic.js
-// Classic corporate design - Navy/Gold theme
+// Classic corporate design - Navy/Gold theme with two-column layout
+
+const { getRegulatorIcon, getCanaryIconSimple, getPriorityColor } = require('./regulatorIcons')
 
 function formatDate(value, options) {
   if (!value) return 'Unknown'
@@ -17,93 +19,215 @@ function formatDate(value, options) {
   }
 }
 
-function truncate(text, length = 360) {
-  if (!text) return ''
-  const cleaned = String(text).replace(/\s+/g, ' ').trim()
-  return cleaned.length > length ? `${cleaned.slice(0, length).trim()}…` : cleaned
+// Get the best available summary, preferring clean text over prefix-polluted text
+function getBestSummary(insight) {
+  const aiSummary = insight.ai_summary || ''
+  const summary = insight.summary || ''
+  const description = insight.description || ''
+  const headline = insight.headline || ''
+
+  // Pattern for common prefixes to strip
+  const prefixPattern = /^(Informational regulatory update:|Regulatory update impacting business operations:|RegCanary Analysis:)\s*/i
+
+  // Helper to check if text is meaningful (not just headline repeated)
+  const isMeaningful = (text) => {
+    if (!text || text.length < 20) return false
+    // If text is at least 40 chars, it's probably meaningful
+    if (text.length >= 40) return true
+    const cleanText = text.toLowerCase().replace(/[^a-z0-9\s]/g, '')
+    const cleanHeadline = headline.toLowerCase().replace(/[^a-z0-9\s]/g, '')
+    // Only reject if it's basically just the headline
+    if (cleanText === cleanHeadline || cleanText.length < cleanHeadline.length * 0.5) return false
+    return true
+  }
+
+  // Prefer clean RSS summary if available and meaningful
+  if (summary && summary.trim() && isMeaningful(summary)) {
+    return summary.replace(prefixPattern, '').trim()
+  }
+
+  // Clean the ai_summary
+  let cleanedAi = aiSummary.replace(prefixPattern, '').trim()
+  // Remove headline if it starts with it
+  const headlineStart = headline.toLowerCase().slice(0, 30)
+  if (cleanedAi.toLowerCase().startsWith(headlineStart)) {
+    cleanedAi = cleanedAi.slice(headline.length).trim()
+  }
+
+  // If cleaned ai_summary is meaningful, use it
+  if (cleanedAi && isMeaningful(cleanedAi)) {
+    return cleanedAi
+  }
+
+  // Use description if available and meaningful
+  if (description && description.trim() && isMeaningful(description)) {
+    return description.replace(prefixPattern, '').trim()
+  }
+
+  // Return empty if nothing meaningful
+  return ''
 }
 
-function buildInsightRows(insights) {
+// Improved truncation - ALWAYS cuts at word boundary, never mid-word
+function truncate(text, length = 360) {
+  if (!text) return ''
+
+  // Clean up the text - normalize whitespace and remove common prefixes
+  let cleaned = String(text).replace(/\s+/g, ' ').trim()
+  cleaned = cleaned.replace(/^(Informational regulatory update:|Regulatory update impacting business operations:|RegCanary Analysis:)\s*/i, '')
+
+  // Helper: always cut at word boundary, never mid-word
+  const cutAtWordBoundary = (str, maxLen) => {
+    if (str.length <= maxLen) return str
+    // Find last space before maxLen
+    const lastSpace = str.lastIndexOf(' ', maxLen)
+    if (lastSpace > maxLen * 0.3) {
+      return str.slice(0, lastSpace).trim()
+    }
+    // If no good space, just take up to maxLen (rare edge case)
+    return str.slice(0, maxLen).trim()
+  }
+
+  // If text is already truncated mid-word, clean it up
+  // Check if it ends abruptly (not with punctuation or complete word)
+  const lastChar = cleaned.slice(-1)
+  const endsWithPunct = ['.', '!', '?', ':', ';', ',', '"', "'", ')'].includes(lastChar)
+  const endsWithEllipsis = cleaned.endsWith('...')
+
+  if (endsWithEllipsis || (!endsWithPunct && cleaned.length > 50)) {
+    // Remove trailing ellipsis if present
+    let base = endsWithEllipsis ? cleaned.slice(0, -3).trim() : cleaned
+
+    // Look for sentence boundary first
+    const lastPeriod = base.lastIndexOf('.')
+    const lastExclaim = base.lastIndexOf('!')
+    const lastQuestion = base.lastIndexOf('?')
+    const boundary = Math.max(lastPeriod, lastExclaim, lastQuestion)
+
+    // If we find a sentence ending after 40% of text, use it
+    if (boundary > base.length * 0.4) {
+      cleaned = base.slice(0, boundary + 1).trim()
+    } else {
+      // Otherwise cut at last space to avoid mid-word cutoff
+      const lastSpace = base.lastIndexOf(' ')
+      if (lastSpace > base.length * 0.5) {
+        cleaned = base.slice(0, lastSpace).trim()
+      }
+    }
+  }
+
+  if (cleaned.length <= length) return cleaned
+
+  // Find the portion within our limit
+  const truncated = cleaned.slice(0, length)
+
+  // Look for sentence endings first
+  const lastPeriod = truncated.lastIndexOf('.')
+  const lastExclaim = truncated.lastIndexOf('!')
+  const lastQuestion = truncated.lastIndexOf('?')
+  const boundary = Math.max(lastPeriod, lastExclaim, lastQuestion)
+
+  // Use sentence boundary if it's after 35% of limit
+  if (boundary > length * 0.35) {
+    return cleaned.slice(0, boundary + 1).trim()
+  }
+
+  // Fallback: ALWAYS cut at word boundary
+  return cutAtWordBoundary(cleaned, length)
+}
+
+// Build premium compact insight card for two-column layout
+function buildCompactCard(insight, index) {
+  const published = formatDate(insight.published || insight.publishedDate || insight.createdAt, {
+    day: 'numeric',
+    month: 'short'
+  })
+
+  const priorityColor = getPriorityColor(insight)
+  let priorityLabel = 'AWARE'
+  if (insight.relevanceScore >= 80) priorityLabel = 'REVIEW'
+  else if (insight.relevanceScore >= 70) priorityLabel = 'MONITOR'
+
+  const regionLabel = insight.region && insight.region !== 'UK'
+    ? ` • ${insight.country || insight.region}`
+    : ''
+
+  return `
+    <div style="padding: 16px 18px; background: #FFFFFF; border-radius: 8px; border-left: 4px solid ${priorityColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);">
+      <!-- Header row with icon and authority -->
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="width: 36px; vertical-align: top;">
+            ${getRegulatorIcon(insight.authority, 32)}
+          </td>
+          <td style="padding-left: 12px; vertical-align: middle;">
+            <span style="font-size: 11px; font-weight: 600; color: #64748B; letter-spacing: 0.05em;">
+              ${insight.authority || 'Unknown'}${regionLabel}
+            </span>
+            <span style="font-size: 10px; color: #94A3B8; margin-left: 6px;">#${index}</span>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Headline -->
+      <h4 style="margin: 12px 0 8px 0; font-size: 15px; font-weight: 600; line-height: 1.45; color: #1E293B;">
+        ${insight.url
+          ? `<a href="${insight.url}" style="color: #1E293B; text-decoration: none;">${truncate(insight.headline || 'Untitled', 85)}</a>`
+          : truncate(insight.headline || 'Untitled', 85)}
+      </h4>
+
+      <!-- Summary - use getBestSummary to get cleanest text -->
+      ${getBestSummary(insight) ? `
+      <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+        ${truncate(getBestSummary(insight), 280)}
+      </p>
+      ` : ''}
+
+      <!-- Footer: Action + Date -->
+      <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #F1F5F9;">
+        <span style="display: inline-block; padding: 4px 10px; background: ${insight.relevanceScore >= 70 ? '#FEF3C7' : '#F0FDF4'}; color: ${insight.relevanceScore >= 70 ? '#92400E' : '#166534'}; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; border-radius: 4px;">
+          ${priorityLabel}
+        </span>
+        <span style="font-size: 11px; color: #94A3B8; margin-left: 10px;">
+          ${published}
+        </span>
+      </div>
+    </div>
+  `
+}
+
+// Build two-column grid of insights
+function buildTwoColumnGrid(insights, startIndex = 1) {
   if (!Array.isArray(insights) || insights.length === 0) {
     return `
       <tr>
-        <td style="padding: 32px 0; text-align: center;">
-          <div style="font-size: 15px; color: #475569; line-height: 1.6;">
-            No high-priority insights were captured in the last cycle.<br/>
-            The intelligence engine will continue monitoring all configured sources.
-          </div>
+        <td colspan="2" style="padding: 24px; text-align: center; color: #6B7280; font-size: 14px;">
+          No updates in this section.
         </td>
       </tr>
     `
   }
 
-  return insights.map((insight, index) => {
-    const published = formatDate(insight.published || insight.publishedDate || insight.createdAt, {
-      day: 'numeric',
-      month: 'short'
-    })
+  const rows = []
+  for (let i = 0; i < insights.length; i += 2) {
+    const left = insights[i]
+    const right = insights[i + 1]
 
-    // Determine priority styling based on relevance score
-    let priorityLabel = 'MONITOR'
-    let priorityBg = '#475569'
-    let priorityBorder = '#94A3B8'
-
-    if (insight.relevanceScore >= 80) {
-      priorityLabel = 'HIGH IMPACT'
-      priorityBg = '#B91C1C'
-      priorityBorder = '#DC2626'
-    } else if (insight.relevanceScore >= 70) {
-      priorityLabel = 'ENFORCEMENT'
-      priorityBg = '#D97706'
-      priorityBorder = '#F59E0B'
-    }
-
-    const sectorLabel = Array.isArray(insight.sectors) && insight.sectors.length
-      ? insight.sectors.join(', ')
-      : (insight.sector || 'Cross-sector')
-
-    return `
+    rows.push(`
       <tr>
-        <td style="padding: 24px 0; border-bottom: 1px solid #E5E7EB;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="width: 50px; vertical-align: top; padding-right: 16px;">
-                <div style="width: 32px; height: 32px; border-radius: 6px; background: #1E3A8A; color: white; text-align: center; line-height: 32px; font-weight: 700; font-size: 14px;">
-                  ${index + 1}
-                </div>
-              </td>
-              <td style="vertical-align: top;">
-                <div style="margin-bottom: 12px;">
-                  <span style="display: inline-block; background: ${priorityBg}; color: white; padding: 5px 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 3px; border-left: 3px solid ${priorityBorder};">
-                    ${priorityLabel}
-                  </span>
-                </div>
-                <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; line-height: 1.5; color: #1F2937;">
-                  ${insight.url
-                    ? `<a href="${insight.url}" style="color: #1F2937; text-decoration: none; border-bottom: 2px solid #D97706;">${insight.headline || 'Untitled update'}</a>`
-                    : (insight.headline || 'Untitled update')}
-                </h3>
-                <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.7; color: #4B5563;">
-                  ${truncate(insight.summary || insight.ai_summary || insight.description || '')}
-                </p>
-                <div style="font-size: 13px; color: #6B7280; line-height: 1.6;">
-                  <div style="margin-bottom: 4px;">
-                    <span style="font-weight: 600; color: #1F2937;">Authority:</span> ${insight.authority || 'Pending'}
-                  </div>
-                  <div style="margin-bottom: 4px;">
-                    <span style="font-weight: 600; color: #1F2937;">Sector:</span> ${sectorLabel}
-                  </div>
-                  <div>
-                    <span style="font-weight: 600; color: #1F2937;">Published:</span> ${published}
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </table>
+        <td style="width: 50%; padding: 8px; vertical-align: top;">
+          ${buildCompactCard(left, startIndex + i)}
         </td>
+        ${right ? `
+        <td style="width: 50%; padding: 8px; vertical-align: top;">
+          ${buildCompactCard(right, startIndex + i + 1)}
+        </td>
+        ` : '<td style="width: 50%; padding: 8px;"></td>'}
       </tr>
-    `
-  }).join('')
+    `)
+  }
+
+  return rows.join('')
 }
 
 function buildMetricsRow(metrics) {
@@ -111,24 +235,24 @@ function buildMetricsRow(metrics) {
 
   return `
     <tr>
-      <td style="padding: 32px 0;">
+      <td style="padding: 24px 0;">
         <table width="100%" cellpadding="0" cellspacing="0" style="border: 2px solid #1E3A8A; border-radius: 8px; overflow: hidden;">
           <tr>
-            <td style="width: 25%; padding: 32px 20px; border-right: 1px solid #E5E7EB; text-align: center; background: #F9FAFB;">
-              <div style="font-size: 42px; font-weight: 700; color: #B91C1C; margin-bottom: 8px;">${metrics.highCount ?? 0}</div>
-              <div style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">High Impact</div>
+            <td style="width: 25%; padding: 24px 16px; border-right: 1px solid #E5E7EB; text-align: center; background: #F9FAFB;">
+              <div style="font-size: 36px; font-weight: 700; color: #B91C1C; margin-bottom: 4px;">${metrics.highCount ?? 0}</div>
+              <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">High Impact</div>
             </td>
-            <td style="width: 25%; padding: 32px 20px; border-right: 1px solid #E5E7EB; text-align: center; background: #F9FAFB;">
-              <div style="font-size: 42px; font-weight: 700; color: #D97706; margin-bottom: 8px;">${metrics.mediumCount ?? 0}</div>
-              <div style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Enforcement</div>
+            <td style="width: 25%; padding: 24px 16px; border-right: 1px solid #E5E7EB; text-align: center; background: #F9FAFB;">
+              <div style="font-size: 36px; font-weight: 700; color: #D97706; margin-bottom: 4px;">${metrics.mediumCount ?? 0}</div>
+              <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Enforcement</div>
             </td>
-            <td style="width: 25%; padding: 32px 20px; border-right: 1px solid #E5E7EB; text-align: center; background: #F9FAFB;">
-              <div style="font-size: 42px; font-weight: 700; color: #475569; margin-bottom: 8px;">${metrics.lowCount ?? 0}</div>
-              <div style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Monitor</div>
+            <td style="width: 25%; padding: 24px 16px; border-right: 1px solid #E5E7EB; text-align: center; background: #F9FAFB;">
+              <div style="font-size: 36px; font-weight: 700; color: #475569; margin-bottom: 4px;">${metrics.lowCount ?? 0}</div>
+              <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Monitor</div>
             </td>
-            <td style="width: 25%; padding: 32px 20px; text-align: center; background: #F9FAFB;">
-              <div style="font-size: 42px; font-weight: 700; color: #1E3A8A; margin-bottom: 8px;">${metrics.uniqueAuthorities ?? 0}</div>
-              <div style="font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Authorities</div>
+            <td style="width: 25%; padding: 24px 16px; text-align: center; background: #F9FAFB;">
+              <div style="font-size: 36px; font-weight: 700; color: #1E3A8A; margin-bottom: 4px;">${metrics.uniqueAuthorities ?? 0}</div>
+              <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Authorities</div>
             </td>
           </tr>
         </table>
@@ -139,13 +263,18 @@ function buildMetricsRow(metrics) {
 
 function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel = 'Executive', brand = {} }) {
   const formattedDate = formatDate(date)
-  const limitedInsights = Array.isArray(insights) ? insights.slice(0, 10) : []
+  const allInsights = Array.isArray(insights) ? insights : []
+
+  // Split insights into UK and International sections
+  const ukInsights = allInsights.filter(i => !i.region || i.region === 'UK').slice(0, 10)
+  const intlInsights = allInsights.filter(i => i.region && i.region !== 'UK').slice(0, 5)
+
   const title = brand.title || 'Regulatory Horizon Scanner'
   const heroTitle = `${personaLabel} Intelligence Digest`
 
   // Premium subject line format
   const dateShort = formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' })
-  const subject = `Regulatory Horizon Scanner — Executive Intelligence Brief | ${dateShort}`
+  const subject = `RegCanary — ${heroTitle} | ${dateShort}`
 
   const dashboardUrl = process.env.DASHBOARD_URL || 'https://horizon-scanner-backend.vercel.app/dashboard'
 
@@ -156,92 +285,62 @@ function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel 
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>${subject}</title>
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lato:wght@400;600;700&display=swap" rel="stylesheet">
       <style>
         @media screen and (max-width: 600px) {
-          .container { width: 100% !important; padding: 16px !important; }
+          .container { width: 100% !important; padding: 12px !important; }
+          .two-col td { display: block !important; width: 100% !important; }
           .stat-cell { display: block !important; width: 100% !important; border-right: none !important; }
         }
       </style>
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F3F4F6;">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background: #F3F4F6; padding: 40px 0;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #F3F4F6;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background: #F3F4F6; padding: 32px 0;">
         <tr>
           <td align="center">
-            <table class="container" width="640" cellpadding="0" cellspacing="0" role="presentation" style="background: white; border: 3px solid #1E3A8A; border-radius: 0; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); overflow: hidden;">
+            <table class="container" width="680" cellpadding="0" cellspacing="0" role="presentation" style="background: white; border: 3px solid #1E3A8A; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); overflow: hidden;">
 
-              <!-- Header with RegCanary branding (navy background) -->
+              <!-- Premium Header with RegCanary branding -->
               <tr>
-                <td style="background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%); padding: 40px 40px 50px; text-align: center; border-bottom: 4px solid #F59E0B;">
-                  <!-- RegCanary Logo & Brand -->
-                  <div style="margin-bottom: 24px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center">
-                          <!-- RegCanary Icon (Built-in SVG Canary) -->
-                          <div style="margin-bottom: 16px;">
-                            <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto;">
-                              <!-- Canary body -->
-                              <ellipse cx="50" cy="55" rx="20" ry="25" fill="#FCD34D"/>
-                              <!-- Canary head -->
-                              <circle cx="50" cy="35" r="12" fill="#FCD34D"/>
-                              <!-- Eye -->
-                              <circle cx="53" cy="33" r="2" fill="#1E3A8A"/>
-                              <!-- Beak -->
-                              <polygon points="58,35 65,35 61,37" fill="#F59E0B"/>
-                              <!-- Wing -->
-                              <ellipse cx="45" cy="55" rx="8" ry="15" fill="#F59E0B" opacity="0.7" transform="rotate(-20 45 55)"/>
-                              <!-- Tail feathers -->
-                              <ellipse cx="35" cy="70" rx="6" ry="12" fill="#F59E0B" opacity="0.6" transform="rotate(-30 35 70)"/>
-                              <!-- Legs -->
-                              <line x1="48" y1="78" x2="48" y2="88" stroke="#F59E0B" stroke-width="2"/>
-                              <line x1="52" y1="78" x2="52" y2="88" stroke="#F59E0B" stroke-width="2"/>
-                              <!-- Feet -->
-                              <line x1="45" y1="88" x2="51" y2="88" stroke="#F59E0B" stroke-width="2"/>
-                              <line x1="49" y1="88" x2="55" y2="88" stroke="#F59E0B" stroke-width="2"/>
-                            </svg>
-                          </div>
-                          <h1 style="margin: 0 0 8px 0; font-family: 'Merriweather', Georgia, serif; font-size: 32px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.02em;">
-                            RegCanary
-                          </h1>
-                          <div style="font-size: 12px; color: #FCD34D; font-weight: 600; letter-spacing: 0.15em;">
-                            REGULATORY INTELLIGENCE
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
-                  </div>
-
-                  <!-- Report Title -->
-                  <h2 style="margin: 0 0 12px 0; font-family: 'Merriweather', Georgia, serif; font-size: 24px; font-weight: 600; color: #E0E7FF; letter-spacing: 0.01em;">
-                    ${heroTitle}
-                  </h2>
-                  <div style="font-size: 14px; color: #93C5FD; font-weight: 500; letter-spacing: 0.05em;">
-                    ${formattedDate}
-                  </div>
+                <td style="background: linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%); padding: 32px 40px; text-align: center; border-bottom: 4px solid #F59E0B;">
+                  <!-- RegCanary Logo -->
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td align="center">
+                        ${getCanaryIconSimple(56)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding-top: 12px;">
+                        <span style="font-size: 26px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em;">RegCanary</span>
+                        <span style="font-size: 14px; font-weight: 500; color: #94A3B8; margin-left: 8px; letter-spacing: 0.05em;">REG INTELLIGENCE</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding-top: 6px;">
+                        <span style="font-size: 12px; color: #F1F5F9; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;">
+                          EXECUTIVE DIGEST • ${formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </td>
+                    </tr>
+                  </table>
                 </td>
               </tr>
 
               <!-- Content area -->
               <tr>
-                <td style="padding: 40px;">
+                <td style="padding: 32px;">
 
                   <!-- Executive Summary -->
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="padding-bottom: 32px; border-bottom: 2px solid #E5E7EB;">
-                        <div style="border-left: 4px solid #D97706; padding-left: 16px; margin-bottom: 16px;">
-                          <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #1F2937; text-transform: uppercase; letter-spacing: 0.05em;">
+                      <td style="padding-bottom: 24px; border-bottom: 2px solid #E5E7EB;">
+                        <div style="border-left: 4px solid #D97706; padding-left: 14px; margin-bottom: 12px;">
+                          <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #1F2937; text-transform: uppercase; letter-spacing: 0.05em;">
                             Executive Summary
                           </h2>
                         </div>
-                        <p style="margin: 0 0 12px 0; font-size: 15px; color: #374151; line-height: 1.8;">
+                        <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151; line-height: 1.7;">
                           ${summary || 'No material intelligence surfaced in the last cycle. Monitoring continues across all configured sources.'}
-                        </p>
-                        <p style="margin: 0; font-size: 13px; color: #6B7280; line-height: 1.6; font-style: italic;">
-                          Each update is classified as HIGH IMPACT (immediate attention required), ENFORCEMENT (regulatory actions and penalties), or MONITOR (notable developments for ongoing awareness).
                         </p>
                       </td>
                     </tr>
@@ -250,36 +349,82 @@ function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel 
                   <!-- Metrics -->
                   ${buildMetricsRow(metrics)}
 
-                  <!-- Insights -->
+                  <!-- UK REGULATORY UPDATES (Navy theme) -->
+                  ${ukInsights.length > 0 ? `
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="padding: 40px 0 16px 0;">
-                        <div style="border-left: 4px solid #D97706; padding-left: 16px;">
-                          <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #1F2937; text-transform: uppercase; letter-spacing: 0.05em;">
-                            Priority Signals
-                          </h2>
-                        </div>
+                      <td style="padding: 32px 0 12px 0;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #EFF6FF; border-radius: 8px; padding: 16px;">
+                          <tr>
+                            <td>
+                              <div style="border-left: 4px solid #1E3A8A; padding-left: 14px;">
+                                <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #1E3A8A; text-transform: uppercase; letter-spacing: 0.05em;">
+                                  UK Regulatory Updates
+                                </h2>
+                                <p style="margin: 4px 0 0 0; font-size: 11px; color: #3B82F6;">${ukInsights.length} updates from UK authorities</p>
+                              </div>
+                            </td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
-                    ${buildInsightRows(limitedInsights)}
+                    <!-- Two-column grid for UK items -->
+                    <tr>
+                      <td>
+                        <table class="two-col" width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border-radius: 8px;">
+                          ${buildTwoColumnGrid(ukInsights, 1)}
+                        </table>
+                      </td>
+                    </tr>
                   </table>
+                  ` : ''}
+
+                  <!-- INTERNATIONAL UPDATES -->
+                  ${intlInsights.length > 0 ? `
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding: 32px 0 12px 0;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border-radius: 8px; padding: 16px;">
+                          <tr>
+                            <td>
+                              <div style="border-left: 4px solid #6366F1; padding-left: 14px;">
+                                <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #4338CA; text-transform: uppercase; letter-spacing: 0.05em;">
+                                  International Updates
+                                </h2>
+                                <p style="margin: 4px 0 0 0; font-size: 11px; color: #6366F1;">${intlInsights.length} updates from global regulators</p>
+                              </div>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <!-- Two-column grid for International items -->
+                    <tr>
+                      <td>
+                        <table class="two-col" width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border-radius: 8px;">
+                          ${buildTwoColumnGrid(intlInsights, ukInsights.length + 1)}
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
 
                 </td>
               </tr>
 
               <!-- CTA Section -->
               <tr>
-                <td style="padding: 32px 40px; background: #F8FAFC; border-top: 1px solid #E5E7EB; border-bottom: 2px solid #E5E7EB;">
+                <td style="padding: 24px 32px; background: #F8FAFC; border-top: 1px solid #E5E7EB;">
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="text-align: center; padding: 20px 0;">
-                        <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #1F2937;">
+                      <td style="text-align: center; padding: 16px 0;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #1F2937;">
                           Explore Full Intelligence Dashboard
                         </h3>
-                        <p style="margin: 0 0 24px 0; font-size: 14px; color: #6B7280; line-height: 1.6;">
+                        <p style="margin: 0 0 20px 0; font-size: 13px; color: #6B7280; line-height: 1.5;">
                           Access real-time regulatory updates, advanced filtering, and comprehensive analytics
                         </p>
-                        <a href="${dashboardUrl}" style="display: inline-block; background: #1E3A8A; color: white; padding: 14px 32px; text-decoration: none; font-size: 14px; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);">
+                        <a href="${dashboardUrl}" style="display: inline-block; background: #1E3A8A; color: white; padding: 12px 28px; text-decoration: none; font-size: 13px; font-weight: 600; border-radius: 6px; box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);">
                           Open Horizon Scanner
                         </a>
                       </td>
@@ -290,14 +435,14 @@ function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel 
 
               <!-- Footer with RegCanary branding -->
               <tr>
-                <td style="background: #F9FAFB; padding: 32px 40px; border-top: 1px solid #E5E7EB;">
-                  <p style="margin: 0 0 16px 0; font-size: 13px; color: #6B7280; line-height: 1.7; text-align: center;">
-                    Your comprehensive intelligence briefing, curated from real-time regulatory movements across all major financial authorities. Stay informed, stay compliant, stay ahead.
+                <td style="background: #F9FAFB; padding: 24px 32px; border-top: 1px solid #E5E7EB;">
+                  <p style="margin: 0 0 12px 0; font-size: 12px; color: #6B7280; line-height: 1.6; text-align: center;">
+                    Your comprehensive intelligence briefing from real-time regulatory movements across major financial authorities.
                   </p>
-                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #6B7280; text-align: center; font-weight: 600;">
+                  <p style="margin: 0 0 6px 0; font-size: 11px; color: #6B7280; text-align: center; font-weight: 600;">
                     ${brand.footer || 'Sent for QA – not for redistribution.'}
                   </p>
-                  <p style="margin: 0; font-size: 11px; color: #9CA3AF; text-align: center;">
+                  <p style="margin: 0; font-size: 10px; color: #9CA3AF; text-align: center;">
                     © ${new Date().getFullYear()} RegCanary • Powered by MEMA Consultants
                   </p>
                 </td>
@@ -312,23 +457,36 @@ function buildDailyDigestEmail({ date, summary, insights, metrics, personaLabel 
   `
 
   const text = [
-    `${title} — ${heroTitle}`,
+    `RegCanary — ${heroTitle}`,
     formattedDate,
     '',
     `Executive Summary: ${summary || 'No material intelligence surfaced in the last cycle.'}`,
     '',
-    ...(limitedInsights.length
-      ? limitedInsights.map((insight, index) => {
+    '=== UK REGULATORY UPDATES ===',
+    ...(ukInsights.length
+      ? ukInsights.map((insight, index) => {
           return [
             `${index + 1}. ${insight.headline || 'Untitled update'}`,
             `   Authority: ${insight.authority || 'Unknown'} | Sector: ${Array.isArray(insight.sectors) && insight.sectors.length ? insight.sectors.join(', ') : insight.sector || 'Cross-sector'}`,
-            `   Reason: ${insight.priorityReason || `Relevance score ${insight.relevanceScore || '—'}%`}`,
+            `   Action: ${insight.relevanceScore >= 80 ? 'Review immediately' : insight.relevanceScore >= 70 ? 'Monitor closely' : 'Awareness only'}`,
             insight.url ? `   Link: ${insight.url}` : ''
           ].filter(Boolean).join('\n')
         })
-      : ['No high-priority insights were captured in the last cycle.']),
+      : ['No UK updates in this cycle.']),
     '',
-    'You can adjust digest preferences inside the Intelligence Workspace.',
+    '=== INTERNATIONAL UPDATES ===',
+    ...(intlInsights.length
+      ? intlInsights.map((insight, index) => {
+          return [
+            `${index + 1}. ${insight.headline || 'Untitled update'}`,
+            `   Authority: ${insight.authority || 'Unknown'} (${insight.country || insight.region || 'International'})`,
+            `   Action: ${insight.relevanceScore >= 80 ? 'Review immediately' : insight.relevanceScore >= 70 ? 'Monitor closely' : 'Awareness only'}`,
+            insight.url ? `   Link: ${insight.url}` : ''
+          ].filter(Boolean).join('\n')
+        })
+      : ['No international updates in this cycle.']),
+    '',
+    'View full dashboard: ' + dashboardUrl,
     ''
   ].join('\n')
 

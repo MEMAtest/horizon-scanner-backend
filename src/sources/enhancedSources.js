@@ -496,6 +496,79 @@ const INTERNATIONAL_SOURCES = {
       timeout: 45000,
       retries: 2
     }
+  },
+
+  MAS: {
+    name: 'Monetary Authority of Singapore',
+    authority: 'MAS',
+    country: 'Singapore',
+    region: 'Asia-Pacific',
+    baseUrl: 'https://www.mas.gov.sg',
+    priority: 'MEDIUM',
+    // Note: MAS website periodically goes into maintenance mode
+
+    deepScraping: {
+      news: {
+        url: 'https://www.mas.gov.sg/news',
+        selectors: {
+          items: '.news-listing-item, .content-item, article, .news-item',
+          title: 'h3 a, h2 a, .title a, a.news-title',
+          url: 'h3 a, h2 a, .title a',
+          date: '.date, time, .news-date, [datetime]',
+          summary: '.description, .summary, .excerpt, p'
+        }
+      },
+
+      mediaReleases: {
+        url: 'https://www.mas.gov.sg/news/media-releases',
+        selectors: {
+          items: '.news-listing-item, .content-item',
+          title: 'h3 a, .title a',
+          url: 'h3 a, .title a',
+          date: '.date, time',
+          summary: '.description, p'
+        }
+      },
+
+      consultations: {
+        url: 'https://www.mas.gov.sg/regulation/consultations',
+        selectors: {
+          items: '.consultation-item, .content-item',
+          title: 'h3 a, .title a',
+          url: 'h3 a, .title a',
+          date: '.date, time',
+          deadline: '.deadline, .closing-date'
+        }
+      }
+    },
+
+    enrichment: {
+      documentTypes: {
+        patterns: {
+          'Media Release': /media\s+release|press/i,
+          Consultation: /consultation/i,
+          Circular: /circular/i,
+          Guideline: /guideline|guidance/i,
+          Notice: /notice/i,
+          'Response to Consultation': /response\s+to\s+consultation/i
+        }
+      },
+      sectorMapping: {
+        Banking: ['bank', 'credit', 'deposit', 'lending'],
+        'Payment Services': ['payment', 'e-money', 'digital payment'],
+        Insurance: ['insurance', 'insurer'],
+        'Capital Markets': ['securities', 'trading', 'investment'],
+        'Digital Assets': ['cryptocurrency', 'digital asset', 'virtual asset', 'token']
+      }
+    },
+
+    scrapingConfig: {
+      rateLimit: 3000,
+      timeout: 45000,
+      retries: 2,
+      // Handle maintenance mode gracefully
+      handleMaintenanceMode: true
+    }
   }
 }
 

@@ -1,4 +1,6 @@
 const { normalizeSectorName } = require('../../utils/sectorTaxonomy')
+const { getAuthorityDisplayName } = require('../../utils/authorityRegistry')
+const { isFallbackSummary, selectSummary } = require('../../utils/summaryUtils')
 
 function sanitizeHtml(value) {
   return String(value ?? '')
@@ -81,33 +83,6 @@ function truncateText(text, maxLength = 280) {
   return truncated.trim() + '...'
 }
 
-function isFallbackSummary(summary, title = '') {
-  if (!summary) return true
-  const normalized = summary.toLowerCase().trim()
-  const normalizedTitle = (title || '').toLowerCase().trim()
-
-  // Check if summary essentially equals or starts with the title
-  if (normalizedTitle && normalizedTitle.length > 20) {
-    const titlePrefix = normalizedTitle.substring(0, Math.min(50, normalizedTitle.length))
-    if (normalized.startsWith(titlePrefix) || normalized === normalizedTitle) {
-      return true
-    }
-  }
-
-  return (
-    normalized.startsWith('informational regulatory update:') ||
-    normalized.startsWith('significant regulatory development') ||
-    normalized.startsWith('regulatory update:') ||
-    normalized.startsWith('regulatory impact overview:') ||
-    normalized.startsWith('regulatory update impacting') ||
-    normalized === 'summary not available' ||
-    normalized === 'no summary available' ||
-    normalized.includes('summary not available') ||
-    normalized.includes('no summary available') ||
-    normalized.length < 30
-  )
-}
-
 function formatStatChange(delta = 0, percent = 0) {
   const value = Number(delta) || 0
   const percentValue = Number(percent) || 0
@@ -154,49 +129,23 @@ function formatFilterOptions(rawOptions = {}) {
     }
   })
 
+  const normalizedAuthorities = authorities
+    .map(item => {
+      const name = typeof item === 'string' ? item : item.name
+      const count = typeof item === 'object' && item.count ? item.count : 0
+      return {
+        name,
+        label: getAuthorityDisplayName(name),
+        count
+      }
+    })
+    .filter(entry => entry.name)
+    .sort((a, b) => a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }))
+
   return {
-    authorities: authorities.map(item => ({
-      name: item.name || item,
-      count: item.count || 0
-    })),
+    authorities: normalizedAuthorities,
     sectors: normalizedSectors
   }
-}
-
-function selectSummary(update) {
-  const title = update.headline || update.title || ''
-
-  const aiSummary = update.ai_summary ? update.ai_summary.trim() : ''
-  const useFallbackSummary = isFallbackSummary(aiSummary, title)
-  if (!useFallbackSummary && aiSummary) return aiSummary
-
-  const summary = update.summary ? update.summary.trim() : ''
-  if (summary && !isFallbackSummary(summary, title)) return summary
-
-  const altFields = [
-    update.description,
-    update.details,
-    update.detail,
-    update.body,
-    update.content,
-    update.excerpt,
-    update.ai_summary_full,
-    update.ai_summary_long,
-    update.ai_summary_extended
-  ]
-
-  for (const value of altFields) {
-    if (!value) continue
-    const trimmed = String(value).trim()
-    if (trimmed && !isFallbackSummary(trimmed, title)) {
-      return trimmed
-    }
-  }
-
-  if (update.impact && update.impact.trim() && !isFallbackSummary(update.impact.trim(), title)) {
-    return update.impact.trim()
-  }
-  return ''
 }
 
 function computeAIFeatures(update) {

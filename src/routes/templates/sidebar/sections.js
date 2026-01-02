@@ -51,6 +51,13 @@ function renderNavigation({ currentPage, icons, recentCounts }) {
                             ${recentCounts.unread > 0 ? `<span class="nav-badge">${recentCounts.unread}</span>` : ''}
                         </a>
                     </li>
+                    <li class="nav-item ${currentPage === 'international' ? 'active' : ''}">
+                        <a href="/international" class="nav-link">
+                            <span class="nav-icon">${icons.international}</span>
+                            <span class="nav-text">International</span>
+                            <span class="nav-badge new">NEW</span>
+                        </a>
+                    </li>
                     <li class="nav-item ${currentPage === 'profile-hub' ? 'active' : ''}">
                         <a href="/profile-hub" class="nav-link">
                             <span class="nav-icon">${icons.profileHub}</span>
@@ -132,13 +139,6 @@ function renderNavigation({ currentPage, icons, recentCounts }) {
                         <a href="/sector-intelligence/Banking" class="nav-link">
                             <span class="nav-icon">${icons.sector}</span>
                             <span class="nav-text">Sector Intelligence</span>
-                        </a>
-                    </li>
-                    <li class="nav-item ${currentPage === 'international' ? 'active' : ''}">
-                        <a href="/international" class="nav-link">
-                            <span class="nav-icon">${icons.international}</span>
-                            <span class="nav-text">International</span>
-                            <span class="nav-badge new">NEW</span>
                         </a>
                     </li>
                 </ul>

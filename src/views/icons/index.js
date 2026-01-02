@@ -18,7 +18,8 @@ const {
   getPredictiveCanary,
   getEnforcementCanary,
   getSpotlightCanary,
-  getIntelligenceCanary
+  getIntelligenceCanary,
+  getInternationalCanary
 } = require('./canaryBase')
 const {
   getDashboardIcon,
@@ -35,6 +36,7 @@ const {
   getEnforcementIcon,
   getSpotlightIcon,
   getIntelligenceIcon,
+  getInternationalIcon,
   wrapIconInContainer,
   getPageIcon
 } = require('./pageIcons')
@@ -60,6 +62,7 @@ module.exports = {
   getEnforcementCanary,
   getSpotlightCanary,
   getIntelligenceCanary,
+  getInternationalCanary,
 
   // Page-specific icons (wrapped)
   getDashboardIcon,
@@ -76,6 +79,7 @@ module.exports = {
   getEnforcementIcon,
   getSpotlightIcon,
   getIntelligenceIcon,
+  getInternationalIcon,
 
   // Utilities
   wrapIconInContainer,

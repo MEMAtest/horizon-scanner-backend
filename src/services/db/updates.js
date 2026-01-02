@@ -170,7 +170,6 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
     },
 
     async getEnhancedUpdatesPG(filters) {
-      console.log('[DEBUG] getEnhancedUpdatesPG called with filters:', JSON.stringify(filters, null, 2))
       const client = await this.pool.connect()
       try {
         let query = `
@@ -308,12 +307,7 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
           params.push(offset)
         }
 
-        console.log('[DEBUG] Final SQL query:', query)
-        console.log('[DEBUG] Query params:', JSON.stringify(params, null, 2))
-
         const result = await client.query(query, params)
-
-        console.log('[DEBUG] Query returned', result.rows.length, 'rows')
 
         // Transform the data for client use
         return result.rows.map(row => this.normalizeUpdateFields({

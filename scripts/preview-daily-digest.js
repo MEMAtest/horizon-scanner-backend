@@ -22,7 +22,7 @@ async function previewDigest() {
     const payload = await dailyDigestService.buildDigestPayload({
       digestDate,
       rollingWindowHours: TESTING_WINDOW_HOURS,
-      limit: 50,
+      limit: 200, // Increased to account for digest history filtering
       personaLabel: process.env.DIGEST_PERSONA || 'Executive',
       brand: {
         title: process.env.DIGEST_BRAND_TITLE || 'MEMA Regulatory Intelligence',

@@ -140,8 +140,8 @@ async function fetchJson(path, { params } = {}) {
 }
 
 function collectSourcebooks(headers) {
-  const sourcebooks = []
-  if (!Array.isArray(headers)) return sourcebooks
+  const sourcebookMap = new Map()
+  if (!Array.isArray(headers)) return []
 
   headers.forEach(block => {
     const blockParts = Array.isArray(block.parts) ? block.parts : []
@@ -184,18 +184,33 @@ function collectSourcebooks(headers) {
         })
       })
 
-      sourcebooks.push({
+      const candidate = {
         code,
         title,
         entityId: sourcebook.entityId || null,
         lastModified: sourcebook.lastmodifieddate || null,
         chapters,
         sections
-      })
+      }
+
+      const existing = sourcebookMap.get(code)
+      if (!existing) {
+        sourcebookMap.set(code, candidate)
+        return
+      }
+
+      const existingSections = existing.sections.length
+      const candidateSections = candidate.sections.length
+      const existingChapters = existing.chapters.length
+      const candidateChapters = candidate.chapters.length
+
+      if (candidateSections > existingSections || (candidateSections === existingSections && candidateChapters > existingChapters)) {
+        sourcebookMap.set(code, candidate)
+      }
     })
   })
 
-  return sourcebooks
+  return Array.from(sourcebookMap.values())
 }
 
 async function ingestFcaHandbook(options = {}) {

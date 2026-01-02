@@ -1,13 +1,31 @@
 function applyRssMethods(ServiceClass, { axios, cheerio }) {
   ServiceClass.prototype.fetchRSSFeed = async function fetchRSSFeed(source) {
     try {
-      const response = await axios.get(source.url, {
-        timeout: this.fetchTimeout || 15000,
-        headers: {
-          'User-Agent': this.userAgent,
-          Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
-        }
-      })
+      const headers = {
+        Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
+      }
+
+      if (!source.skipUserAgent) {
+        headers['User-Agent'] = this.userAgent
+      }
+
+      if (source.headers && typeof source.headers === 'object') {
+        Object.assign(headers, source.headers)
+      }
+
+      const requestConfig = {
+        timeout: source.timeout || this.fetchTimeout || 15000,
+        headers
+      }
+
+      if (source.disableKeepAlive) {
+        const https = require('https')
+        const http = require('http')
+        requestConfig.httpsAgent = new https.Agent({ keepAlive: false })
+        requestConfig.httpAgent = new http.Agent({ keepAlive: false })
+      }
+
+      const response = await axios.get(source.url, requestConfig)
 
       const $ = cheerio.load(response.data, { xmlMode: true })
       const updates = []

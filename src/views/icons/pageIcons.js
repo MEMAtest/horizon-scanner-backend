@@ -16,7 +16,8 @@ const {
   getPredictiveCanary,
   getEnforcementCanary,
   getSpotlightCanary,
-  getIntelligenceCanary
+  getIntelligenceCanary,
+  getInternationalCanary
 } = require('./canaryBase')
 
 /**
@@ -118,6 +119,13 @@ function getIntelligenceIcon() {
 }
 
 /**
+ * International Icon - Globe-watching canary
+ */
+function getInternationalIcon() {
+  return getInternationalCanary()
+}
+
+/**
  * Wrap icon in container div
  * @param {string} iconSvg - The SVG icon
  * @returns {string} Icon wrapped in styled container
@@ -151,7 +159,8 @@ function getPageIcon(pageName) {
     'authority-spotlight': getSpotlightIcon,
     spotlight: getSpotlightIcon,
     'sector-intelligence': getIntelligenceIcon,
-    intelligence: getIntelligenceIcon
+    intelligence: getIntelligenceIcon,
+    international: getInternationalIcon
   }
 
   const iconFn = icons[pageName.toLowerCase()] || getDashboardIcon
@@ -173,6 +182,7 @@ module.exports = {
   getEnforcementIcon,
   getSpotlightIcon,
   getIntelligenceIcon,
+  getInternationalIcon,
   wrapIconInContainer,
   getPageIcon
 }

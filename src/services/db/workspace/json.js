@@ -6,17 +6,43 @@ const {
 } = require('./validators')
 const { mapPinnedItems } = require('./mappers')
 
+let workspaceCache = null
+let memoryOnly = false
+
+const shouldUseMemoryOnly = (error) => {
+  return ['EROFS', 'EACCES', 'EPERM'].includes(error?.code)
+}
+
 async function loadWorkspaceState(service) {
+  if (memoryOnly && workspaceCache) {
+    return workspaceCache
+  }
+
   try {
     const raw = await fs.readFile(service.workspaceFile, 'utf8')
-    return parseWorkspaceState(raw)
+    const parsed = parseWorkspaceState(raw)
+    workspaceCache = parsed
+    return parsed
   } catch (error) {
     if (error.code !== 'ENOENT') {
       console.warn('[workspace] Failed to read workspace cache:', error.message)
     }
-    const fallback = createDefaultWorkspaceState()
-    await fs.writeFile(service.workspaceFile, JSON.stringify(fallback, null, 2))
-    return fallback
+    const fallback = workspaceCache || createDefaultWorkspaceState()
+    workspaceCache = fallback
+    if (memoryOnly) {
+      return fallback
+    }
+    try {
+      await fs.writeFile(service.workspaceFile, JSON.stringify(fallback, null, 2))
+      return fallback
+    } catch (writeError) {
+      if (shouldUseMemoryOnly(writeError)) {
+        memoryOnly = true
+        console.warn('[workspace] Read-only storage detected; using in-memory workspace state.')
+        return fallback
+      }
+      throw writeError
+    }
   }
 }
 
@@ -31,7 +57,21 @@ async function saveWorkspaceState(service, state) {
     bookmarkCollections: ensureBookmarkCollections(state?.bookmarkCollections || state?.bookmark_collections)
   }
 
-  await fs.writeFile(service.workspaceFile, JSON.stringify(merged, null, 2))
+  workspaceCache = merged
+  if (memoryOnly) {
+    return merged
+  }
+
+  try {
+    await fs.writeFile(service.workspaceFile, JSON.stringify(merged, null, 2))
+  } catch (error) {
+    if (shouldUseMemoryOnly(error)) {
+      memoryOnly = true
+      console.warn('[workspace] Read-only storage detected; using in-memory workspace state.')
+      return merged
+    }
+    throw error
+  }
   return merged
 }
 

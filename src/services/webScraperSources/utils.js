@@ -2,6 +2,7 @@ const axios = require('axios')
 const cheerio = require('cheerio')
 const Parser = require('rss-parser')
 const rss = new Parser()
+const { normalizeAuthorityName } = require('../../utils/authorityRegistry')
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
@@ -102,25 +103,31 @@ const extractPraSummary = async (url) => {
 }
 
 /* ───────── Authority Normalization ───────── */
+const LEGACY_AUTHORITY_MAPPING = {
+  'Bank of England': 'BoE',
+  'Bank of England (BoE)': 'BoE',
+  'Prudential Regulation Authority (PRA)': 'PRA',
+  'Prudential Regulation Authority': 'PRA',
+  'European Banking Authority (EBA)': 'EBA',
+  'European Banking Authority': 'EBA',
+  'EBA (European Banking Authority)': 'EBA',
+  'The Pensions Regulator': 'TPR',
+  'Serious Fraud Office': 'SFO',
+  "Information Commissioner's Office": 'ICO',
+  'Information Commissioner Office': 'ICO',
+  'Financial Reporting Council': 'FRC',
+  'Financial Ombudsman Service': 'FOS',
+  'Financial Action Task Force': 'FATF',
+  'HM Treasury, Office of Financial Sanctions Implementation': 'HM Treasury'
+}
+
 const normalizeAuthority = (authority) => {
-  const mapping = {
-    'Bank of England': 'BoE',
-    'Bank of England (BoE)': 'BoE',
-    'Prudential Regulation Authority (PRA)': 'PRA',
-    'Prudential Regulation Authority': 'PRA',
-    'European Banking Authority (EBA)': 'EBA',
-    'European Banking Authority': 'EBA',
-    'EBA (European Banking Authority)': 'EBA',
-    'The Pensions Regulator': 'TPR',
-    'Serious Fraud Office': 'SFO',
-    "Information Commissioner's Office": 'ICO',
-    'Information Commissioner Office': 'ICO',
-    'Financial Reporting Council': 'FRC',
-    'Financial Ombudsman Service': 'FOS',
-    'Financial Action Task Force': 'FATF',
-    'HM Treasury, Office of Financial Sanctions Implementation': 'HM Treasury'
+  if (!authority) return authority
+  const registryNormalized = normalizeAuthorityName(authority)
+  if (registryNormalized && registryNormalized !== authority) {
+    return registryNormalized
   }
-  return mapping[authority] || authority
+  return LEGACY_AUTHORITY_MAPPING[authority] || authority
 }
 
 module.exports = {

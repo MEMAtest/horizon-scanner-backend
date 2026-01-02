@@ -21,6 +21,13 @@ const {
   scrapeHSE,
   scrapeOfcom,
   scrapeSRA,
+  scrapeMAS,
+  scrapeASIC,
+  scrapeACPR,
+  scrapeBankOfItaly,
+  scrapeEEAS,
+  scrapeQCB,
+  scrapeCNMVCommunications,
   normalizeAuthority
 } = require('./webScraper')
 const puppeteerScraper = require('../scrapers/puppeteerScraper')
@@ -136,6 +143,13 @@ applyWebMethods(EnhancedRSSFetcher, {
   scrapeHSE,
   scrapeOfcom,
   scrapeSRA,
+  scrapeMAS,
+  scrapeASIC,
+  scrapeACPR,
+  scrapeBankOfItaly,
+  scrapeEEAS,
+  scrapeQCB,
+  scrapeCNMVCommunications,
   normalizeAuthority
 })
 applyPuppeteerMethods(EnhancedRSSFetcher, { puppeteerScraper })

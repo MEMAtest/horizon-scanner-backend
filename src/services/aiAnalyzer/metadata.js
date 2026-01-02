@@ -2,10 +2,17 @@ function applyMetadataMethods(ServiceClass) {
   ServiceClass.prototype.buildAnalysisMetadata = function(update = {}) {
     const authority = update.authority || update.sourceAuthority || update.regulator
     const publishedDate = update.publishedDate || update.published_date || update.pubDate || update.date
+    const country = update.country || update.raw_data?.country || update.raw_data?.international?.country
+    const requiresTranslation = update.requiresTranslation ||
+      update.raw_data?.requiresTranslation ||
+      update.raw_data?.international?.requiresTranslation ||
+      false
 
     return {
       authority: authority || 'Unknown',
-      publishedDate: publishedDate ? new Date(publishedDate).toISOString() : undefined
+      publishedDate: publishedDate ? new Date(publishedDate).toISOString() : undefined,
+      country: country || undefined,
+      requiresTranslation: requiresTranslation
     }
   }
 

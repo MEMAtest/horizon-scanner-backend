@@ -16,6 +16,13 @@ function applyOrchestratorMethods(ServiceClass) {
       const payukResults = await this.scrapePayUK()
       allResults.push(...payukResults)
 
+      // International AML bodies
+      const wolfsbergResults = await this.scrapeWolfsberg()
+      allResults.push(...wolfsbergResults)
+
+      const egmontResults = await this.scrapeEgmont()
+      allResults.push(...egmontResults)
+
       console.log(`\n✅ Puppeteer scraping complete: ${allResults.length} total items`)
 
       return allResults

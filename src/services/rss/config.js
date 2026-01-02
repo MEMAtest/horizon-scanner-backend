@@ -360,11 +360,11 @@ const feedSources = [
   },
   */
   {
-    name: 'National Crime Agency - Economic Crime',
+    name: 'National Crime Agency - News',
     authority: 'NCA',
-    url: 'https://www.nationalcrimeagency.gov.uk/news?tag=economic-crime',
-    type: 'web_scraping',
-    description: 'National Crime Agency - Economic crime alerts, SAR guidance, AML intelligence',
+    url: 'https://www.nationalcrimeagency.gov.uk/news',
+    type: 'puppeteer',
+    description: 'National Crime Agency - News, economic crime alerts, AML intelligence',
     priority: 'medium',
     recencyDays: 30,
     sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Law Enforcement']
@@ -557,14 +557,74 @@ const feedSources = [
   {
     name: 'FINRA News Releases',
     authority: 'FINRA',
-    url: 'https://www.finra.org/media-center/news-releases',
-    type: 'web_scraping',
-    description: 'Financial Industry Regulatory Authority - News',
+    url: 'http://feeds.finra.org/FINRANews',
+    type: 'rss',
+    description: 'Financial Industry Regulatory Authority - News releases and speeches',
     priority: 'high',
     recencyDays: 30,
     country: 'US',
     region: 'Americas',
     sectors: ['Investment Management', 'Broker-Dealer', 'Capital Markets']
+  },
+  {
+    name: 'FINRA Notices',
+    authority: 'FINRA',
+    url: 'http://feeds.finra.org/FINRANotices',
+    type: 'rss',
+    description: 'FINRA regulatory, election, information, and trade reporting notices',
+    priority: 'high',
+    recencyDays: 60,
+    country: 'US',
+    region: 'Americas',
+    sectors: ['Broker-Dealer', 'Market Regulation', 'Compliance']
+  },
+  {
+    name: 'FINRA Rule Filings',
+    authority: 'FINRA',
+    url: 'http://feeds.finra.org/FINRARuleFilings',
+    type: 'rss',
+    description: 'FINRA rule filings',
+    priority: 'high',
+    recencyDays: 90,
+    country: 'US',
+    region: 'Americas',
+    sectors: ['Broker-Dealer', 'Market Regulation', 'Compliance']
+  },
+  {
+    name: 'FINRA Dispute Resolution Rule Filings',
+    authority: 'FINRA',
+    url: 'http://feeds.finra.org/DisputeResolutionRuleFilings',
+    type: 'rss',
+    description: 'FINRA dispute resolution rule filings',
+    priority: 'medium',
+    recencyDays: 90,
+    country: 'US',
+    region: 'Americas',
+    sectors: ['Dispute Resolution', 'Compliance', 'Broker-Dealer']
+  },
+  {
+    name: 'FINRA UPC Advisories',
+    authority: 'FINRA',
+    url: 'http://feeds.finra.org/FINRAUPCAdvisories',
+    type: 'rss',
+    description: 'FINRA Unified Performance and Compliance advisories',
+    priority: 'medium',
+    recencyDays: 90,
+    country: 'US',
+    region: 'Americas',
+    sectors: ['Compliance', 'Broker-Dealer']
+  },
+  {
+    name: 'FINRA Compliance Podcast',
+    authority: 'FINRA',
+    url: 'http://feeds.finra.org/FINRACompliancePodcast',
+    type: 'rss',
+    description: 'FINRA Unscripted compliance podcast',
+    priority: 'low',
+    recencyDays: 180,
+    country: 'US',
+    region: 'Americas',
+    sectors: ['Compliance', 'Training']
   },
   {
     name: 'Federal Reserve Monetary Policy',
@@ -581,8 +641,8 @@ const feedSources = [
   {
     name: 'OCC News Releases',
     authority: 'OCC',
-    url: 'https://www.occ.gov/news-issuances/news-releases/index-news-releases.html',
-    type: 'web_scraping',
+    url: 'https://www.occ.gov/rss/occ_news.xml',
+    type: 'rss',
     description: 'Office of the Comptroller of the Currency - News Releases',
     priority: 'medium',
     recencyDays: 30,
@@ -595,7 +655,7 @@ const feedSources = [
   {
     name: 'MAS Media Releases',
     authority: 'MAS',
-    url: 'https://www.mas.gov.sg/news',
+    url: 'https://www.mas.gov.sg/news?content_type=Media%20Releases',
     type: 'web_scraping',
     description: 'Monetary Authority of Singapore - Media Releases',
     priority: 'high',
@@ -607,8 +667,8 @@ const feedSources = [
   {
     name: 'HKMA Press Releases',
     authority: 'HKMA',
-    url: 'https://www.hkma.gov.hk/eng/news-and-media/press-releases/',
-    type: 'web_scraping',
+    url: 'https://www.hkma.gov.hk/eng/other-information/rss/rss_press-release.xml',
+    type: 'rss',
     description: 'Hong Kong Monetary Authority - Press Releases',
     priority: 'high',
     recencyDays: 30,
@@ -617,9 +677,45 @@ const feedSources = [
     sectors: ['Banking', 'Financial Stability', 'Payment Services']
   },
   {
+    name: 'HKMA Circulars',
+    authority: 'HKMA',
+    url: 'https://www.hkma.gov.hk/eng/other-information/rss/rss_circulars.xml',
+    type: 'rss',
+    description: 'Hong Kong Monetary Authority - Circulars to Authorized Institutions',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Hong Kong',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Prudential Regulation', 'Compliance']
+  },
+  {
+    name: 'HKMA Guidelines',
+    authority: 'HKMA',
+    url: 'https://www.hkma.gov.hk/eng/other-information/rss/rss_guidelines.xml',
+    type: 'rss',
+    description: 'Hong Kong Monetary Authority - Supervisory Policy Manual Guidelines',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Hong Kong',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Capital Requirements', 'Risk Management']
+  },
+  {
+    name: 'HKMA Consultations',
+    authority: 'HKMA',
+    url: 'https://www.hkma.gov.hk/eng/other-information/rss/rss_consultations.xml',
+    type: 'rss',
+    description: 'Hong Kong Monetary Authority - Policy Consultations',
+    priority: 'high',
+    recencyDays: 60,
+    country: 'Hong Kong',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Policy', 'Regulatory Reform']
+  },
+  {
     name: 'ASIC Media Releases',
     authority: 'ASIC',
-    url: 'https://asic.gov.au/about-asic/news-centre/news-items/',
+    url: 'https://www.asic.gov.au/newsroom/media-releases/',
     type: 'web_scraping',
     description: 'Australian Securities and Investments Commission - Media Releases',
     priority: 'high',
@@ -645,8 +741,8 @@ const feedSources = [
   {
     name: 'EIOPA News',
     authority: 'EIOPA',
-    url: 'https://www.eiopa.europa.eu/media-centre/news_en',
-    type: 'web_scraping',
+    url: 'https://www.eiopa.europa.eu/media/news_en',
+    type: 'puppeteer',
     description: 'European Insurance and Occupational Pensions Authority - News',
     priority: 'high',
     recencyDays: 30,
@@ -657,7 +753,7 @@ const feedSources = [
   {
     name: 'EBA News',
     authority: 'EBA',
-    url: 'https://www.eba.europa.eu/rss.xml',
+    url: 'https://eba.europa.eu/news-press/news/rss.xml',
     type: 'rss',
     description: 'European Banking Authority - News',
     priority: 'high',
@@ -671,8 +767,8 @@ const feedSources = [
   {
     name: 'BIS Press Releases',
     authority: 'BIS',
-    url: 'https://www.bis.org/press/index.htm',
-    type: 'web_scraping',
+    url: 'https://www.bis.org/doclist/all_pressrels.rss',
+    type: 'rss',
     description: 'Bank for International Settlements - Press Releases',
     priority: 'high',
     recencyDays: 30,
@@ -683,8 +779,8 @@ const feedSources = [
   {
     name: 'IOSCO Media Releases',
     authority: 'IOSCO',
-    url: 'https://www.iosco.org/news/',
-    type: 'web_scraping',
+    url: 'https://www.iosco.org/',
+    type: 'puppeteer',
     description: 'International Organization of Securities Commissions - Media Releases',
     priority: 'high',
     recencyDays: 30,
@@ -791,32 +887,18 @@ const feedSources = [
     region: 'Europe',
     sectors: ['Capital Markets', 'Investment Management', 'Consumer Protection']
   },
-  // DNB - Puppeteer (works locally, bot protection)
   {
     name: 'DNB News (Netherlands)',
     authority: 'DNB',
-    url: 'https://www.dnb.nl/en/general-news/',
-    type: 'puppeteer',
-    description: 'De Nederlandsche Bank - Prudential supervision',
-    priority: 'medium', // Works with local Puppeteer
+    url: 'https://www.dnb.nl/en/rss/16451/6882',
+    type: 'rss',
+    description: 'De Nederlandsche Bank - General news feed',
+    skipUserAgent: true,
+    priority: 'medium',
     recencyDays: 30,
     country: 'Netherlands',
     region: 'Europe',
     sectors: ['Banking', 'Insurance', 'Pension Funds', 'Financial Stability']
-  },
-
-  // SPAIN - Puppeteer RSS (works locally, 403 on direct HTTP)
-  {
-    name: 'CNMV News (Spain)',
-    authority: 'CNMV',
-    url: 'https://www.cnmv.es/portal/RSS/RSS.asmx/GetDatos?iID=1',
-    type: 'puppeteer',
-    description: 'Comisión Nacional del Mercado de Valores - Press releases RSS',
-    priority: 'medium', // Works with local Puppeteer
-    recencyDays: 30,
-    country: 'Spain',
-    region: 'Europe',
-    sectors: ['Capital Markets', 'Investment Management', 'Listed Companies']
   },
 
   // ITALY - No RSS available, using web scraping
@@ -831,6 +913,18 @@ const feedSources = [
     country: 'Italy',
     region: 'Europe',
     sectors: ['Capital Markets', 'Corporate Governance', 'Listed Companies']
+  },
+  {
+    name: 'Bank of Italy News',
+    authority: 'Bank of Italy',
+    url: 'https://www.bancaditalia.it/media/notizie/index.html?page=1',
+    type: 'web_scraping',
+    description: 'Banca d\'Italia - News and public communications',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'Italy',
+    region: 'Europe',
+    sectors: ['Banking', 'Monetary Policy', 'Financial Stability']
   },
 
   // SWEDEN
@@ -859,6 +953,381 @@ const feedSources = [
     country: 'EU',
     region: 'Europe',
     sectors: ['Sanctions', 'AML & Financial Crime', 'Compliance']
+  },
+  {
+    name: 'EEAS Press Material',
+    authority: 'EEAS',
+    url: 'https://www.eeas.europa.eu/eeas/press-material_en?f%5B0%5D=pm_category%3AStatement/Declaration',
+    type: 'web_scraping',
+    description: 'European External Action Service - Press material statements and declarations',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'EU',
+    region: 'Europe',
+    sectors: ['International Policy', 'Sanctions', 'Regulatory Statements']
+  },
+
+  // ============================================
+  // AML/CFT INDUSTRY BODIES - Added December 2025
+  // Critical for financial crime intelligence
+  // ============================================
+  {
+    name: 'Basel Institute on Governance',
+    authority: 'BASEL_INSTITUTE',
+    url: 'https://baselgovernance.org/rss.xml',
+    type: 'rss',
+    description: 'Basel Institute - AML Index, anti-corruption, collective action',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'International',
+    region: 'International',
+    sectors: ['AML & Financial Crime', 'Anti-Corruption', 'Compliance', 'Risk Assessment']
+  },
+  {
+    name: 'Wolfsberg Group News',
+    authority: 'WOLFSBERG',
+    url: 'https://wolfsberg-group.org/news',
+    type: 'puppeteer',
+    description: 'Wolfsberg Group - AML/KYC/CTF standards from 12 global banks',
+    priority: 'high',
+    recencyDays: 60,
+    country: 'International',
+    region: 'International',
+    sectors: ['AML & Financial Crime', 'KYC', 'Banking', 'Correspondent Banking']
+  },
+  {
+    name: 'Wolfsberg Group Resources',
+    authority: 'WOLFSBERG',
+    url: 'https://wolfsberg-group.org/resources',
+    type: 'puppeteer',
+    description: 'Wolfsberg Group - Publications, guidance, standards',
+    priority: 'high',
+    recencyDays: 90,
+    country: 'International',
+    region: 'International',
+    sectors: ['AML & Financial Crime', 'KYC', 'Banking', 'Due Diligence']
+  },
+  {
+    name: 'Egmont Group News',
+    authority: 'EGMONT',
+    url: 'https://egmontgroup.org/news-and-events/',
+    type: 'puppeteer',
+    description: 'Egmont Group - FIU cooperation, information sharing',
+    priority: 'high',
+    recencyDays: 60,
+    country: 'International',
+    region: 'International',
+    sectors: ['AML & Financial Crime', 'FIU', 'Information Sharing', 'SAR']
+  },
+
+  // ============================================
+  // MIDDLE EAST REGULATORS - Added December 2025
+  // Major financial centers, strong AML focus
+  // ============================================
+  {
+    name: 'DFSA Announcements',
+    authority: 'DFSA',
+    url: 'https://www.dfsa.ae/news',
+    type: 'puppeteer',
+    description: 'Dubai Financial Services Authority - News and enforcement',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'UAE',
+    region: 'Middle East',
+    sectors: ['Banking', 'Capital Markets', 'Insurance', 'AML & Financial Crime']
+  },
+  {
+    name: 'CBUAE News',
+    authority: 'CBUAE',
+    url: 'https://www.centralbank.ae/en/news-and-publications/news-and-insights/',
+    type: 'puppeteer',
+    description: 'Central Bank of UAE - News, regulations, AML guidance',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'UAE',
+    region: 'Middle East',
+    sectors: ['Banking', 'AML & Financial Crime', 'Payment Services', 'Licensing']
+  },
+  {
+    name: 'ADGM FSRA News',
+    authority: 'ADGM',
+    url: 'https://www.adgm.com/media/announcements',
+    type: 'puppeteer',
+    description: 'Abu Dhabi Global Market FSRA - Regulatory announcements',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'UAE',
+    region: 'Middle East',
+    sectors: ['Banking', 'Capital Markets', 'Fintech', 'Digital Assets']
+  },
+  {
+    name: 'SAMA News',
+    authority: 'SAMA',
+    url: 'https://www.sama.gov.sa/en-US/News/Pages/AllNews.aspx',
+    type: 'puppeteer',
+    description: 'Saudi Arabian Monetary Authority - News and circulars',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Saudi Arabia',
+    region: 'Middle East',
+    sectors: ['Banking', 'Insurance', 'AML & Financial Crime', 'Payment Services']
+  },
+  {
+    name: 'QCB News',
+    authority: 'QCB',
+    url: 'https://www.qcb.gov.qa/en/Pages/allnews.aspx',
+    type: 'web_scraping',
+    description: 'Qatar Central Bank - News and regulations',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'Qatar',
+    region: 'Middle East',
+    sectors: ['Banking', 'AML & Financial Crime', 'Financial Stability']
+  },
+
+  // ============================================
+  // LATIN AMERICA REGULATORS - Added December 2025
+  // Brazil (largest market) and Mexico
+  // ============================================
+  {
+    name: 'BCB Brazil News',
+    authority: 'BCB',
+    url: 'https://www.bcb.gov.br/api/feed/sitebcb/sitefeeds/noticias',
+    type: 'rss',
+    description: 'Banco Central do Brasil - News feed',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Brazil',
+    region: 'Americas',
+    sectors: ['Banking', 'Payment Services', 'AML & Financial Crime', 'Cryptocurrency']
+  },
+  {
+    name: 'CVM Board Decisions',
+    authority: 'CVM',
+    url: 'https://conteudo.cvm.gov.br/feed/decisoes.xml',
+    type: 'rss',
+    description: 'Comissão de Valores Mobiliários - Board decisions feed',
+    priority: 'high',
+    timeout: 30000,
+    recencyDays: 30,
+    country: 'Brazil',
+    region: 'Americas',
+    sectors: ['Capital Markets', 'Investment Management', 'Corporate Governance']
+  },
+  {
+    name: 'CVM Sanctioning Decisions',
+    authority: 'CVM',
+    url: 'https://conteudo.cvm.gov.br/feed/sancionadores.xml',
+    type: 'rss',
+    description: 'Comissão de Valores Mobiliários - Sanctioning decisions feed',
+    priority: 'high',
+    timeout: 30000,
+    recencyDays: 180,
+    country: 'Brazil',
+    region: 'Americas',
+    sectors: ['Capital Markets', 'Enforcement', 'Corporate Governance']
+  },
+  {
+    name: 'CVM Public Hearings',
+    authority: 'CVM',
+    url: 'https://conteudo.cvm.gov.br/feed/audiencias.xml',
+    type: 'rss',
+    description: 'Comissão de Valores Mobiliários - Public hearings feed',
+    priority: 'medium',
+    timeout: 30000,
+    recencyDays: 90,
+    country: 'Brazil',
+    region: 'Americas',
+    sectors: ['Capital Markets', 'Policy', 'Consultations']
+  },
+  {
+    name: 'CVM Collegiate Reports',
+    authority: 'CVM',
+    url: 'https://conteudo.cvm.gov.br/feed/informativos_colegiado.xml',
+    type: 'rss',
+    description: 'Comissão de Valores Mobiliários - Collegiate reports feed',
+    priority: 'medium',
+    timeout: 30000,
+    recencyDays: 90,
+    country: 'Brazil',
+    region: 'Americas',
+    sectors: ['Capital Markets', 'Corporate Governance']
+  },
+  {
+    name: 'CNBV Mexico News',
+    authority: 'CNBV',
+    url: 'https://www.gob.mx/cnbv/prensa',
+    type: 'web_scraping',
+    description: 'Comisión Nacional Bancaria y de Valores - Banking and securities',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Mexico',
+    region: 'Americas',
+    sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime', 'Fintech']
+  },
+
+  // ============================================
+  // AFRICA REGULATORS - Added December 2025
+  // South Africa (most developed financial market)
+  // ============================================
+  {
+    name: 'SARB News & Publications',
+    authority: 'SARB',
+    url: 'https://www.resbank.co.za/bin/sarb/solr/publications/rss',
+    type: 'rss',
+    description: 'South African Reserve Bank - News and publications RSS',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'South Africa',
+    region: 'Africa',
+    sectors: ['Banking', 'Financial Stability', 'Monetary Policy', 'AML & Financial Crime']
+  },
+  {
+    name: 'FSCA Media Releases',
+    authority: 'FSCA',
+    url: 'https://www.fsca.co.za/News/Pages/Media-Releases.aspx',
+    type: 'web_scraping',
+    description: 'Financial Sector Conduct Authority - Market conduct regulator',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'South Africa',
+    region: 'Africa',
+    sectors: ['Capital Markets', 'Insurance', 'Consumer Protection', 'Cryptocurrency']
+  },
+  {
+    name: 'FIC South Africa',
+    authority: 'FIC_SA',
+    url: 'https://www.fic.gov.za/news-events/',
+    type: 'web_scraping',
+    description: 'Financial Intelligence Centre - AML/CFT guidance and alerts',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'South Africa',
+    region: 'Africa',
+    sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Terrorism Financing']
+  },
+
+  // ============================================
+  // ASIA REGULATORS - Added December 2025
+  // China, India, Japan (major economies)
+  // ============================================
+  {
+    name: 'PBOC News',
+    authority: 'PBOC',
+    url: 'http://www.pbc.gov.cn/en/3688110/3688172/index.html',
+    type: 'web_scraping',
+    description: 'People\'s Bank of China - News and announcements',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'China',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Monetary Policy', 'AML & Financial Crime', 'Payment Services']
+  },
+  {
+    name: 'CSRC News',
+    authority: 'CSRC',
+    url: 'http://www.csrc.gov.cn/csrc_en/c102028/common_list.shtml',
+    type: 'web_scraping',
+    description: 'China Securities Regulatory Commission - Securities news',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'China',
+    region: 'Asia-Pacific',
+    sectors: ['Capital Markets', 'Investment Management', 'Corporate Finance']
+  },
+  {
+    name: 'NFRA China News',
+    authority: 'NFRA',
+    url: 'https://www.cbirc.gov.cn/en/view/pages/index/jigouxinwen.html',
+    type: 'web_scraping',
+    description: 'National Financial Regulatory Administration - Banking and insurance',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'China',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Insurance', 'Prudential Regulation']
+  },
+  {
+    name: 'RBI Press Releases',
+    authority: 'RBI',
+    url: 'https://rbi.org.in/Scripts/BS_PressreleaseDisplay.aspx',
+    type: 'puppeteer',
+    description: 'Reserve Bank of India - Press releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'India',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Payment Services', 'AML & Financial Crime', 'Fintech']
+  },
+  {
+    name: 'SEBI Press Releases',
+    authority: 'SEBI',
+    url: 'https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListingAll=yes&sid=1&ssid=2&smession=No',
+    type: 'web_scraping',
+    description: 'Securities and Exchange Board of India - Press releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'India',
+    region: 'Asia-Pacific',
+    sectors: ['Capital Markets', 'Investment Management', 'Corporate Governance']
+  },
+  {
+    name: 'JFSA News',
+    authority: 'JFSA',
+    url: 'https://www.fsa.go.jp/fsaEnNewsList_rss2.xml',
+    type: 'rss',
+    description: 'Japan Financial Services Agency - News releases',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Japan',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Capital Markets', 'Insurance', 'AML & Financial Crime']
+  },
+
+  // ============================================
+  // AUSTRALIA REGULATORS - Added December 2025
+  // Strong AML focus
+  // ============================================
+  {
+    name: 'APRA Media Releases',
+    authority: 'APRA',
+    url: 'https://www.apra.gov.au/news-and-publications',
+    type: 'puppeteer',
+    description: 'Australian Prudential Regulation Authority - News and publications',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Australia',
+    region: 'Asia-Pacific',
+    sectors: ['Banking', 'Insurance', 'Superannuation', 'Prudential Regulation']
+  },
+  {
+    name: 'AUSTRAC Media Releases',
+    authority: 'AUSTRAC',
+    url: 'https://www.austrac.gov.au/news-and-media/media-release',
+    type: 'puppeteer',
+    description: 'Australian Transaction Reports and Analysis Centre - AML/CTF regulator',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Australia',
+    region: 'Asia-Pacific',
+    sectors: ['AML & Financial Crime', 'Banking', 'Remittances', 'Cryptocurrency']
+  },
+
+  // ============================================
+  // CARIBBEAN REGULATORS - Added December 2025
+  // Major offshore financial center
+  // ============================================
+  {
+    name: 'CIMA Industry Notices',
+    authority: 'CIMA',
+    url: 'https://www.cima.ky/general-industry-notices',
+    type: 'puppeteer',
+    description: 'Cayman Islands Monetary Authority - Industry notices and regulatory updates',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Cayman Islands',
+    region: 'Caribbean',
+    sectors: ['Banking', 'Investment Management', 'Insurance', 'AML & Financial Crime']
   },
 
   {

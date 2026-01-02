@@ -28,11 +28,15 @@
   "crons": [
     {
       "path": "/api/cron/rss-refresh",
-      "schedule": "30 10 * * *"
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/fca-enforcement",
+      "schedule": "5 9 * * *"
     },
     {
       "path": "/api/cron/daily-digest",
-      "schedule": "0 7 * * *"
+      "schedule": "10 9 * * *"
     }
   ],
   "env": {

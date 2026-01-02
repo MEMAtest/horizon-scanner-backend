@@ -1,1 +1,46 @@
-[]
+[
+  {
+    "id": "374bfa56-5c6f-4488-807d-6543fc7320de",
+    "watchListId": "6f3a2143-350c-4d6b-90aa-d46b8f9c6e03",
+    "regulatoryUpdateId": 442,
+    "matchScore": 0.6,
+    "matchReasons": {
+      "matched": {
+        "keywords": [],
+        "authorities": [
+          "FCA"
+        ],
+        "sectors": [
+          "Banking"
+        ]
+      },
+      "update": {
+        "authority": "FCA",
+        "sectors": [
+          "banking"
+        ]
+      },
+      "breakdown": {
+        "keywords": {
+          "weight": 0.4,
+          "score": 0,
+          "configured": 4
+        },
+        "authorities": {
+          "weight": 0.3,
+          "score": 1,
+          "configured": 2
+        },
+        "sectors": {
+          "weight": 0.3,
+          "score": 1,
+          "configured": 1
+        }
+      }
+    },
+    "reviewed": false,
+    "reviewedAt": null,
+    "dismissed": false,
+    "createdAt": "2025-12-30T04:36:58.177Z"
+  }
+]

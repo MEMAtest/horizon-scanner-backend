@@ -13,6 +13,13 @@ const { scrapeGamblingCommission } = require('./webScraperSources/gambling')
 const { scrapeHSE } = require('./webScraperSources/hse')
 const { scrapeOfcom } = require('./webScraperSources/ofcom')
 const { scrapeSRA } = require('./webScraperSources/sra')
+const { scrapeMAS } = require('./webScraperSources/mas')
+const { scrapeASIC } = require('./webScraperSources/asic')
+const { scrapeACPR } = require('./webScraperSources/acpr')
+const { scrapeBankOfItaly } = require('./webScraperSources/bankOfItaly')
+const { scrapeEEAS } = require('./webScraperSources/eeas')
+const { scrapeQCB } = require('./webScraperSources/qcb')
+const { scrapeCNMVCommunications } = require('./webScraperSources/cnmvCommunications')
 
 module.exports = {
   // Core scrapers
@@ -33,6 +40,13 @@ module.exports = {
   scrapeHSE,
   scrapeOfcom,
   scrapeSRA,
+  scrapeMAS,
+  scrapeASIC,
+  scrapeACPR,
+  scrapeBankOfItaly,
+  scrapeEEAS,
+  scrapeQCB,
+  scrapeCNMVCommunications,
 
   // Utility function
   normalizeAuthority

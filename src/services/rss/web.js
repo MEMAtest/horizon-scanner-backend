@@ -17,6 +17,13 @@ function applyWebMethods(ServiceClass, {
   scrapeHSE,
   scrapeOfcom,
   scrapeSRA,
+  scrapeMAS,
+  scrapeASIC,
+  scrapeACPR,
+  scrapeBankOfItaly,
+  scrapeEEAS,
+  scrapeQCB,
+  scrapeCNMVCommunications,
   normalizeAuthority
 }) {
   ServiceClass.prototype.fetchWebScraping = async function fetchWebScraping(source) {
@@ -89,6 +96,34 @@ function applyWebMethods(ServiceClass, {
         case 'SRA':
         case 'Solicitors Regulation Authority':
           scraperResults = await scrapeSRA()
+          break
+        case 'MAS':
+        case 'Monetary Authority of Singapore':
+          scraperResults = await scrapeMAS()
+          break
+        case 'ASIC':
+        case 'Australian Securities and Investments Commission':
+          scraperResults = await scrapeASIC()
+          break
+        case 'ACPR':
+        case 'Autorite de Controle Prudentiel':
+          scraperResults = await scrapeACPR()
+          break
+        case 'Bank of Italy':
+        case 'Banca d\'Italia':
+          scraperResults = await scrapeBankOfItaly()
+          break
+        case 'EEAS':
+        case 'European External Action Service':
+          scraperResults = await scrapeEEAS()
+          break
+        case 'QCB':
+        case 'Qatar Central Bank':
+          scraperResults = await scrapeQCB()
+          break
+        case 'CNMV':
+        case 'Comision Nacional del Mercado de Valores':
+          scraperResults = await scrapeCNMVCommunications()
           break
         default:
           console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`)

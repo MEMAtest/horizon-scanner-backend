@@ -797,6 +797,73 @@ function getRegNoticesCanary() {
   </svg>`
 }
 
+/**
+ * 15. International - Globe-Watching Canary
+ * Looking at/holding a small globe, representing global regulatory monitoring
+ */
+function getInternationalCanary() {
+  return `<svg viewBox="0 0 50 50" class="canary-icon-animated" aria-hidden="true">
+    ${getCanaryGradients()}
+    <defs>
+      <linearGradient id="globeBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#60a5fa"/>
+        <stop offset="100%" style="stop-color:#2563eb"/>
+      </linearGradient>
+      <linearGradient id="landGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4ade80"/>
+        <stop offset="100%" style="stop-color:#16a34a"/>
+      </linearGradient>
+    </defs>
+    <!-- Globe being observed -->
+    <g class="globe">
+      <circle cx="14" cy="24" r="10" fill="url(#globeBlue)"/>
+      <!-- Globe grid lines -->
+      <ellipse cx="14" cy="24" rx="10" ry="4" fill="none" stroke="#93c5fd" stroke-width="0.6" opacity="0.6"/>
+      <ellipse cx="14" cy="24" rx="6" ry="10" fill="none" stroke="#93c5fd" stroke-width="0.6" opacity="0.6"/>
+      <line x1="4" y1="24" x2="24" y2="24" stroke="#93c5fd" stroke-width="0.6" opacity="0.6"/>
+      <!-- Continents (simplified) -->
+      <path d="M10 18 Q12 16 15 17 Q18 18 17 21 Q15 20 12 21 Q10 20 10 18" fill="url(#landGreen)" opacity="0.8"/>
+      <path d="M8 26 Q10 25 12 26 Q11 28 9 28 Q8 27 8 26" fill="url(#landGreen)" opacity="0.8"/>
+      <path d="M16 26 Q18 25 19 27 Q18 29 16 28 Q15 27 16 26" fill="url(#landGreen)" opacity="0.8"/>
+      <!-- Globe shine -->
+      <circle cx="10" cy="20" r="2" fill="white" opacity="0.3"/>
+    </g>
+    <!-- Body - leaning forward to observe globe -->
+    <g class="canary-body" transform="rotate(-8 32 30)">
+      <ellipse cx="32" cy="30" rx="9" ry="7" fill="url(#canaryGold)"/>
+      <ellipse cx="32" cy="31" rx="5" ry="3" fill="#FFF3B0" opacity="0.6"/>
+    </g>
+    <!-- Left wing - extended toward globe -->
+    <g class="canary-wing">
+      <ellipse cx="24" cy="26" rx="4" ry="5" fill="url(#canaryOrange)" transform="rotate(-15 24 26)"/>
+    </g>
+    <!-- Right wing -->
+    <ellipse cx="40" cy="28" rx="3" ry="5" fill="url(#canaryOrange)"/>
+    <!-- Tail -->
+    <polygon points="38,36 42,44 38,42 34,44" fill="url(#canaryOrange)"/>
+    <!-- Head - looking at globe with interest -->
+    <g class="canary-head">
+      <circle cx="30" cy="18" r="7" fill="url(#canaryGold)"/>
+      <!-- Curious eyes looking at globe -->
+      <circle cx="27" cy="17" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="26" cy="17" r="1" fill="#1a1a2e"/>
+      <circle cx="33" cy="17" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="32" cy="17" r="1" fill="#1a1a2e"/>
+      <!-- Eye sparkle -->
+      <circle cx="26" cy="16" r="0.3" fill="white"/>
+      <!-- Beak -->
+      <polygon points="24,19 20,18 23,21" fill="#FF6B00"/>
+      <!-- Crest -->
+      <path d="M28 11 Q26 7 29 9 Q29 5 32 8 Q35 5 33 9" fill="url(#canaryOrange)"/>
+    </g>
+    <!-- Feet -->
+    <g fill="#FF6B00">
+      <path d="M29 38 L29 42 M27 42 L31 42" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M35 38 L35 42 M33 42 L37 42" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+  </svg>`
+}
+
 module.exports = {
   getCanaryGradients,
   getCanaryBird,
@@ -815,5 +882,6 @@ module.exports = {
   getEnforcementCanary,
   getSpotlightCanary,
   getIntelligenceCanary,
-  getRegNoticesCanary
+  getRegNoticesCanary,
+  getInternationalCanary
 }

@@ -1,6 +1,17 @@
 function applyBrowserMethods(ServiceClass, puppeteer) {
   ServiceClass.prototype.initBrowser = async function initBrowser() {
-    if (this.browser) return this.browser
+    if (this.browser) {
+      if (typeof this.browser.isConnected === 'function' && this.browser.isConnected()) {
+        return this.browser
+      }
+
+      try {
+        await this.browser.close()
+      } catch (error) {
+        // ignore close errors for stale browsers
+      }
+      this.browser = null
+    }
 
     console.log('🚀 Launching Puppeteer browser with stealth mode...')
     this.browser = await puppeteer.launch({
@@ -15,6 +26,11 @@ function applyBrowserMethods(ServiceClass, puppeteer) {
         '--disable-features=site-per-process',
         '--window-size=1920x1080'
       ]
+    })
+
+    this.browser.on('disconnected', () => {
+      this.browser = null
+      console.warn('⚠️ Puppeteer browser disconnected')
     })
 
     console.log('✅ Puppeteer browser launched successfully')

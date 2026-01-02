@@ -6,6 +6,7 @@ const {
   selectSummary,
   truncateText
 } = require('./helpers')
+const { getAuthorityDisplayName } = require('../../utils/authorityRegistry')
 
 function renderProfileSelector(profiles = [], selectedProfileId = null) {
   if (!profiles || profiles.length === 0) {
@@ -197,13 +198,17 @@ function renderFilterOptionList(options, selectedValue) {
 function renderAuthorityOptions(authorities = [], selectedAuthority) {
   const items = authorities.length
     ? authorities
-    : [{ name: 'FCA', count: 0 }, { name: 'PRA', count: 0 }, { name: 'Bank of England', count: 0 }]
+    : [
+        { name: 'FCA', label: getAuthorityDisplayName('FCA'), count: 0 },
+        { name: 'PRA', label: getAuthorityDisplayName('PRA'), count: 0 },
+        { name: 'Bank of England', label: getAuthorityDisplayName('Bank of England'), count: 0 }
+      ]
 
   return ['<option value="">All authorities</option>']
     .concat(
-      items.map(({ name, count }) => `
+      items.map(({ name, label, count }) => `
         <option value="${sanitizeHtml(name)}" ${name === selectedAuthority ? 'selected' : ''}>
-          ${sanitizeHtml(name)} (${count})
+          ${sanitizeHtml(label || name)} (${count})
         </option>
       `)
     )

@@ -196,7 +196,7 @@ function formatSummary({ highCount, mediumCount, uniqueAuthorities, topSectors, 
 async function buildDigestPayload(options = {}) {
   const {
     persona = process.env.DIGEST_PERSONA || 'Executive',
-    limit = 60,
+    limit = 150, // Increased to account for digest history filtering
     digestDate: digestDateInput,
     rollingWindowHours: rollingWindowPreferred
   } = options
@@ -304,6 +304,16 @@ async function buildDigestPayload(options = {}) {
     const authority = (update.authority || '').toLowerCase()
 
     const excludeKeywords = ['job', 'career', 'vacancy', 'vacancies', 'recruitment', 'hiring', 'apply now', 'job opening']
+    // Exclude generic website pages and navigation items that aren't regulatory content
+    // NOTE: Be careful not to exclude legitimate regulatory topics like AML, banking regulations, etc.
+    const excludePages = ['privacy policy', 'contact us', 'terms of service', 'cookie policy', 'sitemap', 'accessibility', 'advanced search', 'search results', 'login', 'sign in', 'register', 'our operations', 'about us', 'news & events', 'media centre', 'faq', 'careers', 'our services', 'media center', 'get in touch', 'subscribe', 'newsletter signup']
+    // Exclude junk/malformed headlines
+    const junkPatterns = ['others,', 'other,', 'undefined', 'null', 'test', '[object', '+971', '+44', '+1 ', 'tel:', 'reach out', 'japan weeks']
+
+    // Detect navigation pages by URL pattern - only exclude obvious non-content pages
+    const url = (update.url || '').toLowerCase()
+    // Only exclude very specific navigation patterns, not general /services/ which could be regulatory
+    const isNavigationPage = url.includes('/en/search/') || url.endsWith('/about-us') || url.endsWith('/contact-us')
 
     const isJobPosting = excludeKeywords.some(keyword =>
       headline.includes(keyword) || category.includes(keyword)
@@ -311,37 +321,64 @@ async function buildDigestPayload(options = {}) {
 
     if (isJobPosting) return false
 
-    // Exclude low-quality summaries
-    // Check for repetitive text (same word/phrase repeated)
+    // Exclude generic website pages and navigation URLs
+    const isGenericPage = excludePages.some(page => headline.includes(page))
+    if (isGenericPage) return false
+    if (isNavigationPage) return false
+
+    // Exclude junk/malformed headlines (phone numbers, etc)
+    const isJunkHeadline = junkPatterns.some(pattern => headline.includes(pattern))
+    if (isJunkHeadline) return false
+
+    // Exclude items with very short headlines (likely junk)
+    if (headline.length < 15) return false
+
+    // Exclude headlines that are mostly numbers (phone numbers, dates only, etc)
+    const letterCount = (headline.match(/[a-z]/gi) || []).length
+    if (letterCount < 10) return false
+
+    // Exclude low-quality summaries - check for repetitive text
     const words = summary.split(/\s+/)
     const uniqueWords = new Set(words)
     const repetitionRatio = uniqueWords.size / words.length
-
-    if (words.length > 5 && repetitionRatio < 0.4) {
-      // High repetition, likely low quality
-      return false
-    }
+    if (words.length > 5 && repetitionRatio < 0.4) return false
 
     // Exclude purely informational updates with no substance
-    if (summary.includes('informational regulatory update') && summary.length < 80) {
-      return false
-    }
+    if (summary.includes('informational regulatory update') && summary.length < 50) return false
 
-    // Check if summary is just the headline repeated
-    const cleanHeadline = headline.replace(/[^a-z0-9\s]/g, '')
-    const cleanSummary = summary.replace(/[^a-z0-9\s]/g, '')
-    if (cleanSummary.includes(cleanHeadline) && summary.length < 100) {
-      return false
-    }
+    // Check if summary is ONLY the headline with no additional content
+    const cleanHeadline = headline.replace(/[^a-z0-9\s]/g, '').trim()
+    let cleanSummary = summary.replace(/[^a-z0-9\s]/g, '').trim()
+    cleanSummary = cleanSummary.replace(/^informational regulatory update\s*/i, '').trim()
 
-    // Exclude items with no meaningful summary
-    if (summary.length < 30 || !summary.match(/[a-z]{3,}/i)) {
-      return false
-    }
+    // Detect if the summary is just the headline repeated
+    const headlineRepeated = cleanSummary.toLowerCase() === (cleanHeadline + ' ' + cleanHeadline).toLowerCase()
+    if (headlineRepeated) return false
 
-    if (identifier && seenThisDigest.has(identifier)) {
-      return false
-    }
+    // Filter if summary is basically just the headline (within 30 chars)
+    if (cleanSummary.includes(cleanHeadline) && cleanSummary.length < cleanHeadline.length + 30) return false
+
+    // Exclude items with no meaningful summary (very short)
+    if (summary.length < 20 || !summary.match(/[a-z]{3,}/i)) return false
+
+    // Require a meaningful summary - either from RSS feed or a substantial AI summary
+    const rawSummary = update.summary || ''
+    const rawAiSummary = update.ai_summary || ''
+    const cleanedAiSummary = rawAiSummary.replace(/^(Informational regulatory update:|Regulatory update impacting business operations:|RegCanary Analysis:)\s*/i, '').trim()
+
+    // Real summary: RSS summary exists and is substantial
+    const hasRssSummary = rawSummary.length > 40
+    // OR: AI summary has actual analysis (much longer than headline, not just headline repeated)
+    const hasAiAnalysis = cleanedAiSummary.length > headline.length + 80 &&
+                          !cleanedAiSummary.toLowerCase().startsWith(headline.toLowerCase().slice(0, 30))
+
+    if (!hasRssSummary && !hasAiAnalysis) return false
+
+    // Exclude generic navigation/index pages and stock exchange announcements
+    const genericPageTitles = ['regulations and guidance', 'sanctions list updates', 'total voting rights', 'holdings in the company', 'holding(s) in company', 'resignation of director', 'interim results', 'result of annual general meeting', 'settlement agreement', 'announcement provided by']
+    if (genericPageTitles.some(title => headline.includes(title))) return false
+
+    if (identifier && seenThisDigest.has(identifier)) return false
 
     if (identifier) {
       seenThisDigest.add(identifier)
@@ -351,236 +388,306 @@ async function buildDigestPayload(options = {}) {
   })
 
   // Implement balanced selection to ensure diversity across authorities and sectors
+  // Split into UK (10) and International (5) sections
+  const TARGET_UK = 10
+  const TARGET_INTERNATIONAL = 5
+  const TARGET_MAX = TARGET_UK + TARGET_INTERNATIONAL // 15 total
+  const TARGET_MIN = 10 // Minimum items we want to include
+  const MAX_FCA = 3 // FCA gets priority, up to 3 items
+  const MAX_HMRC = 1 // HMRC limited to 1 item only
+  const MAX_HM_GOV = 1 // HM Government limited to 1 item only
+  const MAX_AQUIS = 2 // AQUIS limited to 2 items
+  const MAX_PER_AUTHORITY = 2 // Maximum items from same authority (default)
+  const MAX_PER_SECTOR = 5 // Maximum items from same sector
+  const HM_AUTHORITY_KEYWORDS = ['hm treasury', 'hm government', 'hm govt', 'his majesty']
+  const MAX_HM_OTHER = 2 // HM Treasury + HM Government combined (excluding HMRC)
+
+  // Helper to detect similar headlines (fuzzy deduplication)
+  const normalizeHeadline = (h) => (h || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '') // Remove punctuation
+    .replace(/\s+/g, ' ')        // Normalize spaces
+    .replace(/\s*pdf\s*$/i, '')  // Remove [pdf] suffix
+    .trim()
+    .slice(0, 60) // Compare first 60 chars to catch similar titles
+
+  const seenNormalizedHeadlines = new Set()
+  const deduplicatedFiltered = filtered.filter(update => {
+    const normalized = normalizeHeadline(update.headline)
+    if (seenNormalizedHeadlines.has(normalized)) {
+      return false // Skip duplicate
+    }
+    seenNormalizedHeadlines.add(normalized)
+    return true
+  })
+
+  // Separate UK and International updates
+  const ukFiltered = deduplicatedFiltered.filter(u => !u.region || u.region === 'UK')
+  const intlFiltered = deduplicatedFiltered.filter(u => u.region && u.region !== 'UK')
   const balancedSelection = []
   const authorityCount = {}
   const sectorCount = {}
-  const TARGET_MIN = 10 // Minimum items we want to include
-  const TARGET_MAX = 10 // Maximum (and now exact) items to include
-  const MAX_PER_AUTHORITY = 3 // Maximum items from same authority (relaxed if needed)
-  const MAX_PER_SECTOR = 5 // Maximum items from same sector
-  const HM_AUTHORITY_KEYWORDS = ['hmrc', 'hm treasury', 'hm government', 'hm govt', 'hm r c', 'his majesty']
-  const MAX_HM_TOTAL = 3
 
-  const isHmAuthority = (authority = '') => {
+  const isHmOtherAuthority = (authority = '') => {
     const normalized = authority.toLowerCase()
     return HM_AUTHORITY_KEYWORDS.some(keyword => normalized.includes(keyword))
   }
 
-  // Ensure we reserve a slot for HM authority updates
-  let hmAuthorityIncluded = false
-  let hmAuthorityCount = 0
-  for (const update of filtered) {
-    if (balancedSelection.length >= TARGET_MAX) break
-    if (!isHmAuthority(update.authority)) continue
-    if (hmAuthorityIncluded) break
-    balancedSelection.push(update)
-    const authority = update.authority || 'Unknown'
+  const isLowValueAquis = (update) => {
+    if (update.authority !== 'AQUIS') return false
+    const headline = (update.headline || '').toLowerCase()
+    return headline.includes('agm') ||
+           headline.includes('shares in issue') ||
+           headline.includes('subscription agreement') ||
+           headline.includes('notice of')
+  }
+
+  // ============= UK SECTION (10 items, FCA first) =============
+  const ukSelection = []
+  let hmOtherCount = 0
+
+  // FIRST: Add FCA items (priority authority, up to MAX_FCA)
+  for (const update of ukFiltered.filter(u => u.authority === 'FCA')) {
+    if (ukSelection.length >= TARGET_UK) break
+    if ((authorityCount['FCA'] || 0) >= MAX_FCA) break
+    if (ukSelection.some(item => item.id === update.id || item.url === update.url)) continue
+
+    ukSelection.push(update)
+    authorityCount['FCA'] = (authorityCount['FCA'] || 0) + 1
     const sector = update.sector || 'Unknown'
-    authorityCount[authority] = (authorityCount[authority] || 0) + 1
     sectorCount[sector] = (sectorCount[sector] || 0) + 1
-    hmAuthorityIncluded = true
-    hmAuthorityCount = 1
   }
 
-  // First pass: prioritize high-impact items (score >= 80)
-  for (const update of filtered) {
-    if (balancedSelection.length >= TARGET_MAX) break
-    if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
-      continue
-    }
-    if (update.relevanceScore >= 80) {
-      const authority = update.authority || 'Unknown'
-      const sector = update.sector || 'Unknown'
-      if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
-      if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
-      if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
-      balancedSelection.push(update)
-      authorityCount[authority] = (authorityCount[authority] || 0) + 1
-      sectorCount[sector] = (sectorCount[sector] || 0) + 1
-      if (isHmAuthority(authority)) {
-        hmAuthorityIncluded = true
-        hmAuthorityCount++
-      }
-    }
-  }
-
-  // Second pass: add diverse content respecting limits
-  for (const update of filtered) {
-    if (balancedSelection.length >= TARGET_MAX) break
-    if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
-      continue // Already selected
-    }
+  // SECOND: Add high-impact non-FCA items (score >= 80)
+  for (const update of ukFiltered.filter(u => u.authority !== 'FCA' && u.relevanceScore >= 80)) {
+    if (ukSelection.length >= TARGET_UK) break
+    if (ukSelection.some(item => item.id === update.id || item.url === update.url)) continue
+    if (isLowValueAquis(update)) continue
 
     const authority = update.authority || 'Unknown'
     const sector = update.sector || 'Unknown'
 
-    // Check if adding this would exceed diversity limits
+    // HMRC limited to 1 item
+    if (authority === 'HMRC' && (authorityCount['HMRC'] || 0) >= MAX_HMRC) continue
+    // HM Government limited to 2 items
+    if (authority.toLowerCase() === 'hm government' && (authorityCount[authority] || 0) >= MAX_HM_GOV) continue
+    // Other HM authorities combined max 2
+    if (isHmOtherAuthority(authority) && hmOtherCount >= MAX_HM_OTHER) continue
     if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
-    if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
     if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
 
-    // Exclude low-value AQUIS announcements (AGMs, stock updates)
-    if (authority === 'AQUIS') {
-      const headline = (update.headline || '').toLowerCase()
-      if (headline.includes('agm') ||
-          headline.includes('shares in issue') ||
-          headline.includes('subscription agreement') ||
-          headline.includes('notice of')) {
-        continue
-      }
-    }
-
-    balancedSelection.push(update)
+    ukSelection.push(update)
     authorityCount[authority] = (authorityCount[authority] || 0) + 1
     sectorCount[sector] = (sectorCount[sector] || 0) + 1
-    if (isHmAuthority(authority)) {
-      hmAuthorityIncluded = true
-      hmAuthorityCount++
-    }
+    if (isHmOtherAuthority(authority)) hmOtherCount++
   }
 
-  // Third pass: if we don't have enough items, try to backfill without breaking per-authority caps
-  if (balancedSelection.length < TARGET_MIN) {
-    for (const update of filtered) {
-      if (balancedSelection.length >= TARGET_MAX) break
-      if (balancedSelection.some(item => item.id === update.id || item.url === update.url)) {
-        continue
-      }
+  // THIRD: Fill remaining UK slots with other items
+  for (const update of ukFiltered.filter(u => u.authority !== 'FCA')) {
+    if (ukSelection.length >= TARGET_UK) break
+    if (ukSelection.some(item => item.id === update.id || item.url === update.url)) continue
+    if (isLowValueAquis(update)) continue
+
+    const authority = update.authority || 'Unknown'
+    const sector = update.sector || 'Unknown'
+
+    // HMRC limited to 1 item
+    if (authority === 'HMRC' && (authorityCount['HMRC'] || 0) >= MAX_HMRC) continue
+    // HM Government limited to 2 items
+    if (authority.toLowerCase() === 'hm government' && (authorityCount[authority] || 0) >= MAX_HM_GOV) continue
+    // Other HM authorities combined max 2
+    if (isHmOtherAuthority(authority) && hmOtherCount >= MAX_HM_OTHER) continue
+    if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
+    if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
+
+    ukSelection.push(update)
+    authorityCount[authority] = (authorityCount[authority] || 0) + 1
+    sectorCount[sector] = (sectorCount[sector] || 0) + 1
+    if (isHmOtherAuthority(authority)) hmOtherCount++
+  }
+
+  // FOURTH: Gap-fill to reach TARGET_UK (relax some constraints but keep HMRC/HM Gov limits)
+  if (ukSelection.length < TARGET_UK) {
+    for (const update of ukFiltered) {
+      if (ukSelection.length >= TARGET_UK) break
+      if (ukSelection.some(item => item.id === update.id || item.url === update.url)) continue
+      if (isLowValueAquis(update)) continue
 
       const authority = update.authority || 'Unknown'
-      const sector = update.sector || 'Unknown'
+      // Still respect HMRC limit even in gap-fill
+      if (authority === 'HMRC' && (authorityCount['HMRC'] || 0) >= MAX_HMRC) continue
+      // Still respect HM Government limit
+      if (authority.toLowerCase() === 'hm government' && (authorityCount[authority] || 0) >= MAX_HM_GOV) continue
 
-      // Keep strict max per authority even when backfilling
-      if ((authorityCount[authority] || 0) >= MAX_PER_AUTHORITY) continue
-      if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
-      if ((sectorCount[sector] || 0) >= MAX_PER_SECTOR) continue
-
-      // Still exclude obvious low-value AQUIS content
-      if (authority === 'AQUIS') {
-        const headline = (update.headline || '').toLowerCase()
-        if (headline.includes('agm') ||
-            headline.includes('shares in issue') ||
-            headline.includes('subscription agreement')) {
-          continue
-        }
-      }
-
-      balancedSelection.push(update)
+      ukSelection.push(update)
       authorityCount[authority] = (authorityCount[authority] || 0) + 1
-      sectorCount[sector] = (sectorCount[sector] || 0) + 1
-      if (isHmAuthority(authority)) {
-        hmAuthorityIncluded = true
-        hmAuthorityCount++
-      }
     }
   }
 
-  const rawInsights = balancedSelection.map(update => {
+  // ============= INTERNATIONAL SECTION (5 items) =============
+  const intlSelection = []
+  const intlAuthorityCount = {}
+
+  // Sort international by relevance score (highest first) to get most important
+  const intlSorted = [...intlFiltered].sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+
+  // FIRST PASS: Add high-impact international items (score >= 70), max 1 per authority
+  for (const update of intlSorted.filter(u => (u.relevanceScore || 0) >= 70)) {
+    if (intlSelection.length >= TARGET_INTERNATIONAL) break
+    if (intlSelection.some(item => item.id === update.id || item.url === update.url)) continue
+
+    const authority = update.authority || 'Unknown'
+
+    // Max 1 item per international authority for diversity
+    if ((intlAuthorityCount[authority] || 0) >= 1) continue
+
+    intlSelection.push(update)
+    intlAuthorityCount[authority] = (intlAuthorityCount[authority] || 0) + 1
+  }
+
+  // SECOND PASS: Fill remaining with other items, still max 1 per authority
+  for (const update of intlSorted) {
+    if (intlSelection.length >= TARGET_INTERNATIONAL) break
+    if (intlSelection.some(item => item.id === update.id || item.url === update.url)) continue
+
+    const authority = update.authority || 'Unknown'
+
+    // Max 1 item per international authority for diversity
+    if ((intlAuthorityCount[authority] || 0) >= 1) continue
+
+    intlSelection.push(update)
+    intlAuthorityCount[authority] = (intlAuthorityCount[authority] || 0) + 1
+  }
+
+  // THIRD PASS: If still short, allow up to 2 per authority as fallback
+  if (intlSelection.length < TARGET_INTERNATIONAL) {
+    for (const update of intlSorted) {
+      if (intlSelection.length >= TARGET_INTERNATIONAL) break
+      if (intlSelection.some(item => item.id === update.id || item.url === update.url)) continue
+
+      const authority = update.authority || 'Unknown'
+
+      // Fallback: allow up to 2 per authority
+      if ((intlAuthorityCount[authority] || 0) >= 2) continue
+
+      intlSelection.push(update)
+      intlAuthorityCount[authority] = (intlAuthorityCount[authority] || 0) + 1
+    }
+  }
+
+  // Final enforcement: ensure hard limits are respected
+  const finalUkSelection = []
+  const finalUkAuthorityCount = {}
+  for (const item of ukSelection) {
+    const auth = item.authority || 'Unknown'
+    // Hard limit: max 1 HMRC
+    if (auth === 'HMRC' && (finalUkAuthorityCount['HMRC'] || 0) >= 1) continue
+    // Hard limit: max 1 HM Government
+    if (auth === 'HM Government' && (finalUkAuthorityCount['HM Government'] || 0) >= 1) continue
+    // Hard limit: max 2 AQUIS
+    if (auth === 'AQUIS' && (finalUkAuthorityCount['AQUIS'] || 0) >= 2) continue
+    finalUkSelection.push(item)
+    finalUkAuthorityCount[auth] = (finalUkAuthorityCount[auth] || 0) + 1
+  }
+
+  // Combine UK and International selections
+  balancedSelection.push(...finalUkSelection, ...intlSelection)
+
+  // Map UK insights with section marker
+  const ukInsights = finalUkSelection.map(update => {
     const identifierSource = update.id || update.update_id || update.url
     const identifier = identifierSource != null ? String(identifierSource) : null
     const sectors = Array.isArray(update.sectors) && update.sectors.length
       ? update.sectors
-      : (
-          update.primarySectors ||
-        update.primary_sectors ||
-        (update.sector ? [update.sector] : [])
-        )
-
-    const publishedDate = extractPublishedDate(update)
+      : (update.primarySectors || update.primary_sectors || (update.sector ? [update.sector] : []))
 
     return {
       id: identifier,
       headline: update.headline,
-      summary: update.ai_summary || update.summary || update.description,
+      summary: update.summary || update.description,
+      ai_summary: update.ai_summary,
+      description: update.description,
       authority: update.authority,
       sectors,
       sector: update.sector,
+      region: 'UK',
       relevanceScore: update.relevanceScore,
       priorityReason: update.priorityReason,
-      published: publishedDate,
+      published: extractPublishedDate(update),
       url: update.url
     }
   })
 
-  const authorityCaps = {}
-  const insights = []
-  let hmInsightIncluded = false
-  for (const insight of rawInsights) {
-    if (insights.length >= TARGET_MAX) break
-    const key = insight.authority || 'Unknown'
-    const isHm = isHmAuthority(key)
-    authorityCaps[key] = (authorityCaps[key] || 0) + 1
-    const cap = isHm ? MAX_PER_AUTHORITY : MAX_PER_AUTHORITY
-    if (authorityCaps[key] <= cap) {
-      insights.push(insight)
-      if (isHm) hmInsightIncluded = true
-    }
-  }
-  if (!hmInsightIncluded) {
-    const hmFallback = rawInsights.find(item => isHmAuthority(item.authority))
-    if (hmFallback) {
-      // Remove the lowest priority non-HM insight to make room
-      for (let i = insights.length - 1; i >= 0; i--) {
-        if (!isHmAuthority(insights[i].authority)) {
-          insights.splice(i, 1)
-          break
-        }
-      }
-      insights.push(hmFallback)
-    }
-  }
+  // Map International insights with section marker
+  const intlInsights = intlSelection.map(update => {
+    const identifierSource = update.id || update.update_id || update.url
+    const identifier = identifierSource != null ? String(identifierSource) : null
+    const sectors = Array.isArray(update.sectors) && update.sectors.length
+      ? update.sectors
+      : (update.primarySectors || update.primary_sectors || (update.sector ? [update.sector] : []))
 
-  // Ensure exactly TARGET_MAX insights (pad or trim using remaining ranked updates)
-  const remainingCandidates = rawInsights.filter(candidate =>
-    !insights.some(existing => existing.id === candidate.id)
-  )
-  while (insights.length < TARGET_MAX && remainingCandidates.length) {
-    const next = remainingCandidates.shift()
-    const key = next.authority || 'Unknown'
-    const isHm = isHmAuthority(key)
-    authorityCaps[key] = (authorityCaps[key] || 0) + 1
-    const cap = isHm ? MAX_PER_AUTHORITY : MAX_PER_AUTHORITY
-    if ((isHm && hmAuthorityCount >= MAX_HM_TOTAL) || authorityCaps[key] > cap) {
-      continue
+    return {
+      id: identifier,
+      headline: update.headline,
+      summary: update.summary || update.description,
+      ai_summary: update.ai_summary,
+      description: update.description,
+      authority: update.authority,
+      sectors,
+      sector: update.sector,
+      region: update.region || 'International',
+      country: update.country,
+      relevanceScore: update.relevanceScore,
+      priorityReason: update.priorityReason,
+      published: extractPublishedDate(update),
+      url: update.url
     }
-    if (isHm) hmAuthorityCount++
-    insights.push(next)
-  }
+  })
 
-  // If still short, pull from latest updates regardless of original filters (respect authority caps)
-  if (insights.length < TARGET_MAX) {
+  // Combine insights (UK first, then International)
+  const insights = [...ukInsights, ...intlInsights]
+
+  // If still short on UK items, pull from latest UK updates
+  if (ukInsights.length < TARGET_UK) {
     const supplemental = await dbService.getEnhancedUpdates({ limit: 50, sort: 'newest' }).catch(() => [])
+    const suppAuthorityCount = {}
+    // Count existing authorities in insights
+    for (const item of insights) {
+      const auth = item.authority || 'Unknown'
+      suppAuthorityCount[auth] = (suppAuthorityCount[auth] || 0) + 1
+    }
     for (const update of supplemental) {
       if (insights.length >= TARGET_MAX) break
-      if (rawInsights.some(item => item.id === update.id)) continue
-      const authority = update.authority || 'Unknown'
-      if ((authorityCaps[authority] || 0) >= MAX_PER_AUTHORITY) continue
-      if (isHmAuthority(authority) && hmAuthorityCount >= MAX_HM_TOTAL) continue
+      if (ukInsights.length >= TARGET_UK) break
+      if (update.region && update.region !== 'UK') continue
+      if (insights.some(item => item.id === update.id || item.url === update.url)) continue
+
       const identifier = update.id || update.update_id || update.url
       if (!identifier) continue
+
+      const authority = update.authority || 'Unknown'
+      // Apply same limits in supplemental fetch
+      if (authority === 'HMRC' && (suppAuthorityCount['HMRC'] || 0) >= 1) continue
+      if (authority === 'HM Government' && (suppAuthorityCount['HM Government'] || 0) >= 1) continue
+
       const insight = {
         id: String(identifier),
         headline: update.headline,
-        summary: update.ai_summary || update.summary,
+        summary: update.summary || update.description,
+        ai_summary: update.ai_summary,
+        description: update.description,
         authority: update.authority,
         sectors: update.sectors || [],
         sector: update.sector,
+        region: 'UK',
         relevanceScore: update.relevanceScore || 40,
         priorityReason: update.priorityReason,
         published: extractPublishedDate(update),
         url: update.url
       }
-      insights.push(insight)
-      authorityCaps[authority] = (authorityCaps[authority] || 0) + 1
-      if (isHmAuthority(authority)) {
-        hmAuthorityIncluded = true
-        hmAuthorityCount++
-      }
+      // Insert before international section
+      insights.splice(ukInsights.length, 0, insight)
+      suppAuthorityCount[authority] = (suppAuthorityCount[authority] || 0) + 1
     }
-  }
-
-  if (insights.length > TARGET_MAX) {
-    insights.splice(TARGET_MAX)
   }
 
   // Calculate metrics based on items IN THIS DIGEST (aligned with email template labels)
@@ -660,7 +767,11 @@ async function sendDailyDigest({ recipients, persona, brand }) {
     return { skipped: true, reason: 'No recipients' }
   }
 
-  const digest = await buildDigestPayload({ persona })
+  const digest = await buildDigestPayload({
+    persona,
+    limit: 200,
+    rollingWindowHours: 168 // 7 days to ensure enough fresh content
+  })
   const { subject, html, text } = buildDailyDigestEmail({
     date: digest.generatedAt,
     summary: digest.summary,

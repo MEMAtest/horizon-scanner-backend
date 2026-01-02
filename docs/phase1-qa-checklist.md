@@ -44,5 +44,12 @@ Use this checklist after refactors to verify no UI or API regressions. Keep resu
 - [ ] Add item modal and dropdowns work.
 - [ ] Dossier and policy modals open; link/unlink actions work.
 
+## FCA Handbook Explorer (`/handbook`)
+- [x] Sourcebooks load; ingest status shows timestamp.
+- [x] Outline renders for selected sourcebook.
+- [x] Section content loads with provisions.
+- [x] Search returns results and loads selected reference.
+Notes: Verified via `node scripts/handbook-health-check.js`; UI checks via `node scripts/handbook-ui-smoke.js --http-only` (headless browser blocked by sandbox).
+
 ## Weekly Briefing (`/weekly-roundup`)
 - [ ] Page renders without CSS regressions (cards, typography).

@@ -4,12 +4,14 @@ function applyPromptMethods(ServiceClass) {
   ServiceClass.prototype.createEnhancedAnalysisPrompt = function(content, url, metadata = {}) {
     const authorityContext = metadata.authority ? `Authority: ${metadata.authority}\n` : ''
     const dateContext = metadata.publishedDate ? `Published: ${metadata.publishedDate}\n` : ''
+    const countryContext = metadata.country ? `Country: ${metadata.country}\n` : ''
+    const translationFlag = metadata.requiresTranslation ? 'IMPORTANT: This content is in a non-English language. FIRST translate it to English, then provide your analysis. All output must be in English.\n\n' : ''
 
     return `You are an expert regulatory intelligence analyst for RegCanary, a UK financial services regulatory intelligence platform.
 
-Analyze this regulatory content and provide a comprehensive structured response:
+${translationFlag}Analyze this regulatory content and provide a comprehensive structured response:
 
-${authorityContext}${dateContext}
+${authorityContext}${dateContext}${countryContext}
 CONTENT TO ANALYZE:
 ${content.substring(0, 4000)}
 

@@ -604,23 +604,75 @@ module.exports = function applyHandbookMethods(EnhancedDBService) {
       }
     },
 
-    async searchHandbook(query, { authority = DEFAULT_AUTHORITY, limit = 20, offset = 0 } = {}) {
+    async searchHandbook(query, {
+      authority = DEFAULT_AUTHORITY,
+      limit = 20,
+      offset = 0,
+      sourcebookCode
+    } = {}) {
       ensurePostgres(this)
       if (!query) return []
       const client = await this.pool.connect()
       try {
+        const normalizedCode = sourcebookCode ? sourcebookCode.toUpperCase() : null
         const result = await client.query(
-          `SELECT s.canonical_ref, s.section_title, s.section_number,
-             sb.code AS sourcebook_code, sb.title AS sourcebook_title,
-             v.ingested_at
-           FROM reg_document_sections s
-           JOIN reg_document_versions v ON v.id = s.version_id
-           JOIN reg_document_sourcebooks sb ON sb.id = v.sourcebook_id
-           WHERE sb.authority = $1
-             AND s.search_vector @@ plainto_tsquery('english', $2)
-           ORDER BY ts_rank_cd(s.search_vector, plainto_tsquery('english', $2)) DESC
+          `WITH query AS (
+             SELECT plainto_tsquery('english', $2) AS q
+           ),
+           latest_versions AS (
+             SELECT sb.id AS sourcebook_id,
+                    v.id AS version_id
+             FROM reg_document_sourcebooks sb
+             LEFT JOIN LATERAL (
+               SELECT id, ingested_at
+               FROM reg_document_versions
+               WHERE sourcebook_id = sb.id
+               ORDER BY ingested_at DESC
+               LIMIT 1
+             ) v ON TRUE
+             WHERE sb.authority = $1
+               AND ($5::text IS NULL OR sb.code = $5)
+           )
+           SELECT *
+           FROM (
+             SELECT
+               'section' AS type,
+               s.canonical_ref,
+               s.section_title,
+               s.section_number,
+               sb.code AS sourcebook_code,
+               sb.title AS sourcebook_title,
+               s.id AS section_id,
+               NULL::integer AS paragraph_id,
+               ts_rank_cd(s.search_vector, query.q) AS rank
+             FROM reg_document_sections s
+             JOIN latest_versions lv ON lv.version_id = s.version_id
+             JOIN reg_document_sourcebooks sb ON sb.id = lv.sourcebook_id
+             JOIN query ON TRUE
+             WHERE s.search_vector @@ query.q
+
+             UNION ALL
+
+             SELECT
+               'paragraph' AS type,
+               p.canonical_ref,
+               s.section_title,
+               s.section_number,
+               sb.code AS sourcebook_code,
+               sb.title AS sourcebook_title,
+               s.id AS section_id,
+               p.id AS paragraph_id,
+               ts_rank_cd(p.search_vector, query.q) AS rank
+             FROM reg_document_paragraphs p
+             JOIN reg_document_sections s ON s.id = p.section_id
+             JOIN latest_versions lv ON lv.version_id = s.version_id
+             JOIN reg_document_sourcebooks sb ON sb.id = lv.sourcebook_id
+             JOIN query ON TRUE
+             WHERE p.search_vector @@ query.q
+           ) results
+           ORDER BY rank DESC
            LIMIT $3 OFFSET $4`,
-          [authority, query, limit, offset]
+          [authority, query, limit, offset, normalizedCode]
         )
         return result.rows
       } finally {
