@@ -126,6 +126,172 @@ class FCAAdvancedScraper {
           summary: '.search-result__summary',
           firm: '.search-result__firm, .firm-name'
         }
+      },
+
+      dearCEOLetters: {
+        name: 'Dear CEO Letters',
+        urls: [
+          'https://www.fca.org.uk/publications/search-results?category=policy%20and%20guidance-dear%20ceo%20letters&sort_by=dmetaZ'
+        ],
+        selectors: {
+          container: '.search-results, .publication-list',
+          items: '.search-result, .publication-item',
+          title: '.search-result__title a, .publication-item__title a',
+          url: '.search-result__title a, .publication-item__title a',
+          date: '.search-result__date, .publication-item__date',
+          summary: '.search-result__summary, .publication-item__summary',
+          sector: '.search-result__sector, .sector-tag',
+          topic: '.search-result__topic, .topic-tag'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next, .pager__next',
+          maxPages: 10
+        }
+      },
+
+      marketWatch: {
+        name: 'Market Watch',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=market-watch',
+          'https://www.fca.org.uk/publications/newsletters/market-watch'
+        ],
+        selectors: {
+          container: '.search-results, .newsletter-list',
+          items: '.search-result, .newsletter-item',
+          title: '.search-result__title a, .newsletter-item__title a',
+          url: '.search-result__title a, .newsletter-item__title a',
+          date: '.search-result__date, .newsletter-item__date',
+          summary: '.search-result__summary, .newsletter-item__summary',
+          issue: '.issue-number'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 10
+        }
+      },
+
+      portfolioLetters: {
+        name: 'Portfolio Letters',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=portfolio-letters',
+          'https://www.fca.org.uk/publications/search-results?category=policy%20and%20guidance-portfolio%20letters'
+        ],
+        selectors: {
+          container: '.search-results, .publication-list',
+          items: '.search-result, .publication-item',
+          title: '.search-result__title a, .publication-item__title a',
+          url: '.search-result__title a, .publication-item__title a',
+          date: '.search-result__date, .publication-item__date',
+          summary: '.search-result__summary, .publication-item__summary',
+          portfolio: '.portfolio-tag, .sector-tag'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 8
+        }
+      },
+
+      supervisoryNotices: {
+        name: 'Supervisory Notices',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=supervisory-notice'
+        ],
+        selectors: {
+          container: '.search-results',
+          items: '.search-result',
+          title: '.search-result__title a',
+          url: '.search-result__title a',
+          date: '.search-result__date',
+          summary: '.search-result__summary',
+          firm: '.search-result__firm, .firm-name',
+          noticeType: '.notice-type'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 10
+        }
+      },
+
+      regulatoryRoundups: {
+        name: 'Regulatory Roundups',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=corporate-document&keyword=regulatory+roundup'
+        ],
+        selectors: {
+          container: '.search-results',
+          items: '.search-result',
+          title: '.search-result__title a',
+          url: '.search-result__title a',
+          date: '.search-result__date',
+          summary: '.search-result__summary',
+          period: '.period-tag'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 6
+        }
+      },
+
+      thematicReviews: {
+        name: 'Thematic Reviews',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=thematic-review'
+        ],
+        selectors: {
+          container: '.search-results',
+          items: '.search-result',
+          title: '.search-result__title a',
+          url: '.search-result__title a',
+          date: '.search-result__date',
+          summary: '.search-result__summary',
+          theme: '.theme-tag',
+          sector: '.sector-tag'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 8
+        }
+      },
+
+      discussionPapers: {
+        name: 'Discussion Papers',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=discussion-paper'
+        ],
+        selectors: {
+          container: '.search-results',
+          items: '.search-result',
+          title: '.search-result__title a',
+          url: '.search-result__title a',
+          date: '.search-result__date',
+          summary: '.search-result__summary',
+          reference: '.search-result__reference',
+          deadline: '.consultation-deadline, .deadline'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 6
+        }
+      },
+
+      occasionalPapers: {
+        name: 'Occasional Papers',
+        urls: [
+          'https://www.fca.org.uk/publications?category%5B%5D=occasional-paper'
+        ],
+        selectors: {
+          container: '.search-results',
+          items: '.search-result',
+          title: '.search-result__title a',
+          url: '.search-result__title a',
+          date: '.search-result__date',
+          summary: '.search-result__summary',
+          authors: '.authors'
+        },
+        pagination: {
+          nextPage: '.pagination .pagination__next',
+          maxPages: 5
+        }
       }
     }
 
@@ -289,13 +455,23 @@ class FCAAdvancedScraper {
       const date = this.extractDate(item, selectors.date, $)
       const summary = this.extractText(item, selectors.summary, $)
 
-      // Extract FCA-specific fields
+      // Extract FCA-specific fields (existing)
       const deadline = selectors.deadline ? this.extractDate(item, selectors.deadline, $) : null
       const speaker = selectors.speaker ? this.extractText(item, selectors.speaker, $) : null
       const status = selectors.status ? this.extractText(item, selectors.status, $) : null
       const reference = selectors.reference ? this.extractText(item, selectors.reference, $) : null
       const firm = selectors.firm ? this.extractText(item, selectors.firm, $) : null
       const documentType = selectors.documentType ? this.extractText(item, selectors.documentType, $) : null
+
+      // Extract new publication-specific fields
+      const sector = selectors.sector ? this.extractText(item, selectors.sector, $) : null
+      const topic = selectors.topic ? this.extractText(item, selectors.topic, $) : null
+      const issue = selectors.issue ? this.extractText(item, selectors.issue, $) : null
+      const portfolio = selectors.portfolio ? this.extractText(item, selectors.portfolio, $) : null
+      const noticeType = selectors.noticeType ? this.extractText(item, selectors.noticeType, $) : null
+      const period = selectors.period ? this.extractText(item, selectors.period, $) : null
+      const theme = selectors.theme ? this.extractText(item, selectors.theme, $) : null
+      const authors = selectors.authors ? this.extractText(item, selectors.authors, $) : null
 
       // Validate essential fields
       if (!title || !url) {
@@ -324,12 +500,26 @@ class FCAAdvancedScraper {
           reference: reference?.trim(),
           firm: firm?.trim(),
           documentType: documentType?.trim(),
+          // New publication-specific fields
+          sector: sector?.trim(),
+          topic: topic?.trim(),
+          issue: issue?.trim(),
+          portfolio: portfolio?.trim(),
+          noticeType: noticeType?.trim(),
+          period: period?.trim(),
+          theme: theme?.trim(),
+          authors: authors?.trim(),
           fcaSpecific: {
             extractedFrom: this.scrapingTargets[targetKey].name,
             hasDeadline: !!deadline,
             hasReference: !!reference,
             isEnforcement: targetKey === 'enforcementNotices',
-            isConsultation: targetKey === 'consultations'
+            isConsultation: targetKey === 'consultations',
+            isDearCEOLetter: targetKey === 'dearCEOLetters',
+            isMarketWatch: targetKey === 'marketWatch',
+            isPortfolioLetter: targetKey === 'portfolioLetters',
+            isSupervisoryNotice: targetKey === 'supervisoryNotices',
+            isThematicReview: targetKey === 'thematicReviews'
           }
         }
       }
@@ -342,7 +532,16 @@ class FCAAdvancedScraper {
       }
 
       // Attempt to fetch full content for important items
-      if (targetKey === 'consultations' || targetKey === 'policyStatements') {
+      const shouldFetchFullContent = [
+        'consultations',
+        'policyStatements',
+        'dearCEOLetters',
+        'portfolioLetters',
+        'thematicReviews',
+        'discussionPapers'
+      ].includes(targetKey)
+
+      if (shouldFetchFullContent) {
         try {
           const fullContent = await this.fetchFullContent(itemData.url)
           if (fullContent) {

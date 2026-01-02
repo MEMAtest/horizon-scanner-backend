@@ -10,6 +10,66 @@ const feedSources = [
     sectors: ['Banking', 'Investment Management', 'Consumer Credit', 'Insurance']
   },
   {
+    name: 'FCA Dear CEO Letters',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications/search-results?category=policy%20and%20guidance-dear%20ceo%20letters&sort_by=dmetaZ',
+    type: 'puppeteer',
+    description: 'FCA - Dear CEO Letters on supervisory priorities and thematic issues',
+    priority: 'high',
+    recencyDays: 90,
+    sectors: ['Banking', 'Investment Management', 'Insurance', 'Consumer Credit', 'Payments']
+  },
+  {
+    name: 'FCA Market Watch',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications?category%5B%5D=market-watch',
+    type: 'puppeteer',
+    description: 'FCA - Market Watch newsletter on market conduct and regulatory themes',
+    priority: 'high',
+    recencyDays: 60,
+    sectors: ['Capital Markets', 'Investment Management', 'Market Conduct']
+  },
+  {
+    name: 'FCA Portfolio Letters',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications/search-results?category=policy%20and%20guidance-portfolio%20letters',
+    type: 'puppeteer',
+    description: 'FCA - Portfolio letters to specific sector firms',
+    priority: 'high',
+    recencyDays: 90,
+    sectors: ['Banking', 'Investment Management', 'Insurance', 'Consumer Credit']
+  },
+  {
+    name: 'FCA Thematic Reviews',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications?category%5B%5D=thematic-review',
+    type: 'puppeteer',
+    description: 'FCA - Multi-firm thematic reviews and supervisory findings',
+    priority: 'high',
+    recencyDays: 90,
+    sectors: ['Banking', 'Investment Management', 'Insurance', 'Consumer Credit']
+  },
+  {
+    name: 'FCA Supervisory Notices',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications?category%5B%5D=supervisory-notice',
+    type: 'puppeteer',
+    description: 'FCA - Supervisory notices on firm-specific regulatory actions',
+    priority: 'medium',
+    recencyDays: 60,
+    sectors: ['Banking', 'Investment Management', 'Insurance', 'Capital Markets']
+  },
+  {
+    name: 'FCA Discussion Papers',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications?category%5B%5D=discussion-paper',
+    type: 'puppeteer',
+    description: 'FCA - Discussion papers on policy development and regulatory approach',
+    priority: 'high',
+    recencyDays: 90,
+    sectors: ['Policy', 'Banking', 'Investment Management', 'Capital Markets']
+  },
+  {
     name: 'Bank of England News RSS',
     authority: 'Bank of England',
     url: 'https://www.bankofengland.co.uk/rss/news',
