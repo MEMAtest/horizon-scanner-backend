@@ -4,6 +4,7 @@
 
 const { sendDailyDigest, parseRecipients } = require('../../src/services/dailyDigestService')
 const FCAFinesScraper = require('../../src/services/fcaFinesScraper')
+const rssFetcher = require('../../src/services/rssFetcher')
 
 /**
  * Run FCA enforcement scrape (current year only for speed)
@@ -66,7 +67,13 @@ module.exports = async (req, res) => {
 
   const results = {
     enforcement: null,
+    dataRefresh: null,
     digest: null
+  }
+  const performance = {
+    dataRefreshMs: null,
+    digestBuildMs: null,
+    totalMs: null
   }
 
   // 1. Run FCA Enforcement scrape first (catches new fines before digest)
@@ -76,7 +83,40 @@ module.exports = async (req, res) => {
     results.enforcement = { success: false, error: error.message }
   }
 
-  // 2. Send daily digest email
+  // 2. Refresh regulatory data before building digest
+  const refreshStart = Date.now()
+  try {
+    console.log('📡 DailyDigest: Starting data refresh before digest generation...')
+    const summary = await rssFetcher.fetchAllFeeds({ fastMode: true })
+    const refreshDuration = Date.now() - refreshStart
+
+    results.dataRefresh = {
+      attempted: true,
+      success: true,
+      newUpdates: summary.newUpdates,
+      totalProcessed: summary.total,
+      successful: summary.successful,
+      failed: summary.failed,
+      durationMs: refreshDuration
+    }
+    performance.dataRefreshMs = refreshDuration
+
+    console.log(`✅ DailyDigest: Data refresh completed in ${refreshDuration}ms`)
+    console.log(`   📊 New updates: ${summary.newUpdates}`)
+  } catch (error) {
+    const refreshDuration = Date.now() - refreshStart
+    results.dataRefresh = {
+      attempted: true,
+      success: false,
+      error: error.message,
+      durationMs: refreshDuration
+    }
+    performance.dataRefreshMs = refreshDuration
+    console.warn('⚠️ DailyDigest: Data refresh failed, proceeding with existing data')
+    console.warn(`   Error: ${error.message}`)
+  }
+
+  // 3. Send daily digest email
   if (process.env.ENABLE_DAILY_DIGEST !== 'true') {
     results.digest = { skipped: true, reason: 'ENABLE_DAILY_DIGEST not true' }
   } else if (!process.env.RESEND_API_KEY) {
@@ -88,6 +128,7 @@ module.exports = async (req, res) => {
     } else {
       try {
         console.log('📧 DailyDigest: Building and sending digest email...')
+        const digestStart = Date.now()
 
         const digestResult = await sendDailyDigest({
           recipients,
@@ -97,6 +138,7 @@ module.exports = async (req, res) => {
             footer: process.env.DIGEST_BRAND_FOOTER
           }
         })
+        performance.digestBuildMs = Date.now() - digestStart
 
         console.log(`✅ DailyDigest: Email sent to ${recipients.length} recipients`)
         results.digest = {
@@ -112,13 +154,20 @@ module.exports = async (req, res) => {
   }
 
   const duration = Date.now() - startTime
+  performance.totalMs = duration
   const overallSuccess = (results.enforcement?.success || results.enforcement?.skipped) &&
                          (results.digest?.success || results.digest?.skipped)
+  const insightCount = results.digest?.insightCount || 0
+  const recipients = results.digest?.recipients || []
 
   return res.status(overallSuccess ? 200 : 500).json({
     success: overallSuccess,
     completedAt: new Date().toISOString(),
     durationMs: duration,
+    insightCount,
+    recipients,
+    dataRefresh: results.dataRefresh,
+    performance,
     results
   })
 }

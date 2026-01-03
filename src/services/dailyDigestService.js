@@ -286,106 +286,119 @@ async function buildDigestPayload(options = {}) {
   const digestHistoryWindow = resolveHistoryWindowDays()
   const previouslySentIdentifiers = await dbService.getRecentDigestIdentifiers(digestHistoryWindow)
   const previouslySentSet = new Set(previouslySentIdentifiers.map(id => String(id)))
-  const seenThisDigest = new Set()
+
+  const applyQualityFilters = ({ ignoreHistory = false } = {}) => {
+    const seenThisDigest = new Set()
+
+    return ranked.filter(update => {
+      const identifierSource = update.id || update.update_id || update.url
+      const identifier = identifierSource != null ? String(identifierSource) : null
+
+      if (!ignoreHistory && identifier && previouslySentSet.has(identifier)) {
+        return false
+      }
+
+      // Exclude job postings and careers content
+      const headline = (update.headline || '').toLowerCase()
+      const category = (update.category || '').toLowerCase()
+      const summary = (update.ai_summary || update.summary || update.description || '').toLowerCase()
+      const authority = (update.authority || '').toLowerCase()
+
+      const excludeKeywords = ['job', 'career', 'vacancy', 'vacancies', 'recruitment', 'hiring', 'apply now', 'job opening']
+      // Exclude generic website pages and navigation items that aren't regulatory content
+      // NOTE: Be careful not to exclude legitimate regulatory topics like AML, banking regulations, etc.
+      const excludePages = ['privacy policy', 'contact us', 'terms of service', 'cookie policy', 'sitemap', 'accessibility', 'advanced search', 'search results', 'login', 'sign in', 'register', 'our operations', 'about us', 'news & events', 'media centre', 'faq', 'careers', 'our services', 'media center', 'get in touch', 'subscribe', 'newsletter signup']
+      // Exclude junk/malformed headlines
+      const junkPatterns = ['others,', 'other,', 'undefined', 'null', 'test', '[object', '+971', '+44', '+1 ', 'tel:', 'reach out', 'japan weeks']
+
+      // Detect navigation pages by URL pattern - only exclude obvious non-content pages
+      const url = (update.url || '').toLowerCase()
+      // Only exclude very specific navigation patterns, not general /services/ which could be regulatory
+      const isNavigationPage = url.includes('/en/search/') || url.endsWith('/about-us') || url.endsWith('/contact-us')
+
+      const isJobPosting = excludeKeywords.some(keyword =>
+        headline.includes(keyword) || category.includes(keyword)
+      )
+
+      if (isJobPosting) return false
+
+      // Exclude generic website pages and navigation URLs
+      const isGenericPage = excludePages.some(page => headline.includes(page))
+      if (isGenericPage) return false
+      if (isNavigationPage) return false
+
+      // Exclude junk/malformed headlines (phone numbers, etc)
+      const isJunkHeadline = junkPatterns.some(pattern => headline.includes(pattern))
+      if (isJunkHeadline) return false
+
+      // Exclude items with very short headlines (likely junk)
+      if (headline.length < 15) return false
+
+      // Exclude headlines that are mostly numbers (phone numbers, dates only, etc)
+      const letterCount = (headline.match(/[a-z]/gi) || []).length
+      if (letterCount < 10) return false
+
+      // Exclude low-quality summaries - check for repetitive text
+      const words = summary.split(/\s+/)
+      const uniqueWords = new Set(words)
+      const repetitionRatio = uniqueWords.size / words.length
+      if (words.length > 5 && repetitionRatio < 0.4) return false
+
+      // Exclude purely informational updates with no substance
+      if (summary.includes('informational regulatory update') && summary.length < 50) return false
+
+      // Check if summary is ONLY the headline with no additional content
+      const cleanHeadline = headline.replace(/[^a-z0-9\s]/g, '').trim()
+      let cleanSummary = summary.replace(/[^a-z0-9\s]/g, '').trim()
+      cleanSummary = cleanSummary.replace(/^informational regulatory update\s*/i, '').trim()
+
+      // Detect if the summary is just the headline repeated
+      const headlineRepeated = cleanSummary.toLowerCase() === (cleanHeadline + ' ' + cleanHeadline).toLowerCase()
+      if (headlineRepeated) return false
+
+      // Filter if summary is basically just the headline (within 30 chars)
+      if (cleanSummary.includes(cleanHeadline) && cleanSummary.length < cleanHeadline.length + 30) return false
+
+      // Exclude items with no meaningful summary (very short)
+      if (summary.length < 20 || !summary.match(/[a-z]{3,}/i)) return false
+
+      // Require a meaningful summary - either from RSS feed or a substantial AI summary
+      const rawSummary = update.summary || ''
+      const rawAiSummary = update.ai_summary || ''
+      const cleanedAiSummary = rawAiSummary.replace(/^(Informational regulatory update:|Regulatory update impacting business operations:|RegCanary Analysis:)\s*/i, '').trim()
+
+      // Real summary: RSS summary exists and is substantial
+      const hasRssSummary = rawSummary.length > 40
+      // OR: AI summary has actual analysis (much longer than headline, not just headline repeated)
+      const hasAiAnalysis = cleanedAiSummary.length > headline.length + 80 &&
+                            !cleanedAiSummary.toLowerCase().startsWith(headline.toLowerCase().slice(0, 30))
+
+      if (!hasRssSummary && !hasAiAnalysis) return false
+
+      // Exclude generic navigation/index pages and stock exchange announcements
+      const genericPageTitles = ['regulations and guidance', 'sanctions list updates', 'total voting rights', 'holdings in the company', 'holding(s) in company', 'resignation of director', 'interim results', 'result of annual general meeting', 'settlement agreement', 'announcement provided by']
+      if (genericPageTitles.some(title => headline.includes(title))) return false
+
+      if (identifier && seenThisDigest.has(identifier)) return false
+
+      if (identifier) {
+        seenThisDigest.add(identifier)
+      }
+
+      return true
+    })
+  }
 
   // Quality filtering: exclude job postings and low-quality content
-  const filtered = ranked.filter(update => {
-    const identifierSource = update.id || update.update_id || update.url
-    const identifier = identifierSource != null ? String(identifierSource) : null
+  let filtered = applyQualityFilters()
 
-    if (identifier && previouslySentSet.has(identifier)) {
-      return false
-    }
-
-    // Exclude job postings and careers content
-    const headline = (update.headline || '').toLowerCase()
-    const category = (update.category || '').toLowerCase()
-    const summary = (update.ai_summary || update.summary || update.description || '').toLowerCase()
-    const authority = (update.authority || '').toLowerCase()
-
-    const excludeKeywords = ['job', 'career', 'vacancy', 'vacancies', 'recruitment', 'hiring', 'apply now', 'job opening']
-    // Exclude generic website pages and navigation items that aren't regulatory content
-    // NOTE: Be careful not to exclude legitimate regulatory topics like AML, banking regulations, etc.
-    const excludePages = ['privacy policy', 'contact us', 'terms of service', 'cookie policy', 'sitemap', 'accessibility', 'advanced search', 'search results', 'login', 'sign in', 'register', 'our operations', 'about us', 'news & events', 'media centre', 'faq', 'careers', 'our services', 'media center', 'get in touch', 'subscribe', 'newsletter signup']
-    // Exclude junk/malformed headlines
-    const junkPatterns = ['others,', 'other,', 'undefined', 'null', 'test', '[object', '+971', '+44', '+1 ', 'tel:', 'reach out', 'japan weeks']
-
-    // Detect navigation pages by URL pattern - only exclude obvious non-content pages
-    const url = (update.url || '').toLowerCase()
-    // Only exclude very specific navigation patterns, not general /services/ which could be regulatory
-    const isNavigationPage = url.includes('/en/search/') || url.endsWith('/about-us') || url.endsWith('/contact-us')
-
-    const isJobPosting = excludeKeywords.some(keyword =>
-      headline.includes(keyword) || category.includes(keyword)
+  if (usedStaleFallback && filtered.length < minDigestItems) {
+    console.warn(
+      `[DailyDigest] Only ${filtered.length} updates after digest history filtering with stale fallback. ` +
+      'Rebuilding without history constraints.'
     )
-
-    if (isJobPosting) return false
-
-    // Exclude generic website pages and navigation URLs
-    const isGenericPage = excludePages.some(page => headline.includes(page))
-    if (isGenericPage) return false
-    if (isNavigationPage) return false
-
-    // Exclude junk/malformed headlines (phone numbers, etc)
-    const isJunkHeadline = junkPatterns.some(pattern => headline.includes(pattern))
-    if (isJunkHeadline) return false
-
-    // Exclude items with very short headlines (likely junk)
-    if (headline.length < 15) return false
-
-    // Exclude headlines that are mostly numbers (phone numbers, dates only, etc)
-    const letterCount = (headline.match(/[a-z]/gi) || []).length
-    if (letterCount < 10) return false
-
-    // Exclude low-quality summaries - check for repetitive text
-    const words = summary.split(/\s+/)
-    const uniqueWords = new Set(words)
-    const repetitionRatio = uniqueWords.size / words.length
-    if (words.length > 5 && repetitionRatio < 0.4) return false
-
-    // Exclude purely informational updates with no substance
-    if (summary.includes('informational regulatory update') && summary.length < 50) return false
-
-    // Check if summary is ONLY the headline with no additional content
-    const cleanHeadline = headline.replace(/[^a-z0-9\s]/g, '').trim()
-    let cleanSummary = summary.replace(/[^a-z0-9\s]/g, '').trim()
-    cleanSummary = cleanSummary.replace(/^informational regulatory update\s*/i, '').trim()
-
-    // Detect if the summary is just the headline repeated
-    const headlineRepeated = cleanSummary.toLowerCase() === (cleanHeadline + ' ' + cleanHeadline).toLowerCase()
-    if (headlineRepeated) return false
-
-    // Filter if summary is basically just the headline (within 30 chars)
-    if (cleanSummary.includes(cleanHeadline) && cleanSummary.length < cleanHeadline.length + 30) return false
-
-    // Exclude items with no meaningful summary (very short)
-    if (summary.length < 20 || !summary.match(/[a-z]{3,}/i)) return false
-
-    // Require a meaningful summary - either from RSS feed or a substantial AI summary
-    const rawSummary = update.summary || ''
-    const rawAiSummary = update.ai_summary || ''
-    const cleanedAiSummary = rawAiSummary.replace(/^(Informational regulatory update:|Regulatory update impacting business operations:|RegCanary Analysis:)\s*/i, '').trim()
-
-    // Real summary: RSS summary exists and is substantial
-    const hasRssSummary = rawSummary.length > 40
-    // OR: AI summary has actual analysis (much longer than headline, not just headline repeated)
-    const hasAiAnalysis = cleanedAiSummary.length > headline.length + 80 &&
-                          !cleanedAiSummary.toLowerCase().startsWith(headline.toLowerCase().slice(0, 30))
-
-    if (!hasRssSummary && !hasAiAnalysis) return false
-
-    // Exclude generic navigation/index pages and stock exchange announcements
-    const genericPageTitles = ['regulations and guidance', 'sanctions list updates', 'total voting rights', 'holdings in the company', 'holding(s) in company', 'resignation of director', 'interim results', 'result of annual general meeting', 'settlement agreement', 'announcement provided by']
-    if (genericPageTitles.some(title => headline.includes(title))) return false
-
-    if (identifier && seenThisDigest.has(identifier)) return false
-
-    if (identifier) {
-      seenThisDigest.add(identifier)
-    }
-
-    return true
-  })
+    filtered = applyQualityFilters({ ignoreHistory: true })
+  }
 
   // Implement balanced selection to ensure diversity across authorities and sectors
   // Split into UK (10) and International (5) sections
