@@ -751,7 +751,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
         }
 
         function seedActivityFromPinnedItems() {
-          if (state.activityLog.length > 0) return;
+          // Always rebuild from pinned items to ensure fresh data
           const seeds = (Array.isArray(state.pinnedItems) ? state.pinnedItems : [])
             .filter(item => item && (item.pinned_date || item.pinnedDate))
             .map(item => ({
@@ -836,14 +836,27 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           const canvas = document.getElementById('bookmarkThemesChart');
           if (!canvas) return;
 
-          // Count topics from pinnedItems
+          // Count topics from pinnedItems - use multiple fallbacks
           const themeCounts = {};
           const items = Array.isArray(state.pinnedItems) ? state.pinnedItems : [];
           for (const item of items) {
             const metadata = item && item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
-            let topic = normalizeId(metadata.topicArea || metadata.topic_area || metadata.topic || '');
-            if (!topic || topic.toLowerCase() === 'uncategorized' || topic.toLowerCase() === 'uncategorised') {
-              topic = 'Other';
+            // Try multiple sources for topic: explicit topic, then area, then sector, then authority
+            let topic = normalizeId(
+              metadata.topicArea || metadata.topic_area || metadata.topic ||
+              metadata.area || item.area || item.update_area ||
+              metadata.sector || item.sector || item.update_sector ||
+              ''
+            );
+            // Normalize common uncategorized values
+            if (!topic || topic.toLowerCase() === 'uncategorized' || topic.toLowerCase() === 'uncategorised' || topic.toLowerCase() === 'general') {
+              // Try to derive from authority as last resort
+              const authority = normalizeId(item.update_authority || item.authority || metadata.authority || '');
+              if (authority && authority.toLowerCase() !== 'unknown') {
+                topic = authority;
+              } else {
+                topic = 'Other';
+              }
             }
             themeCounts[topic] = (themeCounts[topic] || 0) + 1;
           }
