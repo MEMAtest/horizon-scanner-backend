@@ -18,11 +18,14 @@ puppeteer.use(StealthPlugin())
 const BANK_CONFIGS = {
   JPMorgan: {
     name: 'JPMorgan Chase',
-    url: 'https://www.jpmorganchase.com/newsroom',
+    url: 'https://www.jpmorganchase.com/newsroom/press-releases',
     baseUrl: 'https://www.jpmorganchase.com',
     region: 'Americas',
     country: 'United States',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    // JPMorgan uses dynamic loading - need to wait for content
+    waitForSelector: '.press-release, .news-item, [class*="press"], [class*="release"]',
+    selectors: ['[class*="press-release"]', '[class*="news-item"]', '.card-body', 'article']
   },
   BofA: {
     name: 'Bank of America',
@@ -30,7 +33,8 @@ const BANK_CONFIGS = {
     baseUrl: 'https://newsroom.bankofamerica.com',
     region: 'Americas',
     country: 'United States',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.press-release-item', '.news-item', 'article.teaser', '.teaser']
   },
   Citigroup: {
     name: 'Citigroup',
@@ -38,31 +42,35 @@ const BANK_CONFIGS = {
     baseUrl: 'https://www.citigroup.com',
     region: 'Americas',
     country: 'United States',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.press-release-card', '.news-card', 'article', '[class*="card"]']
   },
   WellsFargo: {
     name: 'Wells Fargo',
-    url: 'https://newsroom.wf.com/news-releases/',
+    url: 'https://newsroom.wf.com/English/news-releases/default.aspx',
     baseUrl: 'https://newsroom.wf.com',
     region: 'Americas',
     country: 'United States',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.wd_news_release', '.news-release', 'article', '.module_body li']
   },
   Goldman: {
     name: 'Goldman Sachs',
-    url: 'https://www.goldmansachs.com/pressroom',
+    url: 'https://www.goldmansachs.com/pressroom/press-releases/',
     baseUrl: 'https://www.goldmansachs.com',
     region: 'Americas',
     country: 'United States',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '[class*="article"]']
   },
   MorganStanley: {
     name: 'Morgan Stanley',
-    url: 'https://www.morganstanley.com/about-us-newsroom',
+    url: 'https://www.morganstanley.com/press-releases',
     baseUrl: 'https://www.morganstanley.com',
     region: 'Americas',
     country: 'United States',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '.article-card']
   },
   HSBC: {
     name: 'HSBC',
@@ -70,7 +78,8 @@ const BANK_CONFIGS = {
     baseUrl: 'https://www.hsbc.com',
     region: 'Europe',
     country: 'United Kingdom',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.news-card', '.article-card', 'article', '[class*="news"]']
   },
   Barclays: {
     name: 'Barclays',
@@ -78,15 +87,17 @@ const BANK_CONFIGS = {
     baseUrl: 'https://home.barclays',
     region: 'Europe',
     country: 'United Kingdom',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '.card']
   },
   DeutscheBank: {
     name: 'Deutsche Bank',
-    url: 'https://www.db.com/newsroom/',
+    url: 'https://www.db.com/news',
     baseUrl: 'https://www.db.com',
     region: 'Europe',
     country: 'Germany',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.news-item', '.press-release', 'article', '[class*="news"]']
   },
   UBS: {
     name: 'UBS',
@@ -94,7 +105,8 @@ const BANK_CONFIGS = {
     baseUrl: 'https://www.ubs.com',
     region: 'Europe',
     country: 'Switzerland',
-    type: 'puppeteer'
+    type: 'puppeteer',
+    selectors: ['.news-item', '.media-release', 'article', '[class*="news"]']
   }
 }
 
@@ -105,9 +117,171 @@ const DEFAULT_CONFIG = {
   maxAgeDays: 90
 }
 
+// Bank-specific extraction functions
+const BANK_EXTRACTORS = {
+  // Deutsche Bank - well-structured selectors
+  DeutscheBank: async (page, baseUrl) => {
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const entries = document.querySelectorAll('.news-stream-entry')
+
+      entries.forEach(entry => {
+        const headlineEl = entry.querySelector('.news-stream-entry-description h3 a, h3 a')
+        const dateEl = entry.querySelector('time.news-meta-date, .news-meta-date')
+        const descEl = entry.querySelector('.news-stream-entry-description')
+
+        if (!headlineEl) return
+
+        let url = headlineEl.href || headlineEl.getAttribute('href')
+        if (url && url.startsWith('/')) url = baseUrl + url
+
+        items.push({
+          title: headlineEl.textContent?.trim(),
+          url: url,
+          date: dateEl?.textContent?.trim() || '',
+          description: descEl?.textContent?.trim()?.substring(0, 300) || ''
+        })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // HSBC - card-based structure
+  HSBC: async (page, baseUrl) => {
+    // Wait for dynamic content
+    await page.waitForSelector('a[href*="/news-and-views/"]', { timeout: 10000 }).catch(() => {})
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      // Find all news links
+      const links = document.querySelectorAll('a[href*="/news-and-views/news/"]')
+
+      links.forEach(link => {
+        const url = link.href
+        if (seen.has(url) || !url.includes('/news/')) return
+        seen.add(url)
+
+        // Get parent card/container
+        const card = link.closest('article, [class*="card"], [class*="item"], li')
+        const headingEl = card?.querySelector('h2, h3, h4') || link.querySelector('h2, h3, h4')
+        const title = headingEl?.textContent?.trim() || link.textContent?.trim()
+
+        if (!title || title.length < 20) return
+
+        const dateEl = card?.querySelector('time, [class*="date"], span')
+
+        items.push({
+          title: title,
+          url: url,
+          date: dateEl?.textContent?.trim() || '',
+          description: ''
+        })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Barclays - press releases section
+  Barclays: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/news/"]', { timeout: 10000 }).catch(() => {})
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/news/press-releases/"], a[href*="/news/"]')
+
+      links.forEach(link => {
+        const url = link.href
+        if (seen.has(url)) return
+        if (!url.includes('/news/') || url.endsWith('/news/') || url.endsWith('/press-releases/')) return
+        seen.add(url)
+
+        const card = link.closest('article, [class*="card"], [class*="item"], div')
+        const headingEl = card?.querySelector('h2, h3, h4') || link
+        const title = headingEl?.textContent?.trim()
+
+        if (!title || title.length < 20) return
+        if (title.toLowerCase().includes('press releases') || title.toLowerCase().includes('view all')) return
+
+        items.push({
+          title: title,
+          url: url,
+          date: '',
+          description: ''
+        })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Goldman Sachs
+  Goldman: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/pressroom/"]', { timeout: 10000 }).catch(() => {})
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/pressroom/press-releases/"]')
+
+      links.forEach(link => {
+        const url = link.href
+        if (seen.has(url)) return
+        seen.add(url)
+
+        const title = link.textContent?.trim()
+        if (!title || title.length < 20) return
+
+        items.push({
+          title: title,
+          url: url,
+          date: '',
+          description: ''
+        })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // UBS - media news
+  UBS: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/media/"]', { timeout: 10000 }).catch(() => {})
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/media/"][href*="news"], a[href*="/media/"][href*="release"]')
+
+      links.forEach(link => {
+        const url = link.href
+        if (seen.has(url) || url.endsWith('/news.html') || url.endsWith('/media/')) return
+        seen.add(url)
+
+        const card = link.closest('article, [class*="card"], [class*="item"], li')
+        const headingEl = card?.querySelector('h2, h3, h4') || link
+        const title = headingEl?.textContent?.trim()
+
+        if (!title || title.length < 15) return
+
+        items.push({
+          title: title,
+          url: url,
+          date: '',
+          description: ''
+        })
+      })
+      return items
+    }, baseUrl)
+  }
+}
+
 function applyBanksMethods(ServiceClass) {
   /**
-   * Generic bank scraper method
+   * Generic bank scraper method with bank-specific extractors
    * @param {string} bankKey - Key from BANK_CONFIGS
    */
   ServiceClass.prototype.scrapeBank = async function scrapeBank(bankKey) {
@@ -147,11 +321,11 @@ function applyBanksMethods(ServiceClass) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       })
 
-      // Block heavy resources
+      // Block heavy resources but keep stylesheets for structure
       await page.setRequestInterception(true)
       page.on('request', (req) => {
         const resourceType = req.resourceType()
-        if (['image', 'font', 'media', 'stylesheet'].includes(resourceType)) {
+        if (['image', 'font', 'media'].includes(resourceType)) {
           req.abort()
         } else {
           req.continue()
@@ -171,87 +345,33 @@ function applyBanksMethods(ServiceClass) {
 
       await this.wait(DEFAULT_CONFIG.waitTime)
 
-      // Scroll to load content
+      // Scroll to load lazy content
+      await page.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight / 3)
+      })
+      await this.wait(2000)
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight / 2)
       })
-      await this.wait(2000)
+      await this.wait(1000)
 
-      const extractedItems = await page.evaluate((baseUrl, bankName) => {
-        const items = []
-        const seen = new Set()
+      let extractedItems = []
 
-        // Bank-specific selectors
-        const selectors = [
-          // Common news patterns
-          'article', '.news-item', '.press-release', '.news-card',
-          '.media-release', '.content-item', '.list-item',
-          // Link patterns
-          'a[href*="news"]', 'a[href*="press"]', 'a[href*="media"]',
-          'a[href*="release"]', 'a[href*="article"]',
-          // Card patterns
-          '.card', '[class*="card"]', '[class*="news"]', '[class*="press"]'
-        ]
-
-        for (const selector of selectors) {
-          const elements = document.querySelectorAll(selector)
-
-          elements.forEach(el => {
-            const linkEl = el.querySelector('a[href]') || (el.tagName === 'A' ? el : null)
-            if (!linkEl) return
-
-            let href = linkEl.href || linkEl.getAttribute('href')
-            if (!href || seen.has(href)) return
-
-            // Normalize URL
-            if (href.startsWith('/')) {
-              href = baseUrl + href
-            }
-
-            // Skip non-article links
-            if (href.includes('#') ||
-                href.includes('javascript:') ||
-                href.includes('mailto:') ||
-                href.includes('linkedin') ||
-                href.includes('twitter') ||
-                href.includes('facebook')) return
-
-            // Get title
-            const titleEl = el.querySelector('h1, h2, h3, h4, .title, [class*="title"], [class*="headline"]')
-            const title = titleEl?.textContent?.trim() || linkEl.textContent?.trim()
-
-            if (!title || title.length < 15) return
-
-            // Skip navigation/footer links
-            if (title.toLowerCase().includes('see all') ||
-                title.toLowerCase().includes('view all') ||
-                title.toLowerCase().includes('read more') ||
-                title.toLowerCase().includes('subscribe')) return
-
-            // Get date
-            const dateEl = el.querySelector('time, .date, [datetime], [class*="date"], .meta, span.time')
-            const dateText = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || ''
-
-            // Get description
-            const descEl = el.querySelector('p, .summary, .excerpt, .description, [class*="summary"]')
-            const description = descEl?.textContent?.trim() || ''
-
-            seen.add(href)
-            items.push({
-              title: title.replace(/\s+/g, ' ').trim(),
-              url: href,
-              date: dateText,
-              description: description.substring(0, 300)
-            })
-          })
-        }
-
-        return items
-      }, config.baseUrl, config.name)
+      // Use bank-specific extractor if available
+      if (BANK_EXTRACTORS[bankKey]) {
+        console.log(`📰 ${bankKey}: Using custom extractor`)
+        extractedItems = await BANK_EXTRACTORS[bankKey](page, config.baseUrl)
+      } else {
+        // Fallback to generic extraction
+        console.log(`📰 ${bankKey}: Using generic extractor`)
+        extractedItems = await this.genericBankExtract(page, config)
+      }
 
       console.log(`📰 ${bankKey}: Extracted ${extractedItems.length} items`)
 
       for (const item of extractedItems.slice(0, DEFAULT_CONFIG.maxItems)) {
+        if (!item.title || item.title.length < 15) continue
+
         results.push({
           headline: item.title,
           url: item.url,
@@ -260,7 +380,7 @@ function applyBanksMethods(ServiceClass) {
           source_category: 'bank_news',
           source_description: `${config.name} Press Releases`,
           fetched_date: new Date().toISOString(),
-          published_date: item.date ? new Date(item.date).toISOString() : null,
+          published_date: item.date ? this.parseDate(item.date) : null,
           raw_data: {
             sourceType: 'puppeteer',
             sourceKey: bankKey,
@@ -289,6 +409,67 @@ function applyBanksMethods(ServiceClass) {
       if (browser) {
         await browser.close()
       }
+    }
+  }
+
+  // Generic extraction fallback
+  ServiceClass.prototype.genericBankExtract = async function(page, config) {
+    return page.evaluate((baseUrl, selectors) => {
+      const items = []
+      const seen = new Set()
+
+      const selectorList = selectors?.length > 0
+        ? selectors
+        : ['article', '.news-item', '.press-release', 'a[href*="news"]', 'a[href*="press"]']
+
+      for (const selector of selectorList) {
+        const elements = document.querySelectorAll(selector)
+
+        elements.forEach(el => {
+          const linkEl = el.querySelector('a[href]') || (el.tagName === 'A' ? el : null)
+          if (!linkEl) return
+
+          let url = linkEl.href || linkEl.getAttribute('href')
+          if (!url || seen.has(url)) return
+          if (url.startsWith('/')) url = baseUrl + url
+
+          // Skip navigation and social links
+          if (url.includes('#') || url.includes('javascript:') ||
+              url.includes('linkedin') || url.includes('twitter') ||
+              url.includes('facebook') || url.includes('youtube')) return
+
+          const titleEl = el.querySelector('h1, h2, h3, h4, h5')
+          const title = titleEl?.textContent?.trim() || linkEl.textContent?.trim()
+
+          if (!title || title.length < 20) return
+
+          // Skip navigation text
+          const titleLower = title.toLowerCase()
+          if (titleLower.includes('see all') || titleLower.includes('view all') ||
+              titleLower.includes('read more') || titleLower.includes('subscribe')) return
+
+          seen.add(url)
+          items.push({
+            title: title.replace(/\s+/g, ' ').trim(),
+            url: url,
+            date: '',
+            description: ''
+          })
+        })
+      }
+
+      return items
+    }, config.baseUrl, config.selectors || [])
+  }
+
+  // Helper to parse various date formats
+  ServiceClass.prototype.parseDate = function(dateStr) {
+    if (!dateStr) return null
+    try {
+      const date = new Date(dateStr)
+      return isNaN(date.getTime()) ? null : date.toISOString()
+    } catch {
+      return null
     }
   }
 
