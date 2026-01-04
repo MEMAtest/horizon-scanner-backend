@@ -43,11 +43,11 @@ const BANK_CONFIGS = {
     region: 'Americas',
     country: 'United States',
     type: 'puppeteer',
-    selectors: ['.press-release-card', '.news-card', 'article', '[class*="card"]']
+    selectors: ['[class*="press"]', '[class*="news"]', '[class*="article"]', 'article']
   },
   WellsFargo: {
     name: 'Wells Fargo',
-    url: 'https://newsroom.wf.com/English/news-releases/default.aspx',
+    url: 'https://newsroom.wf.com/',
     baseUrl: 'https://newsroom.wf.com',
     region: 'Americas',
     country: 'United States',
@@ -65,7 +65,7 @@ const BANK_CONFIGS = {
   },
   MorganStanley: {
     name: 'Morgan Stanley',
-    url: 'https://www.morganstanley.com/press-releases',
+    url: 'https://www.morganstanley.com/about-us-newsroom',
     baseUrl: 'https://www.morganstanley.com',
     region: 'Americas',
     country: 'United States',
@@ -347,6 +347,138 @@ const BANK_EXTRACTORS = {
           description: ''
         })
       })
+      return items
+    }, baseUrl)
+  },
+
+  // Citigroup - press releases
+  Citigroup: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/news/"], a[href*="/press"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const selectors = [
+        'a[href*="/press-release/"]',
+        'a[href*="/news/2"]',
+        '[class*="article"] a[href]',
+        '[class*="card"] a[href*="news"]',
+        '[class*="press"] a[href]'
+      ]
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector)
+        links.forEach(link => {
+          const url = link.href
+          if (!url || seen.has(url)) return
+          if (url.endsWith('/press-release') || url.endsWith('/news/')) return
+          // Must be an actual article (with date pattern or specific path)
+          if (!url.match(/\/202[0-9]|\/press-release\/|\/news\/[a-z]/i)) return
+          seen.add(url)
+
+          const container = link.closest('article, [class*="card"], [class*="item"], div')
+          const title = container?.querySelector('h2, h3, h4, [class*="title"], [class*="headline"]')?.textContent?.trim()
+                     || link.textContent?.trim()
+
+          if (!title || title.length < 20) return
+          if (title.toLowerCase().includes('view all') || title.toLowerCase().includes('media resources')) return
+
+          items.push({ title, url, date: '', description: '' })
+        })
+      }
+      return items
+    }, baseUrl)
+  },
+
+  // Wells Fargo - newsroom
+  WellsFargo: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="news"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    // Scroll to load more content
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2))
+    await new Promise(r => setTimeout(r, 2000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const selectors = [
+        'a[href*="/news-releases/"][href*="202"]',
+        'a[href*="/press-release/"]',
+        '.wd_news_release a',
+        'article a[href]',
+        '[class*="headline"] a[href]'
+      ]
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector)
+        links.forEach(link => {
+          const url = link.href
+          if (!url || seen.has(url)) return
+          if (url.endsWith('/news-releases/') || url.endsWith('/default.aspx')) return
+          seen.add(url)
+
+          const container = link.closest('article, [class*="item"], li, div')
+          const title = container?.querySelector('h2, h3, h4, [class*="title"], [class*="headline"]')?.textContent?.trim()
+                     || link.textContent?.trim()
+
+          if (!title || title.length < 20) return
+          // Filter out navigation links
+          if (title.toLowerCase().includes('see all') ||
+              title.toLowerCase().includes('view all') ||
+              title.toLowerCase().includes('financial news')) return
+
+          items.push({ title, url, date: '', description: '' })
+        })
+      }
+      return items
+    }, baseUrl)
+  },
+
+  // Morgan Stanley - newsroom
+  MorganStanley: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="newsroom"], a[href*="ideas"], a[href*="articles"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const selectors = [
+        'a[href*="/press-releases/"]',
+        'a[href*="/articles/"]',
+        'a[href*="/ideas/"]',
+        'a[href*="/about-us-newsroom/"]',
+        '[class*="article"] a[href]',
+        '[class*="card"] a[href]',
+        '[class*="teaser"] a[href]'
+      ]
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector)
+        links.forEach(link => {
+          const url = link.href
+          if (!url || seen.has(url)) return
+          // Skip index pages
+          if (url.endsWith('/press-releases') ||
+              url.endsWith('/press-releases/') ||
+              url.endsWith('/about-us-newsroom') ||
+              url.endsWith('/about-us-newsroom/')) return
+          seen.add(url)
+
+          const container = link.closest('article, [class*="card"], [class*="item"], [class*="teaser"], div')
+          const title = container?.querySelector('h2, h3, h4, [class*="title"], [class*="headline"]')?.textContent?.trim()
+                     || link.textContent?.trim()
+
+          if (!title || title.length < 20) return
+          if (title.toLowerCase().includes('view all') || title.toLowerCase().includes('see more')) return
+
+          items.push({ title, url, date: '', description: '' })
+        })
+      }
       return items
     }, baseUrl)
   },
