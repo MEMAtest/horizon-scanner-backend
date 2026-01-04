@@ -9,6 +9,34 @@ const feedSources = [
     recencyDays: 30,
     sectors: ['Banking', 'Investment Management', 'Consumer Credit', 'Insurance']
   },
+  // ============================================
+  // DEAR CEO LETTERS & SUPERVISORY COMMUNICATIONS
+  // Premium supervisory content - high priority
+  // ============================================
+  {
+    name: 'FCA Dear CEO Letters',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/publications/search-results?category=dear-ceo-letters',
+    type: 'puppeteer',
+    description: 'FCA Dear CEO Letters - Critical supervisory communications to firm leadership',
+    priority: 'critical',
+    recencyDays: 1825, // 5 years
+    extractDates: true,
+    documentType: 'dear_ceo_letter',
+    sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit', 'Insurance', 'Payments']
+  },
+  {
+    name: 'PRA Supervisory Statements',
+    authority: 'PRA',
+    url: 'https://www.bankofengland.co.uk/prudential-regulation/publication',
+    type: 'puppeteer',
+    description: 'PRA Supervisory Statements (SS) and Policy Statements (PS) - Binding prudential expectations',
+    priority: 'critical',
+    recencyDays: 1825, // 5 years
+    extractDates: true,
+    documentType: 'supervisory_statement',
+    sectors: ['Banking', 'Insurance', 'Investment Firms', 'Capital Requirements']
+  },
   {
     name: 'Bank of England News RSS',
     authority: 'Bank of England',
@@ -1206,6 +1234,46 @@ const feedSources = [
     region: 'Africa',
     sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Terrorism Financing']
   },
+  {
+    name: 'CBN Nigeria News',
+    authority: 'CBN',
+    url: 'https://www.cbn.gov.ng/NewsArchive/News.html',
+    type: 'puppeteer',
+    description: 'Central Bank of Nigeria - News and regulatory updates',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Nigeria',
+    region: 'Africa',
+    sectors: ['Banking', 'Monetary Policy', 'AML & Financial Crime', 'Payment Services']
+  },
+  {
+    name: 'CBE Egypt News',
+    authority: 'CBE',
+    url: 'https://www.cbe.org.eg/en/news-publications/news',
+    type: 'puppeteer',
+    description: 'Central Bank of Egypt - News and publications',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'Egypt',
+    region: 'Africa',
+    sectors: ['Banking', 'Monetary Policy', 'AML & Financial Crime', 'Payment Services']
+  },
+
+  // ============================================
+  // UK ADDITIONAL REGULATORS - Added January 2026
+  // ============================================
+  {
+    name: 'FSCS News',
+    authority: 'FSCS',
+    url: 'https://www.fscs.org.uk/news/',
+    type: 'puppeteer',
+    description: 'Financial Services Compensation Scheme - Consumer protection news',
+    priority: 'high',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'Europe',
+    sectors: ['Consumer Protection', 'Banking', 'Insurance', 'Investment Management']
+  },
 
   // ============================================
   // ASIA REGULATORS - Added December 2025
@@ -1238,9 +1306,9 @@ const feedSources = [
   {
     name: 'NFRA China News',
     authority: 'NFRA',
-    url: 'https://www.cbirc.gov.cn/en/view/pages/index/jigouxinwen.html',
-    type: 'web_scraping',
-    description: 'National Financial Regulatory Administration - Banking and insurance',
+    url: 'https://www.nfra.gov.cn/en/view/pages/ItemList.html?itemPId=973&itemId=980&itemUrl=ItemListRightList.html&itemTitle=News%20and%20Events&itemPTitle=News%20and%20Events',
+    type: 'puppeteer',
+    description: 'National Financial Regulatory Administration - Banking and insurance news',
     priority: 'high',
     recencyDays: 30,
     country: 'China',

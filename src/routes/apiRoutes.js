@@ -28,6 +28,9 @@ const registerFirmPersonaRoutes = require('./api/firmPersonas')
 const registerCalendarRoutes = require('./api/calendar')
 const registerHandbookRoutes = require('./api/handbook')
 const registerInternationalRoutes = require('./api/international')
+const registerDearCeoRoutes = require('./api/dearCeo')
+const consultationsRoutes = require('./api/consultations')
+const registerBankNewsRoutes = require('./api/bankNews')
 
 const router = express.Router()
 
@@ -59,5 +62,8 @@ registerFirmPersonaRoutes(router)
 registerCalendarRoutes(router)
 registerHandbookRoutes(router)
 registerInternationalRoutes(router)
+registerDearCeoRoutes(router)
+router.use('/consultations', consultationsRoutes)
+registerBankNewsRoutes(router)
 
 module.exports = router

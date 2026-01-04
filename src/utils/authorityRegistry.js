@@ -387,6 +387,24 @@ const AUTHORITY_REGISTRY = [
     logo: '/images/regulators/fic.png'
   },
   {
+    id: 'CBN',
+    name: 'Central Bank of Nigeria',
+    acronym: 'CBN',
+    region: 'Africa',
+    country: 'Nigeria',
+    aliases: ['Central Bank of Nigeria', 'CBN'],
+    logo: '/images/regulators/cbn.png'
+  },
+  {
+    id: 'CBE',
+    name: 'Central Bank of Egypt',
+    acronym: 'CBE',
+    region: 'Africa',
+    country: 'Egypt',
+    aliases: ['Central Bank of Egypt', 'CBE'],
+    logo: '/images/regulators/cbe.png'
+  },
+  {
     id: 'FI_SWEDEN',
     name: 'Finansinspektionen',
     acronym: 'FI',
@@ -576,13 +594,22 @@ const AUTHORITY_REGISTRY = [
     logo: '/images/regulators/nca.png'
   },
   {
-    id: 'NFRA',
+    id: 'NFRA_INDIA',
     name: 'National Financial Reporting Authority',
     acronym: 'NFRA',
     region: 'Asia-Pacific',
     country: 'India',
-    aliases: ['National Financial Reporting Authority', 'NFRA'],
-    logo: '/images/regulators/nfra.png'
+    aliases: ['National Financial Reporting Authority', 'NFRA India', 'NFRA_INDIA'],
+    logo: '/images/regulators/nfra-india.png'
+  },
+  {
+    id: 'NFRA',
+    name: 'National Financial Regulatory Administration',
+    acronym: 'NFRA',
+    region: 'Asia-Pacific',
+    country: 'China',
+    aliases: ['National Financial Regulatory Administration', 'NFRA', 'NFRA China', 'CBIRC'],
+    logo: '/images/regulators/nfra-china.png'
   },
   {
     id: 'OCC',
