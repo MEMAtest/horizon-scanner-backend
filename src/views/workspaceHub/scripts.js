@@ -74,7 +74,8 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           'Conduct & Market Abuse',
           'Payments',
           'Data Protection',
-          'ESG / Sustainability'
+          'ESG / Sustainability',
+          'Other'
         ];
 
         function formatDate(value) {
@@ -97,19 +98,21 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
             ? (item.metadata && typeof item.metadata === 'object' ? item.metadata : {})
             : {};
           const raw = metadata.topicArea || metadata.topic_area || metadata.topic || '';
-          return normalizeId(raw);
+          const normalized = normalizeId(raw);
+          if (!normalized) return 'Other';
+          const lowered = normalized.toLowerCase();
+          if (lowered === 'uncategorized' || lowered === 'uncategorised') return 'Other';
+          return normalized;
         }
 
         function buildTopicOptions(currentTopicArea) {
-          const current = normalizeId(currentTopicArea);
+          const current = normalizeId(currentTopicArea) || 'Other';
           const ordered = TOPIC_AREAS.slice();
           if (current && !ordered.some(topic => normalizeId(topic) === current)) {
             ordered.unshift(current);
           }
 
           const options = [];
-          options.push('<option value="" ' + (current ? '' : 'selected') + '>Uncategorised</option>');
-
           ordered.forEach(topic => {
             const value = normalizeId(topic);
             if (!value) return;
@@ -265,16 +268,18 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
         }
 
-        async function moveBookmark(updateUrl, collectionId) {
+        async function moveBookmark(updateUrl, collectionId, updateId) {
           const url = normalizeId(updateUrl);
           const nextCollectionId = normalizeId(collectionId);
-          if (!url || !nextCollectionId) return;
+          const normalizedUpdateId = normalizeId(updateId);
+          if ((!url && !normalizedUpdateId) || !nextCollectionId) return;
+          const urlParam = url || normalizedUpdateId;
 
           try {
-            const response = await fetch('/api/workspace/pin/' + encodeURIComponent(url) + '/collection', {
+            const response = await fetch('/api/workspace/pin/' + encodeURIComponent(urlParam) + '/collection', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ collectionId: nextCollectionId })
+              body: JSON.stringify({ collectionId: nextCollectionId, updateId: normalizedUpdateId || undefined })
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || !data.success) {
@@ -288,16 +293,18 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
         }
 
-        async function updateBookmarkTopic(updateUrl, topicArea) {
+        async function updateBookmarkTopic(updateUrl, topicArea, updateId) {
           const url = normalizeId(updateUrl);
-          if (!url) return;
+          const normalizedUpdateId = normalizeId(updateId);
+          if (!url && !normalizedUpdateId) return;
+          const urlParam = url || normalizedUpdateId;
           const nextTopicArea = normalizeId(topicArea);
 
           try {
-            const response = await fetch('/api/workspace/pin/' + encodeURIComponent(url) + '/topic', {
+            const response = await fetch('/api/workspace/pin/' + encodeURIComponent(urlParam) + '/topic', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ topicArea: nextTopicArea })
+              body: JSON.stringify({ topicArea: nextTopicArea, updateId: normalizedUpdateId || undefined })
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || !data.success) {
@@ -585,7 +592,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
                     <span>\${escapeHtml(authority)}</span>
                     <span>Saved: \${escapeHtml(formatDate(pinnedDate))}</span>
                     <span>Collection: \${escapeHtml(getBookmarkCollectionName(currentCollectionId))}</span>
-                    <span>Topic: \${escapeHtml(topicArea || 'Uncategorised')}</span>
+                    <span>Topic: \${escapeHtml(topicArea || 'Other')}</span>
                   </div>
                 </div>
               </div>
@@ -600,7 +607,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
 
             const select = card.querySelector('select[data-role=\"collection-select\"]');
             if (select) {
-              select.addEventListener('change', () => moveBookmark(url, select.value));
+              select.addEventListener('change', () => moveBookmark(url, select.value, updateId));
             }
 
             const topicSelect = card.querySelector('select[data-role=\"topic-select\"]');
@@ -618,7 +625,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
                 }
                 topicSelect.disabled = true;
                 try {
-                  await updateBookmarkTopic(url, next);
+                  await updateBookmarkTopic(url, next, updateId);
                 } finally {
                   topicSelect.disabled = false;
                 }
@@ -653,6 +660,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           renderCollections();
           renderBookmarks();
           renderActivityChart();
+          renderBookmarkThemesChart();
         }
 
         // Saved Searches Widget
@@ -707,11 +715,13 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
 
         // Activity Timeline - 30-Day Line Graph
         function logActivity(type, data) {
-          const activity = {
-            type,
-            ...data,
-            timestamp: new Date().toISOString()
-          };
+          const payload = data && typeof data === 'object' ? data : {};
+          const activityType = type || payload.type || 'activity';
+          const activityTimestamp = payload.timestamp || payload.pinned_date || new Date().toISOString();
+          const activity = Object.assign({}, payload, {
+            type: activityType,
+            timestamp: activityTimestamp
+          });
 
           state.activityLog.unshift(activity);
           // Keep more activity for 30-day chart
@@ -740,6 +750,37 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
         }
 
+        function seedActivityFromPinnedItems() {
+          if (state.activityLog.length > 0) return;
+          const seeds = (Array.isArray(state.pinnedItems) ? state.pinnedItems : [])
+            .filter(item => item && (item.pinned_date || item.pinnedDate))
+            .map(item => ({
+              type: 'bookmark_saved',
+              title: item.update_title || item.updateTitle || item.title || 'Untitled update',
+              authority: item.update_authority || item.updateAuthority || item.authority || 'Unknown',
+              url: item.update_url || item.updateUrl || item.url || '',
+              timestamp: item.pinned_date || item.pinnedDate
+            }))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 500);
+
+          if (!seeds.length) return;
+          state.activityLog = seeds;
+          try {
+            localStorage.setItem('profileHubActivity', JSON.stringify(state.activityLog));
+          } catch (error) {
+            console.warn('[ProfileHub] Failed to persist seeded activity:', error);
+          }
+        }
+
+        function bindWorkspaceActivity() {
+          window.addEventListener('workspace:activity', (event) => {
+            const detail = event && event.detail;
+            if (!detail || typeof detail !== 'object') return;
+            logActivity(detail.type || 'activity', detail);
+          });
+        }
+
         function aggregateActivityByDay(days = 30) {
           const counts = {};
           const now = new Date();
@@ -766,75 +807,222 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
             .map(([date, count]) => ({ date, count }));
         }
 
+        // Chart.js instances for cleanup
+        let activityChartInstance = null;
+        let themesChartInstance = null;
+
+        // Chart.js color palette
+        const chartColors = {
+          primary: '#3b82f6',
+          gradient: ['#3b82f6', '#8b5cf6', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
+        };
+
+        // Theme colors configuration
+        const themeColorConfig = {
+          'Consumer Duty': '#3b82f6',
+          'Operational Resilience': '#10b981',
+          'Financial Crime / AML': '#ef4444',
+          'Sanctions': '#f97316',
+          'Capital & Liquidity': '#8b5cf6',
+          'Conduct & Market Abuse': '#ec4899',
+          'Payments': '#14b8a6',
+          'Data Protection': '#6b7280',
+          'ESG / Sustainability': '#059669',
+          'Other': '#94a3b8',
+          'Other themes': '#94a3b8'
+        };
+
+        function renderBookmarkThemesChart() {
+          const canvas = document.getElementById('bookmarkThemesChart');
+          if (!canvas) return;
+
+          // Count topics from pinnedItems
+          const themeCounts = {};
+          const items = Array.isArray(state.pinnedItems) ? state.pinnedItems : [];
+          for (const item of items) {
+            const metadata = item && item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+            let topic = normalizeId(metadata.topicArea || metadata.topic_area || metadata.topic || '');
+            if (!topic || topic.toLowerCase() === 'uncategorized' || topic.toLowerCase() === 'uncategorised') {
+              topic = 'Other';
+            }
+            themeCounts[topic] = (themeCounts[topic] || 0) + 1;
+          }
+
+          const sortedThemes = Object.entries(themeCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
+          const topCount = sortedThemes.reduce((sum, [, count]) => sum + count, 0);
+          const otherCount = items.length > 0 ? Math.max(items.length - topCount, 0) : 0;
+
+          const themeEntries = [...sortedThemes];
+          if (otherCount > 0) {
+            themeEntries.push(['Other themes', otherCount]);
+          }
+
+          if (themeEntries.length === 0) return;
+
+          const themeLabels = themeEntries.map(([theme]) => theme);
+          const themeCntValues = themeEntries.map(([, count]) => count);
+          const themeColors = themeEntries.map(([theme], i) => {
+            return themeColorConfig[theme] || chartColors.gradient[i % chartColors.gradient.length];
+          });
+
+          // Destroy existing chart instance if it exists
+          if (themesChartInstance) {
+            themesChartInstance.destroy();
+            themesChartInstance = null;
+          }
+
+          const ctx = canvas.getContext('2d');
+          themesChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: themeLabels,
+              datasets: [{
+                data: themeCntValues,
+                backgroundColor: themeColors,
+                borderWidth: 0,
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '55%',
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    usePointStyle: true,
+                    pointStyle: 'rectRounded',
+                    padding: 10,
+                    font: { size: 10 },
+                    color: '#475569'
+                  }
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  padding: 12,
+                  titleFont: { size: 12, weight: '600' },
+                  bodyFont: { size: 11 },
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: function(context) {
+                      const value = context.parsed;
+                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                      const percentage = ((value / total) * 100).toFixed(1);
+                      return context.label + ': ' + value + ' (' + percentage + '%)';
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
         function renderActivityChart() {
-          const lineEl = document.getElementById('activityLine');
-          const areaEl = document.getElementById('activityArea');
-          const pointsEl = document.getElementById('activityPoints');
+          const canvas = document.getElementById('activityChart');
           const peakEl = document.getElementById('activityPeak');
           const avgEl = document.getElementById('activityAvg');
           const totalEl = document.getElementById('activityTotal');
-          const startDateEl = document.getElementById('chartStartDate');
-          const endDateEl = document.getElementById('chartEndDate');
 
-          if (!lineEl || !areaEl) return;
+          if (!canvas) return;
 
           const data = aggregateActivityByDay(30);
           const counts = data.map(d => d.count);
-          const maxCount = Math.max(...counts, 1);
           const total = counts.reduce((a, b) => a + b, 0);
           const avg = (total / counts.length).toFixed(1);
           const peak = Math.max(...counts);
 
-          // SVG dimensions
-          const width = 400;
-          const height = 100;
-          const padding = 5;
-
-          // Calculate points
-          const points = data.map((d, i) => {
-            const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
-            const y = height - padding - (d.count / maxCount) * (height - 2 * padding);
-            return { x, y, date: d.date, count: d.count };
+          // Format labels as short dates
+          const labels = data.map(d => {
+            const date = new Date(d.date);
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
           });
 
-          // Build line path
-          if (points.length > 0) {
-            const linePath = points.map((p, i) =>
-              (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)
-            ).join(' ');
-            lineEl.setAttribute('d', linePath);
-
-            // Build area path (line + bottom closure)
-            const areaPath = linePath +
-              ' L' + points[points.length - 1].x.toFixed(1) + ',' + (height - padding) +
-              ' L' + points[0].x.toFixed(1) + ',' + (height - padding) + ' Z';
-            areaEl.setAttribute('d', areaPath);
+          // Destroy existing chart instance if it exists
+          if (activityChartInstance) {
+            activityChartInstance.destroy();
+            activityChartInstance = null;
           }
 
-          // Add hover points
-          if (pointsEl) {
-            pointsEl.innerHTML = points.map(p => {
-              const dateStr = new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-              return \`<circle cx="\${p.x.toFixed(1)}" cy="\${p.y.toFixed(1)}" r="4"
-                class="chart-point" data-date="\${escapeHtml(dateStr)}" data-count="\${p.count}">
-                <title>\${escapeHtml(dateStr)}: \${p.count} action\${p.count !== 1 ? 's' : ''}</title>
-              </circle>\`;
-            }).join('');
-          }
+          const ctx = canvas.getContext('2d');
+
+          // Create gradient for area fill
+          const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+          gradient.addColorStop(1, 'rgba(59, 130, 246, 0.02)');
+
+          activityChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                data: counts,
+                borderColor: chartColors.primary,
+                backgroundColor: gradient,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                pointHoverBackgroundColor: chartColors.primary,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                intersect: false,
+                mode: 'index'
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  padding: 12,
+                  titleFont: { size: 12, weight: '600' },
+                  bodyFont: { size: 11 },
+                  cornerRadius: 8,
+                  callbacks: {
+                    label: function(context) {
+                      const value = context.parsed.y;
+                      return value + ' action' + (value !== 1 ? 's' : '');
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { display: false },
+                  border: { display: false }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: '#f1f5f9',
+                    drawBorder: false
+                  },
+                  ticks: {
+                    stepSize: 1,
+                    font: { size: 10 },
+                    color: '#94a3b8',
+                    padding: 8
+                  },
+                  border: { display: false }
+                }
+              }
+            }
+          });
 
           // Update stats
           if (peakEl) peakEl.textContent = peak;
           if (avgEl) avgEl.textContent = avg;
           if (totalEl) totalEl.textContent = total;
-
-          // Update date labels
-          if (startDateEl && data.length > 0) {
-            const startDate = new Date(data[0].date);
-            startDateEl.textContent = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-          }
-          if (endDateEl) {
-            endDateEl.textContent = 'Today';
-          }
         }
 
         function bindSavedSearches() {
@@ -880,10 +1068,45 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
         }
 
-	        function bindControls() {
-	          const newButton = document.getElementById('hubNewCollectionBtn');
-	          if (newButton) {
-	            newButton.addEventListener('click', (event) => {
+        function setEventsView(view) {
+          const target = view || 'list';
+          document.querySelectorAll('[data-events-view]').forEach(panel => {
+            panel.classList.toggle('active', panel.dataset.eventsView === target);
+          });
+          document.querySelectorAll('[data-events-toggle]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.eventsToggle === target);
+          });
+          try {
+            localStorage.setItem('profileHubEventsView', target);
+          } catch (error) {
+            // ignore storage errors
+          }
+        }
+
+        function bindEventsToggle() {
+          const buttons = Array.from(document.querySelectorAll('[data-events-toggle]'));
+          if (!buttons.length) return;
+
+          buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+              const view = btn.dataset.eventsToggle || 'list';
+              setEventsView(view);
+            });
+          });
+
+          let savedView = 'list';
+          try {
+            savedView = localStorage.getItem('profileHubEventsView') || 'list';
+          } catch (error) {
+            savedView = 'list';
+          }
+          setEventsView(savedView);
+        }
+
+        function bindControls() {
+          const newButton = document.getElementById('hubNewCollectionBtn');
+          if (newButton) {
+            newButton.addEventListener('click', (event) => {
               event.preventDefault();
               createCollection();
             });
@@ -939,8 +1162,11 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
 
         function init() {
           loadActivityLog();
+          seedActivityFromPinnedItems();
+          bindWorkspaceActivity();
           bindControls();
           bindSavedSearches();
+          bindEventsToggle();
           render();
           refreshAll();
         }

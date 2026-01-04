@@ -42,6 +42,7 @@ function buildWorkspaceHubPage({
       ${commonStyles}
       ${workspaceHubStyles}
       <style>${canaryStyles}</style>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
       ${sidebar}
@@ -63,7 +64,6 @@ function buildWorkspaceHubPage({
                 </svg>
                 Refresh
               </button>
-              <a class="btn btn-primary" href="/kanban">Change Board</a>
             </div>
           </header>
 
@@ -130,6 +130,7 @@ function buildWorkspaceHubPage({
 function renderUpcomingEventsWidget(events) {
   const safeEvents = Array.isArray(events) ? events : []
   const now = new Date()
+  const calendarMarkup = buildEventsCalendarMarkup(safeEvents, now)
 
   // Sort by priority (critical first) then by date
   const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
@@ -144,10 +145,18 @@ function renderUpcomingEventsWidget(events) {
 
   // Count critical events this week
   const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const criticalThisWeek = safeEvents.filter(e => {
+  const criticalEventsThisWeek = safeEvents.filter(e => {
+    if (!e.eventDate) return false
     const eventDate = new Date(e.eventDate)
-    return eventDate <= oneWeekFromNow && (e.priority === 'critical' || e.priority === 'high')
-  }).length
+    return eventDate >= now && eventDate <= oneWeekFromNow && String(e.priority || '').toLowerCase() === 'critical'
+  })
+  const criticalThisWeek = criticalEventsThisWeek.length
+  const criticalTooltip = criticalThisWeek
+    ? criticalEventsThisWeek
+        .slice(0, 3)
+        .map(event => escapeHtml(event.title || 'Critical event'))
+        .join(', ') + (criticalThisWeek > 3 ? ` +${criticalThisWeek - 3} more` : '')
+    : 'No critical events this week'
 
   const priorityDots = {
     critical: '🔴',
@@ -183,27 +192,120 @@ function renderUpcomingEventsWidget(events) {
           <span class="widget-icon">📅</span>
           Upcoming Events
         </h3>
-        <a href="/regulatory-calendar" class="widget-link">View All →</a>
+        <div class="widget-controls">
+          <div class="widget-toggle" role="tablist" aria-label="Upcoming events view">
+            <button class="widget-toggle-btn active" type="button" data-events-toggle="list">List</button>
+            <button class="widget-toggle-btn" type="button" data-events-toggle="calendar">Calendar</button>
+          </div>
+          <a href="/regulatory-calendar" class="widget-link">View All →</a>
+        </div>
       </div>
       <div class="widget-body">
-        <div class="event-cards">
-          ${eventsHtml}
-        </div>
-        <div class="widget-stats-row">
-          <span class="widget-stat ${criticalThisWeek > 0 ? 'critical' : ''}">
+        <div class="events-view events-list active" data-events-view="list">
+          <div class="event-cards">
+            ${eventsHtml}
+          </div>
+          <div class="widget-stats-row">
+            <span class="widget-stat widget-stat-tooltip ${criticalThisWeek > 0 ? 'critical' : ''}" data-tooltip="${escapeHtml(criticalTooltip)}" tabindex="0">
             🔴 ${criticalThisWeek} critical this week
-          </span>
-          <span class="widget-stat">
-            📋 ${safeEvents.length} total
-          </span>
+            </span>
+            <span class="widget-stat">
+              📋 ${safeEvents.length} total
+            </span>
+          </div>
+        </div>
+        <div class="events-view events-calendar" data-events-view="calendar">
+          ${calendarMarkup}
         </div>
       </div>
     </div>
   `
 }
 
+function buildEventsCalendarMarkup(events, now) {
+  const safeNow = now instanceof Date && !isNaN(now) ? new Date(now) : new Date()
+  safeNow.setHours(0, 0, 0, 0)
+  const dayOfWeek = safeNow.getDay()
+  const mondayOffset = (dayOfWeek + 6) % 7
+  const startDate = new Date(safeNow)
+  startDate.setDate(safeNow.getDate() - mondayOffset)
+
+  const totalDays = 35
+  const endDate = new Date(startDate)
+  endDate.setDate(startDate.getDate() + totalDays - 1)
+
+  const eventsByDate = {}
+  events.forEach(event => {
+    if (!event || !event.eventDate) return
+    const date = new Date(event.eventDate)
+    if (isNaN(date)) return
+    const key = date.toISOString().split('T')[0]
+    if (!eventsByDate[key]) eventsByDate[key] = []
+    eventsByDate[key].push(event)
+  })
+
+  const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const todayKey = safeNow.toISOString().split('T')[0]
+  const priorityRank = { critical: 3, high: 2, medium: 1, low: 0 }
+
+  const cells = []
+  for (let i = 0; i < totalDays; i += 1) {
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + i)
+    const dateKey = date.toISOString().split('T')[0]
+    const items = eventsByDate[dateKey] || []
+    const isToday = dateKey === todayKey
+    const isPast = date < safeNow
+
+    let topPriority = null
+    let topPriorityRank = -1
+    items.forEach(item => {
+      const priority = (item.priority || 'medium').toLowerCase()
+      const rank = priorityRank[priority] ?? 0
+      if (rank > topPriorityRank) {
+        topPriorityRank = rank
+        topPriority = priority
+      }
+    })
+
+    const tooltip = items.length
+      ? items.slice(0, 3).map(item => escapeHtml(item.title || 'Event')).join(' • ') +
+        (items.length > 3 ? ` +${items.length - 3} more` : '')
+      : ''
+
+    cells.push(`
+      <div class="calendar-cell${isToday ? ' today' : ''}${isPast ? ' muted' : ''}"${tooltip ? ` title="${tooltip}"` : ''}>
+        <div class="calendar-date">
+          <span>${date.getDate()}</span>
+          ${items.length ? `<span class="calendar-count">${items.length}</span>` : ''}
+        </div>
+        ${items.length ? `<span class="calendar-dot priority-${topPriority || 'medium'}"></span>` : '<span class="calendar-dot empty"></span>'}
+      </div>
+    `)
+  }
+
+  const startLabel = startDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+  const endLabel = endDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+  const rangeLabel = startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`
+
+  return `
+    <div class="events-calendar-wrap">
+      <div class="calendar-header">
+        <span class="calendar-title">${escapeHtml(rangeLabel)}</span>
+        <span class="calendar-subtitle">Next 5 weeks</span>
+      </div>
+      <div class="calendar-weekdays">
+        ${weekdayLabels.map(label => `<span>${label}</span>`).join('')}
+      </div>
+      <div class="calendar-grid">
+        ${cells.join('')}
+      </div>
+    </div>
+  `
+}
+
 /**
- * Render Bookmark Themes Widget - Horizontal Stacked Bar
+ * Render Bookmark Themes Widget - Chart.js Doughnut Chart
  */
 function renderBookmarkThemesWidget(pinnedItems) {
   const safeItems = Array.isArray(pinnedItems) ? pinnedItems : []
@@ -212,47 +314,17 @@ function renderBookmarkThemesWidget(pinnedItems) {
   const themeCounts = {}
   for (const item of safeItems) {
     const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
-    const topic = metadata.topicArea || metadata.topic_area || metadata.topic || 'Uncategorized'
+    const topic = normalizeThemeLabel(metadata.topicArea || metadata.topic_area || metadata.topic || '')
     themeCounts[topic] = (themeCounts[topic] || 0) + 1
   }
 
-  const sortedThemes = Object.entries(themeCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-
   const themeCount = Object.keys(themeCounts).length
-  const total = safeItems.length || 1
 
-  // Theme colors and abbreviations
-  const themeConfig = {
-    'Consumer Duty': { color: '#3b82f6', abbr: 'CD' },
-    'Operational Resilience': { color: '#10b981', abbr: 'OpRes' },
-    'Financial Crime / AML': { color: '#ef4444', abbr: 'AML' },
-    'Sanctions': { color: '#f97316', abbr: 'Sanc' },
-    'Capital & Liquidity': { color: '#8b5cf6', abbr: 'Cap' },
-    'Conduct & Market Abuse': { color: '#ec4899', abbr: 'Cond' },
-    'Payments': { color: '#14b8a6', abbr: 'Pay' },
-    'Data Protection': { color: '#6b7280', abbr: 'DP' },
-    'ESG / Sustainability': { color: '#059669', abbr: 'ESG' },
-    'Uncategorized': { color: '#94a3b8', abbr: 'Other' }
-  }
-
-  const defaultColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
-
-  const barHtml = sortedThemes.length > 0
-    ? `<div class="stacked-bar">
-        ${sortedThemes.map(([theme, count], i) => {
-          const config = themeConfig[theme] || { color: defaultColors[i % 5], abbr: theme.slice(0, 4) }
-          const widthPercent = (count / total) * 100
-          return `
-            <div class="bar-segment"
-                 style="width: ${widthPercent}%; background: ${config.color};"
-                 title="${theme}: ${count} bookmarks">
-              <span class="segment-label">${config.abbr}</span>
-              <span class="segment-count">(${count})</span>
-            </div>
-          `
-        }).join('')}
+  const chartHtml = safeItems.length > 0
+    ? `<div class="chart-card">
+        <div class="chart-container" style="height: 180px;">
+          <canvas id="bookmarkThemesChart"></canvas>
+        </div>
       </div>`
     : '<div class="empty-themes">No bookmarks yet</div>'
 
@@ -265,7 +337,7 @@ function renderBookmarkThemesWidget(pinnedItems) {
         </h3>
       </div>
       <div class="widget-body">
-        ${barHtml}
+        ${chartHtml}
         <div class="widget-footer-stats">
           ${safeItems.length} bookmarks across ${themeCount} themes
         </div>
@@ -275,11 +347,11 @@ function renderBookmarkThemesWidget(pinnedItems) {
 }
 
 /**
- * Render Activity Graph Widget - 30-day SVG Line Chart
+ * Render Activity Graph Widget - Chart.js Bar Chart
  */
 function renderActivityGraphWidget() {
   // The actual data will be populated client-side from localStorage
-  // This renders the container with SVG chart structure
+  // This renders the container with Chart.js canvas
   return `
     <div class="widget activity-graph-widget">
       <div class="widget-header">
@@ -289,34 +361,15 @@ function renderActivityGraphWidget() {
         </h3>
       </div>
       <div class="widget-body">
-        <div class="activity-chart" id="activityChart">
-          <svg viewBox="0 0 400 100" preserveAspectRatio="none" class="chart-svg">
-            <defs>
-              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.3"/>
-                <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.05"/>
-              </linearGradient>
-            </defs>
-            <!-- Grid lines -->
-            <line x1="0" y1="25" x2="400" y2="25" class="grid-line"/>
-            <line x1="0" y1="50" x2="400" y2="50" class="grid-line"/>
-            <line x1="0" y1="75" x2="400" y2="75" class="grid-line"/>
-            <!-- Area fill -->
-            <path id="activityArea" class="chart-area" d="M0,100 L0,100 L400,100 Z"/>
-            <!-- Line -->
-            <path id="activityLine" class="chart-line" d="M0,100 L400,100"/>
-            <!-- Data points (populated by JS) -->
-            <g id="activityPoints"></g>
-          </svg>
-          <div class="chart-labels">
-            <span class="chart-label-start" id="chartStartDate">30 days ago</span>
-            <span class="chart-label-end" id="chartEndDate">Today</span>
+        <div class="chart-card activity-chart-card">
+          <div class="chart-container" style="height: 120px;">
+            <canvas id="activityChart"></canvas>
           </div>
-        </div>
-        <div class="chart-stats">
-          <span class="chart-stat">Peak: <strong id="activityPeak">0</strong> actions</span>
-          <span class="chart-stat">Avg: <strong id="activityAvg">0</strong>/day</span>
-          <span class="chart-stat">Total: <strong id="activityTotal">0</strong></span>
+          <div class="chart-stats">
+            <span class="chart-stat">Peak: <strong id="activityPeak">0</strong> actions</span>
+            <span class="chart-stat">Avg: <strong id="activityAvg">0</strong>/day</span>
+            <span class="chart-stat">Total: <strong id="activityTotal">0</strong></span>
+          </div>
         </div>
       </div>
     </div>
@@ -371,6 +424,16 @@ function truncate(str, length) {
   if (!str) return ''
   if (str.length <= length) return str
   return str.substring(0, length) + '...'
+}
+
+function normalizeThemeLabel(value) {
+  const raw = value != null ? String(value).trim() : ''
+  if (!raw) return 'Other'
+  const lowered = raw.toLowerCase()
+  if (lowered === 'uncategorized' || lowered === 'uncategorised') {
+    return 'Other'
+  }
+  return raw
 }
 
 /**
