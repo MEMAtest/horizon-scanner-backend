@@ -97,9 +97,6 @@ const DEFAULT_FINANCIAL_KEYWORDS = [
   'mortgage',
   'prudential',
   'conduct',
-  'regulation',
-  'regulatory',
-  'compliance',
   'money laundering',
   'aml',
   'sanctions',
@@ -113,6 +110,15 @@ const DEFAULT_FINANCIAL_KEYWORDS = [
   'trading',
   'derivatives',
   'clearing'
+]
+const DEFAULT_AUTHORITY_BLOCKLIST = [
+  'AQUIS',
+  'LSE',
+  'HM Government',
+  'DBT',
+  'Department for Business and Trade',
+  'Department for Transport',
+  'Highways England'
 ]
 
 function resolveHistoryWindowDays() {
@@ -193,6 +199,11 @@ function resolveFinancialSectorAllowlist() {
 function resolveFinancialKeywordAllowlist() {
   const envValues = parseCsvEnv(process.env.DIGEST_KEYWORD_ALLOWLIST)
   return envValues.length ? envValues.map(value => value.toLowerCase()) : DEFAULT_FINANCIAL_KEYWORDS
+}
+
+function resolveFinancialAuthorityBlocklist() {
+  const envValues = parseCsvEnv(process.env.DIGEST_AUTHORITY_BLOCKLIST)
+  return buildLowerSet(envValues.length ? envValues : DEFAULT_AUTHORITY_BLOCKLIST)
 }
 
 function shouldFilterNonFinancial() {
@@ -420,7 +431,35 @@ async function buildDigestPayload(options = {}) {
   const authorityAllowlist = resolveFinancialAuthorityAllowlist()
   const sectorAllowlist = resolveFinancialSectorAllowlist()
   const keywordAllowlist = resolveFinancialKeywordAllowlist()
+  const authorityBlocklist = resolveFinancialAuthorityBlocklist()
   const filterNonFinancial = shouldFilterNonFinancial()
+
+  const passesFinancialFilter = (update) => {
+    if (!filterNonFinancial) return true
+
+    const authority = (update.authority || '').toLowerCase()
+    if (authority && authorityBlocklist.has(authority)) {
+      return false
+    }
+
+    const content = `${update.headline || ''} ${update.summary || ''} ${update.ai_summary || ''}`
+      .toLowerCase()
+    const sectorCandidates = []
+      .concat(update.sectors || [])
+      .concat(update.primarySectors || update.primary_sectors || [])
+      .concat(update.firmTypesAffected || update.firm_types_affected || [])
+      .concat(update.sector ? [update.sector] : [])
+      .filter(Boolean)
+    const normalizedSectors = sectorCandidates
+      .map(value => normalizeSectorName(value) || value)
+      .map(value => String(value).toLowerCase())
+
+    const hasAuthorityMatch = authority && authorityAllowlist.has(authority)
+    const hasSectorMatch = normalizedSectors.some(value => sectorAllowlist.has(value))
+    const hasKeywordMatch = keywordAllowlist.some(keyword => content.includes(keyword))
+
+    return hasAuthorityMatch || hasSectorMatch || hasKeywordMatch
+  }
 
   const applyQualityFilters = ({ ignoreHistory = false } = {}) => {
     const seenThisDigest = new Set()
@@ -433,34 +472,14 @@ async function buildDigestPayload(options = {}) {
         return false
       }
 
-      if (filterNonFinancial) {
-        const authority = (update.authority || '').toLowerCase()
-        const content = `${update.headline || ''} ${update.summary || ''} ${update.ai_summary || ''}`
-          .toLowerCase()
-        const sectorCandidates = []
-          .concat(update.sectors || [])
-          .concat(update.primarySectors || update.primary_sectors || [])
-          .concat(update.firmTypesAffected || update.firm_types_affected || [])
-          .concat(update.sector ? [update.sector] : [])
-          .filter(Boolean)
-        const normalizedSectors = sectorCandidates
-          .map(value => normalizeSectorName(value) || value)
-          .map(value => String(value).toLowerCase())
-
-        const hasAuthorityMatch = authority && authorityAllowlist.has(authority)
-        const hasSectorMatch = normalizedSectors.some(value => sectorAllowlist.has(value))
-        const hasKeywordMatch = keywordAllowlist.some(keyword => content.includes(keyword))
-
-        if (!hasAuthorityMatch && !hasSectorMatch && !hasKeywordMatch) {
-          return false
-        }
+      if (!passesFinancialFilter(update)) {
+        return false
       }
 
       // Exclude job postings and careers content
       const headline = (update.headline || '').toLowerCase()
       const category = (update.category || '').toLowerCase()
       const summary = (update.ai_summary || update.summary || update.description || '').toLowerCase()
-      const authority = (update.authority || '').toLowerCase()
 
       const excludeKeywords = ['job', 'career', 'vacancy', 'vacancies', 'recruitment', 'hiring', 'apply now', 'job opening']
       // Exclude generic website pages and navigation items that aren't regulatory content
@@ -830,6 +849,7 @@ async function buildDigestPayload(options = {}) {
       if (insights.length >= TARGET_MAX) break
       if (ukInsights.length >= TARGET_UK) break
       if (update.region && update.region !== 'UK') continue
+      if (!passesFinancialFilter(update)) continue
       if (insights.some(item => item.id === update.id || item.url === update.url)) continue
 
       const identifier = update.id || update.update_id || update.url
