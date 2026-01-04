@@ -41,11 +41,6 @@ function getBestSummary(insight) {
     return true
   }
 
-  // Prefer clean RSS summary if available and meaningful
-  if (summary && summary.trim() && isMeaningful(summary)) {
-    return summary.replace(prefixPattern, '').trim()
-  }
-
   // Clean the ai_summary
   let cleanedAi = aiSummary.replace(prefixPattern, '').trim()
   // Remove headline if it starts with it
@@ -54,9 +49,14 @@ function getBestSummary(insight) {
     cleanedAi = cleanedAi.slice(headline.length).trim()
   }
 
-  // If cleaned ai_summary is meaningful, use it
+  // Prefer AI summary if meaningful (cleaner and more contextual)
   if (cleanedAi && isMeaningful(cleanedAi)) {
     return cleanedAi
+  }
+
+  // Fall back to RSS summary if available and meaningful
+  if (summary && summary.trim() && isMeaningful(summary)) {
+    return summary.replace(prefixPattern, '').trim()
   }
 
   // Use description if available and meaningful

@@ -6,12 +6,114 @@ const dbService = require('./dbService')
 const relevanceService = require('./relevanceService')
 const { buildDailyDigestEmail } = require('../templates/emails/dailyDigestEmail-classic')
 const { sendEmail } = require('./email/resendClient')
+const { normalizeSectorName } = require('../utils/sectorTaxonomy')
 
 const DEFAULT_HISTORY_WINDOW_DAYS = 45
 // const DEFAULT_DIGEST_TIMEZONE = 'Europe/London'
 const DEFAULT_DIGEST_ROLLING_WINDOW_HOURS = 24
 const DEFAULT_DIGEST_MAX_ROLLING_WINDOW_HOURS = 24 * 14 // two weeks
 const DEFAULT_DIGEST_MIN_ITEMS = 6
+const DEFAULT_FINANCIAL_AUTHORITIES = [
+  'FCA',
+  'PRA',
+  'Bank of England',
+  'HM Treasury',
+  'HMRC',
+  'Financial Ombudsman Service',
+  'FOS',
+  'The Pensions Regulator',
+  'Serious Fraud Office',
+  'ICO',
+  'FRC',
+  'JMLSG',
+  'Pay.UK',
+  'FATF',
+  'FSB',
+  'ESMA',
+  'EBA',
+  'EIOPA',
+  'FINMA',
+  'BaFin',
+  'SEC',
+  'CFTC',
+  'Federal Reserve',
+  'FDIC',
+  'OCC',
+  'MAS',
+  'ASIC',
+  'APRA',
+  'AUSTRAC',
+  'SAMA',
+  'ADGM',
+  'DFSA',
+  'ACPR',
+  'Bank of Italy',
+  'CNMV',
+  'QCB',
+  'EEAS'
+]
+const DEFAULT_FINANCIAL_SECTORS = [
+  'Banking',
+  'Investment Management',
+  'Wealth Management',
+  'Insurance',
+  'Consumer Credit',
+  'Payments',
+  'Payment Services',
+  'Fintech',
+  'Capital Markets',
+  'Market Infrastructure',
+  'Securities Regulation',
+  'Asset Management',
+  'Pensions',
+  'Pension Funds',
+  'Tax',
+  'AML & Financial Crime',
+  'Compliance',
+  'Prudential Regulation',
+  'Financial Crime',
+  'Money Laundering',
+  'Corporate Finance',
+  'Credit',
+  'Lending',
+  'Cryptocurrency',
+  'Digital Assets'
+]
+const DEFAULT_FINANCIAL_KEYWORDS = [
+  'financial',
+  'finance',
+  'bank',
+  'banking',
+  'insurance',
+  'insurer',
+  'investment',
+  'securities',
+  'capital markets',
+  'payments',
+  'payment',
+  'fintech',
+  'credit',
+  'lending',
+  'mortgage',
+  'prudential',
+  'conduct',
+  'regulation',
+  'regulatory',
+  'compliance',
+  'money laundering',
+  'aml',
+  'sanctions',
+  'crypto',
+  'digital assets',
+  'consumer credit',
+  'pension',
+  'wealth',
+  'asset management',
+  'market abuse',
+  'trading',
+  'derivatives',
+  'clearing'
+]
 
 function resolveHistoryWindowDays() {
   const envValue = parseInt(process.env.DIGEST_HISTORY_WINDOW_DAYS, 10)
@@ -66,6 +168,35 @@ function resolveMinDigestItems() {
     return envValue
   }
   return DEFAULT_DIGEST_MIN_ITEMS
+}
+
+function parseCsvEnv(value) {
+  if (!value) return []
+  return value.split(',').map(entry => entry.trim()).filter(Boolean)
+}
+
+function buildLowerSet(values = []) {
+  return new Set(values.map(value => String(value).toLowerCase()))
+}
+
+function resolveFinancialAuthorityAllowlist() {
+  const envValues = parseCsvEnv(process.env.DIGEST_AUTHORITY_ALLOWLIST)
+  return buildLowerSet(envValues.length ? envValues : DEFAULT_FINANCIAL_AUTHORITIES)
+}
+
+function resolveFinancialSectorAllowlist() {
+  const envValues = parseCsvEnv(process.env.DIGEST_SECTOR_ALLOWLIST)
+  const base = envValues.length ? envValues : DEFAULT_FINANCIAL_SECTORS
+  return buildLowerSet(base.map(entry => normalizeSectorName(entry) || entry))
+}
+
+function resolveFinancialKeywordAllowlist() {
+  const envValues = parseCsvEnv(process.env.DIGEST_KEYWORD_ALLOWLIST)
+  return envValues.length ? envValues.map(value => value.toLowerCase()) : DEFAULT_FINANCIAL_KEYWORDS
+}
+
+function shouldFilterNonFinancial() {
+  return process.env.DIGEST_FINANCIAL_ONLY !== 'false'
 }
 
 // function formatDateKey(value, timeZone) {
@@ -286,6 +417,10 @@ async function buildDigestPayload(options = {}) {
   const digestHistoryWindow = resolveHistoryWindowDays()
   const previouslySentIdentifiers = await dbService.getRecentDigestIdentifiers(digestHistoryWindow)
   const previouslySentSet = new Set(previouslySentIdentifiers.map(id => String(id)))
+  const authorityAllowlist = resolveFinancialAuthorityAllowlist()
+  const sectorAllowlist = resolveFinancialSectorAllowlist()
+  const keywordAllowlist = resolveFinancialKeywordAllowlist()
+  const filterNonFinancial = shouldFilterNonFinancial()
 
   const applyQualityFilters = ({ ignoreHistory = false } = {}) => {
     const seenThisDigest = new Set()
@@ -296,6 +431,29 @@ async function buildDigestPayload(options = {}) {
 
       if (!ignoreHistory && identifier && previouslySentSet.has(identifier)) {
         return false
+      }
+
+      if (filterNonFinancial) {
+        const authority = (update.authority || '').toLowerCase()
+        const content = `${update.headline || ''} ${update.summary || ''} ${update.ai_summary || ''}`
+          .toLowerCase()
+        const sectorCandidates = []
+          .concat(update.sectors || [])
+          .concat(update.primarySectors || update.primary_sectors || [])
+          .concat(update.firmTypesAffected || update.firm_types_affected || [])
+          .concat(update.sector ? [update.sector] : [])
+          .filter(Boolean)
+        const normalizedSectors = sectorCandidates
+          .map(value => normalizeSectorName(value) || value)
+          .map(value => String(value).toLowerCase())
+
+        const hasAuthorityMatch = authority && authorityAllowlist.has(authority)
+        const hasSectorMatch = normalizedSectors.some(value => sectorAllowlist.has(value))
+        const hasKeywordMatch = keywordAllowlist.some(keyword => content.includes(keyword))
+
+        if (!hasAuthorityMatch && !hasSectorMatch && !hasKeywordMatch) {
+          return false
+        }
       }
 
       // Exclude job postings and careers content
