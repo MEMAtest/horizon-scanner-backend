@@ -1398,6 +1398,142 @@ const feedSources = [
     sectors: ['Banking', 'Investment Management', 'Insurance', 'AML & Financial Crime']
   },
 
+  // ============================================
+  // GLOBAL BANK NEWS - Added January 2026
+  // Major global banks - press releases and news
+  // source_category: 'bank_news' separates from regulatory
+  // ============================================
+  {
+    name: 'JPMorgan Chase News',
+    authority: 'JPMorgan',
+    url: 'https://www.jpmorganchase.com/newsroom',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'JPMorgan Chase - Press releases and corporate news',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United States',
+    region: 'Americas',
+    sectors: ['Banking', 'Capital Markets', 'Wealth Management']
+  },
+  {
+    name: 'Bank of America News',
+    authority: 'BofA',
+    url: 'https://newsroom.bankofamerica.com/content/newsroom/press-releases.html',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Bank of America - Newsroom and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United States',
+    region: 'Americas',
+    sectors: ['Banking', 'Capital Markets', 'Wealth Management']
+  },
+  {
+    name: 'Citigroup News',
+    authority: 'Citigroup',
+    url: 'https://www.citigroup.com/global/news/press-release',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Citigroup - Global news and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United States',
+    region: 'Americas',
+    sectors: ['Banking', 'Capital Markets', 'Wealth Management']
+  },
+  {
+    name: 'Wells Fargo News',
+    authority: 'WellsFargo',
+    url: 'https://newsroom.wf.com/news-releases/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Wells Fargo - Newsroom and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United States',
+    region: 'Americas',
+    sectors: ['Banking', 'Consumer Finance', 'Wealth Management']
+  },
+  {
+    name: 'Goldman Sachs News',
+    authority: 'Goldman',
+    url: 'https://www.goldmansachs.com/pressroom',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Goldman Sachs - Pressroom and announcements',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United States',
+    region: 'Americas',
+    sectors: ['Investment Banking', 'Capital Markets', 'Asset Management']
+  },
+  {
+    name: 'Morgan Stanley News',
+    authority: 'MorganStanley',
+    url: 'https://www.morganstanley.com/about-us-newsroom',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Morgan Stanley - Newsroom and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United States',
+    region: 'Americas',
+    sectors: ['Investment Banking', 'Wealth Management', 'Capital Markets']
+  },
+  {
+    name: 'HSBC News',
+    authority: 'HSBC',
+    url: 'https://www.hsbc.com/news-and-views/news',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'HSBC - News and media releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'Europe',
+    sectors: ['Banking', 'Wealth Management', 'Capital Markets']
+  },
+  {
+    name: 'Barclays News',
+    authority: 'Barclays',
+    url: 'https://home.barclays/news/press-releases/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Barclays - Press releases and corporate news',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'Europe',
+    sectors: ['Banking', 'Investment Banking', 'Consumer Finance']
+  },
+  {
+    name: 'Deutsche Bank News',
+    authority: 'DeutscheBank',
+    url: 'https://www.db.com/newsroom/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Deutsche Bank - Newsroom and media centre',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'Germany',
+    region: 'Europe',
+    sectors: ['Investment Banking', 'Capital Markets', 'Corporate Banking']
+  },
+  {
+    name: 'UBS News',
+    authority: 'UBS',
+    url: 'https://www.ubs.com/global/en/media/news.html',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'UBS - Media and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'Switzerland',
+    region: 'Europe',
+    sectors: ['Wealth Management', 'Investment Banking', 'Asset Management']
+  },
+
   {
     name: 'Demo Regulatory Updates',
     authority: 'Demo Authority',

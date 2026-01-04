@@ -790,6 +790,109 @@ const AUTHORITY_REGISTRY = [
     country: 'International',
     aliases: ['Wolfsberg Group', 'WOLFSBERG'],
     logo: '/images/regulators/wolfsberg.jpg'
+  },
+  // ============================================
+  // GLOBAL BANKS - Bank News Sources
+  // ============================================
+  {
+    id: 'JPMorgan',
+    name: 'JPMorgan Chase',
+    acronym: 'JPM',
+    region: 'Americas',
+    country: 'United States',
+    aliases: ['JPMorgan Chase', 'JPMorgan', 'JPM', 'JP Morgan'],
+    logo: '/images/banks/jpmorgan.png',
+    isBank: true
+  },
+  {
+    id: 'BofA',
+    name: 'Bank of America',
+    acronym: 'BofA',
+    region: 'Americas',
+    country: 'United States',
+    aliases: ['Bank of America', 'BofA', 'BoA', 'BAC'],
+    logo: '/images/banks/bofa.png',
+    isBank: true
+  },
+  {
+    id: 'Citigroup',
+    name: 'Citigroup',
+    acronym: 'Citi',
+    region: 'Americas',
+    country: 'United States',
+    aliases: ['Citigroup', 'Citi', 'Citibank'],
+    logo: '/images/banks/citi.png',
+    isBank: true
+  },
+  {
+    id: 'WellsFargo',
+    name: 'Wells Fargo',
+    acronym: 'WFC',
+    region: 'Americas',
+    country: 'United States',
+    aliases: ['Wells Fargo', 'WellsFargo', 'WFC'],
+    logo: '/images/banks/wellsfargo.png',
+    isBank: true
+  },
+  {
+    id: 'Goldman',
+    name: 'Goldman Sachs',
+    acronym: 'GS',
+    region: 'Americas',
+    country: 'United States',
+    aliases: ['Goldman Sachs', 'Goldman', 'GS'],
+    logo: '/images/banks/goldman.png',
+    isBank: true
+  },
+  {
+    id: 'MorganStanley',
+    name: 'Morgan Stanley',
+    acronym: 'MS',
+    region: 'Americas',
+    country: 'United States',
+    aliases: ['Morgan Stanley', 'MorganStanley', 'MS'],
+    logo: '/images/banks/morganstanley.png',
+    isBank: true
+  },
+  {
+    id: 'HSBC',
+    name: 'HSBC',
+    acronym: 'HSBC',
+    region: 'Europe',
+    country: 'United Kingdom',
+    aliases: ['HSBC', 'HSBC Holdings', 'Hongkong and Shanghai Banking Corporation'],
+    logo: '/images/banks/hsbc.png',
+    isBank: true
+  },
+  {
+    id: 'Barclays',
+    name: 'Barclays',
+    acronym: 'BARC',
+    region: 'Europe',
+    country: 'United Kingdom',
+    aliases: ['Barclays', 'Barclays Bank', 'BARC'],
+    logo: '/images/banks/barclays.png',
+    isBank: true
+  },
+  {
+    id: 'DeutscheBank',
+    name: 'Deutsche Bank',
+    acronym: 'DB',
+    region: 'Europe',
+    country: 'Germany',
+    aliases: ['Deutsche Bank', 'DeutscheBank', 'DB'],
+    logo: '/images/banks/deutschebank.png',
+    isBank: true
+  },
+  {
+    id: 'UBS',
+    name: 'UBS',
+    acronym: 'UBS',
+    region: 'Europe',
+    country: 'Switzerland',
+    aliases: ['UBS', 'UBS Group', 'Union Bank of Switzerland'],
+    logo: '/images/banks/ubs.png',
+    isBank: true
   }
 ]
 
