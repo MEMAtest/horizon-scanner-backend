@@ -6,6 +6,9 @@ const puppeteer = require('puppeteer-extra')
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 const axios = require('axios')
 const cheerio = require('cheerio')
+const { scrapePensionRegulator } = require('./src/services/webScraperSources/tpr')
+const { scrapeICO } = require('./src/services/webScraperSources/ico')
+const puppeteerScraper = require('./src/scrapers/puppeteerScraper')
 
 puppeteer.use(StealthPlugin())
 
@@ -148,11 +151,7 @@ async function testPuppeteerScraper(url, name, selectors) {
 }
 
 async function testLSE() {
-  return testPuppeteerScraper(
-    'https://www.londonstockexchange.com/discover/news-and-insights',
-    'LSE',
-    ['h2 a', 'h3 a', '.news-title', 'article h2', 'article h3']
-  )
+  return await puppeteerScraper.scrapeLSE()
 }
 
 async function testPayUK() {
@@ -172,49 +171,15 @@ async function testAquis() {
 }
 
 async function testJMLSG() {
-  return testPuppeteerScraper(
-    'https://www.jmlsg.org.uk/',
-    'JMLSG',
-    ['h2 a', 'h3 a', '.news-title', 'article h2', '.post-title']
-  )
+  return await puppeteerScraper.scrapeJMLSG()
 }
 
 async function testTPR() {
-  const url = 'https://www.thepensionsregulator.gov.uk/en/media-hub/press-releases'
-  const { data } = await axios.get(url, { headers: { 'User-Agent': USER_AGENT }, timeout: 15000 })
-  const $ = cheerio.load(data)
-  const items = []
-
-  $('.newsitem, .news-item, article, .search-result').each((_, el) => {
-    const title = $(el).find('a, h2, h3').first().text().trim()
-    if (title && title.length > 10) items.push({ title })
-  })
-
-  return items
+  return await scrapePensionRegulator()
 }
 
 async function testICO() {
-  // ICO has API
-  try {
-    const { data } = await axios.post('https://ico.org.uk/api/search', {
-      query: '',
-      filters: { contentType: ['news'] },
-      page: 1,
-      pageSize: 10
-    }, { headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT }, timeout: 15000 })
-
-    return (data.results || []).map(r => ({ title: r.title }))
-  } catch {
-    // Fallback to HTML
-    const { data } = await axios.get('https://ico.org.uk/about-the-ico/media-centre/', { headers: { 'User-Agent': USER_AGENT }, timeout: 15000 })
-    const $ = cheerio.load(data)
-    const items = []
-    $('article, .news-item, h2 a').each((_, el) => {
-      const title = $(el).text().trim()
-      if (title && title.length > 10) items.push({ title })
-    })
-    return items
-  }
+  return await scrapeICO()
 }
 
 // Main test runner
@@ -253,4 +218,12 @@ async function runAllTests() {
   console.log('\n' + '=' .repeat(60))
 }
 
-runAllTests().catch(console.error)
+runAllTests()
+  .catch(console.error)
+  .finally(async () => {
+    try {
+      await puppeteerScraper.closeBrowser()
+    } catch (error) {
+      console.warn('⚠️ Failed to close Puppeteer browser:', error.message)
+    }
+  })
