@@ -56,12 +56,12 @@ const BANK_CONFIGS = {
   },
   Goldman: {
     name: 'Goldman Sachs',
-    url: 'https://www.goldmansachs.com/pressroom/press-releases/',
+    url: 'https://www.goldmansachs.com/pressroom',
     baseUrl: 'https://www.goldmansachs.com',
     region: 'Americas',
     country: 'United States',
     type: 'puppeteer',
-    selectors: ['.press-release', '.news-item', 'article', '[class*="article"]']
+    selectors: ['[class*="content-list-item"]', '[class*="link-root"]', 'a[href*="/pressroom/"]']
   },
   MorganStanley: {
     name: 'Morgan Stanley',
@@ -101,7 +101,7 @@ const BANK_CONFIGS = {
   },
   UBS: {
     name: 'UBS',
-    url: 'https://www.ubs.com/global/en/media/news.html',
+    url: 'https://www.ubs.com/global/en/media.html',
     baseUrl: 'https://www.ubs.com',
     region: 'Europe',
     country: 'Switzerland',
@@ -217,23 +217,128 @@ const BANK_EXTRACTORS = {
     }, baseUrl)
   },
 
-  // Goldman Sachs
+  // Goldman Sachs - React-based with specific class patterns
   Goldman: async (page, baseUrl) => {
-    await page.waitForSelector('a[href*="/pressroom/"]', { timeout: 10000 }).catch(() => {})
+    // Wait for content list to load
+    await page.waitForSelector('[class*="content-list"], [class*="pressroom"], a[href*="/pressroom/"]', { timeout: 15000 }).catch(() => {})
+
+    // Extra wait for React hydration
+    await new Promise(r => setTimeout(r, 3000))
 
     return page.evaluate((baseUrl) => {
       const items = []
       const seen = new Set()
 
-      const links = document.querySelectorAll('a[href*="/pressroom/press-releases/"]')
+      // Try multiple selector patterns for Goldman's React UI
+      const selectors = [
+        '[class*="content-list-item"] a',
+        '[class*="link-root"] a',
+        'a[href*="/pressroom/press-releases/"]',
+        'a[href*="/insights/"]',
+        '[class*="card"] a[href*="pressroom"]'
+      ]
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector)
+        links.forEach(link => {
+          const url = link.href
+          if (!url || seen.has(url)) return
+          if (url.endsWith('/pressroom/') || url.endsWith('/press-releases/')) return
+          seen.add(url)
+
+          // Get text from link or parent container
+          const container = link.closest('[class*="content-list-item"], [class*="card"], article')
+          const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                     || link.textContent?.trim()
+
+          if (!title || title.length < 20) return
+          if (title.toLowerCase().includes('view all') || title.toLowerCase().includes('see more')) return
+
+          items.push({
+            title: title,
+            url: url,
+            date: '',
+            description: ''
+          })
+        })
+      }
+      return items
+    }, baseUrl)
+  },
+
+  // UBS - media releases page
+  UBS: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/media/"], a[href*="news"], article', { timeout: 10000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 2000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      // Try multiple selector patterns
+      const selectors = [
+        'a[href*="/media/"][href*=".html"]',
+        'a[href*="/media/news"]',
+        'a[href*="media-releases"]',
+        '.teaser a[href]',
+        'article a[href]',
+        '[class*="news"] a[href]',
+        '[class*="teaser"] a[href]'
+      ]
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector)
+        links.forEach(link => {
+          const url = link.href
+          if (!url || seen.has(url)) return
+          if (url.endsWith('/media.html') || url.endsWith('/media/') || url === baseUrl) return
+          seen.add(url)
+
+          const container = link.closest('article, [class*="teaser"], [class*="card"], li, div')
+          const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                     || link.textContent?.trim()
+
+          if (!title || title.length < 15) return
+          if (title.toLowerCase().includes('view all') || title.toLowerCase().includes('more news')) return
+
+          items.push({
+            title: title,
+            url: url,
+            date: '',
+            description: ''
+          })
+        })
+      }
+      return items
+    }, baseUrl)
+  },
+
+  // JPMorgan - dynamic loading with filter-based content
+  JPMorgan: async (page, baseUrl) => {
+    // Wait longer for dynamic content
+    await page.waitForSelector('a[href*="/newsroom/"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      // Try to find press release links
+      const links = document.querySelectorAll('a[href*="/newsroom/press-releases/"], a[href*="/newsroom/stories/"]')
 
       links.forEach(link => {
         const url = link.href
-        if (seen.has(url)) return
+        if (!url || seen.has(url)) return
+        // Skip section index pages
+        if (url.endsWith('/press-releases') || url.endsWith('/stories') || url.endsWith('/press-releases/') || url.endsWith('/stories/')) return
         seen.add(url)
 
-        const title = link.textContent?.trim()
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
         if (!title || title.length < 20) return
+        if (title.toLowerCase().includes('view all') || title.toLowerCase().includes('press releases')) return
 
         items.push({
           title: title,
@@ -246,26 +351,83 @@ const BANK_EXTRACTORS = {
     }, baseUrl)
   },
 
-  // UBS - media news
-  UBS: async (page, baseUrl) => {
-    await page.waitForSelector('a[href*="/media/"]', { timeout: 10000 }).catch(() => {})
+  // Bank of America - press releases
+  BofA: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="newsroom"], article, .teaser', { timeout: 10000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 2000))
 
     return page.evaluate((baseUrl) => {
       const items = []
       const seen = new Set()
 
-      const links = document.querySelectorAll('a[href*="/media/"][href*="news"], a[href*="/media/"][href*="release"]')
+      // Look for teaser articles and news links
+      const selectors = [
+        '.teaser a[href]',
+        'article a[href]',
+        'a[href*="/press-releases/"]',
+        'a[href*="/newsroom/"][href*=".html"]',
+        '[class*="article"] a[href]'
+      ]
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector)
+        links.forEach(link => {
+          const url = link.href
+          if (!url || seen.has(url)) return
+          if (url.endsWith('/press-releases.html') || url.endsWith('/newsroom/')) return
+          seen.add(url)
+
+          const container = link.closest('article, .teaser, [class*="card"], div')
+          const title = container?.querySelector('h2, h3, h4, .title, [class*="title"]')?.textContent?.trim()
+                     || link.textContent?.trim()
+
+          if (!title || title.length < 20) return
+          if (title.toLowerCase().includes('view all') || title.toLowerCase().includes('read more')) return
+
+          items.push({
+            title: title,
+            url: url,
+            date: '',
+            description: ''
+          })
+        })
+      }
+      return items
+    }, baseUrl)
+  },
+
+  // Barclays - dynamically loaded CMS content
+  Barclays: async (page, baseUrl) => {
+    // Wait for CMS content to load
+    await page.waitForSelector('a[href*="/news/"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    // Scroll to trigger lazy loading
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight / 2)
+    })
+    await new Promise(r => setTimeout(r, 2000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/news/press-releases/2"], a[href*="/news/2"]')
 
       links.forEach(link => {
         const url = link.href
-        if (seen.has(url) || url.endsWith('/news.html') || url.endsWith('/media/')) return
+        if (!url || seen.has(url)) return
+        // Must be an actual article (contains year in URL pattern)
+        if (!url.match(/\/news\/.*\/202[0-9]/)) return
+        if (url.endsWith('/news/') || url.endsWith('/press-releases/')) return
         seen.add(url)
 
-        const card = link.closest('article, [class*="card"], [class*="item"], li')
-        const headingEl = card?.querySelector('h2, h3, h4') || link
-        const title = headingEl?.textContent?.trim()
+        const card = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = card?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
 
-        if (!title || title.length < 15) return
+        if (!title || title.length < 20) return
+        if (title.toLowerCase().includes('press releases') || title.toLowerCase().includes('view all')) return
 
         items.push({
           title: title,
