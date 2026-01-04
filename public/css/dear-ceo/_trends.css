@@ -1,0 +1,217 @@
+/**
+ * Dear CEO Letters - Trends Sidebar Styles
+ * Theme trends visualization
+ */
+
+/* Trends Section */
+.trends-section {
+  background: var(--dear-ceo-bg-white);
+  border-radius: var(--dear-ceo-radius-lg);
+  box-shadow: var(--dear-ceo-shadow);
+  border: 1px solid var(--dear-ceo-border);
+  padding: 20px;
+  position: sticky;
+  top: 24px;
+}
+
+.trends-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--dear-ceo-text);
+}
+
+.trends-section .section-subtitle {
+  font-size: 13px;
+  color: var(--dear-ceo-text-muted);
+  margin: 0 0 20px 0;
+}
+
+/* Trend Items */
+.trend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--dear-ceo-border-light);
+  transition: all var(--dear-ceo-transition-fast);
+}
+
+.trend-item:last-child {
+  border-bottom: none;
+}
+
+.trend-item:hover {
+  padding-left: 8px;
+}
+
+.trend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trend-name {
+  font-size: 14px;
+  color: var(--dear-ceo-text);
+  font-weight: 500;
+}
+
+.trend-count {
+  font-size: 12px;
+  color: var(--dear-ceo-text-muted);
+}
+
+/* Trend Status Badges */
+.trend-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.trend-status.emerging {
+  background: var(--dear-ceo-success-bg);
+  color: var(--dear-ceo-success);
+}
+
+.trend-status.persistent {
+  background: var(--dear-ceo-fca-bg);
+  color: var(--dear-ceo-fca);
+}
+
+.trend-status.declining {
+  background: var(--dear-ceo-warning-bg);
+  color: var(--dear-ceo-warning);
+}
+
+.trend-status.high {
+  background: var(--dear-ceo-danger-bg);
+  color: var(--dear-ceo-danger);
+}
+
+/* Trend Chart (mini visualization) */
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 24px;
+  margin-left: 12px;
+}
+
+.trend-bar {
+  width: 4px;
+  background: var(--dear-ceo-primary-light);
+  border-radius: 2px;
+  opacity: 0.3;
+  transition: all var(--dear-ceo-transition-fast);
+}
+
+.trend-bar.active {
+  opacity: 1;
+}
+
+.trend-item:hover .trend-bar {
+  opacity: 0.5;
+}
+
+.trend-item:hover .trend-bar.active {
+  opacity: 1;
+}
+
+/* Trends Summary Card */
+.trends-summary {
+  background: linear-gradient(135deg, var(--dear-ceo-fca-bg) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border-radius: var(--dear-ceo-radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.trends-summary-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.trends-summary-stat:not(:last-child) {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.trends-summary-label {
+  font-size: 13px;
+  color: var(--dear-ceo-text-muted);
+}
+
+.trends-summary-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dear-ceo-primary);
+}
+
+/* Quick Filters */
+.trend-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.trend-filter-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--dear-ceo-border);
+  border-radius: 16px;
+  background: var(--dear-ceo-bg-white);
+  font-size: 12px;
+  color: var(--dear-ceo-text-muted);
+  cursor: pointer;
+  transition: all var(--dear-ceo-transition-fast);
+}
+
+.trend-filter-btn:hover {
+  border-color: var(--dear-ceo-primary-light);
+  color: var(--dear-ceo-primary);
+}
+
+.trend-filter-btn.active {
+  background: var(--dear-ceo-primary);
+  border-color: var(--dear-ceo-primary);
+  color: white;
+}
+
+/* Trend Legend */
+.trend-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--dear-ceo-border-light);
+  flex-wrap: wrap;
+}
+
+.trend-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--dear-ceo-text-muted);
+}
+
+.trend-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.trend-legend-dot.emerging {
+  background: var(--dear-ceo-success);
+}
+
+.trend-legend-dot.persistent {
+  background: var(--dear-ceo-primary);
+}
+
+.trend-legend-dot.declining {
+  background: var(--dear-ceo-warning);
+}

@@ -1,0 +1,355 @@
+/**
+ * Dear CEO Letters - Responsive Styles
+ * Mobile and tablet breakpoints
+ */
+
+/* Large Tablets / Small Desktops */
+@media (max-width: 1200px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trends-section {
+    position: static;
+    order: -1;
+  }
+
+  .trends-section h2 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .trend-item {
+    display: inline-flex;
+    padding: 10px 16px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--dear-ceo-border);
+    border-radius: 20px;
+    background: var(--dear-ceo-bg);
+  }
+
+  .trend-item:hover {
+    padding-left: 16px;
+    background: var(--dear-ceo-fca-bg);
+  }
+
+  #trends-container {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-card .stat-value {
+    font-size: 28px;
+  }
+
+  .dear-ceo-header {
+    padding: 24px;
+  }
+
+  .dear-ceo-header h1 {
+    font-size: 24px;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    margin: 10px;
+    max-height: calc(100vh - 20px);
+  }
+
+  .modal-header {
+    padding: 20px;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+}
+
+/* Mobile Landscape / Large Phones */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 12px;
+  }
+
+  .dear-ceo-header {
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .dear-ceo-header h1 {
+    font-size: 20px;
+  }
+
+  .dear-ceo-header p {
+    font-size: 14px;
+  }
+
+  .section-header {
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-select {
+    flex: 1;
+  }
+
+  .letter-item {
+    padding: 14px 16px;
+  }
+
+  .letter-title {
+    font-size: 14px;
+  }
+
+  .letters-list {
+    max-height: 500px;
+  }
+
+  /* Modal Adjustments */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    border-radius: var(--dear-ceo-radius-xl) var(--dear-ceo-radius-xl) 0 0;
+    max-height: 95vh;
+    margin: 0;
+  }
+
+  .modal-header {
+    padding: 16px;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .analysis-section h3 {
+    font-size: 11px;
+  }
+
+  .analysis-content {
+    font-size: 14px;
+  }
+
+  .action-item {
+    padding: 14px;
+  }
+
+  .action-text {
+    font-size: 13px;
+  }
+
+  .applicability-box {
+    padding: 16px;
+  }
+
+  .applicability-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .applicability-label {
+    min-width: auto;
+  }
+
+  .view-original-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Small Phones */
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 20px;
+  }
+
+  .dear-ceo-header {
+    padding: 16px;
+    border-radius: var(--dear-ceo-radius-lg);
+  }
+
+  .dear-ceo-header h1 {
+    font-size: 18px;
+  }
+
+  .dear-ceo-header p {
+    font-size: 13px;
+  }
+
+  .letter-item {
+    padding: 12px 14px;
+  }
+
+  .letter-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .letter-authority {
+    align-self: flex-start;
+  }
+
+  .letter-date {
+    align-self: flex-start;
+  }
+
+  .letter-themes {
+    gap: 4px;
+  }
+
+  .theme-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  .modal-header {
+    padding: 14px;
+  }
+
+  .modal-close {
+    padding: 6px;
+    font-size: 18px;
+  }
+
+  .themes-grid {
+    gap: 6px;
+  }
+
+  .theme-item {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .timeline {
+    padding-left: 20px;
+  }
+
+  .timeline-item {
+    padding-left: 12px;
+  }
+
+  .timeline-item::before {
+    left: -16px;
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .modal-overlay {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .modal-content {
+    box-shadow: none;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .modal-close,
+  .view-original-btn,
+  .filter-group {
+    display: none;
+  }
+
+  .analysis-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .action-list,
+  .timeline {
+    break-inside: avoid;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-content,
+  .letter-item,
+  .letter-item::before,
+  .stat-card,
+  .trend-item,
+  .action-item,
+  .view-original-btn {
+    transition: none;
+  }
+
+  .analysis-section {
+    animation: none;
+    opacity: 1;
+  }
+
+  .loading-spinner::before {
+    animation: none;
+  }
+
+  @keyframes dear-ceo-spin {
+    to { transform: none; }
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .letter-item.selected {
+    outline: 2px solid var(--dear-ceo-primary);
+  }
+
+  .theme-tag,
+  .trend-status,
+  .complexity-badge {
+    border: 1px solid currentColor;
+  }
+
+  .action-item {
+    border-left-width: 4px;
+  }
+}
