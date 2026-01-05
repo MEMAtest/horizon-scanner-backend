@@ -2,6 +2,7 @@ const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector
 const { getDashboardStyles } = require('./styles')
 const { getDashboardScripts } = require('./scripts')
 const { formatCurrentDate } = require('./helpers')
+const { renderDashboardCharts } = require('./charts')
 
 function buildDashboardPage({
   sidebar,
@@ -42,6 +43,7 @@ function buildDashboardPage({
               Real-time regulatory monitoring with AI-powered analysis and business impact intelligence.
             </p>
             ${renderStatsGrid(stats)}
+            ${renderDashboardCharts(updates)}
           </header>
           ${renderFilters({ filterOptions, currentFilters })}
           <section class="updates-container">

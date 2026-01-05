@@ -11,7 +11,8 @@ const {
   renderTopFinesWidget,
   renderAuthorityHeatmap,
   renderSectorPressureChart,
-  renderQuickActionsWidget
+  renderQuickActionsWidget,
+  renderDashboardCharts
 } = require('./widgets')
 
 function buildHomePageHtml({ sidebar, commonStyles, clientScripts, recentUpdates, systemStats, topFines, aiInsights, upcomingEvents }) {
@@ -290,6 +291,8 @@ function buildHomePageHtml({ sidebar, commonStyles, clientScripts, recentUpdates
                         ${renderAuthorityHeatmap(recentUpdates)}
                         ${renderSectorPressureChart(recentUpdates)}
                     </section>
+
+                    ${renderDashboardCharts(recentUpdates)}
 
                     ${renderTopFinesWidget(topFines)}
 

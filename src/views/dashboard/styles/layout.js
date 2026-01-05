@@ -698,6 +698,109 @@ function getDashboardLayoutStyles() {
         color: #059669;
       }
 
+      /* Dashboard Charts Section - Collapsible */
+      .dashboard-charts-section {
+        margin-top: 24px;
+        margin-bottom: 10px;
+      }
+
+      .charts-header.charts-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        cursor: pointer;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .charts-header.charts-toggle:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+      }
+
+      .charts-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+      }
+
+      .charts-toggle-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        transition: transform 0.3s ease;
+      }
+
+      .dashboard-charts-section:not(.collapsed) .charts-toggle-icon {
+        transform: rotate(180deg);
+      }
+
+      .dashboard-charts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, opacity 0.3s ease;
+        opacity: 1;
+      }
+
+      .dashboard-charts-section.collapsed .dashboard-charts-grid {
+        max-height: 0;
+        opacity: 0;
+        margin: 0;
+      }
+
+      .dashboard-charts-section.collapsed .charts-header.charts-toggle {
+        margin-bottom: 0;
+      }
+
+      .dashboard-chart-card {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+      }
+
+      .dashboard-chart-card .chart-card-header {
+        margin-bottom: 12px;
+      }
+
+      .dashboard-chart-card .chart-card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+      }
+
+      .dashboard-chart-card .chart-card-subtitle {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 2px;
+      }
+
+      .chart-canvas-container {
+        position: relative;
+        height: 200px;
+        width: 100%;
+      }
+
+      .chart-canvas-container.timeline-chart {
+        height: 160px;
+      }
+
+      @media (max-width: 900px) {
+        .dashboard-charts-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       `
 }
 

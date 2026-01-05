@@ -672,6 +672,300 @@ function renderQuickActionsWidget(updates = []) {
   `
 }
 
+// =========================================================================
+// Chart.js Based Charts (30-Day Activity, Impact Distribution, Sector Pressure)
+// =========================================================================
+
+function calculate30DayTimeline(updates = []) {
+  const timeline = {}
+  const now = new Date()
+
+  // Initialize all 30 days with 0
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    const key = d.toISOString().split('T')[0]
+    timeline[key] = 0
+  }
+
+  // Count updates per day
+  updates.forEach(update => {
+    const dateStr = update.publishedDate || update.published_date || update.fetchedDate || update.createdAt
+    if (!dateStr) return
+    const date = new Date(dateStr)
+    if (Number.isNaN(date.getTime())) return
+    const key = date.toISOString().split('T')[0]
+    if (timeline.hasOwnProperty(key)) {
+      timeline[key]++
+    }
+  })
+
+  return Object.entries(timeline)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, count]) => ({ date, count }))
+}
+
+function calculateImpactDistribution(updates = []) {
+  const distribution = { Significant: 0, Moderate: 0, Informational: 0 }
+
+  updates.forEach(update => {
+    const impact = (update.impactLevel || update.impact_level || 'Informational')
+    if (impact === 'Significant' || impact === 'Critical' || impact === 'High') {
+      distribution.Significant++
+    } else if (impact === 'Moderate' || impact === 'Medium') {
+      distribution.Moderate++
+    } else {
+      distribution.Informational++
+    }
+  })
+
+  return distribution
+}
+
+function renderDashboardCharts(updates = []) {
+  const timelineData = calculate30DayTimeline(updates)
+  const impactData = calculateImpactDistribution(updates)
+  const sectorData = calculateSectorPressure(updates)
+
+  // Prepare chart data as JSON for client-side rendering (escaped to prevent XSS)
+  const chartDataJson = JSON.stringify({
+    timeline: {
+      labels: timelineData.map(d => {
+        const date = new Date(d.date)
+        return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      }),
+      values: timelineData.map(d => d.count)
+    },
+    impact: {
+      labels: ['Significant', 'Moderate', 'Informational'],
+      values: [impactData.Significant, impactData.Moderate, impactData.Informational],
+      colors: ['rgba(220, 38, 38, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)'],
+      borderColors: ['#dc2626', '#f59e0b', '#3b82f6']
+    },
+    sectors: {
+      labels: sectorData.map(s => s.name),
+      values: sectorData.map(s => s.pressure),
+      colors: sectorData.map(s =>
+        s.level === 'high' ? 'rgba(239, 68, 68, 0.8)' :
+        s.level === 'medium' ? 'rgba(245, 158, 11, 0.8)' :
+        'rgba(16, 185, 129, 0.8)'
+      )
+    }
+  }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
+
+  return `
+    <section class="dashboard-charts-section">
+      <div class="section-header">
+        <h2 class="section-title">Analytics Overview</h2>
+        <a class="panel-link" href="/regulatory-analytics">Full analytics →</a>
+      </div>
+      <div class="dashboard-charts-grid">
+        <!-- 30-Day Activity Timeline -->
+        <div class="dashboard-chart-card timeline-chart">
+          <div class="chart-card-header">
+            <div>
+              <h3 class="chart-card-title">30-Day Activity</h3>
+              <p class="chart-card-subtitle">Regulatory updates over time</p>
+            </div>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="activityTimelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Impact Distribution -->
+        <div class="dashboard-chart-card impact-chart">
+          <div class="chart-card-header">
+            <div>
+              <h3 class="chart-card-title">Impact Distribution</h3>
+              <p class="chart-card-subtitle">Updates by severity</p>
+            </div>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="impactDistributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Sector Pressure -->
+        <div class="dashboard-chart-card sector-chart">
+          <div class="chart-card-header">
+            <div>
+              <h3 class="chart-card-title">Sector Pressure</h3>
+              <p class="chart-card-subtitle">Regulatory burden by sector</p>
+            </div>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="sectorPressureChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      (function() {
+        const chartData = ${chartDataJson};
+
+        document.addEventListener('DOMContentLoaded', function() {
+          // 30-Day Activity Timeline (Line Chart)
+          const timelineCtx = document.getElementById('activityTimelineChart');
+          if (timelineCtx) {
+            new Chart(timelineCtx, {
+              type: 'line',
+              data: {
+                labels: chartData.timeline.labels,
+                datasets: [{
+                  label: 'Updates',
+                  data: chartData.timeline.values,
+                  borderColor: '#3b82f6',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                  pointHoverBackgroundColor: '#3b82f6'
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: '#1f2937',
+                    titleFont: { size: 11 },
+                    bodyFont: { size: 11 },
+                    padding: 8,
+                    cornerRadius: 6
+                  }
+                },
+                scales: {
+                  x: {
+                    display: true,
+                    grid: { display: false },
+                    ticks: {
+                      font: { size: 9 },
+                      maxRotation: 45,
+                      maxTicksLimit: 8
+                    }
+                  },
+                  y: {
+                    display: true,
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { font: { size: 10 }, stepSize: 1 }
+                  }
+                },
+                interaction: {
+                  intersect: false,
+                  mode: 'index'
+                }
+              }
+            });
+          }
+
+          // Impact Distribution (Polar Area Chart)
+          const impactCtx = document.getElementById('impactDistributionChart');
+          if (impactCtx) {
+            new Chart(impactCtx, {
+              type: 'polarArea',
+              data: {
+                labels: chartData.impact.labels,
+                datasets: [{
+                  data: chartData.impact.values,
+                  backgroundColor: chartData.impact.colors,
+                  borderColor: chartData.impact.borderColors,
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: {
+                      boxWidth: 12,
+                      padding: 12,
+                      font: { size: 11 },
+                      usePointStyle: true,
+                      pointStyle: 'circle'
+                    }
+                  },
+                  tooltip: {
+                    backgroundColor: '#1f2937',
+                    titleFont: { size: 11 },
+                    bodyFont: { size: 11 },
+                    padding: 8,
+                    cornerRadius: 6
+                  }
+                },
+                scales: {
+                  r: {
+                    ticks: { display: false },
+                    grid: { color: '#e5e7eb' }
+                  }
+                }
+              }
+            });
+          }
+
+          // Sector Pressure (Horizontal Bar Chart)
+          const sectorCtx = document.getElementById('sectorPressureChart');
+          if (sectorCtx) {
+            new Chart(sectorCtx, {
+              type: 'bar',
+              data: {
+                labels: chartData.sectors.labels,
+                datasets: [{
+                  data: chartData.sectors.values,
+                  backgroundColor: chartData.sectors.colors,
+                  borderRadius: 4,
+                  borderSkipped: false
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: '#1f2937',
+                    titleFont: { size: 11 },
+                    bodyFont: { size: 11 },
+                    padding: 8,
+                    cornerRadius: 6,
+                    callbacks: {
+                      label: function(context) {
+                        return 'Pressure: ' + context.raw + '%';
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    display: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { font: { size: 10 } },
+                    max: 100
+                  },
+                  y: {
+                    display: true,
+                    grid: { display: false },
+                    ticks: { font: { size: 10 } }
+                  }
+                }
+              }
+            });
+          }
+        });
+      })();
+    </script>
+  `
+}
+
 module.exports = {
   formatNumber,
   generateInsightCards,
@@ -683,5 +977,6 @@ module.exports = {
   renderTopFinesWidget,
   renderAuthorityHeatmap,
   renderSectorPressureChart,
-  renderQuickActionsWidget
+  renderQuickActionsWidget,
+  renderDashboardCharts
 }

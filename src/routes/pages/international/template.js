@@ -405,7 +405,7 @@ function renderInternationalPage({
               <div class="chart-card">
                 <h3 class="chart-title">Updates by Region</h3>
                 <div class="chart-container">
-                  <div id="regionOrbit" class="region-orbit" role="img" aria-label="Updates by region"></div>
+                  <canvas id="regionChart"></canvas>
                 </div>
               </div>
               <div class="chart-card">
@@ -544,8 +544,8 @@ function renderInternationalPage({
       <!-- Chart.js -->
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
       <script>
-        // Chart data from server
-        const chartData = ${JSON.stringify(chartData)};
+        // Chart data from server (escaped to prevent XSS)
+        const chartData = ${JSON.stringify(chartData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')};
 
         // Colors for charts
         const regionColors = {
@@ -557,95 +557,50 @@ function renderInternationalPage({
           'Unknown': '#d1d5db'
         };
 
-        const regionIconSvgs = ${JSON.stringify(REGION_ICON_SVGS).replace(/</g, '\\u003c')};
-        let orbitResizeTimer;
-
-        function renderRegionOrbit() {
-          const orbit = document.getElementById('regionOrbit');
-          if (!orbit) return;
-
-          const distribution = chartData.regionDistribution || {};
-          const entries = Object.entries(distribution)
-            .filter(([, value]) => Number(value) > 0);
-
-          if (!entries.length) {
-            orbit.innerHTML = '<div class="chart-empty">No region data yet</div>';
-            return;
-          }
-
-          const total = entries.reduce((sum, [, value]) => sum + Number(value || 0), 0);
-          const values = entries.map(([, value]) => Number(value || 0));
-          const maxValue = Math.max(...values, 1);
-
-          orbit.innerHTML = '';
-
-          const ring = document.createElement('div');
-          ring.className = 'orbit-ring';
-          orbit.appendChild(ring);
-
-          const center = document.createElement('div');
-          center.className = 'orbit-center';
-          center.innerHTML = '<div class="orbit-total">' + total + '</div><div class="orbit-caption">International updates</div>';
-          orbit.appendChild(center);
-
-          const width = orbit.clientWidth || 220;
-          const height = orbit.clientHeight || 220;
-          const radius = Math.min(width, height) * 0.32;
-          const centerX = width / 2;
-          const centerY = height / 2;
-          const sorted = entries.sort((a, b) => b[1] - a[1]);
-
-          sorted.forEach(([region, value], index) => {
-            const angle = (index / sorted.length) * Math.PI * 2 - Math.PI / 2;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
-            const minSize = 34;
-            const maxSize = 58;
-            const size = minSize + (Number(value || 0) / maxValue) * (maxSize - minSize);
-
-            const node = document.createElement('div');
-            node.className = 'orbit-node';
-            node.style.left = x + 'px';
-            node.style.top = y + 'px';
-            node.style.setProperty('--node-color', regionColors[region] || '#6b7280');
-            node.style.setProperty('--node-size', Math.round(size) + 'px');
-            node.style.setProperty('--node-index', index);
-            node.setAttribute('title', region + ': ' + value + ' updates');
-
-            const bubble = document.createElement('div');
-            bubble.className = 'orbit-node-bubble';
-
-            const icon = document.createElement('span');
-            icon.className = 'orbit-node-icon';
-            icon.innerHTML = regionIconSvgs[region] || regionIconSvgs.all || '';
-
-            const count = document.createElement('span');
-            count.className = 'orbit-node-count';
-            count.textContent = value;
-
-            bubble.appendChild(icon);
-            bubble.appendChild(count);
-
-            const label = document.createElement('div');
-            label.className = 'orbit-node-label';
-            label.textContent = region;
-
-            node.appendChild(bubble);
-            node.appendChild(label);
-            orbit.appendChild(node);
-          });
-        }
-
-        function scheduleRegionOrbit() {
-          if (orbitResizeTimer) {
-            window.clearTimeout(orbitResizeTimer);
-          }
-          orbitResizeTimer = window.setTimeout(renderRegionOrbit, 150);
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-          renderRegionOrbit();
-          window.addEventListener('resize', scheduleRegionOrbit);
+          // Region Polar Area Chart
+          const regionCtx = document.getElementById('regionChart');
+          if (regionCtx && chartData.regionDistribution) {
+            const distribution = chartData.regionDistribution;
+            const labels = Object.keys(distribution);
+            const values = Object.values(distribution);
+            const colors = labels.map(r => regionColors[r] || '#6b7280');
+
+            new Chart(regionCtx, {
+              type: 'polarArea',
+              data: {
+                labels: labels,
+                datasets: [{
+                  data: values,
+                  backgroundColor: colors.map(c => c.replace(')', ', 0.8)').replace('rgb', 'rgba').replace('#', 'rgba(').replace(/([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i, (m, r, g, b) => parseInt(r, 16) + ', ' + parseInt(g, 16) + ', ' + parseInt(b, 16))),
+                  borderColor: colors,
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'right',
+                    labels: {
+                      boxWidth: 12,
+                      padding: 8,
+                      font: { size: 11 },
+                      usePointStyle: true,
+                      pointStyle: 'circle'
+                    }
+                  }
+                },
+                scales: {
+                  r: {
+                    ticks: { display: false },
+                    grid: { color: '#e5e7eb' }
+                  }
+                }
+              }
+            });
+          }
 
           // Top Authorities Bar Chart
           const authCtx = document.getElementById('authoritiesChart');

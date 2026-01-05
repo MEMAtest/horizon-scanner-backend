@@ -274,6 +274,83 @@ function getHomePageStyles() {
                 .pressure-bar.low { background: linear-gradient(90deg, #10b981 0%, #34d399 100%); }
                 .pressure-value { font-size: 0.75rem; font-weight: 700; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
+                /* Dashboard Charts Section (Chart.js) */
+                .dashboard-charts-section {
+                  background: #ffffff;
+                  border-radius: 16px;
+                  padding: 24px;
+                  border: 1px solid #e2e8f0;
+                  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+                  margin-bottom: 32px;
+                }
+                .dashboard-charts-section .section-header {
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  margin-bottom: 20px;
+                }
+                .dashboard-charts-section .section-title {
+                  font-size: 1.25rem;
+                  font-weight: 600;
+                  color: #0f172a;
+                  margin: 0;
+                }
+                .dashboard-charts-grid {
+                  display: grid;
+                  grid-template-columns: 1.5fr 1fr 1fr;
+                  gap: 20px;
+                }
+                .dashboard-chart-card {
+                  background: #f8fafc;
+                  border-radius: 12px;
+                  padding: 16px;
+                  border: 1px solid #e2e8f0;
+                }
+                .dashboard-chart-card .chart-card-header {
+                  margin-bottom: 12px;
+                }
+                .dashboard-chart-card .chart-card-title {
+                  font-size: 0.95rem;
+                  font-weight: 600;
+                  color: #0f172a;
+                  margin: 0;
+                }
+                .dashboard-chart-card .chart-card-subtitle {
+                  font-size: 0.75rem;
+                  color: #64748b;
+                  margin-top: 2px;
+                }
+                .chart-canvas-container {
+                  position: relative;
+                  height: 180px;
+                  width: 100%;
+                }
+                .timeline-chart .chart-canvas-container {
+                  height: 160px;
+                }
+                .impact-chart .chart-canvas-container {
+                  height: 200px;
+                }
+                .sector-chart .chart-canvas-container {
+                  height: 180px;
+                }
+                @media (max-width: 1024px) {
+                  .dashboard-charts-grid {
+                    grid-template-columns: 1fr 1fr;
+                  }
+                  .timeline-chart {
+                    grid-column: span 2;
+                  }
+                }
+                @media (max-width: 768px) {
+                  .dashboard-charts-grid {
+                    grid-template-columns: 1fr;
+                  }
+                  .timeline-chart {
+                    grid-column: span 1;
+                  }
+                }
+
                 /* Top Fines Widget */
                 .fines-widget { background: #ffffff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); margin-bottom: 32px; }
                 .fines-widget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
