@@ -268,18 +268,23 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
         }
 
-        async function moveBookmark(updateUrl, collectionId, updateId) {
+        async function moveBookmark(updateUrl, collectionId, updateId, pinnedItemId) {
           const url = normalizeId(updateUrl);
           const nextCollectionId = normalizeId(collectionId);
           const normalizedUpdateId = normalizeId(updateId);
-          if ((!url && !normalizedUpdateId) || !nextCollectionId) return;
-          const urlParam = url || normalizedUpdateId;
+          const normalizedPinnedId = normalizeId(pinnedItemId);
+          if ((!url && !normalizedUpdateId && !normalizedPinnedId) || !nextCollectionId) return;
+          const urlParam = url || normalizedUpdateId || normalizedPinnedId;
 
           try {
             const response = await fetch('/api/workspace/pin/' + encodeURIComponent(urlParam) + '/collection', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ collectionId: nextCollectionId, updateId: normalizedUpdateId || undefined })
+              body: JSON.stringify({
+                collectionId: nextCollectionId,
+                updateId: normalizedUpdateId || undefined,
+                pinnedItemId: normalizedPinnedId || undefined
+              })
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || !data.success) {
@@ -308,7 +313,8 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
               body: JSON.stringify({
                 topicArea: nextTopicArea,
                 updateId: normalizedUpdateId || undefined,
-                itemId: normalizedItemId || undefined
+                itemId: normalizedItemId || undefined,
+                pinnedItemId: normalizedItemId || undefined
               })
             });
             const data = await response.json().catch(() => ({}));
@@ -564,7 +570,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
 
 		          items.forEach(item => {
-		            const itemId = normalizeId(item.id || '');
+		            const itemId = normalizeId(item.id || item.item_id || item.pinned_id || item.pinnedId || '');
 		            const url = normalizeId(item.update_url || item.updateUrl || item.url);
 		            const title = normalizeId(item.update_title || item.updateTitle || item.title) || 'Untitled update';
 		            const rawAuthority = normalizeId(item.update_authority || item.updateAuthority || item.authority);
@@ -613,7 +619,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
 
             const select = card.querySelector('select[data-role=\"collection-select\"]');
             if (select) {
-              select.addEventListener('change', () => moveBookmark(url, select.value, updateId));
+              select.addEventListener('change', () => moveBookmark(url, select.value, updateId, itemId));
             }
 
             const topicSelect = card.querySelector('select[data-role=\"topic-select\"]');
@@ -816,6 +822,11 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
         // Chart.js instances for cleanup
         let activityChartInstance = null;
         let themesChartInstance = null;
+        let deadlineRunwayInstance = null;
+        let authorityTrackerInstance = null;
+
+        // Intelligence widgets state
+        let intelligenceStats = null;
 
         // Chart.js color palette
         const chartColors = {
@@ -1044,6 +1055,233 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           if (totalEl) totalEl.textContent = total;
         }
 
+        // === INTELLIGENCE WIDGETS ===
+
+        async function fetchIntelligenceStats() {
+          try {
+            console.log('[ProfileHub] Fetching intelligence stats...');
+            const response = await fetch('/api/workspace/intelligence-stats');
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+              console.warn('[ProfileHub] Intelligence stats fetch failed:', data.error);
+              return null;
+            }
+            console.log('[ProfileHub] Intelligence stats received:', data);
+            return data;
+          } catch (error) {
+            console.error('[ProfileHub] Intelligence stats error:', error);
+            return null;
+          }
+        }
+
+        async function renderIntelligenceWidgets() {
+          console.log('[ProfileHub] Rendering intelligence widgets...');
+          intelligenceStats = await fetchIntelligenceStats();
+          if (!intelligenceStats) {
+            console.warn('[ProfileHub] No intelligence stats, using fallback');
+            intelligenceStats = {
+              deadlineBuckets: { thisWeek: 0, twoWeeks: 0, thirtyDays: 0, sixtyNinety: 0 },
+              authorityActivity: []
+            };
+          }
+
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            renderDeadlineRunway();
+            renderAuthorityTracker();
+          }, 100);
+        }
+
+        function renderDeadlineRunway() {
+          const canvas = document.getElementById('deadlineRunwayChart');
+          const totalsEl = document.getElementById('totalDeadlines');
+
+          console.log('[ProfileHub] Rendering Deadline Runway, canvas:', !!canvas);
+          if (!canvas) {
+            console.warn('[ProfileHub] Deadline Runway canvas not found');
+            return;
+          }
+
+          const buckets = intelligenceStats?.deadlineBuckets || { thisWeek: 0, twoWeeks: 0, thirtyDays: 0, sixtyNinety: 0 };
+          const total = (buckets.thisWeek || 0) + (buckets.twoWeeks || 0) + (buckets.thirtyDays || 0) + (buckets.sixtyNinety || 0);
+
+          console.log('[ProfileHub] Deadline buckets:', buckets, 'Total:', total);
+
+          if (totalsEl) {
+            totalsEl.textContent = total + ' deadline' + (total !== 1 ? 's' : '') + ' ahead';
+          }
+
+          // Destroy existing chart
+          if (deadlineRunwayInstance) {
+            deadlineRunwayInstance.destroy();
+            deadlineRunwayInstance = null;
+          }
+
+          try {
+            const ctx = canvas.getContext('2d');
+            deadlineRunwayInstance = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: ['This Week', '2 Weeks', '30 Days', '60-90 Days'],
+                datasets: [{
+                  data: [buckets.thisWeek || 0, buckets.twoWeeks || 0, buckets.thirtyDays || 0, buckets.sixtyNinety || 0],
+                  backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#64748b'],
+                  borderRadius: 6,
+                  barThickness: 28
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    padding: 12,
+                    titleFont: { size: 12, weight: '600' },
+                    bodyFont: { size: 11 },
+                    cornerRadius: 8,
+                    callbacks: {
+                      label: function(context) {
+                        const value = context.parsed.x;
+                        return value + ' deadline' + (value !== 1 ? 's' : '');
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                      font: { size: 10 },
+                      color: '#94a3b8',
+                      stepSize: 5
+                    },
+                    border: { display: false }
+                  },
+                  y: {
+                    grid: { display: false },
+                    ticks: {
+                      font: { size: 11, weight: '500' },
+                      color: '#475569'
+                    },
+                    border: { display: false }
+                  }
+                }
+              }
+            });
+            console.log('[ProfileHub] Deadline Runway chart created successfully');
+          } catch (err) {
+            console.error('[ProfileHub] Deadline Runway chart error:', err);
+          }
+        }
+
+        function renderAuthorityTracker() {
+          const canvas = document.getElementById('authorityTrackerChart');
+
+          console.log('[ProfileHub] Rendering Authority Tracker, canvas:', !!canvas);
+          if (!canvas) {
+            console.warn('[ProfileHub] Authority Tracker canvas not found');
+            return;
+          }
+
+          const authorities = intelligenceStats?.authorityActivity || [];
+          console.log('[ProfileHub] Authority data:', authorities);
+
+          if (authorities.length === 0) {
+            console.warn('[ProfileHub] No authority data available');
+            return;
+          }
+
+          // Prepare data
+          const labels = authorities.map(a => a.name || 'Unknown');
+          const counts = authorities.map(a => a.count || 0);
+          const momentums = authorities.map(a => a.momentum || 'stable');
+
+          // Color by momentum
+          const backgroundColors = momentums.map(m => {
+            if (m === 'up') return '#3b82f6';
+            if (m === 'down') return '#cbd5e1';
+            return '#64748b';
+          });
+
+          // Destroy existing chart
+          if (authorityTrackerInstance) {
+            authorityTrackerInstance.destroy();
+            authorityTrackerInstance = null;
+          }
+
+          try {
+            const ctx = canvas.getContext('2d');
+            authorityTrackerInstance = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: labels.map((label, i) => {
+                  const momentum = momentums[i];
+                  const arrow = momentum === 'up' ? ' ▲' : momentum === 'down' ? ' ▼' : ' ●';
+                  return label + arrow;
+                }),
+                datasets: [{
+                  data: counts,
+                  backgroundColor: backgroundColors,
+                  borderRadius: 6,
+                  barThickness: 22
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    padding: 12,
+                    titleFont: { size: 12, weight: '600' },
+                    bodyFont: { size: 11 },
+                    cornerRadius: 8,
+                    callbacks: {
+                      title: function(context) {
+                        return labels[context[0].dataIndex];
+                      },
+                      label: function(context) {
+                        const idx = context.dataIndex;
+                        const momentum = momentums[idx];
+                        const trendText = momentum === 'up' ? 'Increasing' : momentum === 'down' ? 'Decreasing' : 'Stable';
+                        return context.parsed.x + ' updates (' + trendText + ')';
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    ticks: {
+                      font: { size: 10 },
+                      color: '#94a3b8'
+                    },
+                    border: { display: false }
+                  },
+                  y: {
+                    grid: { display: false },
+                    ticks: {
+                      font: { size: 11, weight: '500' },
+                      color: '#475569'
+                    },
+                    border: { display: false }
+                  }
+                }
+              }
+            });
+            console.log('[ProfileHub] Authority Tracker chart created successfully');
+          } catch (err) {
+            console.error('[ProfileHub] Authority Tracker chart error:', err);
+          }
+        }
+
         function bindSavedSearches() {
           const container = document.getElementById('savedSearchesList');
           if (!container) return;
@@ -1188,6 +1426,10 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           bindEventsToggle();
           render();
           refreshAll();
+          // Render intelligence widgets asynchronously
+          renderIntelligenceWidgets().catch(err => {
+            console.warn('[ProfileHub] Intelligence widgets error:', err);
+          });
         }
 
         if (document.readyState === 'loading') {

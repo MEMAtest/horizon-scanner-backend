@@ -436,7 +436,7 @@ function registerWorkspaceRoutes(router) {
   router.put('/workspace/pin/:url/collection', async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url)
-    const { collectionId, updateId } = req.body || {}
+    const { collectionId, updateId, pinnedItemId } = req.body || {}
     if (!collectionId) {
       return res.status(400).json({
         success: false,
@@ -444,7 +444,7 @@ function registerWorkspaceRoutes(router) {
       })
     }
 
-    const updated = await dbService.setPinnedItemCollection(url, collectionId, { updateId })
+    const updated = await dbService.setPinnedItemCollection(url, collectionId, { updateId, pinnedItemId })
     if (!updated) {
       return res.status(404).json({
         success: false,
@@ -469,9 +469,9 @@ function registerWorkspaceRoutes(router) {
   router.put('/workspace/pin/:url/topic', async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url)
-    const { topicArea, topic, updateId, itemId } = req.body || {}
+    const { topicArea, topic, updateId, itemId, pinnedItemId } = req.body || {}
     const requested = topicArea != null ? topicArea : topic
-    const updated = await dbService.setPinnedItemTopicArea(url, requested, { updateId, itemId })
+    const updated = await dbService.setPinnedItemTopicArea(url, requested, { updateId, itemId, pinnedItemId })
     if (!updated) {
       return res.status(404).json({
         success: false,
@@ -845,6 +845,28 @@ function registerWorkspaceRoutes(router) {
       }
     })
   }
+  })
+
+  // Intelligence Stats - for Profile Hub dashboard widgets
+  router.get('/workspace/intelligence-stats', async (req, res) => {
+    try {
+      const stats = await dbService.getIntelligenceStats()
+      res.json({
+        success: true,
+        ...stats,
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('X API Error getting intelligence stats:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        pressureScore: 0,
+        pressureTrend: '0%',
+        deadlineBuckets: { thisWeek: 0, twoWeeks: 0, thirtyDays: 0, sixtyNinety: 0 },
+        authorityActivity: []
+      })
+    }
   })
 }
 

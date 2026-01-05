@@ -762,9 +762,121 @@ function getWorkspaceHubStyles() {
         font-size: 0.85rem;
       }
 
+      /* Intelligence Widgets Row */
+      .widgets-row.intelligence-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+
+      /* Widget SVG Icon Styling */
+      .widget-icon-svg {
+        flex-shrink: 0;
+        color: #3b82f6;
+      }
+
+      /* Deadline Runway Widget */
+      .deadline-runway-widget .widget-body {
+        padding: 14px 16px;
+      }
+
+      .runway-chart-container {
+        height: 130px;
+      }
+
+      .runway-legend {
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.68rem;
+        color: #64748b;
+      }
+
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+      }
+
+      .legend-dot.critical { background: #ef4444; }
+      .legend-dot.high { background: #f59e0b; }
+      .legend-dot.medium { background: #3b82f6; }
+      .legend-dot.low { background: #94a3b8; }
+
+      .runway-totals {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #f1f5f9;
+        text-align: center;
+      }
+
+      .runway-total {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      /* Authority Tracker Widget */
+      .authority-tracker-widget .widget-header {
+        position: relative;
+      }
+
+      .widget-period {
+        font-size: 0.65rem;
+        color: #94a3b8;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .authority-tracker-widget .widget-body {
+        padding: 14px 16px;
+      }
+
+      .authority-chart-container {
+        height: 160px;
+      }
+
+      .authority-momentum-legend {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .momentum-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.68rem;
+        color: #64748b;
+      }
+
+      .momentum-arrow {
+        font-size: 0.7rem;
+        font-weight: 600;
+      }
+
+      .momentum-arrow.up { color: #3b82f6; }
+      .momentum-arrow.stable { color: #64748b; }
+      .momentum-arrow.down { color: #94a3b8; }
+
       /* Responsive */
       @media (max-width: 1100px) {
         .widgets-row {
+          grid-template-columns: 1fr;
+        }
+
+        .widgets-row.intelligence-row {
           grid-template-columns: 1fr;
         }
       }

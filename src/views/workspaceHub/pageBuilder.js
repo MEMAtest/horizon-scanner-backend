@@ -32,6 +32,10 @@ function buildWorkspaceHubPage({
   const activityGraphWidget = renderActivityGraphWidget()
   const savedSearchesWidget = renderSavedSearchesWidget(savedSearches || [])
 
+  // Intelligence widgets (2 widgets only)
+  const deadlineRunwayWidget = renderDeadlineRunwayWidget()
+  const authorityTrackerWidget = renderAuthorityTrackerWidget()
+
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -76,6 +80,12 @@ function buildWorkspaceHubPage({
           <!-- Second Row: Activity Graph (full width) -->
           <div class="widgets-row single">
             ${activityGraphWidget}
+          </div>
+
+          <!-- Intelligence Widgets Row: Runway + Authority -->
+          <div class="widgets-row intelligence-row">
+            ${deadlineRunwayWidget}
+            ${authorityTrackerWidget}
           </div>
 
           <!-- Main Content Grid: Collections & Bookmarks -->
@@ -185,11 +195,20 @@ function renderUpcomingEventsWidget(events) {
       }).join('')
     : '<div class="empty-events">No upcoming events</div>'
 
+  // Custom SVG icon - calendar with dot
+  const calendarIcon = `<svg class="widget-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+    <circle cx="12" cy="15" r="2" fill="#3b82f6" stroke="#3b82f6"/>
+  </svg>`
+
   return `
     <div class="widget upcoming-events-widget">
       <div class="widget-header">
         <h3>
-          <span class="widget-icon">📅</span>
+          ${calendarIcon}
           Upcoming Events
         </h3>
         <div class="widget-controls">
@@ -328,11 +347,19 @@ function renderBookmarkThemesWidget(pinnedItems) {
       </div>`
     : '<div class="empty-themes">No bookmarks yet</div>'
 
+  // Custom SVG icon - pie/doughnut chart
+  const themesIcon = `<svg class="widget-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 3v9l6.5 6.5"/>
+    <path d="M12 12L5.5 18.5"/>
+    <circle cx="12" cy="12" r="3" fill="#3b82f6" stroke="#3b82f6"/>
+  </svg>`
+
   return `
     <div class="widget bookmark-themes-widget">
       <div class="widget-header">
         <h3>
-          <span class="widget-icon">📊</span>
+          ${themesIcon}
           Bookmark Themes
         </h3>
       </div>
@@ -350,13 +377,19 @@ function renderBookmarkThemesWidget(pinnedItems) {
  * Render Activity Graph Widget - Chart.js Bar Chart
  */
 function renderActivityGraphWidget() {
+  // Custom SVG icon - activity/pulse line
+  const activityIcon = `<svg class="widget-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12h4l3-9 4 18 3-9h4"/>
+    <circle cx="20" cy="12" r="2" fill="#3b82f6" stroke="#3b82f6"/>
+  </svg>`
+
   // The actual data will be populated client-side from localStorage
   // This renders the container with Chart.js canvas
   return `
     <div class="widget activity-graph-widget">
       <div class="widget-header">
         <h3>
-          <span class="widget-icon">⚡</span>
+          ${activityIcon}
           Activity (Last 30 Days)
         </h3>
       </div>
@@ -370,6 +403,81 @@ function renderActivityGraphWidget() {
             <span class="chart-stat">Avg: <strong id="activityAvg">0</strong>/day</span>
             <span class="chart-stat">Total: <strong id="activityTotal">0</strong></span>
           </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Render Deadline Runway Widget - Stacked horizontal bar of upcoming deadlines
+ */
+function renderDeadlineRunwayWidget() {
+  // Custom SVG icon - timeline/runway style
+  const runwayIcon = `<svg class="widget-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12h18"/>
+    <path d="M3 12l4-4v8l-4-4"/>
+    <circle cx="10" cy="12" r="1.5" fill="currentColor"/>
+    <circle cx="15" cy="12" r="1.5" fill="currentColor"/>
+    <circle cx="20" cy="12" r="1.5" fill="currentColor"/>
+    <path d="M10 8v-2" stroke-width="1.4"/>
+    <path d="M15 8v-3" stroke-width="1.4"/>
+    <path d="M20 8v-4" stroke-width="1.4"/>
+  </svg>`
+
+  return `
+    <div class="widget deadline-runway-widget">
+      <div class="widget-header">
+        <h3>
+          ${runwayIcon}
+          Deadline Runway
+        </h3>
+        <span class="widget-period">Upcoming</span>
+      </div>
+      <div class="widget-body">
+        <div class="runway-chart-container" style="position: relative; height: 140px;">
+          <canvas id="deadlineRunwayChart"></canvas>
+        </div>
+        <div class="runway-totals" id="runwayTotals">
+          <span class="runway-total" id="totalDeadlines">Loading...</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Render Authority Tracker Widget - Horizontal bar chart with momentum indicators
+ */
+function renderAuthorityTrackerWidget() {
+  // Custom SVG icon - authority/building with pulse style
+  const authorityIcon = `<svg class="widget-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3L4 7v13h16V7l-8-4z"/>
+    <path d="M8 11v5"/>
+    <path d="M12 11v5"/>
+    <path d="M16 11v5"/>
+    <path d="M4 20h16"/>
+    <circle cx="19" cy="5" r="2.5" fill="#3b82f6" stroke="#3b82f6"/>
+    <path d="M19 3v4M17 5h4" stroke="#fff" stroke-width="1.2"/>
+  </svg>`
+
+  return `
+    <div class="widget authority-tracker-widget">
+      <div class="widget-header">
+        <h3>
+          ${authorityIcon}
+          Authority Activity
+        </h3>
+        <span class="widget-period">Last 30 days</span>
+      </div>
+      <div class="widget-body">
+        <div class="authority-chart-container" style="position: relative; height: 180px;">
+          <canvas id="authorityTrackerChart"></canvas>
+        </div>
+        <div class="authority-momentum-legend">
+          <span class="momentum-item"><span class="momentum-arrow up">▲</span>Increasing</span>
+          <span class="momentum-item"><span class="momentum-arrow stable">●</span>Stable</span>
+          <span class="momentum-item"><span class="momentum-arrow down">▼</span>Decreasing</span>
         </div>
       </div>
     </div>
@@ -400,11 +508,18 @@ function renderSavedSearchesWidget(savedSearches) {
       }).join('')
     : '<div class="empty-searches">No saved searches yet. Save a search from the dashboard to see it here.</div>'
 
+  // Custom SVG icon - search/magnifier
+  const searchIcon = `<svg class="widget-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="7"/>
+    <path d="M21 21l-4.35-4.35"/>
+    <path d="M11 8v6M8 11h6" stroke-width="1.4"/>
+  </svg>`
+
   return `
     <div class="saved-searches-section">
       <div class="section-header">
         <h3>
-          <span class="widget-icon">🔍</span>
+          ${searchIcon}
           Saved Searches
         </h3>
         <button class="btn-small" id="saveCurrentSearchBtn">+ Save Current</button>

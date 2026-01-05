@@ -31,6 +31,7 @@ const {
   UPDATE_ALERT_STATUS_QUERY,
   UPDATE_PINNED_ITEM_COLLECTION_QUERY,
   UPDATE_PINNED_ITEM_COLLECTION_BY_UPDATE_ID_QUERY,
+  UPDATE_PINNED_ITEM_COLLECTION_BY_ID_QUERY,
   UPDATE_PINNED_ITEM_NOTES_QUERY,
   UPDATE_PINNED_ITEM_TOPIC_QUERY,
   UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY,
@@ -193,7 +194,9 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       const url = updateUrl != null ? String(updateUrl).trim() : ''
       const updateId = options.updateId || options.update_id
       const normalizedUpdateId = updateId != null ? String(updateId).trim() : ''
-      if (!url && !normalizedUpdateId) throw new Error('Update URL or id is required')
+      const itemId = options.pinnedItemId || options.pinned_item_id || options.itemId || options.item_id
+      const normalizedItemId = itemId != null ? String(itemId).trim() : ''
+      if (!url && !normalizedUpdateId && !normalizedItemId) throw new Error('Update URL, updateId, or itemId is required')
 
       const collections = await this.getBookmarkCollections()
       const target = collections.find(collection => String(collection.id) === String(collectionId))
@@ -219,6 +222,13 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
             )
             postgresUpdated = result.rowCount > 0
           }
+          if (!postgresUpdated && normalizedItemId) {
+            const result = await client.query(
+              UPDATE_PINNED_ITEM_COLLECTION_BY_ID_QUERY,
+              [normalizedItemId, normalizedCollectionId]
+            )
+            postgresUpdated = result.rowCount > 0
+          }
         } catch (error) {
           console.warn('📊 Using JSON fallback for pinned item collection update:', error.message)
         } finally {
@@ -235,7 +245,8 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
             const itemUpdateId = item?.update_id || item?.updateId || item?.metadata?.updateId || item?.metadata?.update_id
             const matchesUrl = url && itemUrl && String(itemUrl) === url
             const matchesUpdateId = normalizedUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedUpdateId
-            if (!matchesUrl && !matchesUpdateId) return item
+            const matchesItemId = normalizedItemId && item?.id != null && String(item.id) === normalizedItemId
+            if (!matchesUrl && !matchesUpdateId && !matchesItemId) return item
             const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
             metadata.collectionId = normalizedCollectionId
             delete metadata.collection_id
@@ -256,7 +267,7 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       const url = updateUrl != null ? String(updateUrl).trim() : ''
       const updateId = options.updateId || options.update_id
       const normalizedUpdateId = updateId != null ? String(updateId).trim() : ''
-      const itemId = options.itemId || options.item_id
+      const itemId = options.pinnedItemId || options.pinned_item_id || options.itemId || options.item_id
       const normalizedItemId = itemId != null ? String(itemId).trim() : ''
       if (!url && !normalizedUpdateId && !normalizedItemId) throw new Error('Update URL, updateId, or itemId is required')
 
@@ -309,10 +320,13 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
             const itemUpdateId = item?.update_id || item?.updateId || item?.metadata?.updateId || item?.metadata?.update_id
             const matchesUrl = url && itemUrl && String(itemUrl) === url
             const matchesUpdateId = normalizedUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedUpdateId
-            if (!matchesUrl && !matchesUpdateId) return item
+            const matchesItemId = normalizedItemId && item?.id != null && String(item.id) === normalizedItemId
+            if (!matchesUrl && !matchesUpdateId && !matchesItemId) return item
             const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
             if (normalizedTopicArea) {
               metadata.topicArea = normalizedTopicArea
+              delete metadata.topic_area
+              delete metadata.topic
             } else {
               delete metadata.topicArea
               delete metadata.topic_area
@@ -841,6 +855,158 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
 
     async saveFirmProfileJSON(profileData) {
       return json.saveFirmProfileJSON(this, profileData)
+    },
+
+    // Intelligence Stats for Profile Hub dashboard widgets
+    async getIntelligenceStats() {
+      await this.initialize()
+
+      const now = new Date()
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+      const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      const fourteenDays = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      const ninetyDays = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
+
+      let pressureScore = 50
+      let pressureTrend = '+0%'
+      let deadlineBuckets = { thisWeek: 0, twoWeeks: 0, thirtyDays: 0, sixtyNinety: 0 }
+      let authorityActivity = []
+
+      if (!this.fallbackMode && this.pool) {
+        const client = await this.pool.connect()
+        try {
+          // 1. Calculate Pressure Score components
+          // High impact count (last 30 days)
+          const impactResult = await client.query(`
+            SELECT
+              COUNT(*) FILTER (WHERE impact_level = 'Significant') as high_impact,
+              COUNT(*) FILTER (WHERE urgency = 'High') as high_urgency,
+              COUNT(*) as total
+            FROM regulatory_updates
+            WHERE created_at >= $1
+          `, [thirtyDaysAgo.toISOString()])
+
+          const { high_impact, high_urgency, total } = impactResult.rows[0] || {}
+          const highImpactScore = total > 0 ? (parseInt(high_impact) / parseInt(total)) * 100 : 0
+          const urgencyScore = total > 0 ? (parseInt(high_urgency) / parseInt(total)) * 100 : 0
+
+          // Previous 30 days for trend
+          const prevResult = await client.query(`
+            SELECT COUNT(*) as prev_total
+            FROM regulatory_updates
+            WHERE created_at >= $1 AND created_at < $2
+          `, [sixtyDaysAgo.toISOString(), thirtyDaysAgo.toISOString()])
+
+          const prevTotal = parseInt(prevResult.rows[0]?.prev_total || 0)
+          const currentTotal = parseInt(total || 0)
+
+          // Deadline pressure (count upcoming deadlines)
+          const deadlineResult = await client.query(`
+            SELECT COUNT(*) as deadline_count
+            FROM regulatory_updates
+            WHERE compliance_deadline IS NOT NULL
+            AND compliance_deadline >= $1
+            AND compliance_deadline <= $2
+          `, [now.toISOString(), thirtyDays.toISOString()])
+
+          const deadlineCount = parseInt(deadlineResult.rows[0]?.deadline_count || 0)
+          const deadlineScore = Math.min(deadlineCount * 10, 100) // Each deadline adds 10%, max 100
+
+          // Volume score (compare to average)
+          const volumeScore = prevTotal > 0 ? Math.min((currentTotal / prevTotal) * 50, 100) : 50
+
+          // Calculate final pressure score
+          pressureScore = Math.round(
+            0.35 * highImpactScore +
+            0.25 * urgencyScore +
+            0.20 * deadlineScore +
+            0.20 * volumeScore
+          )
+          pressureScore = Math.max(0, Math.min(100, pressureScore))
+
+          // Calculate trend
+          if (prevTotal > 0) {
+            const change = ((currentTotal - prevTotal) / prevTotal) * 100
+            pressureTrend = change >= 0 ? `+${Math.round(change)}%` : `${Math.round(change)}%`
+          }
+
+          // 2. Deadline Buckets
+          const bucketResult = await client.query(`
+            SELECT
+              COUNT(*) FILTER (WHERE compliance_deadline <= $2) as this_week,
+              COUNT(*) FILTER (WHERE compliance_deadline > $2 AND compliance_deadline <= $3) as two_weeks,
+              COUNT(*) FILTER (WHERE compliance_deadline > $3 AND compliance_deadline <= $4) as thirty_days,
+              COUNT(*) FILTER (WHERE compliance_deadline > $4 AND compliance_deadline <= $5) as sixty_ninety
+            FROM regulatory_updates
+            WHERE compliance_deadline IS NOT NULL AND compliance_deadline >= $1
+          `, [now.toISOString(), sevenDays.toISOString(), fourteenDays.toISOString(), thirtyDays.toISOString(), ninetyDays.toISOString()])
+
+          if (bucketResult.rows[0]) {
+            deadlineBuckets = {
+              thisWeek: parseInt(bucketResult.rows[0].this_week || 0),
+              twoWeeks: parseInt(bucketResult.rows[0].two_weeks || 0),
+              thirtyDays: parseInt(bucketResult.rows[0].thirty_days || 0),
+              sixtyNinety: parseInt(bucketResult.rows[0].sixty_ninety || 0)
+            }
+          }
+
+          // 3. Authority Activity with Momentum
+          const authorityResult = await client.query(`
+            WITH current_period AS (
+              SELECT authority, COUNT(*) as current_count
+              FROM regulatory_updates
+              WHERE created_at >= $1 AND authority IS NOT NULL AND authority != ''
+              GROUP BY authority
+            ),
+            previous_period AS (
+              SELECT authority, COUNT(*) as prev_count
+              FROM regulatory_updates
+              WHERE created_at >= $2 AND created_at < $1 AND authority IS NOT NULL AND authority != ''
+              GROUP BY authority
+            )
+            SELECT
+              COALESCE(c.authority, p.authority) as authority,
+              COALESCE(c.current_count, 0) as count,
+              COALESCE(p.prev_count, 0) as prev_count
+            FROM current_period c
+            FULL OUTER JOIN previous_period p ON c.authority = p.authority
+            ORDER BY COALESCE(c.current_count, 0) DESC
+            LIMIT 6
+          `, [thirtyDaysAgo.toISOString(), sixtyDaysAgo.toISOString()])
+
+          authorityActivity = authorityResult.rows.map(row => {
+            const count = parseInt(row.count || 0)
+            const prevCount = parseInt(row.prev_count || 0)
+            let momentum = 'stable'
+            if (prevCount > 0) {
+              const change = (count - prevCount) / prevCount
+              if (change > 0.1) momentum = 'up'
+              else if (change < -0.1) momentum = 'down'
+            } else if (count > 0) {
+              momentum = 'up' // New authority with activity
+            }
+            return {
+              name: row.authority,
+              count,
+              momentum
+            }
+          })
+
+        } catch (error) {
+          console.warn('📊 Intelligence stats query failed:', error.message)
+        } finally {
+          client.release()
+        }
+      }
+
+      return {
+        pressureScore,
+        pressureTrend,
+        deadlineBuckets,
+        authorityActivity
+      }
     }
   })
 }
