@@ -19,7 +19,10 @@ const {
   getEnforcementCanary,
   getSpotlightCanary,
   getIntelligenceCanary,
-  getInternationalCanary
+  getInternationalCanary,
+  getBankNewsCanary,
+  getDearCeoCanary,
+  getConsultationsCanary
 } = require('./canaryBase')
 const {
   getDashboardIcon,
@@ -37,6 +40,9 @@ const {
   getSpotlightIcon,
   getIntelligenceIcon,
   getInternationalIcon,
+  getBankNewsIcon,
+  getDearCeoIcon,
+  getConsultationsIcon,
   wrapIconInContainer,
   getPageIcon
 } = require('./pageIcons')
@@ -63,6 +69,9 @@ module.exports = {
   getSpotlightCanary,
   getIntelligenceCanary,
   getInternationalCanary,
+  getBankNewsCanary,
+  getDearCeoCanary,
+  getConsultationsCanary,
 
   // Page-specific icons (wrapped)
   getDashboardIcon,
@@ -80,6 +89,9 @@ module.exports = {
   getSpotlightIcon,
   getIntelligenceIcon,
   getInternationalIcon,
+  getBankNewsIcon,
+  getDearCeoIcon,
+  getConsultationsIcon,
 
   // Utilities
   wrapIconInContainer,

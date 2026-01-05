@@ -19,6 +19,7 @@
     "digest:send": "node scripts/send-daily-digest.js",
     "digest:test": "node scripts/test-daily-digest-cron.js",
     "setup": "node scripts/setup-environment.js",
+    "monitor:scrapes": "node scripts/run-scrape-monitor.js",
     "build": "echo 'No build step required for Node.js application'",
     "health": "curl -f http://localhost:3000/health || curl -f http://localhost:3001/health || curl -f http://localhost:3002/health || exit 1"
   },

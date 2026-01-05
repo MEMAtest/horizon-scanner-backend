@@ -1,3 +1,5 @@
+const SUMMARY_PREFIX_PATTERN = /^(?:0\s*)?(?:informational regulatory update|regulatory update impacting business operations|regulatory update impacting|regulatory update|regulatory impact overview|regcanary analysis|ai analysis)[:\s-]*/i
+
 const decodeHtmlEntities = (value = '') => {
   if (!value) return ''
   return String(value)
@@ -18,8 +20,35 @@ const stripHtml = (value = '') => {
   return decodedTwice.replace(/\s+/g, ' ').trim()
 }
 
-const isFallbackSummary = (summary, title = '') => {
-  const cleaned = stripHtml(summary)
+const stripSummaryPrefix = (value = '') => {
+  if (!value) return ''
+  const stripped = String(value).replace(SUMMARY_PREFIX_PATTERN, '')
+  return stripped.replace(/^[^A-Za-z0-9]+/, '').trim()
+}
+
+const cleanSummaryText = (value = '') => {
+  if (!value) return ''
+  const cleaned = stripHtml(value)
+  if (!cleaned) return ''
+  return stripSummaryPrefix(cleaned)
+}
+
+const isFallbackSummary = (summary, title = '', options = {}) => {
+  const raw = stripHtml(summary)
+  if (!raw) return true
+  const normalizedRaw = raw.toLowerCase().trim()
+
+  if (
+    normalizedRaw.startsWith('informational regulatory update') ||
+    normalizedRaw.startsWith('significant regulatory development') ||
+    normalizedRaw.startsWith('regulatory update:') ||
+    normalizedRaw.startsWith('regulatory impact overview:') ||
+    normalizedRaw.startsWith('regulatory update impacting')
+  ) {
+    return true
+  }
+
+  const cleaned = options.cleaned ? String(summary || '').trim() : cleanSummaryText(summary)
   if (!cleaned) return true
 
   const normalized = cleaned.toLowerCase().trim()
@@ -41,8 +70,7 @@ const isFallbackSummary = (summary, title = '') => {
     normalized === 'summary not available' ||
     normalized === 'no summary available' ||
     normalized.includes('summary not available') ||
-    normalized.includes('no summary available') ||
-    normalized.length < 30
+    normalized.includes('no summary available')
   )
 }
 
@@ -66,8 +94,8 @@ const selectSummary = (update = {}) => {
 
   for (const candidate of candidates) {
     if (!candidate) continue
-    const cleaned = stripHtml(candidate)
-    if (cleaned && !isFallbackSummary(cleaned, title)) {
+    const cleaned = cleanSummaryText(candidate)
+    if (cleaned && !isFallbackSummary(cleaned, title, { cleaned: true })) {
       return cleaned
     }
   }
@@ -77,7 +105,9 @@ const selectSummary = (update = {}) => {
 
 module.exports = {
   decodeHtmlEntities,
+  cleanSummaryText,
   isFallbackSummary,
   selectSummary,
+  stripSummaryPrefix,
   stripHtml
 }

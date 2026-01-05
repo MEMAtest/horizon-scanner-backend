@@ -2,21 +2,24 @@ const { Pool } = require('pg')
 const fs = require('fs').promises
 const path = require('path')
 const { normalizeSectorName } = require('../../utils/sectorTaxonomy')
+const { inferContentType } = require('../../utils/contentTypeInference')
 
 module.exports = function applyBaseMethods(EnhancedDBService) {
   Object.assign(EnhancedDBService.prototype, {
     normalizeUpdateFields(update) {
+      const inferredContentType = inferContentType(update || {})
+
       return {
         ...update,
         impactLevel: update.impactLevel || update.impact_level,
         businessImpactScore: update.businessImpactScore || update.business_impact_score,
         aiSummary: update.ai_summary || update.aiSummary,
-        contentType: update.content_type || update.contentType,
+        contentType: inferredContentType,
         aiTags: update.ai_tags || update.aiTags,
         impact_level: update.impactLevel || update.impact_level,
         business_impact_score: update.businessImpactScore || update.business_impact_score,
         ai_summary: update.ai_summary || update.aiSummary,
-        content_type: update.content_type || update.contentType
+        content_type: inferredContentType
       }
     },
 
@@ -260,9 +263,18 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
           await this.ensureFirmPersonasTable()
         }
 
+        // Create workspace tables
+        if (typeof this.ensureWorkspaceTables === 'function') {
+          await this.ensureWorkspaceTables()
+        }
+
         // Create handbook registry tables
         if (typeof this.ensureHandbookTables === 'function') {
           await this.ensureHandbookTables()
+        }
+
+        if (typeof this.ensureScrapeMonitoringTables === 'function') {
+          await this.ensureScrapeMonitoringTables()
         }
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
@@ -329,7 +341,9 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
           { path: path.join(this.jsonDataPath, 'intelligence_events.json'), defaultContent: [] },
           { path: path.join(this.jsonDataPath, 'profile_feedback_scores.json'), defaultContent: [] },
           { path: path.join(this.jsonDataPath, 'profile_workflows.json'), defaultContent: [] },
-          { path: this.digestHistoryFile, defaultContent: [] }
+          { path: this.digestHistoryFile, defaultContent: [] },
+          { path: this.scrapeMonitorRunsFile, defaultContent: [] },
+          { path: this.scrapeMonitorChecksFile, defaultContent: [] }
         ]
 
         await Promise.all(defaultFiles.map(async ({ path: filePath, defaultContent }) => {

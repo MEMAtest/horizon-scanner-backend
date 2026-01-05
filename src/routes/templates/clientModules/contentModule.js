@@ -21,12 +21,42 @@ function getContentModule() {
             return trimmed.substring(0, maxLength).trim() + '...';
         }
 
+        const SUMMARY_PREFIX_PATTERN = /^(?:0\\s*)?(?:informational regulatory update|regulatory update impacting business operations|regulatory update impacting|regulatory update|regulatory impact overview|regcanary analysis|ai analysis)[:\\s-]*/i;
+
+        function stripSummaryPrefix(summary = '') {
+            if (!summary) return '';
+            const stripped = String(summary).replace(SUMMARY_PREFIX_PATTERN, '');
+            return stripped.replace(/^[^A-Za-z0-9]+/, '').trim();
+        }
+
+        function normalizeSummaryText(summary = '') {
+            if (!summary) return '';
+            const withoutTags = String(summary).replace(/<[^>]*>/g, ' ');
+            const collapsed = withoutTags.replace(/\\s+/g, ' ').trim();
+            if (!collapsed) return '';
+            return stripSummaryPrefix(collapsed);
+        }
+
         function isFallbackSummary(summary = '') {
-            const normalized = summary.trim().toLowerCase();
-            return normalized.startsWith('informational regulatory update') ||
-                   normalized.startsWith('significant regulatory development') ||
-                   normalized.startsWith('regulatory update') ||
-                   normalized.startsWith('regulatory impact overview');
+            const rawText = String(summary ?? '')
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/\\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+            if (!rawText) return true;
+            if (rawText.startsWith('informational regulatory update') ||
+                rawText.startsWith('significant regulatory development') ||
+                rawText.startsWith('regulatory update:') ||
+                rawText.startsWith('regulatory impact overview:') ||
+                rawText.startsWith('regulatory update impacting')) {
+                return true;
+            }
+            const normalized = normalizeSummaryText(summary).toLowerCase();
+            if (!normalized) return true;
+            return normalized === 'summary not available' ||
+                   normalized === 'no summary available' ||
+                   normalized.includes('summary not available') ||
+                   normalized.includes('no summary available');
         }
 
         function generateRelevanceBasedStreams(updates) {
@@ -79,11 +109,11 @@ function getContentModule() {
                                impactLevel === 'Moderate' ? 'moderate' : 'low';
 
             // Get AI summary - prioritize ai_summary, then aiSummary
-            const aiSummary = update.ai_summary || update.aiSummary || update.impact || '';
+            const aiSummary = normalizeSummaryText(update.ai_summary || update.aiSummary || update.impact || '');
             const useFallback = isFallbackSummary(aiSummary);
-            const baseSummary = !useFallback && aiSummary.trim().length > 0
-                ? aiSummary.trim()
-                : (update.summary || update.description || '').trim();
+            const baseSummary = !useFallback && aiSummary.length > 0
+                ? aiSummary
+                : normalizeSummaryText(update.summary || update.description || '');
             const shortSummary = baseSummary;
             const isPinned = pinnedUrls.has(update.url);
             const displayDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt);

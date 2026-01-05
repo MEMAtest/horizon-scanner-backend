@@ -27,7 +27,7 @@ ANALYSIS REQUIREMENTS:
 3. Identify the specific regulatory area/topic
 4. Determine impact level: Significant, Moderate, or Informational
 5. Assess urgency: High, Medium, or Low
-6. Categorize the content type from: Speech, Consultation, Final Rule, Guidance, Enforcement Action, Statistical Report, Market Notice, Press Release, Research Paper, Event, or Other
+6. Categorize the content type from: Dear CEO Letter, Supervisory Statement, Policy Statement, Speech, Consultation, Final Rule, Guidance, Enforcement Action, Statistical Report, Market Notice, Press Release, Research Paper, Event, or Other
 7. Identify ALL relevant industry sectors from this list: ${INDUSTRY_SECTORS.join(', ')}
 8. Provide sector-specific relevance scores (0-100) for each identified sector
 9. Extract any key dates, deadlines, or implementation timeframes
@@ -39,7 +39,7 @@ CRITICAL: Respond ONLY with valid JSON in this exact format:
 {
   "headline": "Clear, professional headline under 120 chars",
   "impact": "RegCanary-branded business impact summary - rewritten for financial services professionals, NOT verbatim from source",
-  "contentType": "Speech|Consultation|Final Rule|Guidance|Enforcement Action|Statistical Report|Market Notice|Press Release|Research Paper|Event|Other",
+  "contentType": "Dear CEO Letter|Supervisory Statement|Policy Statement|Speech|Consultation|Final Rule|Guidance|Enforcement Action|Statistical Report|Market Notice|Press Release|Research Paper|Event|Other",
   "area": "Specific regulatory area or topic",
   "impactLevel": "Significant|Moderate|Informational",
   "urgency": "High|Medium|Low",

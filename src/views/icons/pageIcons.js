@@ -17,7 +17,10 @@ const {
   getEnforcementCanary,
   getSpotlightCanary,
   getIntelligenceCanary,
-  getInternationalCanary
+  getInternationalCanary,
+  getBankNewsCanary,
+  getDearCeoCanary,
+  getConsultationsCanary
 } = require('./canaryBase')
 
 /**
@@ -126,6 +129,27 @@ function getInternationalIcon() {
 }
 
 /**
+ * Bank News Icon - Canary monitoring a bank building
+ */
+function getBankNewsIcon() {
+  return getBankNewsCanary()
+}
+
+/**
+ * Dear CEO Icon - Letter-reading canary
+ */
+function getDearCeoIcon() {
+  return getDearCeoCanary()
+}
+
+/**
+ * Consultations Icon - Speech bubble canary
+ */
+function getConsultationsIcon() {
+  return getConsultationsCanary()
+}
+
+/**
  * Wrap icon in container div
  * @param {string} iconSvg - The SVG icon
  * @returns {string} Icon wrapped in styled container
@@ -160,7 +184,10 @@ function getPageIcon(pageName) {
     spotlight: getSpotlightIcon,
     'sector-intelligence': getIntelligenceIcon,
     intelligence: getIntelligenceIcon,
-    international: getInternationalIcon
+    international: getInternationalIcon,
+    'bank-news': getBankNewsIcon,
+    'dear-ceo': getDearCeoIcon,
+    consultations: getConsultationsIcon
   }
 
   const iconFn = icons[pageName.toLowerCase()] || getDashboardIcon
@@ -183,6 +210,9 @@ module.exports = {
   getSpotlightIcon,
   getIntelligenceIcon,
   getInternationalIcon,
+  getBankNewsIcon,
+  getDearCeoIcon,
+  getConsultationsIcon,
   wrapIconInContainer,
   getPageIcon
 }

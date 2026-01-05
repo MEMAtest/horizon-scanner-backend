@@ -9,22 +9,34 @@ class AnnotationService {
   constructor() {
     this.storagePath = path.join(process.cwd(), 'data', 'annotations.json')
     this.initialized = false
+    // Disable file operations on serverless (Vercel)
+    this.isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME
   }
 
   async ensureStorage() {
-    if (this.initialized) return
+    if (this.initialized || this.isServerless) return
 
     try {
       await fs.access(this.storagePath)
     } catch (_) {
-      await fs.mkdir(path.dirname(this.storagePath), { recursive: true })
-      await fs.writeFile(this.storagePath, '[]', 'utf8')
+      try {
+        await fs.mkdir(path.dirname(this.storagePath), { recursive: true })
+        await fs.writeFile(this.storagePath, '[]', 'utf8')
+      } catch (writeErr) {
+        console.warn('AnnotationService: Unable to create storage file (serverless?)', writeErr.message)
+        this.isServerless = true
+      }
     }
 
     this.initialized = true
   }
 
   async loadAnnotations() {
+    // Return empty array on serverless - no persistent file storage
+    if (this.isServerless) {
+      return []
+    }
+
     await this.ensureStorage()
     try {
       const content = await fs.readFile(this.storagePath, 'utf8')
@@ -40,6 +52,11 @@ class AnnotationService {
   }
 
   async saveAnnotations(annotations) {
+    // Skip save on serverless - no persistent file storage
+    if (this.isServerless) {
+      return
+    }
+
     await this.ensureStorage()
     await fs.writeFile(this.storagePath, JSON.stringify(annotations, null, 2), 'utf8')
   }

@@ -864,6 +864,163 @@ function getInternationalCanary() {
   </svg>`
 }
 
+/**
+ * Bank News - Canary monitoring a bank building
+ * Banking-focused pose with a stylized bank facade
+ */
+function getBankNewsCanary() {
+  return `<svg viewBox="0 0 50 50" class="canary-icon-animated" aria-hidden="true">
+    ${getCanaryGradients()}
+    <!-- Bank building -->
+    <g class="bank-building">
+      <polygon points="6,22 18,16 30,22" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+      <rect x="8" y="22" width="20" height="16" rx="1.5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="12" y1="22" x2="12" y2="38" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="18" y1="22" x2="18" y2="38" stroke="#cbd5e1" stroke-width="1"/>
+      <line x1="24" y1="22" x2="24" y2="38" stroke="#cbd5e1" stroke-width="1"/>
+      <rect x="16" y="30" width="4" height="8" fill="#e2e8f0"/>
+    </g>
+    <!-- Body -->
+    <g class="canary-body" transform="rotate(-6 34 30)">
+      <ellipse cx="34" cy="30" rx="8" ry="6" fill="url(#canaryGold)"/>
+      <ellipse cx="34" cy="31" rx="4.5" ry="2.5" fill="#FFF3B0" opacity="0.6"/>
+    </g>
+    <!-- Left wing - gesturing toward bank -->
+    <g class="canary-wing">
+      <ellipse cx="26" cy="27" rx="3.5" ry="4.5" fill="url(#canaryOrange)" transform="rotate(-18 26 27)"/>
+    </g>
+    <!-- Right wing -->
+    <ellipse cx="41" cy="29" rx="2.8" ry="4.5" fill="url(#canaryOrange)"/>
+    <!-- Tail -->
+    <polygon points="38,36 42,44 38,42 34,44" fill="url(#canaryOrange)"/>
+    <!-- Head -->
+    <g class="canary-head">
+      <circle cx="32" cy="18" r="7" fill="url(#canaryGold)"/>
+      <circle cx="29" cy="17" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="28" cy="17" r="1" fill="#1a1a2e"/>
+      <circle cx="35" cy="17" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="34" cy="17" r="1" fill="#1a1a2e"/>
+      <circle cx="28" cy="16" r="0.3" fill="white"/>
+      <polygon points="26,19 22,18 25,21" fill="#FF6B00"/>
+      <path d="M30 11 Q28 7 31 9 Q31 5 34 8 Q37 5 35 9" fill="url(#canaryOrange)"/>
+    </g>
+    <!-- Feet -->
+    <g fill="#FF6B00">
+      <path d="M31 38 L31 42 M29 42 L33 42" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M37 38 L37 42 M35 42 L39 42" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+  </svg>`
+}
+
+/**
+ * Dear CEO Letters - Canary holding/reading an official letter
+ * Serious expression, holding envelope with seal
+ */
+function getDearCeoCanary() {
+  return `<svg viewBox="0 0 50 50" class="canary-icon-animated" aria-hidden="true">
+    ${getCanaryGradients()}
+    <!-- Official Letter/Envelope -->
+    <g class="letter">
+      <!-- Envelope body -->
+      <rect x="4" y="22" width="18" height="14" rx="2" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/>
+      <!-- Envelope flap -->
+      <path d="M4 22 L13 30 L22 22" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+      <!-- Red seal -->
+      <circle cx="13" cy="30" r="4" fill="#dc2626"/>
+      <circle cx="13" cy="30" r="2.5" fill="#ef4444"/>
+      <text x="13" y="31.5" text-anchor="middle" font-size="4" fill="white" font-weight="bold">!</text>
+    </g>
+    <!-- Body - attentive reading pose -->
+    <g class="canary-body">
+      <ellipse cx="32" cy="30" rx="9" ry="7" fill="url(#canaryGold)"/>
+      <ellipse cx="32" cy="31" rx="5" ry="3" fill="#FFF3B0" opacity="0.6"/>
+    </g>
+    <!-- Left wing holding letter -->
+    <g class="canary-wing">
+      <ellipse cx="23" cy="26" rx="4" ry="5" fill="url(#canaryOrange)" transform="rotate(-15 23 26)"/>
+    </g>
+    <!-- Right wing -->
+    <ellipse cx="40" cy="28" rx="3" ry="5" fill="url(#canaryOrange)"/>
+    <!-- Tail -->
+    <polygon points="38,36 42,44 38,42 34,44" fill="url(#canaryOrange)"/>
+    <!-- Head - focused on letter -->
+    <g class="canary-head">
+      <circle cx="32" cy="18" r="7" fill="url(#canaryGold)"/>
+      <!-- Focused eyes looking down at letter -->
+      <circle cx="29" cy="18" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="28" cy="18.5" r="1" fill="#1a1a2e"/>
+      <circle cx="35" cy="18" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="34" cy="18.5" r="1" fill="#1a1a2e"/>
+      <!-- Concentrated brow -->
+      <path d="M27 16 L29 17" stroke="#E6A500" stroke-width="0.8"/>
+      <path d="M35 17 L37 16" stroke="#E6A500" stroke-width="0.8"/>
+      <!-- Beak - slightly open as if reading -->
+      <polygon points="32,21 36,22 32,24" fill="#FF6B00"/>
+      <path d="M32 22.5 L35 22.5" stroke="#e65c00" stroke-width="0.5"/>
+      <!-- Crest -->
+      <path d="M29 11 Q27 7 30 9 Q30 5 33 8 Q36 5 34 9" fill="url(#canaryOrange)"/>
+    </g>
+    <!-- Feet -->
+    <g fill="#FF6B00">
+      <path d="M29 38 L29 42 M27 42 L31 42" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M35 38 L35 42 M33 42 L37 42" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+  </svg>`
+}
+
+/**
+ * Consultations - Canary with megaphone/speech bubble
+ * Engaged in consultation, speaking/listening pose
+ */
+function getConsultationsCanary() {
+  return `<svg viewBox="0 0 50 50" class="canary-icon-animated" aria-hidden="true">
+    ${getCanaryGradients()}
+    <!-- Speech bubble -->
+    <g class="speech-bubble">
+      <path d="M4 10 Q4 6 8 6 L22 6 Q26 6 26 10 L26 18 Q26 22 22 22 L12 22 L8 26 L10 22 L8 22 Q4 22 4 18 Z" fill="#f0f9ff" stroke="#3b82f6" stroke-width="1.5"/>
+      <!-- Dots indicating discussion -->
+      <circle cx="10" cy="14" r="1.5" fill="#3b82f6"/>
+      <circle cx="15" cy="14" r="1.5" fill="#3b82f6"/>
+      <circle cx="20" cy="14" r="1.5" fill="#3b82f6"/>
+    </g>
+    <!-- Body - engaged speaking pose -->
+    <g class="canary-body">
+      <ellipse cx="32" cy="32" rx="9" ry="7" fill="url(#canaryGold)"/>
+      <ellipse cx="32" cy="33" rx="5" ry="3" fill="#FFF3B0" opacity="0.6"/>
+    </g>
+    <!-- Left wing gesturing -->
+    <g class="canary-wing">
+      <ellipse cx="24" cy="26" rx="4" ry="5" fill="url(#canaryOrange)" transform="rotate(-25 24 26)"/>
+    </g>
+    <!-- Right wing -->
+    <ellipse cx="40" cy="30" rx="3" ry="5" fill="url(#canaryOrange)"/>
+    <!-- Tail -->
+    <polygon points="38,38 42,46 38,44 34,46" fill="url(#canaryOrange)"/>
+    <!-- Head - speaking/engaging expression -->
+    <g class="canary-head">
+      <circle cx="32" cy="20" r="7" fill="url(#canaryGold)"/>
+      <!-- Engaged, friendly eyes -->
+      <circle cx="29" cy="19" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="29" cy="19" r="1" fill="#1a1a2e"/>
+      <circle cx="35" cy="19" r="1.8" fill="white"/>
+      <circle class="canary-eye" cx="35" cy="19" r="1" fill="#1a1a2e"/>
+      <!-- Eye sparkle -->
+      <circle cx="29.5" cy="18.5" r="0.3" fill="white"/>
+      <circle cx="35.5" cy="18.5" r="0.3" fill="white"/>
+      <!-- Beak - open as if speaking -->
+      <polygon points="32,22 37,23 32,25" fill="#FF6B00"/>
+      <polygon points="32,24 36,25 32,26" fill="#e65c00"/>
+      <!-- Crest -->
+      <path d="M29 13 Q27 9 30 11 Q30 7 33 10 Q36 7 34 11" fill="url(#canaryOrange)"/>
+    </g>
+    <!-- Feet -->
+    <g fill="#FF6B00">
+      <path d="M29 40 L29 44 M27 44 L31 44" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M35 40 L35 44 M33 44 L37 44" stroke="#FF6B00" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+  </svg>`
+}
+
 module.exports = {
   getCanaryGradients,
   getCanaryBird,
@@ -883,5 +1040,8 @@ module.exports = {
   getSpotlightCanary,
   getIntelligenceCanary,
   getRegNoticesCanary,
-  getInternationalCanary
+  getInternationalCanary,
+  getBankNewsCanary,
+  getDearCeoCanary,
+  getConsultationsCanary
 }

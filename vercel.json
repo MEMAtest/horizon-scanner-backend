@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/api/cron/daily-digest", "destination": "/api/cron/daily-digest.js" },
     { "source": "/api/cron/rss-refresh", "destination": "/api/cron/rss-refresh.js" },
+    { "source": "/api/cron/bank-news-refresh", "destination": "/api/cron/bank-news-refresh.js" },
     { "source": "/api/cron/fca-enforcement", "destination": "/api/cron/fca-enforcement.js" },
     { "source": "/(.*)", "destination": "/api/index.js" }
   ],
@@ -29,6 +30,10 @@
     {
       "path": "/api/cron/rss-refresh",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/bank-news-refresh",
+      "schedule": "15 9 * * *"
     },
     {
       "path": "/api/cron/fca-enforcement",

@@ -148,6 +148,19 @@ function applyCBNMethods(ServiceClass) {
       console.log(`📰 CBN: Extracted ${extractedItems.length} items`)
 
       for (const item of extractedItems.slice(0, CBN_CONFIG.maxItems)) {
+        // Parse date safely
+        let publishedDate = null
+        if (item.date) {
+          try {
+            const parsed = new Date(item.date)
+            if (!isNaN(parsed.getTime())) {
+              publishedDate = parsed.toISOString()
+            }
+          } catch (e) {
+            // Ignore invalid dates
+          }
+        }
+
         results.push({
           headline: item.title,
           url: item.url,
@@ -156,7 +169,7 @@ function applyCBNMethods(ServiceClass) {
           source_category: 'international_scraping',
           source_description: 'Central Bank of Nigeria News Archive',
           fetched_date: new Date().toISOString(),
-          published_date: item.date ? new Date(item.date).toISOString() : null,
+          published_date: publishedDate,
           raw_data: {
             sourceType: 'puppeteer',
             sourceKey: 'CBN',

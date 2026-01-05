@@ -1,3 +1,5 @@
+const { selectSummary } = require('../../../utils/summaryUtils')
+
 function generateInsightCards(recentUpdates, systemStats, calendarEvents = []) {
   const highlights = buildHomepageHighlights(recentUpdates, systemStats, calendarEvents)
   return highlights.map(item => `
@@ -288,15 +290,22 @@ function renderPriorityStrip(updates = []) {
 
   const impact = (priority.impactLevel || priority.impact_level || 'Informational')
   const urgency = priority.urgency || '—'
-  const summary = priority.summary || priority.ai_summary || 'Most recent high-impact update for today.'
+  const summary = selectSummary(priority) || 'Most recent high-impact update for today.'
+  const summaryExcerpt = summary.length > 200 ? summary.slice(0, 200).trim() + '...' : summary
   const heatLabel = heat.level === 'high' ? 'High' : heat.level === 'moderate' ? 'Moderate' : 'Low'
+  const rawPriorityUrl = priority.url || (priority.id ? `/update/${priority.id}` : '')
+  const priorityUrl = rawPriorityUrl ? escapeAttribute(rawPriorityUrl) : ''
+  const priorityLinkAttrs = priorityUrl
+    ? `href="${priorityUrl}"${/^https?:\/\//i.test(rawPriorityUrl) ? ' target="_blank" rel="noopener"' : ''}`
+    : ''
+  const priorityHeadline = escapeHtml(priority.headline || 'Priority update')
 
   return `
         <section class="priority-panel">
             <div class="priority-primary">
                 <span class="priority-lead">Top Impact Today</span>
-                <h3>${escapeHtml(priority.headline || 'Priority update')}</h3>
-                <p class="priority-summary">${escapeHtml(summary.substring(0, 200))}</p>
+                <h3>${priorityUrl ? `<a class="priority-link" ${priorityLinkAttrs}>${priorityHeadline}</a>` : priorityHeadline}</h3>
+                <p class="priority-summary">${escapeHtml(summaryExcerpt)}</p>
                 <div class="priority-meta">
                     <span class="pill impact-${impact.toLowerCase()}">${escapeHtml(impact)}</span>
                     <span class="pill urgency-${String(urgency).toLowerCase()}">Urgency: ${escapeHtml(urgency)}</span>

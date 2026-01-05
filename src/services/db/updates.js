@@ -1,4 +1,45 @@
 module.exports = function applyUpdatesMethods(EnhancedDBService) {
+  const normalizeHeadlineText = (value) => {
+    if (value == null) return ''
+    return String(value).replace(/\s+/g, ' ').trim()
+  }
+
+  const deriveHeadlineFromUrl = (url) => {
+    if (!url) return ''
+    try {
+      const parsed = new URL(String(url))
+      const host = parsed.hostname.replace(/^www\./, '')
+      const path = parsed.pathname.split('/').filter(Boolean).slice(0, 3).join(' / ')
+      return normalizeHeadlineText(path ? `${host} — ${path}` : host)
+    } catch (error) {
+      return ''
+    }
+  }
+
+  const ensureUpdateHeadline = (updateData) => {
+    if (!updateData || typeof updateData !== 'object') return updateData
+    const existing = normalizeHeadlineText(updateData.headline)
+    if (existing) return updateData
+
+    const fallbackText = normalizeHeadlineText(
+      updateData.title ||
+      updateData.ai_headline ||
+      updateData.aiHeadline ||
+      updateData.summary ||
+      updateData.ai_summary ||
+      updateData.impact
+    ).replace(/^RegCanary Analysis:\s*/i, '')
+
+    let headline = normalizeHeadlineText(fallbackText)
+    if (headline) {
+      headline = headline.split(/[.?!]/)[0].trim().slice(0, 140)
+    } else {
+      headline = deriveHeadlineFromUrl(updateData.url) || 'Regulatory update'
+    }
+
+    return { ...updateData, headline }
+  }
+
   Object.assign(EnhancedDBService.prototype, {
     async checkUpdateExists(url) {
       try {
@@ -25,10 +66,11 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
 
     async saveUpdate(updateData) {
       try {
+        const preparedUpdate = ensureUpdateHeadline(updateData)
         if (this.fallbackMode) {
-          return await this.saveUpdateJSON(updateData)
+          return await this.saveUpdateJSON(preparedUpdate)
         } else {
-          return await this.saveUpdatePG(updateData)
+          return await this.saveUpdatePG(preparedUpdate)
         }
       } catch (error) {
         console.error('❌ Error saving update:', error)
@@ -46,8 +88,8 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
                       ai_summary, business_impact_score, ai_tags,
                       firm_types_affected, compliance_deadline, ai_confidence_score,
                       sector_relevance_scores, implementation_phases, required_resources,
-                      country, region
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                      country, region, content_type, source_category
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
                   RETURNING id
               `
 
@@ -56,7 +98,7 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
           updateData.summary || updateData.impact,
           updateData.url,
           updateData.authority,
-          updateData.publishedDate || updateData.fetchedDate || new Date(),
+          updateData.publishedDate || updateData.published_date || updateData.fetchedDate || new Date(),
           updateData.impactLevel,
           updateData.urgency,
           updateData.sector,
@@ -70,8 +112,10 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
           JSON.stringify(updateData.sectorRelevanceScores || updateData.sector_relevance_scores || {}),
           JSON.stringify(updateData.implementationPhases || updateData.implementation_phases || []),
           JSON.stringify(updateData.requiredResources || updateData.required_resources || {}),
-          updateData.country || 'UK',
-          updateData.region || 'UK'
+          updateData.country || updateData.raw_data?.country || updateData.raw_data?.international?.sourceCountry || 'UK',
+          updateData.region || updateData.raw_data?.region || 'UK',
+          updateData.content_type || updateData.contentType || null,
+          updateData.source_category || updateData.sourceCategory || null
         ]
 
         const result = await client.query(query, values)
@@ -180,7 +224,7 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
                       ai_summary, content_type, business_impact_score, ai_tags,
                       firm_types_affected, compliance_deadline, ai_confidence_score,
                       sector_relevance_scores, implementation_phases, required_resources,
-                      country, region
+                      country, region, source_category
                   FROM regulatory_updates
                   WHERE 1=1
               `
@@ -282,6 +326,19 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
             query += ` AND region = $${++paramCount}`
             params.push(filters.region)
           }
+        }
+
+        const hasSourceCategoryFilter = Boolean(filters.sourceCategory)
+        const excludeBankNews = !filters.includeBankNews && !hasSourceCategoryFilter
+
+        if (excludeBankNews) {
+          query += " AND source_category IS DISTINCT FROM 'bank_news'"
+        }
+
+        // Source category filter (for bank news page)
+        if (filters.sourceCategory) {
+          query += ` AND source_category = $${++paramCount}`
+          params.push(filters.sourceCategory)
         }
 
         // Category-specific filters - FIXED VERSION
@@ -429,6 +486,18 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
         }
       }
 
+      const hasSourceCategoryFilter = Boolean(filters.sourceCategory)
+      const excludeBankNews = !filters.includeBankNews && !hasSourceCategoryFilter
+
+      if (excludeBankNews) {
+        filtered = filtered.filter(u => (u.source_category || u.sourceCategory) !== 'bank_news')
+      }
+
+      // Source category filter (for bank news page)
+      if (filters.sourceCategory) {
+        filtered = filtered.filter(u => (u.source_category || u.sourceCategory) === filters.sourceCategory)
+      }
+
       // Category filter - FIXED VERSION
       if (filters.category && filters.category !== 'all') {
         filtered = this.applyCategoryFilterJSON(filtered, filters.category)
@@ -454,7 +523,7 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
         )
       }
 
-      return filtered
+      return filtered.map(update => this.normalizeUpdateFields(update))
     },
 
     async updateRegulatoryUpdate(url, aiAnalysisData) {

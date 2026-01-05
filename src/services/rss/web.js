@@ -26,13 +26,13 @@ function applyWebMethods(ServiceClass, {
   scrapeCNMVCommunications,
   normalizeAuthority
 }) {
-  ServiceClass.prototype.fetchWebScraping = async function fetchWebScraping(source) {
+  ServiceClass.prototype.fetchWebScraping = async function fetchWebScraping(source, options = {}) {
     try {
       console.log(`🌐 Web scraping for ${source.name} (${source.authority})...`)
 
-      if (source.useGeneric) {
+      if (options.forceGeneric || source.useGeneric) {
         console.log(`ℹ️ Using generic HTML parsing for ${source.name}`)
-        return await this.genericWebScraping(source)
+        return await this.genericWebScraping(source, options)
       }
 
       let scraperResults = []
@@ -127,7 +127,7 @@ function applyWebMethods(ServiceClass, {
           break
         default:
           console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`)
-          return await this.genericWebScraping(source)
+          return await this.genericWebScraping(source, options)
       }
 
       if (scraperResults && scraperResults.length > 0) {
@@ -151,25 +151,29 @@ function applyWebMethods(ServiceClass, {
       console.error(`❌ Web scraping failed for ${source.name}:`, error.message)
 
       try {
-        return await this.genericWebScraping(source)
+        return await this.genericWebScraping(source, options)
       } catch (fallbackError) {
         console.error(`❌ Generic scraping also failed for ${source.name}:`, fallbackError.message)
+        if (options.throwOnError) {
+          throw fallbackError
+        }
         return []
       }
     }
   }
 
-  ServiceClass.prototype.genericWebScraping = async function genericWebScraping(source) {
+  ServiceClass.prototype.genericWebScraping = async function genericWebScraping(source, options = {}) {
     try {
       const response = await axios.get(source.url, {
-        timeout: this.fetchTimeout || 15000,
+        timeout: options.timeoutMs || this.fetchTimeout || 15000,
         headers: {
           'User-Agent': this.userAgent,
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
           'Accept-Encoding': 'gzip, deflate',
           Connection: 'keep-alive',
-          'Upgrade-Insecure-Requests': '1'
+          'Upgrade-Insecure-Requests': '1',
+          ...(options.disableKeepAlive ? { Connection: 'close' } : {})
         }
       })
 
@@ -177,7 +181,10 @@ function applyWebMethods(ServiceClass, {
       return this.parseWebScrapingContent($, source)
     } catch (error) {
       console.error('❌ Generic web scraping failed:', error.message)
-      throw error
+      if (options.throwOnError) {
+        throw error
+      }
+      return []
     }
   }
 

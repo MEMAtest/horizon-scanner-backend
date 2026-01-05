@@ -163,10 +163,10 @@ function renderUpcomingEventsWidget(events) {
   const criticalThisWeek = criticalEventsThisWeek.length
   const criticalTooltip = criticalThisWeek
     ? criticalEventsThisWeek
-        .slice(0, 3)
-        .map(event => escapeHtml(event.title || 'Critical event'))
-        .join(', ') + (criticalThisWeek > 3 ? ` +${criticalThisWeek - 3} more` : '')
+        .map(event => `- ${event.title || 'Critical event'}`)
+        .join('\n')
     : 'No critical events this week'
+  const criticalLink = '/regulatory-calendar?view=agenda&priority=critical'
 
   const priorityDots = {
     critical: '🔴',
@@ -231,6 +231,7 @@ function renderUpcomingEventsWidget(events) {
             <span class="widget-stat">
               📋 ${safeEvents.length} total
             </span>
+            <a class="widget-stat-link" href="${criticalLink}">View critical →</a>
           </div>
         </div>
         <div class="events-view events-calendar" data-events-view="calendar">

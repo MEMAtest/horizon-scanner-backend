@@ -1,152 +1,162 @@
-#!/usr/bin/env node
-// Backfill script to update content_type for existing articles
+/**
+ * Backfill inferred content_type for updates that are missing or set to Other.
+ *
+ * Usage:
+ *   node scripts/backfill-content-types.js --target=auto --dry-run
+ *   node scripts/backfill-content-types.js --target=json
+ *   node scripts/backfill-content-types.js --target=db
+ *   node scripts/backfill-content-types.js --target=both
+ */
+
 require('dotenv').config()
 
-const { Pool } = require('pg')
-const aiAnalyzer = require('../src/services/aiAnalyzer')
+const fs = require('fs').promises
+const path = require('path')
+const dbService = require('../src/services/dbService')
+const { inferContentType, normalizeContentType } = require('../src/utils/contentTypeInference')
 
-async function backfillContentTypes() {
-  console.log('═══════════════════════════════════════════════════════════════')
-  console.log('   BACKFILLING CONTENT TYPES')
-  console.log('═══════════════════════════════════════════════════════════════\n')
+const args = process.argv.slice(2)
+const flags = new Set(args.filter(arg => arg.startsWith('--')).map(arg => arg.replace(/^--/, '')))
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://horizon-scanning_owner:npg_ThUNJ1dmXg5u@ep-summer-art-ab0r6nxf-pooler.eu-west-2.aws.neon.tech/horizon-scanning?sslmode=require'
+function getFlagValue(name, fallback) {
+  const prefix = `--${name}=`
+  const arg = args.find(value => value.startsWith(prefix))
+  if (!arg) return fallback
+  return arg.slice(prefix.length)
+}
+
+const target = getFlagValue('target', 'auto')
+const dryRun = flags.has('dry-run')
+const limitArg = Number.parseInt(getFlagValue('limit', ''), 10)
+const limit = Number.isFinite(limitArg) && limitArg > 0 ? limitArg : null
+
+function shouldUpdateContentType(update) {
+  const existing = normalizeContentType(update.content_type || update.contentType || update.contentType)
+  const inferred = inferContentType(update)
+
+  if (!inferred || inferred === 'Other') return null
+  if (!existing || existing === 'Other') return inferred
+  return null
+}
+
+async function backfillJson() {
+  const updatesPath = path.join(__dirname, '../data/updates.json')
+  const raw = await fs.readFile(updatesPath, 'utf8')
+  const updates = JSON.parse(raw)
+  const counts = {}
+  let updated = 0
+
+  updates.forEach(update => {
+    if (limit && updated >= limit) return
+    const inferred = shouldUpdateContentType(update)
+    if (!inferred) return
+
+    counts[inferred] = (counts[inferred] || 0) + 1
+    update.content_type = inferred
+    update.contentType = inferred
+    updated += 1
   })
 
+  if (!dryRun && updated > 0) {
+    await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2) + '\n', 'utf8')
+  }
+
+  return { updated, counts }
+}
+
+async function backfillDb() {
+  if (!dbService.usePostgres || !dbService.pool) {
+    throw new Error('Postgres is not available (DATABASE_URL missing or connection failed).')
+  }
+
+  const client = await dbService.pool.connect()
   try {
-    // Step 1: Count articles needing update
-    console.log('📊 Step 1: Checking articles needing content type update...\n')
-
-    const countQuery = `
-      SELECT COUNT(*) as total
+    const result = await client.query(`
+      SELECT id, url, headline, summary, ai_summary, content_type, ai_tags
       FROM regulatory_updates
-      WHERE content_type = 'OTHER' OR content_type IS NULL
-    `
+      ORDER BY published_date DESC
+    `)
 
-    const countResult = await pool.query(countQuery)
-    const totalToUpdate = parseInt(countResult.rows[0].total)
-
-    console.log(`Found ${totalToUpdate} articles with content_type = 'OTHER' or NULL\n`)
-
-    if (totalToUpdate === 0) {
-      console.log('✅ No articles need updating!')
-      await pool.end()
-      process.exit(0)
-    }
-
-    // Step 2: Fetch articles in batches
-    console.log('═══════════════════════════════════════════════════════════════')
-    console.log('📊 Step 2: Fetching articles to update...\n')
-
-    const fetchQuery = `
-      SELECT id, headline, url, authority, ai_summary
-      FROM regulatory_updates
-      WHERE content_type = 'OTHER' OR content_type IS NULL
-      ORDER BY created_at DESC
-      LIMIT 500
-    `
-
-    const articles = await pool.query(fetchQuery)
-    console.log(`Retrieved ${articles.rows.length} articles for processing\n`)
-
-    // Step 3: Process each article
-    console.log('═══════════════════════════════════════════════════════════════')
-    console.log('📊 Step 3: Detecting content types...\n')
-
+    const updatesByType = new Map()
     let updated = 0
-    let failed = 0
-    const stats = {}
 
-    for (let i = 0; i < articles.rows.length; i++) {
-      const article = articles.rows[i]
+    result.rows.forEach(row => {
+      if (limit && updated >= limit) return
+      const inferred = shouldUpdateContentType(row)
+      if (!inferred) return
 
-      try {
-        // Use the fallback detectContentType method directly
-        const content = article.ai_summary || article.headline || ''
-        const url = article.url || ''
-        const metadata = { authority: article.authority }
+      if (!updatesByType.has(inferred)) {
+        updatesByType.set(inferred, [])
+      }
+      updatesByType.get(inferred).push(row.id)
+      updated += 1
+    })
 
-        // Detect content type using the fallback method
-        const contentType = aiAnalyzer.detectContentType(content, url, metadata)
-
-        // Update database
-        const updateQuery = `
-          UPDATE regulatory_updates
-          SET content_type = $1
-          WHERE id = $2
-        `
-
-        await pool.query(updateQuery, [contentType, article.id])
-
-        updated++
-        stats[contentType] = (stats[contentType] || 0) + 1
-
-        // Progress indicator every 50 articles
-        if ((i + 1) % 50 === 0) {
-          console.log(`   Processed ${i + 1}/${articles.rows.length} articles...`)
-        }
-
-      } catch (error) {
-        failed++
-        console.error(`   ❌ Failed to update article ${article.id}: ${error.message}`)
+    if (!dryRun && updated > 0) {
+      for (const [contentType, ids] of updatesByType.entries()) {
+        await client.query(
+          'UPDATE regulatory_updates SET content_type = $1 WHERE id = ANY($2::int[])',
+          [contentType, ids]
+        )
       }
     }
 
-    console.log(`\n✅ Processing complete!`)
-    console.log(`   Updated: ${updated}`)
-    console.log(`   Failed: ${failed}\n`)
+    const counts = {}
+    for (const [contentType, ids] of updatesByType.entries()) {
+      counts[contentType] = ids.length
+    }
 
-    // Step 4: Show statistics
-    console.log('═══════════════════════════════════════════════════════════════')
-    console.log('📊 Step 4: Content Type Distribution\n')
-
-    console.log('Updated articles by content type:')
-    Object.entries(stats)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([type, count]) => {
-        const percentage = ((count / updated) * 100).toFixed(1)
-        console.log(`   ${type}: ${count} (${percentage}%)`)
-      })
-
-    console.log()
-
-    // Step 5: Verify final state
-    console.log('═══════════════════════════════════════════════════════════════')
-    console.log('📊 Step 5: Final Verification\n')
-
-    const verifyQuery = `
-      SELECT
-        content_type,
-        COUNT(*) as count
-      FROM regulatory_updates
-      GROUP BY content_type
-      ORDER BY count DESC
-    `
-
-    const verifyResult = await pool.query(verifyQuery)
-
-    console.log('Current content type distribution in database:')
-    verifyResult.rows.forEach(row => {
-      console.log(`   ${row.content_type || 'NULL'}: ${row.count} articles`)
-    })
-
-    console.log('\n═══════════════════════════════════════════════════════════════')
-    console.log('✅ BACKFILL COMPLETE')
-    console.log('═══════════════════════════════════════════════════════════════\n')
-
-    await pool.end()
-    process.exit(0)
-
-  } catch (error) {
-    console.error('═══════════════════════════════════════════════════════════════')
-    console.error('❌ BACKFILL FAILED')
-    console.error('═══════════════════════════════════════════════════════════════\n')
-    console.error('Error:', error.message)
-    console.error('Stack:', error.stack)
-    await pool.end()
-    process.exit(1)
+    return { updated, counts }
+  } finally {
+    client.release()
   }
 }
 
-backfillContentTypes()
+async function run() {
+  console.log('Backfilling content types...')
+  console.log(`Target: ${target} | Dry run: ${dryRun ? 'yes' : 'no'}${limit ? ` | Limit: ${limit}` : ''}`)
+
+  const results = {}
+  const wantsDb = target === 'db' || target === 'both' || target === 'auto'
+  if (wantsDb) {
+    await dbService.waitForInitialization()
+  }
+
+  if (target === 'json' || target === 'both' || target === 'auto') {
+    if (target === 'auto' || target === 'json' || target === 'both') {
+      results.json = await backfillJson()
+      console.log(`JSON updates changed: ${results.json.updated}`)
+    }
+  }
+
+  if (target === 'db' || target === 'both' || target === 'auto') {
+    if (target === 'auto') {
+      if (dbService.usePostgres) {
+        results.db = await backfillDb()
+        console.log(`DB updates changed: ${results.db.updated}`)
+      } else {
+        console.log('DB backfill skipped (Postgres unavailable).')
+      }
+    } else {
+      results.db = await backfillDb()
+      console.log(`DB updates changed: ${results.db.updated}`)
+    }
+  }
+
+  const logCounts = (label, counts = {}) => {
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    if (!entries.length) return
+    console.log(`\n${label} by content type:`)
+    entries.forEach(([type, count]) => console.log(`  ${type}: ${count}`))
+  }
+
+  if (results.json) logCounts('JSON updates', results.json.counts)
+  if (results.db) logCounts('DB updates', results.db.counts)
+
+  console.log('\nDone.')
+}
+
+run().catch(error => {
+  console.error('Backfill failed:', error.message)
+  process.exit(1)
+})

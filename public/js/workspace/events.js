@@ -36,6 +36,15 @@
       }
     }
 
+    function broadcastWorkspaceActivity(detail) {
+      const payload = detail && typeof detail === 'object' ? detail : { type: 'activity' };
+      try {
+        window.dispatchEvent(new CustomEvent('workspace:activity', { detail: payload }));
+      } catch (error) {
+        console.warn('WorkspaceModule activity event failed:', error);
+      }
+    }
+
     function applyWorkspaceStats(stats) {
       const counts = {
         pinnedItems: typeof stats?.pinnedItems === 'number'
@@ -85,6 +94,7 @@
 
     context.define('broadcastWorkspacePins', broadcastWorkspacePins);
     context.define('broadcastWorkspaceStats', broadcastWorkspaceStats);
+    context.define('broadcastWorkspaceActivity', broadcastWorkspaceActivity);
     context.define('applyWorkspaceStats', applyWorkspaceStats);
     context.expose('updateWorkspaceCounts', updateWorkspaceCounts);
   });

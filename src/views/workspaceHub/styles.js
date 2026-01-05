@@ -239,12 +239,15 @@ function getWorkspaceHubStyles() {
         left: 0;
         min-width: 180px;
         max-width: 260px;
+        max-height: 220px;
         padding: 8px 10px;
         border-radius: 8px;
         background: #0f172a;
         color: #f8fafc;
         font-size: 0.72rem;
         line-height: 1.4;
+        white-space: pre-line;
+        overflow-y: auto;
         opacity: 0;
         transform: translateY(4px);
         pointer-events: none;
@@ -257,6 +260,24 @@ function getWorkspaceHubStyles() {
       .widget-stat-tooltip:focus::after {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      .widget-stat-link {
+        margin-left: auto;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #2563eb;
+        text-decoration: none;
+      }
+
+      .widget-stat-link:hover {
+        text-decoration: underline;
+      }
+
+      .widget-stat-link:focus-visible {
+        outline: 2px solid #93c5fd;
+        outline-offset: 2px;
+        border-radius: 6px;
       }
 
       /* Chart.js Container Styles */

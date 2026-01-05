@@ -20,6 +20,11 @@ const TOPIC_AREA_RULES = [
 function normalizeTopicArea(value) {
   if (value == null) return ''
   const trimmed = String(value).trim()
+  if (!trimmed) return ''
+  const lowered = trimmed.toLowerCase()
+  if (lowered === 'uncategorized' || lowered === 'uncategorised') {
+    return 'Other'
+  }
   return trimmed
 }
 
@@ -59,9 +64,7 @@ function ensurePinnedItemTopicArea(item) {
       authority: item.update_authority || '',
       sectors: Array.isArray(item.sectors) ? item.sectors : metadata.sectors
     })
-    if (inferred) {
-      metadata.topicArea = inferred
-    }
+    metadata.topicArea = inferred || 'Other'
   }
   delete metadata.topic_area
   delete metadata.topic

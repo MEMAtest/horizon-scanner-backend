@@ -21,6 +21,15 @@ function getHomePageStyles() {
                     letter-spacing: -0.01em;
                     color: #0f172a;
                 }
+                .priority-link {
+                    color: inherit;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .priority-link:hover { text-decoration: underline; }
+                .priority-link:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; border-radius: 6px; }
                 .priority-lead { display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 999px; background: #fef2f2; color: #b91c1c; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.78rem; }
                 .priority-summary { color: #475569; margin: 0 0 12px; line-height: 1.5; }
                 .priority-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }

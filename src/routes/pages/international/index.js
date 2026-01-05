@@ -25,7 +25,7 @@ const internationalPage = async (req, res) => {
       filters.region = region
     } else {
       // Exclude UK for all-regions view
-      filters.region = ['Americas', 'Europe', 'Asia-Pacific', 'International']
+      filters.region = ['Americas', 'Europe', 'Asia-Pacific', 'Africa', 'International']
     }
 
     // If specific country requested
@@ -76,13 +76,18 @@ const internationalPage = async (req, res) => {
 
     // Get all international updates for stats
     const allInternational = await dbService.getEnhancedUpdates({
-      region: ['Americas', 'Europe', 'Asia-Pacific', 'International'],
+      region: ['Americas', 'Europe', 'Asia-Pacific', 'Africa', 'International'],
       limit: 1000
     })
+
+    // UK authorities to exclude from international charts
+    const UK_AUTHORITIES = ['FCA', 'PRA', 'BoE', 'Bank of England', 'FSCS', 'FOS', 'TPR', 'ICO', 'SFO', 'JMLSG', 'FRC', 'LSE', 'Aquis Exchange']
 
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const countryStats = {}
     const authorityCounts = {}
+    const internationalAuthorityCounts = {} // For charts - excludes UK
+    const topicCounts = {} // For topic/category chart
     let thisWeek = 0
     let highImpact = 0
 
@@ -90,6 +95,7 @@ const internationalPage = async (req, res) => {
       const updateCountry = update.country || 'Unknown'
       const updateRegion = update.region || 'Unknown'
       const updateAuthority = update.authority || 'Unknown'
+      const isUK = updateCountry === 'UK' || UK_AUTHORITIES.includes(updateAuthority)
 
       if (!countryStats[updateCountry]) {
         countryStats[updateCountry] = {
@@ -103,8 +109,17 @@ const internationalPage = async (req, res) => {
         countryStats[updateCountry].authorities.add(update.authority)
       }
 
-      // Count authorities
+      // Count authorities (all)
       authorityCounts[updateAuthority] = (authorityCounts[updateAuthority] || 0) + 1
+
+      // Count international authorities only (for charts)
+      if (!isUK) {
+        internationalAuthorityCounts[updateAuthority] = (internationalAuthorityCounts[updateAuthority] || 0) + 1
+
+        // Count topics/categories for international updates
+        const topic = update.content_type || update.contentType || update.sector || 'General'
+        topicCounts[topic] = (topicCounts[topic] || 0) + 1
+      }
 
       // This week count
       const updateDate = new Date(update.published_date || update.publishedDate || update.fetchedDate)
@@ -131,11 +146,64 @@ const internationalPage = async (req, res) => {
       countries: Object.keys(countryStats).length
     }
 
+    // Chart data - Region distribution (exclude UK)
+    const regionDistribution = {}
+    for (const update of allInternational) {
+      const updateCountry = update.country || 'Unknown'
+      const updateAuthority = update.authority || 'Unknown'
+      const isUK = updateCountry === 'UK' || UK_AUTHORITIES.includes(updateAuthority)
+      if (!isUK) {
+        const r = update.region || 'Unknown'
+        regionDistribution[r] = (regionDistribution[r] || 0) + 1
+      }
+    }
+
+    // Chart data - Top 10 international authorities (excludes UK)
+    const topAuthorities = Object.entries(internationalAuthorityCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+
+    // Chart data - Topic/Category distribution
+    const topTopics = Object.entries(topicCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+
+    // Chart data - 30-day trend (international only)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const trendData = {}
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
+      const key = d.toISOString().split('T')[0]
+      trendData[key] = 0
+    }
+    for (const update of allInternational) {
+      const updateCountry = update.country || 'Unknown'
+      const updateAuthority = update.authority || 'Unknown'
+      const isUK = updateCountry === 'UK' || UK_AUTHORITIES.includes(updateAuthority)
+      if (!isUK) {
+        const updateDate = new Date(update.published_date || update.publishedDate || update.fetchedDate)
+        if (updateDate >= thirtyDaysAgo) {
+          const key = updateDate.toISOString().split('T')[0]
+          if (trendData.hasOwnProperty(key)) {
+            trendData[key]++
+          }
+        }
+      }
+    }
+
+    // Chart data objects
+    const chartData = {
+      regionDistribution,
+      topAuthorities,
+      topTopics,
+      trendData: Object.entries(trendData).sort((a, b) => a[0].localeCompare(b[0]))
+    }
+
     // Build filter options for dropdowns
     const filterOptions = {
       countries: Object.entries(countryStats)
         .map(([name, data]) => ({ name, count: data.total }))
-        .sort((a, b) => b.count - a.count),
+        .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
       authorities: Object.entries(authorityCounts)
         .map(([name, count]) => ({
           name,
@@ -163,7 +231,8 @@ const internationalPage = async (req, res) => {
       countryStats,
       updates,
       filterOptions,
-      currentFilters
+      currentFilters,
+      chartData
     })
 
     res.send(html)

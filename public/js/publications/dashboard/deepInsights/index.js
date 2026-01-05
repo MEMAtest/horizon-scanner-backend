@@ -46,6 +46,7 @@ export function applyDeepInsightsMixin(klass) {
     initBreachCharts,
     showBreachDetail,
     renderHandbookBars,
+    findMatchingRule,
     renderDeepTakeaways,
     setupDeepInsightsEvents,
     renderYearlyBreakdown,

@@ -516,6 +516,18 @@ input[type="radio"]:checked + .filter-option-checkmark {
     border-color: #d97706;
 }
 
+.action-btn-bookmark.is-bookmarked,
+.action-btn-bookmark[aria-pressed="true"] {
+    background: #fffbeb;
+    border-color: rgba(245, 158, 11, 0.6);
+    color: #f59e0b;
+}
+
+.action-btn-bookmark.is-bookmarked svg,
+.action-btn-bookmark[aria-pressed="true"] svg {
+    fill: currentColor;
+}
+
 .share-btn:hover {
     color: #059669;
     border-color: #059669;

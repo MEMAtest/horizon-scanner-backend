@@ -91,6 +91,43 @@
       }
     }
 
+    function persistProfileHubActivity(entry) {
+      try {
+        const key = 'profileHubActivity';
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        existing.unshift(entry);
+        if (existing.length > 500) existing.length = 500;
+        localStorage.setItem(key, JSON.stringify(existing));
+      } catch (error) {
+        // ignore storage issues
+      }
+    }
+
+    function broadcastWorkspaceActivity(entry) {
+      if (typeof context.broadcastWorkspaceActivity === 'function') {
+        context.broadcastWorkspaceActivity(entry);
+        return;
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('workspace:activity', { detail: entry }));
+      } catch (error) {
+        // ignore event errors
+      }
+    }
+
+    function recordProfileHubActivity(type, details) {
+      const payload = details && typeof details === 'object' ? details : {};
+      const entry = Object.assign({}, payload, {
+        type: type || payload.type || 'activity',
+        timestamp: payload.timestamp || new Date().toISOString()
+      });
+      const isProfileHub = window.location && window.location.pathname === '/profile-hub';
+      if (!isProfileHub) {
+        persistProfileHubActivity(entry);
+      }
+      broadcastWorkspaceActivity(entry);
+    }
+
     function getPreferredKanbanTemplateId() {
       try {
         const fromState = window.kanbanState && window.kanbanState.selectedTemplateId;
@@ -315,6 +352,22 @@
           ? state.pinnedUpdateIds.has(String(savedUpdateId))
           : state.pinnedUrls.has(savedUrl);
 
+        const activityTitle = (savedItem && savedItem.update_title)
+          || (pinnedItemByUpdateId && pinnedItemByUpdateId.update_title)
+          || title
+          || metadata.title
+          || 'Untitled update';
+        const activityAuthority = (savedItem && savedItem.update_authority)
+          || (pinnedItemByUpdateId && pinnedItemByUpdateId.update_authority)
+          || resolvedAuthority
+          || 'Unknown';
+        const activityPayload = {
+          title: activityTitle,
+          authority: activityAuthority,
+          url: savedUrl || normalizedUrl,
+          updateId: savedUpdateId || normalizedUpdateId
+        };
+
         updatePinButton(normalizedUrl);
         if (unpinUrl !== normalizedUrl) {
           updatePinButton(unpinUrl);
@@ -323,6 +376,7 @@
 
         if (isPinnedNow && !wasPinned) {
           context.showMessage('★ Saved to Profile Hub', 'success');
+          recordProfileHubActivity('bookmark_saved', activityPayload);
           try {
             if (window.NotificationsModule && typeof window.NotificationsModule.refresh === 'function') {
               window.NotificationsModule.refresh({ silent: true });
@@ -332,6 +386,7 @@
           }
         } else if (!isPinnedNow && wasPinned) {
           context.showMessage('Bookmark removed from Profile Hub', 'info');
+          recordProfileHubActivity('bookmark_removed', activityPayload);
           try {
             if (window.NotificationsModule && typeof window.NotificationsModule.refresh === 'function') {
               window.NotificationsModule.refresh({ silent: true });

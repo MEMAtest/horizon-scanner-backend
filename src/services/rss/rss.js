@@ -1,5 +1,5 @@
 function applyRssMethods(ServiceClass, { axios, cheerio }) {
-  ServiceClass.prototype.fetchRSSFeed = async function fetchRSSFeed(source) {
+  ServiceClass.prototype.fetchRSSFeed = async function fetchRSSFeed(source, options = {}) {
     try {
       const headers = {
         Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
@@ -14,11 +14,11 @@ function applyRssMethods(ServiceClass, { axios, cheerio }) {
       }
 
       const requestConfig = {
-        timeout: source.timeout || this.fetchTimeout || 15000,
+        timeout: options.timeoutMs || source.timeout || this.fetchTimeout || 15000,
         headers
       }
 
-      if (source.disableKeepAlive) {
+      if (options.disableKeepAlive || source.disableKeepAlive) {
         const https = require('https')
         const http = require('http')
         requestConfig.httpsAgent = new https.Agent({ keepAlive: false })

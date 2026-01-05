@@ -296,18 +296,36 @@ function renderInitializationSection() {
             return source || fallback;
         }
 
+        function extractLabel(value) {
+            if (Array.isArray(value)) {
+                const picked = value.map(item => (typeof item === 'string' ? item.trim() : ''))
+                    .filter(Boolean);
+                return picked[0] || '';
+            }
+            return typeof value === 'string' ? value.trim() : '';
+        }
+
+        function resolveRegulatoryArea(update) {
+            const area = safeText(update.area || update.regulatory_area || update.regulatoryArea || '');
+            if (area) return area;
+            const sector = extractLabel(update.sector) ||
+                extractLabel(update.primarySectors) ||
+                extractLabel(update.firm_types_affected);
+            return sector || 'General Regulation';
+        }
+
         function deriveSummaryText(update) {
             if (!update || typeof update !== 'object') return '';
 
             const candidates = [];
-            const aiSummaryRaw = safeText(update.ai_summary);
+            const aiSummaryRaw = normalizeSummaryText(update.ai_summary);
             if (aiSummaryRaw && !isFallbackSummary(aiSummaryRaw)) {
-                candidates.push(aiSummaryRaw.trim());
+                candidates.push(aiSummaryRaw);
             }
 
-            const summaryRaw = safeText(update.summary);
+            const summaryRaw = normalizeSummaryText(update.summary);
             if (summaryRaw && !isFallbackSummary(summaryRaw)) {
-                candidates.push(summaryRaw.trim());
+                candidates.push(summaryRaw);
             }
 
             const altFields = [
@@ -325,15 +343,15 @@ function renderInitializationSection() {
             altFields.forEach(value => {
                 if (value == null) return;
                 const raw = typeof value === 'string' ? value : String(value);
-                const textValue = raw.trim();
+                const textValue = normalizeSummaryText(raw);
                 if (textValue && !isFallbackSummary(textValue)) {
                     candidates.push(textValue);
                 }
             });
 
-            const impactText = safeText(update.impact);
+            const impactText = normalizeSummaryText(update.impact);
             if (impactText) {
-                candidates.push(impactText.trim());
+                candidates.push(impactText);
             }
 
             return candidates.find(Boolean) || '';
@@ -408,8 +426,9 @@ function renderInitializationSection() {
         }
 
         function buildDetailItems(update) {
+            const regulatoryArea = resolveRegulatoryArea(update);
             const fields = [
-                { label: 'Regulatory Area', value: safeText(update.area || update.regulatory_area || update.regulatoryArea || '') },
+                { label: 'Regulatory Area', value: safeText(regulatoryArea, 'General Regulation') },
                 update.business_impact_score != null && {
                     label: 'Impact Score',
                     value: safeText(String(update.business_impact_score)) + '/10'
@@ -448,7 +467,7 @@ function renderInitializationSection() {
             const publishedDate = formatDateDisplay(publishedAt || new Date());
             const isoDate = publishedAt ? publishedAt.toISOString() : '';
             const summarySource = deriveSummaryText(update);
-            const summaryText = summarySource ? truncateText(summarySource, 260) : 'No summary available';
+            const summaryText = summarySource || 'No summary available';
             const headline = safeText(update.headline, update.title || '');
             const authority = safeText(update.authority, 'Unknown authority');
 
@@ -460,7 +479,7 @@ function renderInitializationSection() {
             const dateAttr = escapeAttribute(isoDate || '');
             const summaryAttr = escapeAttribute(summarySource || '');
             const publishedAttr = escapeAttribute(update.published_date || update.publishedDate || isoDate || '');
-            const regulatoryArea = safeText(update.regulatory_area || update.regulatoryArea || update.area || '');
+            const regulatoryArea = resolveRegulatoryArea(update);
             const regulatoryAttr = escapeAttribute(regulatoryArea);
             const contentBadge = buildContentTypeBadge(update);
             const riskBadge = buildRiskScoreBadge(update, impactLevel);
@@ -487,9 +506,15 @@ function renderInitializationSection() {
                         '<div class="update-meta-secondary">' +
 	                            riskBadge +
 	                            '<div class="update-actions">' +
-	                                '<button class="action-btn action-btn-bookmark update-action-btn bookmark-btn" data-update-id="' + idAttr + '" title="Bookmark" aria-label="Bookmark" aria-pressed="false">☆</button>' +
-	                                '<button class="action-btn update-action-btn share-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="Share" aria-label="Share">Link</button>' +
-	                                '<button class="action-btn update-action-btn details-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="View details" aria-label="View details">View</button>' +
+	                                '<button class="action-btn action-btn-bookmark update-action-btn bookmark-btn" data-update-id="' + idAttr + '" title="Bookmark" aria-label="Bookmark" aria-pressed="false">' +
+	                                    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+	                                '</button>' +
+	                                '<button class="action-btn update-action-btn share-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="Share" aria-label="Share">' +
+	                                    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>' +
+	                                '</button>' +
+	                                '<button class="action-btn update-action-btn details-btn" data-update-id="' + idAttr + '" data-update-url="' + urlAttr + '" title="View details" aria-label="View details">' +
+	                                    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/></svg>' +
+	                                '</button>' +
 	                            '</div>' +
 	                        '</div>' +
 	                    '</div>' +
@@ -553,6 +578,17 @@ function renderInitializationSection() {
                 setupSearchBox();
                 bindUpdateActionHandlers();
                 updateWorkspaceCounts(workspaceStats);
+
+                try {
+                    if (typeof synchronizePinnedState === 'function') {
+                        await synchronizePinnedState({ silent: true });
+                    }
+                    if (typeof syncBookmarkButtons === 'function') {
+                        syncBookmarkButtons();
+                    }
+                } catch (error) {
+                    console.warn('Pinned sync failed:', error);
+                }
 
                 const isDashboardPage = Boolean(document.querySelector('.dashboard-header'));
                 if (!isDashboardPage) {

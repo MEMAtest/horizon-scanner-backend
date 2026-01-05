@@ -1,3 +1,5 @@
+const { VALID_CONTENT_TYPES } = require('../../utils/contentTypeInference')
+
 function applyParserMethods(ServiceClass) {
   ServiceClass.prototype.parseAndValidateAIResponse = function(response) {
     try {
@@ -36,10 +38,7 @@ function applyParserMethods(ServiceClass) {
 
       const validImpactLevels = ['Significant', 'Moderate', 'Informational']
       const validUrgencyLevels = ['High', 'Medium', 'Low']
-      const validContentTypes = [
-        'Speech', 'Consultation', 'Final Rule', 'Guidance', 'Enforcement Action',
-        'Statistical Report', 'Market Notice', 'Press Release', 'Research Paper', 'Event', 'Other'
-      ]
+      const validContentTypes = VALID_CONTENT_TYPES
 
       if (!validImpactLevels.includes(parsed.impactLevel)) {
         parsed.impactLevel = 'Moderate'

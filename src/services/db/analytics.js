@@ -1,4 +1,8 @@
 module.exports = function applyAnalyticsMethods(EnhancedDBService) {
+  const isBankNewsUpdate = (update) => (update.source_category || update.sourceCategory) === 'bank_news'
+  const excludeBankNewsUpdates = (updates) => (Array.isArray(updates) ? updates.filter(update => !isBankNewsUpdate(update)) : [])
+  const bankNewsFilterSql = "source_category IS DISTINCT FROM 'bank_news'"
+
   Object.assign(EnhancedDBService.prototype, {
     async getSystemStatistics() {
       try {
@@ -23,6 +27,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
                       COUNT(*) FILTER (WHERE ai_summary IS NOT NULL) as ai_analyzed,
                       COUNT(*) FILTER (WHERE impact_level = 'Significant' OR business_impact_score >= 7) as high_impact
                   FROM regulatory_updates
+                  WHERE ${bankNewsFilterSql}
               `)
 
         const stats = result.rows[0]
@@ -38,7 +43,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
     },
 
     async getSystemStatisticsJSON() {
-      const updates = await this.loadJSONData(this.updatesFile)
+      const updates = excludeBankNewsUpdates(await this.loadJSONData(this.updatesFile))
 
       const totalUpdates = updates.length
       const activeAuthorities = new Set(updates.map(u => u.authority)).size
@@ -106,6 +111,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
                       COUNT(DISTINCT CASE WHEN published_date >= $2 THEN authority END) as authorities_last_week,
                       COUNT(DISTINCT CASE WHEN published_date >= $3 AND published_date < $2 THEN authority END) as authorities_prev_week
                   FROM regulatory_updates
+                  WHERE ${bankNewsFilterSql}
               `, [today, startOfWeek, startOfPrevWeek])
 
         const stats = result.rows[0]
@@ -147,7 +153,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
     },
 
     async getDashboardStatisticsJSON() {
-      const updates = await this.loadJSONData(this.updatesFile)
+      const updates = excludeBankNewsUpdates(await this.loadJSONData(this.updatesFile))
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
@@ -249,6 +255,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
                       COUNT(*) FILTER (WHERE published_date >= $1) as today,
                       COUNT(*) FILTER (WHERE published_date >= $2) as this_week
                   FROM regulatory_updates
+                  WHERE ${bankNewsFilterSql}
               `, [today, weekAgo])
 
         // Get authority counts
@@ -256,6 +263,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
                   SELECT authority, COUNT(*) as count
                   FROM regulatory_updates
                   WHERE published_date >= $1
+                    AND ${bankNewsFilterSql}
                   GROUP BY authority
                   ORDER BY count DESC
               `, [weekAgo])
@@ -283,7 +291,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
     },
 
     async getUpdateCountsJSON() {
-      const updates = await this.loadJSONData(this.updatesFile)
+      const updates = excludeBankNewsUpdates(await this.loadJSONData(this.updatesFile))
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -344,6 +352,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
         const authoritiesResult = await client.query(`
                   SELECT authority as name, COUNT(*) as count
                   FROM regulatory_updates
+                  WHERE ${bankNewsFilterSql}
                   GROUP BY authority
                   ORDER BY count DESC
               `)
@@ -353,6 +362,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
                   SELECT DISTINCT sector as name, COUNT(*) as count
                   FROM regulatory_updates
                   WHERE sector IS NOT NULL
+                    AND ${bankNewsFilterSql}
                   GROUP BY sector
                   ORDER BY count DESC
               `)
@@ -367,7 +377,7 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
     },
 
     async getFilterOptionsJSON() {
-      const updates = await this.loadJSONData(this.updatesFile)
+      const updates = excludeBankNewsUpdates(await this.loadJSONData(this.updatesFile))
 
       const authorityCounts = {}
       const sectorCounts = {}

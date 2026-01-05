@@ -1,5 +1,5 @@
 function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
-  ServiceClass.prototype.fetchPuppeteer = async function fetchPuppeteer(source) {
+  ServiceClass.prototype.fetchPuppeteer = async function fetchPuppeteer(source, options = {}) {
     try {
       console.log(`🤖 Puppeteer scraping for ${source.name} (${source.authority})...`)
 
@@ -65,6 +65,41 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
         case 'Reserve Bank of India':
           scraperResults = await puppeteerScraper.scrapeRBI()
           break
+        case 'JPMorgan':
+          scraperResults = await puppeteerScraper.scrapeJPMorgan()
+          break
+        case 'BofA':
+        case 'Bank of America':
+          scraperResults = await puppeteerScraper.scrapeBofA()
+          break
+        case 'Citigroup':
+          scraperResults = await puppeteerScraper.scrapeCitigroup()
+          break
+        case 'WellsFargo':
+        case 'Wells Fargo':
+          scraperResults = await puppeteerScraper.scrapeWellsFargo()
+          break
+        case 'Goldman':
+        case 'Goldman Sachs':
+          scraperResults = await puppeteerScraper.scrapeGoldman()
+          break
+        case 'MorganStanley':
+        case 'Morgan Stanley':
+          scraperResults = await puppeteerScraper.scrapeMorganStanley()
+          break
+        case 'HSBC':
+          scraperResults = await puppeteerScraper.scrapeHSBC()
+          break
+        case 'Barclays':
+          scraperResults = await puppeteerScraper.scrapeBarclays()
+          break
+        case 'DeutscheBank':
+        case 'Deutsche Bank':
+          scraperResults = await puppeteerScraper.scrapeDeutscheBank()
+          break
+        case 'UBS':
+          scraperResults = await puppeteerScraper.scrapeUBS()
+          break
         case 'CIMA':
         case 'Cayman Islands Monetary Authority':
           scraperResults = await puppeteerScraper.scrapeCIMA()
@@ -90,6 +125,9 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
       return scraperResults
     } catch (error) {
       console.error(`❌ Puppeteer scraping failed for ${source.name}:`, error.message)
+      if (options.throwOnError) {
+        throw error
+      }
       return []
     }
   }

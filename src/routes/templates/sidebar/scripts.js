@@ -200,7 +200,12 @@ function getSidebarScripts() {
                     try {
                         // Determine the correct endpoint based on current page
                         const isPublicationsPage = window.location.pathname.includes('publications');
-                        const endpoint = isPublicationsPage ? '/api/publications/refresh' : '/manual-refresh';
+                        const isBankNewsPage = window.location.pathname.includes('bank-news');
+                        const endpoint = isPublicationsPage
+                            ? '/api/publications/refresh'
+                            : isBankNewsPage
+                                ? '/manual-refresh?sourceCategory=bank_news'
+                                : '/manual-refresh';
 
                         // Call the manual refresh endpoint with timeout
                         const controller = new AbortController();
@@ -278,9 +283,101 @@ function getSidebarScripts() {
                                 '@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
                 document.head.appendChild(style);
             }
-            
+
             // Auto-refresh counters every 30 seconds
             setInterval(updateLiveCounters, 30000);
+
+            // Collapsible Sidebar Sections
+            if (typeof toggleSidebarSection === 'undefined') {
+                window.toggleSidebarSection = function(sectionId) {
+                    const section = document.querySelector('[data-section-id="' + sectionId + '"]');
+                    if (!section) return;
+
+                    const header = section.querySelector('.section-header');
+                    const content = section.querySelector('.section-content');
+                    const chevron = section.querySelector('.section-chevron');
+
+                    const isExpanded = header.getAttribute('aria-expanded') === 'true';
+
+                    // Toggle state
+                    header.setAttribute('aria-expanded', !isExpanded);
+
+                    if (isExpanded) {
+                        content.classList.remove('expanded');
+                        content.classList.add('collapsed');
+                        chevron.textContent = '▶';
+                    } else {
+                        content.classList.remove('collapsed');
+                        content.classList.add('expanded');
+                        chevron.textContent = '▼';
+                    }
+
+                    // Save state to localStorage
+                    saveSidebarState();
+                };
+            }
+
+            // Save sidebar collapsed state to localStorage
+            if (typeof saveSidebarState === 'undefined') {
+                window.saveSidebarState = function() {
+                    const sections = document.querySelectorAll('.sidebar-section');
+                    const state = {};
+
+                    sections.forEach(section => {
+                        const id = section.getAttribute('data-section-id');
+                        const header = section.querySelector('.section-header');
+                        state[id] = header.getAttribute('aria-expanded') === 'true';
+                    });
+
+                    localStorage.setItem('sidebarSectionsState', JSON.stringify(state));
+                };
+            }
+
+            // Restore sidebar state from localStorage
+            if (typeof restoreSidebarState === 'undefined') {
+                window.restoreSidebarState = function() {
+                    const savedState = localStorage.getItem('sidebarSectionsState');
+                    if (!savedState) return;
+
+                    try {
+                        const state = JSON.parse(savedState);
+
+                        Object.entries(state).forEach(([sectionId, isExpanded]) => {
+                            const section = document.querySelector('[data-section-id="' + sectionId + '"]');
+                            if (!section) return;
+
+                            const header = section.querySelector('.section-header');
+                            const content = section.querySelector('.section-content');
+                            const chevron = section.querySelector('.section-chevron');
+
+                            // Check if section has active item - if so, always expand
+                            const hasActiveItem = section.querySelector('.nav-item.active');
+                            const shouldExpand = hasActiveItem || isExpanded;
+
+                            header.setAttribute('aria-expanded', shouldExpand);
+
+                            if (shouldExpand) {
+                                content.classList.remove('collapsed');
+                                content.classList.add('expanded');
+                                chevron.textContent = '▼';
+                            } else {
+                                content.classList.remove('expanded');
+                                content.classList.add('collapsed');
+                                chevron.textContent = '▶';
+                            }
+                        });
+                    } catch (e) {
+                        console.log('Could not restore sidebar state:', e);
+                    }
+                };
+            }
+
+            // Initialize sidebar on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                if (typeof restoreSidebarState === 'function') {
+                    restoreSidebarState();
+                }
+            });
         </script>`
 }
 

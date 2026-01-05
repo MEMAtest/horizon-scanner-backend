@@ -14,6 +14,7 @@ const rssFetcher = require('./services/rssFetcher')
 const aiAnalyzer = require('./services/aiAnalyzer')
 const FCAEnforcementService = require('./services/fcaEnforcementService')
 const { scheduleDailyDigest } = require('./services/dailyDigestService')
+const scrapeMonitorService = require('./services/scrapeMonitorService')
 
 // Import routes
 const pageRoutes = require('./routes/pageRoutes')
@@ -177,7 +178,8 @@ class AIRegulatoryIntelligenceServer {
     this.app.post('/api/refresh', async (req, res) => {
       try {
         console.log('🔄 Manual refresh triggered')
-        const result = await rssFetcher.fetchAllFeeds()
+        const sourceCategory = req.query.sourceCategory || req.body?.sourceCategory
+        const result = await rssFetcher.fetchAllFeeds(sourceCategory ? { sourceCategory } : {})
 
         res.json({
           success: true,
@@ -198,7 +200,8 @@ class AIRegulatoryIntelligenceServer {
     this.app.post('/manual-refresh', async (req, res) => {
       try {
         console.log('🔄 Manual refresh triggered from sidebar')
-        const result = await rssFetcher.fetchAllFeeds()
+        const sourceCategory = req.query.sourceCategory || req.body?.sourceCategory
+        const result = await rssFetcher.fetchAllFeeds(sourceCategory ? { sourceCategory } : {})
 
         res.json({
           success: true,
@@ -693,6 +696,8 @@ class AIRegulatoryIntelligenceServer {
           }
         }, 60 * 1000) // Check every minute
       }
+
+      scrapeMonitorService.schedule()
 
       console.log('✅ Background tasks started')
     } catch (error) {

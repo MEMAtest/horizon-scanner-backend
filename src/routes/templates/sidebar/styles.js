@@ -198,9 +198,65 @@ function getSidebarStyles() {
             
             /* Navigation Styles */
             .sidebar-nav-clean {
-                padding: 1.5rem 0;
+                padding: 0.75rem 0;
             }
-            
+
+            /* Collapsible Section Styles */
+            .sidebar-section {
+                margin-bottom: 0.25rem;
+            }
+
+            .section-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                padding: 0.6rem 1.5rem;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .section-header:hover {
+                background: #f8fafc;
+            }
+
+            .section-title {
+                font-size: 0.7rem;
+                font-weight: 600;
+                color: #9ca3af;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+
+            .section-chevron {
+                font-size: 0.6rem;
+                color: #9ca3af;
+                transition: transform 0.25s ease;
+            }
+
+            .section-header[aria-expanded="false"] .section-chevron {
+                transform: rotate(-90deg);
+            }
+
+            .section-content {
+                max-height: 1000px;
+                overflow: hidden;
+                transition: max-height 0.3s ease-out, opacity 0.25s ease;
+                opacity: 1;
+            }
+
+            .section-content.collapsed {
+                max-height: 0;
+                opacity: 0;
+            }
+
+            .section-content.expanded {
+                max-height: 1000px;
+                opacity: 1;
+            }
+
             .nav-section-title {
                 font-size: 0.7rem;
                 font-weight: 600;

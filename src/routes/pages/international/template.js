@@ -2,7 +2,7 @@ const { getCommonStyles } = require('../../templates/commonStyles')
 const { getClientScripts } = require('../../templates/clientScripts')
 const { getInternationalStyles } = require('./styles')
 const { getInternationalIcon, wrapIconInContainer, getCanaryAnimationStyles } = require('../../../views/icons')
-const { isFallbackSummary, selectSummary, stripHtml } = require('../../../utils/summaryUtils')
+const { isFallbackSummary, selectSummary } = require('../../../utils/summaryUtils')
 
 const COUNTRY_FLAGS = {
   // Americas
@@ -32,8 +32,20 @@ const COUNTRY_FLAGS = {
   Qatar: '\u{1F1F6}\u{1F1E6}',
   // Africa
   'South Africa': '\u{1F1FF}\u{1F1E6}',
+  Nigeria: '\u{1F1F3}\u{1F1EC}',
+  Egypt: '\u{1F1EA}\u{1F1EC}',
+  Africa: '\u{1F30D}',
   // International
   International: '\u{1F30D}'
+}
+
+const REGION_ICON_SVGS = {
+  all: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>',
+  Europe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20h16"/><path d="M6 20V9l6-4 6 4v11"/><path d="M9 20v-6h6v6"/></svg>',
+  Americas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M10 14l2-6 2 6-2-1-2 1z"/></svg>',
+  'Asia-Pacific': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>',
+  Africa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.5 4.5l1.5 1.5M18 18l1.5 1.5M3 12h2M19 12h2M4.5 19.5l1.5-1.5M18 6l1.5-1.5"/></svg>',
+  International: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>'
 }
 
 function escapeHtml(text) {
@@ -56,18 +68,6 @@ function formatDate(dateValue) {
   if (diffDays === 1) return 'Yesterday'
   if (diffDays <= 7) return `${diffDays} days ago`
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function truncateSummary(text, maxLength = 280) {
-  if (!text) return ''
-  const cleaned = stripHtml(text)
-  if (cleaned.length <= maxLength) return cleaned
-  const truncated = cleaned.substring(0, maxLength)
-  const lastSpace = truncated.lastIndexOf(' ')
-  if (lastSpace > maxLength * 0.7) {
-    return truncated.substring(0, lastSpace).trim() + '...'
-  }
-  return truncated.trim() + '...'
 }
 
 function getRiskScoreInfo(update, level = 'Informational') {
@@ -185,7 +185,7 @@ function renderUpdateItem(update) {
   const updateId = escapeForInline(update.id || '')
 
   return `
-    <div class="update-card" data-id="${escapeHtml(update.id || '')}" data-country="${escapeHtml(country)}" data-authority="${escapeHtml(update.authority || '')}" data-impact="${escapeHtml(impactLevel)}">
+    <div class="update-card" data-id="${escapeHtml(update.id || '')}" data-url="${escapeHtml(update.url || '')}" data-country="${escapeHtml(country)}" data-authority="${escapeHtml(update.authority || '')}" data-impact="${escapeHtml(impactLevel)}" data-urgency="${escapeHtml(update.urgency || '')}" data-date="${escapeHtml(update.published_date || update.publishedDate || '')}">
       <div class="update-header">
         <div class="update-meta-primary">
           <span class="authority-badge">${escapeHtml(update.authority || 'Unknown')}</span>
@@ -222,7 +222,7 @@ function renderUpdateItem(update) {
       </h3>
 
       <div class="update-summary">
-        ${hasAiSummary ? '<span class="ai-badge">AI Analysis:</span> ' : ''}${escapeHtml(truncateSummary(summaryText))}
+        ${hasAiSummary ? '<span class="ai-badge">AI Analysis:</span> ' : ''}${escapeHtml(summaryText)}
       </div>
 
       ${buildDetailItems(update)}
@@ -256,7 +256,14 @@ function renderCountryCard(country, data) {
 }
 
 function renderFilters({ currentFilters, filterOptions }) {
-  const regions = ['Europe', 'Americas', 'Asia-Pacific', 'International']
+  const regionButtons = [
+    { value: '', label: 'All Regions', icon: 'all' },
+    { value: 'Europe', label: 'Europe', icon: 'Europe' },
+    { value: 'Americas', label: 'Americas', icon: 'Americas' },
+    { value: 'Asia-Pacific', label: 'Asia-Pacific', icon: 'Asia-Pacific' },
+    { value: 'Africa', label: 'Africa', icon: 'Africa' },
+    { value: 'International', label: 'International', icon: 'International' }
+  ]
   const countries = filterOptions.countries || []
   const authorities = filterOptions.authorities || []
   const impactLevels = [
@@ -276,9 +283,11 @@ function renderFilters({ currentFilters, filterOptions }) {
   return `
     <section class="filters-container">
       <div class="quick-filters" role="group" aria-label="Region filters">
-        <button type="button" class="quick-filter-btn ${!currentFilters.region ? 'active' : ''}" onclick="InternationalPage.filterByRegion('')">All Regions</button>
-        ${regions.map(r => `
-          <button type="button" class="quick-filter-btn ${currentFilters.region === r ? 'active' : ''}" onclick="InternationalPage.filterByRegion('${escapeHtml(r)}')">${escapeHtml(r)}</button>
+        ${regionButtons.map(button => `
+          <button type="button" class="quick-filter-btn ${button.value ? (currentFilters.region === button.value ? 'active' : '') : (!currentFilters.region ? 'active' : '')}" onclick="InternationalPage.filterByRegion('${escapeHtml(button.value)}')" aria-pressed="${button.value ? (currentFilters.region === button.value ? 'true' : 'false') : (!currentFilters.region ? 'true' : 'false')}">
+            <span class="region-icon">${REGION_ICON_SVGS[button.icon] || ''}</span>
+            <span>${escapeHtml(button.label)}</span>
+          </button>
         `).join('')}
       </div>
       <form class="filters-grid" method="get" action="/international">
@@ -338,7 +347,8 @@ function renderInternationalPage({
   countryStats,
   updates,
   filterOptions,
-  currentFilters
+  currentFilters,
+  chartData = {}
 }) {
   const regionCountries = Object.entries(countryStats)
     .filter(([c, data]) => !region || data.region === region)
@@ -390,17 +400,54 @@ function renderInternationalPage({
             </article>
           </section>
 
+          <section class="charts-section">
+            <div class="charts-grid-2x2">
+              <div class="chart-card">
+                <h3 class="chart-title">Updates by Region</h3>
+                <div class="chart-container">
+                  <div id="regionOrbit" class="region-orbit" role="img" aria-label="Updates by region"></div>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h3 class="chart-title">Top 10 International Authorities by Updates</h3>
+                <div class="chart-container">
+                  <canvas id="authoritiesChart"></canvas>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h3 class="chart-title">Topics & Categories</h3>
+                <div class="chart-container">
+                  <canvas id="topicsChart"></canvas>
+                </div>
+              </div>
+              <div class="chart-card">
+                <h3 class="chart-title">30-Day International Trend</h3>
+                <div class="chart-container">
+                  <canvas id="trendChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </section>
+
           ${renderFilters({ currentFilters: currentFilters || {}, filterOptions: filterOptions || {} })}
 
           <section class="jurisdictions-section">
-            <h2 class="section-title">
-              ${region ? `${COUNTRY_FLAGS[region] || '\u{1F30D}'} ${region} Jurisdictions` : '\u{1F30D} Jurisdictions by Region'}
-            </h2>
-            <div class="country-grid">
+            <button class="jurisdictions-toggle" onclick="toggleJurisdictions()" aria-expanded="false">
+              <span class="toggle-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </span>
+              <span class="toggle-text">${region ? `${COUNTRY_FLAGS[region] || '\u{1F30D}'} ${region} Jurisdictions` : '\u{1F30D} Jurisdictions by Region'}</span>
+              <span class="toggle-count">${regionCountries.length} jurisdictions</span>
+            </button>
+            <div class="jurisdictions-content collapsed" id="jurisdictionsContent">
+              <div class="country-grid">
               ${regionCountries.length > 0
     ? regionCountries.map(([c, data]) => renderCountryCard(c, data)).join('')
     : '<div class="no-updates"><p>No updates from this region yet.</p></div>'
               }
+              </div>
             </div>
           </section>
 
@@ -427,7 +474,6 @@ function renderInternationalPage({
         </main>
       </div>
 
-      ${getClientScripts()}
       <script>
         // Initialize updates data for client-side filtering
         window.initialUpdates = ${JSON.stringify(updates.map(u => ({
@@ -442,6 +488,8 @@ function renderInternationalPage({
           impact_level: u.impact_level || u.impactLevel,
           impactLevel: u.impact_level || u.impactLevel,
           urgency: u.urgency,
+          area: u.area || u.regulatory_area || u.regulatoryArea,
+          regulatory_area: u.regulatory_area || u.regulatoryArea || u.area,
           sector: u.sector,
           content_type: u.content_type || u.contentType,
           business_impact_score: u.business_impact_score,
@@ -453,6 +501,7 @@ function renderInternationalPage({
         window.originalUpdates = window.initialUpdates.slice();
         window.filteredUpdates = window.initialUpdates.slice();
       </script>
+      ${getClientScripts()}
       <script>
         const InternationalPage = {
           filterByRegion: function(region) {
@@ -479,6 +528,283 @@ function renderInternationalPage({
           InternationalPage.filterByCountry(country);
         }
         window.InternationalPage = InternationalPage;
+
+        // Toggle jurisdictions section
+        function toggleJurisdictions() {
+          const content = document.getElementById('jurisdictionsContent');
+          const button = document.querySelector('.jurisdictions-toggle');
+          const isExpanded = button.getAttribute('aria-expanded') === 'true';
+
+          button.setAttribute('aria-expanded', !isExpanded);
+          content.classList.toggle('collapsed');
+          content.classList.toggle('expanded');
+        }
+      </script>
+
+      <!-- Chart.js -->
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+      <script>
+        // Chart data from server
+        const chartData = ${JSON.stringify(chartData)};
+
+        // Colors for charts
+        const regionColors = {
+          'Europe': '#3b82f6',
+          'Americas': '#10b981',
+          'Asia-Pacific': '#f59e0b',
+          'Africa': '#8b5cf6',
+          'International': '#6b7280',
+          'Unknown': '#d1d5db'
+        };
+
+        const regionIconSvgs = ${JSON.stringify(REGION_ICON_SVGS).replace(/</g, '\\u003c')};
+        let orbitResizeTimer;
+
+        function renderRegionOrbit() {
+          const orbit = document.getElementById('regionOrbit');
+          if (!orbit) return;
+
+          const distribution = chartData.regionDistribution || {};
+          const entries = Object.entries(distribution)
+            .filter(([, value]) => Number(value) > 0);
+
+          if (!entries.length) {
+            orbit.innerHTML = '<div class="chart-empty">No region data yet</div>';
+            return;
+          }
+
+          const total = entries.reduce((sum, [, value]) => sum + Number(value || 0), 0);
+          const values = entries.map(([, value]) => Number(value || 0));
+          const maxValue = Math.max(...values, 1);
+
+          orbit.innerHTML = '';
+
+          const ring = document.createElement('div');
+          ring.className = 'orbit-ring';
+          orbit.appendChild(ring);
+
+          const center = document.createElement('div');
+          center.className = 'orbit-center';
+          center.innerHTML = '<div class="orbit-total">' + total + '</div><div class="orbit-caption">International updates</div>';
+          orbit.appendChild(center);
+
+          const width = orbit.clientWidth || 220;
+          const height = orbit.clientHeight || 220;
+          const radius = Math.min(width, height) * 0.32;
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const sorted = entries.sort((a, b) => b[1] - a[1]);
+
+          sorted.forEach(([region, value], index) => {
+            const angle = (index / sorted.length) * Math.PI * 2 - Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            const minSize = 34;
+            const maxSize = 58;
+            const size = minSize + (Number(value || 0) / maxValue) * (maxSize - minSize);
+
+            const node = document.createElement('div');
+            node.className = 'orbit-node';
+            node.style.left = x + 'px';
+            node.style.top = y + 'px';
+            node.style.setProperty('--node-color', regionColors[region] || '#6b7280');
+            node.style.setProperty('--node-size', Math.round(size) + 'px');
+            node.style.setProperty('--node-index', index);
+            node.setAttribute('title', region + ': ' + value + ' updates');
+
+            const bubble = document.createElement('div');
+            bubble.className = 'orbit-node-bubble';
+
+            const icon = document.createElement('span');
+            icon.className = 'orbit-node-icon';
+            icon.innerHTML = regionIconSvgs[region] || regionIconSvgs.all || '';
+
+            const count = document.createElement('span');
+            count.className = 'orbit-node-count';
+            count.textContent = value;
+
+            bubble.appendChild(icon);
+            bubble.appendChild(count);
+
+            const label = document.createElement('div');
+            label.className = 'orbit-node-label';
+            label.textContent = region;
+
+            node.appendChild(bubble);
+            node.appendChild(label);
+            orbit.appendChild(node);
+          });
+        }
+
+        function scheduleRegionOrbit() {
+          if (orbitResizeTimer) {
+            window.clearTimeout(orbitResizeTimer);
+          }
+          orbitResizeTimer = window.setTimeout(renderRegionOrbit, 150);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+          renderRegionOrbit();
+          window.addEventListener('resize', scheduleRegionOrbit);
+
+          // Top Authorities Bar Chart
+          const authCtx = document.getElementById('authoritiesChart');
+          if (authCtx && chartData.topAuthorities && chartData.topAuthorities.length > 0) {
+            const labels = chartData.topAuthorities.map(a => a[0]);
+            const values = chartData.topAuthorities.map(a => a[1]);
+
+            new Chart(authCtx, {
+              type: 'bar',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: 'Updates',
+                  data: values,
+                  backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                  borderColor: '#3b82f6',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  barThickness: 16
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    grid: { color: '#f3f4f6' },
+                    ticks: { stepSize: 10, font: { size: 10 } }
+                  },
+                  y: {
+                    grid: { display: false },
+                    ticks: {
+                      font: { size: 10 },
+                      callback: function(value) {
+                        const label = this.getLabelForValue(value);
+                        return label.length > 15 ? label.substring(0, 15) + '...' : label;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          }
+
+          // 30-Day Trend Line Chart
+          const trendCtx = document.getElementById('trendChart');
+          if (trendCtx && chartData.trendData && chartData.trendData.length > 0) {
+            const labels = chartData.trendData.map(d => {
+              const date = new Date(d[0]);
+              return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            });
+            const values = chartData.trendData.map(d => d[1]);
+
+            new Chart(trendCtx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: 'Updates',
+                  data: values,
+                  borderColor: '#3b82f6',
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 2,
+                  pointBackgroundColor: '#3b82f6',
+                  pointBorderColor: '#ffffff',
+                  pointBorderWidth: 1,
+                  pointHoverRadius: 5
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: {
+                    grid: { display: false },
+                    ticks: {
+                      maxTicksLimit: 7,
+                      font: { size: 10 },
+                      maxRotation: 0
+                    }
+                  },
+                  y: {
+                    beginAtZero: true,
+                    grid: { color: '#f3f4f6' },
+                    ticks: {
+                      stepSize: 5,
+                      font: { size: 10 }
+                    }
+                  }
+                },
+                interaction: {
+                  intersect: false,
+                  mode: 'index'
+                }
+              }
+            });
+          }
+
+          // Topics/Categories Chart
+          const topicsCtx = document.getElementById('topicsChart');
+          if (topicsCtx && chartData.topTopics && chartData.topTopics.length > 0) {
+            const labels = chartData.topTopics.map(t => t[0]);
+            const values = chartData.topTopics.map(t => t[1]);
+
+            const topicColors = [
+              '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+              '#ef4444', '#06b6d4', '#ec4899', '#84cc16'
+            ];
+
+            new Chart(topicsCtx, {
+              type: 'bar',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: 'Updates',
+                  data: values,
+                  backgroundColor: topicColors.slice(0, labels.length),
+                  borderRadius: 4,
+                  barThickness: 20
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    grid: { color: '#f3f4f6' },
+                    ticks: { font: { size: 10 } }
+                  },
+                  y: {
+                    grid: { display: false },
+                    ticks: {
+                      font: { size: 10 },
+                      callback: function(value) {
+                        const label = this.getLabelForValue(value);
+                        return label.length > 20 ? label.substring(0, 20) + '...' : label;
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          }
+        });
       </script>
     </body>
     </html>

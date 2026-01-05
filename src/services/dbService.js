@@ -22,6 +22,7 @@ const applyAuthMethods = require('./db/auth')
 const applyFirmPersonasMethods = require('./db/firmPersonas')
 const applyCalendarMethods = require('./db/calendar')
 const applyHandbookMethods = require('./db/handbook')
+const applyScrapeMonitoringMethods = require('./db/scrapeMonitoring')
 
 class EnhancedDBService {
   constructor() {
@@ -41,6 +42,8 @@ class EnhancedDBService {
     this.userProfilesFile = path.join(this.jsonDataPath, 'user_profiles.json')
     this.profileWorkflowsFile = path.join(this.jsonDataPath, 'profile_workflows.json')
     this.digestHistoryFile = path.join(this.jsonDataPath, 'digest_history.json')
+    this.scrapeMonitorRunsFile = path.join(this.jsonDataPath, 'scrape_monitor_runs.json')
+    this.scrapeMonitorChecksFile = path.join(this.jsonDataPath, 'scrape_monitor_checks.json')
 
     this.initializationPromise = this.initializeDatabase()
   }
@@ -73,5 +76,6 @@ applyAuthMethods(EnhancedDBService)
 applyFirmPersonasMethods(EnhancedDBService)
 applyCalendarMethods(EnhancedDBService)
 applyHandbookMethods(EnhancedDBService)
+applyScrapeMonitoringMethods(EnhancedDBService)
 
 module.exports = new EnhancedDBService()
