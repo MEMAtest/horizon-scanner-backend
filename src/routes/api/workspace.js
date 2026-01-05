@@ -15,6 +15,59 @@ function registerWorkspaceRoutes(router) {
     return 'default'
   }
 
+  function safeDecode(value) {
+    if (value == null) return ''
+    const raw = String(value)
+    try {
+      return decodeURIComponent(raw)
+    } catch (error) {
+      return raw
+    }
+  }
+
+  function normalizeUrlKey(value) {
+    if (!value) return ''
+    const raw = String(value).trim()
+    if (!raw) return ''
+    try {
+      const parsed = new URL(raw)
+      const host = parsed.host.toLowerCase()
+      let path = parsed.pathname.replace(/\/+$/, '')
+      if (!path) path = '/'
+      return `${host}${path}${parsed.search}`
+    } catch (error) {
+      return raw.replace(/\/+$/, '')
+    }
+  }
+
+  function extractPinnedItemIdentifiers(item) {
+    if (!item || typeof item !== 'object') {
+      return { url: '', updateId: '', itemId: '' }
+    }
+    const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
+    return {
+      url: item.update_url || item.updateUrl || item.url || metadata.url || metadata.sourceUrl || '',
+      updateId: metadata.updateId || metadata.update_id || item.update_id || item.updateId || '',
+      itemId: item.id || item.item_id || item.pinned_id || item.pinnedId || ''
+    }
+  }
+
+  async function findPinnedItemByUrl(targetUrl) {
+    const targetKey = normalizeUrlKey(targetUrl)
+    if (!targetKey) return null
+    try {
+      const items = await dbService.getPinnedItems()
+      if (!Array.isArray(items)) return null
+      return items.find(item => {
+        const { url } = extractPinnedItemIdentifiers(item)
+        return url && normalizeUrlKey(url) === targetKey
+      }) || null
+    } catch (error) {
+      console.warn('[workspace] Failed to resolve pinned item by URL:', error.message)
+      return null
+    }
+  }
+
   async function notifyBookmarkSaved(req, pinnedItem, fallbackTitle) {
     try {
       if (!pinnedItem || typeof pinnedItem !== 'object') return
@@ -433,10 +486,21 @@ function registerWorkspaceRoutes(router) {
   }
   })
 
-  router.put('/workspace/pin/:url/collection', async (req, res) => {
+  router.put('/workspace/pin/:url(*)/collection', async (req, res) => {
   try {
-    const url = decodeURIComponent(req.params.url)
-    const { collectionId, updateId, pinnedItemId } = req.body || {}
+    const rawParam = safeDecode(req.params.url || '')
+    const { collectionId } = req.body || {}
+    let { updateId, pinnedItemId } = req.body || {}
+    const looksLikeUrl = /^https?:\/\//i.test(rawParam)
+    const url = looksLikeUrl ? rawParam : ''
+
+    if (!updateId && !pinnedItemId && rawParam && !looksLikeUrl) {
+      if (/^\d+$/.test(rawParam)) {
+        pinnedItemId = rawParam
+      } else {
+        updateId = rawParam
+      }
+    }
     if (!collectionId) {
       return res.status(400).json({
         success: false,
@@ -444,7 +508,18 @@ function registerWorkspaceRoutes(router) {
       })
     }
 
-    const updated = await dbService.setPinnedItemCollection(url, collectionId, { updateId, pinnedItemId })
+    let updated = await dbService.setPinnedItemCollection(url, collectionId, { updateId, pinnedItemId })
+    if (!updated && url) {
+      const match = await findPinnedItemByUrl(url)
+      if (match) {
+        const identifiers = extractPinnedItemIdentifiers(match)
+        updated = await dbService.setPinnedItemCollection(
+          identifiers.url || url,
+          collectionId,
+          { updateId: identifiers.updateId, pinnedItemId: identifiers.itemId }
+        )
+      }
+    }
     if (!updated) {
       return res.status(404).json({
         success: false,
@@ -466,12 +541,35 @@ function registerWorkspaceRoutes(router) {
   }
   })
 
-  router.put('/workspace/pin/:url/topic', async (req, res) => {
+  router.put('/workspace/pin/:url(*)/topic', async (req, res) => {
   try {
-    const url = decodeURIComponent(req.params.url)
-    const { topicArea, topic, updateId, itemId, pinnedItemId } = req.body || {}
+    const rawParam = safeDecode(req.params.url || '')
+    const { topicArea, topic } = req.body || {}
+    let { updateId, itemId, pinnedItemId } = req.body || {}
+    const looksLikeUrl = /^https?:\/\//i.test(rawParam)
+    const url = looksLikeUrl ? rawParam : ''
+
+    if (!updateId && !itemId && !pinnedItemId && rawParam && !looksLikeUrl) {
+      if (/^\d+$/.test(rawParam)) {
+        pinnedItemId = rawParam
+        itemId = rawParam
+      } else {
+        updateId = rawParam
+      }
+    }
     const requested = topicArea != null ? topicArea : topic
-    const updated = await dbService.setPinnedItemTopicArea(url, requested, { updateId, itemId, pinnedItemId })
+    let updated = await dbService.setPinnedItemTopicArea(url, requested, { updateId, itemId, pinnedItemId })
+    if (!updated && url) {
+      const match = await findPinnedItemByUrl(url)
+      if (match) {
+        const identifiers = extractPinnedItemIdentifiers(match)
+        updated = await dbService.setPinnedItemTopicArea(
+          identifiers.url || url,
+          requested,
+          { updateId: identifiers.updateId, itemId: identifiers.itemId, pinnedItemId: identifiers.itemId }
+        )
+      }
+    }
     if (!updated) {
       return res.status(404).json({
         success: false,
@@ -493,12 +591,21 @@ function registerWorkspaceRoutes(router) {
   }
   })
 
-  router.delete('/workspace/pin/:url', async (req, res) => {
+  router.delete('/workspace/pin/:url(*)', async (req, res) => {
   try {
-    const url = decodeURIComponent(req.params.url)
+    const url = safeDecode(req.params.url)
     console.log('Pin API: Unpinning update', url)
 
-    const success = await dbService.removePinnedItem(url)
+    let success = await dbService.removePinnedItem(url)
+    if (!success && url) {
+      const match = await findPinnedItemByUrl(url)
+      if (match) {
+        const identifiers = extractPinnedItemIdentifiers(match)
+        if (identifiers.url) {
+          success = await dbService.removePinnedItem(identifiers.url)
+        }
+      }
+    }
 
     if (success) {
       try {
@@ -529,10 +636,19 @@ function registerWorkspaceRoutes(router) {
   })
 
   // Legacy alias: some older clients DELETE /api/workspace/pinned/:url
-  router.delete('/workspace/pinned/:url', async (req, res) => {
+  router.delete('/workspace/pinned/:url(*)', async (req, res) => {
   try {
-    const url = decodeURIComponent(req.params.url)
-    const success = await dbService.removePinnedItem(url)
+    const url = safeDecode(req.params.url)
+    let success = await dbService.removePinnedItem(url)
+    if (!success && url) {
+      const match = await findPinnedItemByUrl(url)
+      if (match) {
+        const identifiers = extractPinnedItemIdentifiers(match)
+        if (identifiers.url) {
+          success = await dbService.removePinnedItem(identifiers.url)
+        }
+      }
+    }
 
     if (success) {
       try {
@@ -562,14 +678,23 @@ function registerWorkspaceRoutes(router) {
   }
   })
 
-  router.put('/workspace/pin/:url/notes', async (req, res) => {
+  router.put('/workspace/pin/:url(*)/notes', async (req, res) => {
   try {
-    const url = decodeURIComponent(req.params.url)
+    const url = safeDecode(req.params.url)
     const { notes } = req.body
 
     console.log('Note API: Updating pinned item notes', url)
 
-    const success = await dbService.updatePinnedItemNotes(url, notes)
+    let success = await dbService.updatePinnedItemNotes(url, notes)
+    if (!success && url) {
+      const match = await findPinnedItemByUrl(url)
+      if (match) {
+        const identifiers = extractPinnedItemIdentifiers(match)
+        if (identifiers.url) {
+          success = await dbService.updatePinnedItemNotes(identifiers.url, notes)
+        }
+      }
+    }
 
     if (success) {
       res.json({

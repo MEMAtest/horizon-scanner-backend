@@ -38,6 +38,27 @@ const {
   UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY
 } = require('./queries')
 
+function normalizeUrlKey(value) {
+  if (!value) return ''
+  const raw = String(value).trim()
+  if (!raw) return ''
+  try {
+    const parsed = new URL(raw)
+    const host = parsed.host.toLowerCase()
+    let path = parsed.pathname.replace(/\/+$/, '')
+    if (!path) path = '/'
+    return `${host}${path}${parsed.search}`
+  } catch (error) {
+    return raw.replace(/\/+$/, '')
+  }
+}
+
+function urlsMatch(left, right) {
+  const leftKey = normalizeUrlKey(left)
+  if (!leftKey) return false
+  return leftKey === normalizeUrlKey(right)
+}
+
 module.exports = function applyWorkspaceMethods(EnhancedDBService) {
   Object.assign(EnhancedDBService.prototype, {
     async ensureWorkspaceTables() {
@@ -243,7 +264,7 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
         ? workspace.pinnedItems.map(item => {
             const itemUrl = item?.update_url || item?.updateUrl || item?.url
             const itemUpdateId = item?.update_id || item?.updateId || item?.metadata?.updateId || item?.metadata?.update_id
-            const matchesUrl = url && itemUrl && String(itemUrl) === url
+            const matchesUrl = url && itemUrl && urlsMatch(itemUrl, url)
             const matchesUpdateId = normalizedUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedUpdateId
             const matchesItemId = normalizedItemId && item?.id != null && String(item.id) === normalizedItemId
             if (!matchesUrl && !matchesUpdateId && !matchesItemId) return item
@@ -318,7 +339,7 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
         ? workspace.pinnedItems.map(item => {
             const itemUrl = item?.update_url || item?.updateUrl || item?.url
             const itemUpdateId = item?.update_id || item?.updateId || item?.metadata?.updateId || item?.metadata?.update_id
-            const matchesUrl = url && itemUrl && String(itemUrl) === url
+            const matchesUrl = url && itemUrl && urlsMatch(itemUrl, url)
             const matchesUpdateId = normalizedUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedUpdateId
             const matchesItemId = normalizedItemId && item?.id != null && String(item.id) === normalizedItemId
             if (!matchesUrl && !matchesUpdateId && !matchesItemId) return item
@@ -709,7 +730,7 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       workspace.pinnedItems = workspace.pinnedItems.filter(item => {
         if (!item || typeof item !== 'object') return false
         const itemUrl = item.update_url || item.updateUrl || item.url
-        if (itemUrl && String(itemUrl) === url) return false
+        if (itemUrl && urlsMatch(itemUrl, url)) return false
         if (!normalizedUpdateId) return true
         const meta = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
         const itemUpdateId = meta.updateId || meta.update_id || item.update_id || item.updateId || null
@@ -742,7 +763,11 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       const workspace = await this.loadWorkspaceState()
       const initialLength = Array.isArray(workspace.pinnedItems) ? workspace.pinnedItems.length : 0
       workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
-        ? workspace.pinnedItems.filter(item => item && item.update_url !== url)
+        ? workspace.pinnedItems.filter(item => {
+            if (!item) return false
+            const itemUrl = item.update_url || item.updateUrl || item.url
+            return !urlsMatch(itemUrl, url)
+          })
         : []
       await this.saveWorkspaceState(workspace)
       return workspace.pinnedItems.length < initialLength

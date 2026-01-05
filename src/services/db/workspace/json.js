@@ -13,6 +13,27 @@ const shouldUseMemoryOnly = (error) => {
   return ['EROFS', 'EACCES', 'EPERM'].includes(error?.code)
 }
 
+const normalizeUrlKey = (value) => {
+  if (!value) return ''
+  const raw = String(value).trim()
+  if (!raw) return ''
+  try {
+    const parsed = new URL(raw)
+    const host = parsed.host.toLowerCase()
+    let path = parsed.pathname.replace(/\/+$/, '')
+    if (!path) path = '/'
+    return `${host}${path}${parsed.search}`
+  } catch (error) {
+    return raw.replace(/\/+$/, '')
+  }
+}
+
+const urlsMatch = (left, right) => {
+  const leftKey = normalizeUrlKey(left)
+  if (!leftKey) return false
+  return leftKey === normalizeUrlKey(right)
+}
+
 async function loadWorkspaceState(service) {
   if (memoryOnly && workspaceCache) {
     return workspaceCache
@@ -153,7 +174,12 @@ async function getPinnedItemsJSON(service) {
 async function updatePinnedItemNotesJSON(service, updateUrl, notes) {
   try {
     const workspace = await loadWorkspaceState(service)
-    const pinnedItem = workspace.pinnedItems.find(item => item.updateUrl === updateUrl)
+    const pinnedItem = workspace.pinnedItems.find(item => {
+      if (!item) return false
+      const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {}
+      const itemUrl = item.update_url || item.updateUrl || item.url || metadata.url || metadata.sourceUrl || ''
+      return urlsMatch(itemUrl, updateUrl)
+    })
     if (pinnedItem) {
       pinnedItem.notes = notes
       pinnedItem.updatedDate = new Date().toISOString()

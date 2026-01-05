@@ -68,10 +68,6 @@ const UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
                WHERE id = $1`
 
-const UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY = `UPDATE pinned_items
-               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
-               WHERE id = $1`
-
 const CLEAR_PINNED_ITEM_TOPIC_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
                WHERE update_url = $1`
@@ -79,10 +75,6 @@ const CLEAR_PINNED_ITEM_TOPIC_QUERY = `UPDATE pinned_items
 const CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
                WHERE metadata->>'updateId' = $1`
-
-const CLEAR_PINNED_ITEM_TOPIC_BY_ID_QUERY = `UPDATE pinned_items
-               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
-               WHERE id = $1`
 
 const CLEAR_PINNED_ITEM_TOPIC_BY_ID_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
