@@ -293,18 +293,23 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
         }
 
-        async function updateBookmarkTopic(updateUrl, topicArea, updateId) {
+        async function updateBookmarkTopic(updateUrl, topicArea, updateId, itemId) {
           const url = normalizeId(updateUrl);
           const normalizedUpdateId = normalizeId(updateId);
-          if (!url && !normalizedUpdateId) return;
-          const urlParam = url || normalizedUpdateId;
+          const normalizedItemId = normalizeId(itemId);
+          if (!url && !normalizedUpdateId && !normalizedItemId) return;
+          const urlParam = url || normalizedUpdateId || normalizedItemId;
           const nextTopicArea = normalizeId(topicArea);
 
           try {
             const response = await fetch('/api/workspace/pin/' + encodeURIComponent(urlParam) + '/topic', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ topicArea: nextTopicArea, updateId: normalizedUpdateId || undefined })
+              body: JSON.stringify({
+                topicArea: nextTopicArea,
+                updateId: normalizedUpdateId || undefined,
+                itemId: normalizedItemId || undefined
+              })
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || !data.success) {
@@ -559,6 +564,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
           }
 
 		          items.forEach(item => {
+		            const itemId = normalizeId(item.id || '');
 		            const url = normalizeId(item.update_url || item.updateUrl || item.url);
 		            const title = normalizeId(item.update_title || item.updateTitle || item.title) || 'Untitled update';
 		            const rawAuthority = normalizeId(item.update_authority || item.updateAuthority || item.authority);
@@ -625,7 +631,7 @@ function getWorkspaceHubScripts({ pinnedItems, bookmarkCollections, savedSearche
                 }
                 topicSelect.disabled = true;
                 try {
-                  await updateBookmarkTopic(url, next, updateId);
+                  await updateBookmarkTopic(url, next, updateId, itemId);
                 } finally {
                   topicSelect.disabled = false;
                 }

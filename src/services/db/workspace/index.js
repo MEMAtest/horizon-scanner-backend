@@ -12,6 +12,8 @@ const json = require('./json')
 const {
   CLEAR_FIRM_PROFILE_QUERY,
   CLEAR_PINNED_ITEM_TOPIC_QUERY,
+  CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY,
+  CLEAR_PINNED_ITEM_TOPIC_BY_ID_QUERY,
   DELETE_CUSTOM_ALERT_QUERY,
   DELETE_PINNED_ITEM_BY_UPDATE_ID_QUERY,
   DELETE_PINNED_ITEM_QUERY,
@@ -28,12 +30,61 @@ const {
   INSERT_SAVED_SEARCH_QUERY,
   UPDATE_ALERT_STATUS_QUERY,
   UPDATE_PINNED_ITEM_COLLECTION_QUERY,
+  UPDATE_PINNED_ITEM_COLLECTION_BY_UPDATE_ID_QUERY,
   UPDATE_PINNED_ITEM_NOTES_QUERY,
-  UPDATE_PINNED_ITEM_TOPIC_QUERY
+  UPDATE_PINNED_ITEM_TOPIC_QUERY,
+  UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY,
+  UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY
 } = require('./queries')
 
 module.exports = function applyWorkspaceMethods(EnhancedDBService) {
   Object.assign(EnhancedDBService.prototype, {
+    async ensureWorkspaceTables() {
+      if (this.fallbackMode) return
+      const client = await this.pool.connect()
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS pinned_items (
+            id BIGSERIAL PRIMARY KEY,
+            update_url TEXT NOT NULL,
+            update_title TEXT,
+            update_authority TEXT,
+            notes TEXT,
+            pinned_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+            metadata JSONB DEFAULT '{}'::JSONB,
+            sectors TEXT[] DEFAULT ARRAY[]::TEXT[]
+          )
+        `)
+
+        await client.query(`
+          ALTER TABLE pinned_items
+          ADD COLUMN IF NOT EXISTS update_title TEXT
+        `)
+        await client.query(`
+          ALTER TABLE pinned_items
+          ADD COLUMN IF NOT EXISTS update_authority TEXT
+        `)
+        await client.query(`
+          ALTER TABLE pinned_items
+          ADD COLUMN IF NOT EXISTS notes TEXT
+        `)
+        await client.query(`
+          ALTER TABLE pinned_items
+          ADD COLUMN IF NOT EXISTS pinned_date TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+        `)
+        await client.query(`
+          ALTER TABLE pinned_items
+          ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::JSONB
+        `)
+        await client.query(`
+          ALTER TABLE pinned_items
+          ADD COLUMN IF NOT EXISTS sectors TEXT[] DEFAULT ARRAY[]::TEXT[]
+        `)
+      } finally {
+        client.release()
+      }
+    },
+
     async loadWorkspaceState() {
       return json.loadWorkspaceState(this)
     },
@@ -137,10 +188,12 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       return true
     },
 
-    async setPinnedItemCollection(updateUrl, collectionId) {
+    async setPinnedItemCollection(updateUrl, collectionId, options = {}) {
       await this.initializeDatabase()
-      const url = updateUrl != null ? String(updateUrl) : ''
-      if (!url) throw new Error('Update URL is required')
+      const url = updateUrl != null ? String(updateUrl).trim() : ''
+      const updateId = options.updateId || options.update_id
+      const normalizedUpdateId = updateId != null ? String(updateId).trim() : ''
+      if (!url && !normalizedUpdateId) throw new Error('Update URL or id is required')
 
       const collections = await this.getBookmarkCollections()
       const target = collections.find(collection => String(collection.id) === String(collectionId))
@@ -152,11 +205,20 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       if (!this.fallbackMode) {
         const client = await this.pool.connect()
         try {
-          const result = await client.query(
-            UPDATE_PINNED_ITEM_COLLECTION_QUERY,
-            [url, normalizedCollectionId]
-          )
-          postgresUpdated = result.rowCount > 0
+          if (url) {
+            const result = await client.query(
+              UPDATE_PINNED_ITEM_COLLECTION_QUERY,
+              [url, normalizedCollectionId]
+            )
+            postgresUpdated = result.rowCount > 0
+          }
+          if (!postgresUpdated && normalizedUpdateId) {
+            const result = await client.query(
+              UPDATE_PINNED_ITEM_COLLECTION_BY_UPDATE_ID_QUERY,
+              [normalizedUpdateId, normalizedCollectionId]
+            )
+            postgresUpdated = result.rowCount > 0
+          }
         } catch (error) {
           console.warn('📊 Using JSON fallback for pinned item collection update:', error.message)
         } finally {
@@ -170,7 +232,10 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
         ? workspace.pinnedItems.map(item => {
             const itemUrl = item?.update_url || item?.updateUrl || item?.url
-            if (!itemUrl || String(itemUrl) !== url) return item
+            const itemUpdateId = item?.update_id || item?.updateId || item?.metadata?.updateId || item?.metadata?.update_id
+            const matchesUrl = url && itemUrl && String(itemUrl) === url
+            const matchesUpdateId = normalizedUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedUpdateId
+            if (!matchesUrl && !matchesUpdateId) return item
             const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
             metadata.collectionId = normalizedCollectionId
             delete metadata.collection_id
@@ -186,10 +251,14 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       return updated || postgresUpdated
     },
 
-    async setPinnedItemTopicArea(updateUrl, topicArea) {
+    async setPinnedItemTopicArea(updateUrl, topicArea, options = {}) {
       await this.initializeDatabase()
-      const url = updateUrl != null ? String(updateUrl) : ''
-      if (!url) throw new Error('Update URL is required')
+      const url = updateUrl != null ? String(updateUrl).trim() : ''
+      const updateId = options.updateId || options.update_id
+      const normalizedUpdateId = updateId != null ? String(updateId).trim() : ''
+      const itemId = options.itemId || options.item_id
+      const normalizedItemId = itemId != null ? String(itemId).trim() : ''
+      if (!url && !normalizedUpdateId && !normalizedItemId) throw new Error('Update URL, updateId, or itemId is required')
 
       const normalizedTopicArea = normalizeTopicArea(topicArea)
 
@@ -197,12 +266,33 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       if (!this.fallbackMode) {
         const client = await this.pool.connect()
         try {
-          const query = normalizedTopicArea
-            ? UPDATE_PINNED_ITEM_TOPIC_QUERY
-            : CLEAR_PINNED_ITEM_TOPIC_QUERY
-          const params = normalizedTopicArea ? [url, normalizedTopicArea] : [url]
-          const result = await client.query(query, params)
-          postgresUpdated = result.rowCount > 0
+          // Try matching by URL first
+          if (url) {
+            const query = normalizedTopicArea
+              ? UPDATE_PINNED_ITEM_TOPIC_QUERY
+              : CLEAR_PINNED_ITEM_TOPIC_QUERY
+            const params = normalizedTopicArea ? [url, normalizedTopicArea] : [url]
+            const result = await client.query(query, params)
+            postgresUpdated = result.rowCount > 0
+          }
+          // Try matching by metadata updateId
+          if (!postgresUpdated && normalizedUpdateId) {
+            const query = normalizedTopicArea
+              ? UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY
+              : CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY
+            const params = normalizedTopicArea ? [normalizedUpdateId, normalizedTopicArea] : [normalizedUpdateId]
+            const result = await client.query(query, params)
+            postgresUpdated = result.rowCount > 0
+          }
+          // Try matching by database id (most reliable fallback)
+          if (!postgresUpdated && normalizedItemId) {
+            const query = normalizedTopicArea
+              ? UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY
+              : CLEAR_PINNED_ITEM_TOPIC_BY_ID_QUERY
+            const params = normalizedTopicArea ? [normalizedItemId, normalizedTopicArea] : [normalizedItemId]
+            const result = await client.query(query, params)
+            postgresUpdated = result.rowCount > 0
+          }
         } catch (error) {
           console.warn('📊 Using JSON fallback for pinned item topic update:', error.message)
         } finally {
@@ -216,7 +306,10 @@ module.exports = function applyWorkspaceMethods(EnhancedDBService) {
       workspace.pinnedItems = Array.isArray(workspace.pinnedItems)
         ? workspace.pinnedItems.map(item => {
             const itemUrl = item?.update_url || item?.updateUrl || item?.url
-            if (!itemUrl || String(itemUrl) !== url) return item
+            const itemUpdateId = item?.update_id || item?.updateId || item?.metadata?.updateId || item?.metadata?.update_id
+            const matchesUrl = url && itemUrl && String(itemUrl) === url
+            const matchesUpdateId = normalizedUpdateId && itemUpdateId != null && String(itemUpdateId) === normalizedUpdateId
+            if (!matchesUrl && !matchesUpdateId) return item
             const metadata = item.metadata && typeof item.metadata === 'object' ? { ...item.metadata } : {}
             if (normalizedTopicArea) {
               metadata.topicArea = normalizedTopicArea

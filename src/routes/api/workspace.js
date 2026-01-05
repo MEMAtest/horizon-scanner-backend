@@ -436,7 +436,7 @@ function registerWorkspaceRoutes(router) {
   router.put('/workspace/pin/:url/collection', async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url)
-    const { collectionId } = req.body || {}
+    const { collectionId, updateId } = req.body || {}
     if (!collectionId) {
       return res.status(400).json({
         success: false,
@@ -444,7 +444,7 @@ function registerWorkspaceRoutes(router) {
       })
     }
 
-    const updated = await dbService.setPinnedItemCollection(url, collectionId)
+    const updated = await dbService.setPinnedItemCollection(url, collectionId, { updateId })
     if (!updated) {
       return res.status(404).json({
         success: false,
@@ -469,9 +469,9 @@ function registerWorkspaceRoutes(router) {
   router.put('/workspace/pin/:url/topic', async (req, res) => {
   try {
     const url = decodeURIComponent(req.params.url)
-    const { topicArea, topic } = req.body || {}
+    const { topicArea, topic, updateId, itemId } = req.body || {}
     const requested = topicArea != null ? topicArea : topic
-    const updated = await dbService.setPinnedItemTopicArea(url, requested)
+    const updated = await dbService.setPinnedItemTopicArea(url, requested, { updateId, itemId })
     if (!updated) {
       return res.status(404).json({
         success: false,

@@ -60,6 +60,10 @@ const UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
                WHERE metadata->>'updateId' = $1`
 
+const UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY = `UPDATE pinned_items
+               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
+               WHERE id = $1`
+
 const CLEAR_PINNED_ITEM_TOPIC_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
                WHERE update_url = $1`
@@ -67,6 +71,10 @@ const CLEAR_PINNED_ITEM_TOPIC_QUERY = `UPDATE pinned_items
 const CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
                WHERE metadata->>'updateId' = $1`
+
+const CLEAR_PINNED_ITEM_TOPIC_BY_ID_QUERY = `UPDATE pinned_items
+               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
+               WHERE id = $1`
 
 const DELETE_PINNED_ITEM_BY_UPDATE_ID_QUERY = `DELETE FROM pinned_items
                  WHERE metadata->>'updateId' = $1`
@@ -103,6 +111,7 @@ module.exports = {
   CLEAR_FIRM_PROFILE_QUERY,
   CLEAR_PINNED_ITEM_TOPIC_QUERY,
   CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY,
+  CLEAR_PINNED_ITEM_TOPIC_BY_ID_QUERY,
   DELETE_CUSTOM_ALERT_QUERY,
   DELETE_PINNED_ITEM_BY_UPDATE_ID_QUERY,
   DELETE_PINNED_ITEM_QUERY,
@@ -122,5 +131,6 @@ module.exports = {
   UPDATE_PINNED_ITEM_COLLECTION_BY_UPDATE_ID_QUERY,
   UPDATE_PINNED_ITEM_NOTES_QUERY,
   UPDATE_PINNED_ITEM_TOPIC_QUERY,
-  UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY
+  UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY,
+  UPDATE_PINNED_ITEM_TOPIC_BY_ID_QUERY
 }
