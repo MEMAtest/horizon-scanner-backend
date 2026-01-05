@@ -35,21 +35,38 @@ const UPDATE_ALERT_STATUS_QUERY = 'UPDATE custom_alerts SET is_active = $1 WHERE
 const DELETE_CUSTOM_ALERT_QUERY = 'DELETE FROM custom_alerts WHERE id = $1'
 
 const GET_PINNED_ITEMS_QUERY = `
-                      SELECT * FROM pinned_items 
-                      ORDER BY pinned_date DESC
+                      SELECT p.*,
+                             COALESCE(u.area, '') as update_area,
+                             COALESCE(u.sector, '') as update_sector,
+                             COALESCE(u.authority, p.update_authority) as authority
+                      FROM pinned_items p
+                      LEFT JOIN regulatory_updates u ON p.update_url = u.url
+                      ORDER BY p.pinned_date DESC
                   `
 
 const UPDATE_PINNED_ITEM_COLLECTION_QUERY = `UPDATE pinned_items
              SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('collectionId', $2)
              WHERE update_url = $1`
 
+const UPDATE_PINNED_ITEM_COLLECTION_BY_UPDATE_ID_QUERY = `UPDATE pinned_items
+             SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('collectionId', $2)
+             WHERE metadata->>'updateId' = $1`
+
 const UPDATE_PINNED_ITEM_TOPIC_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
                WHERE update_url = $1`
 
+const UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY = `UPDATE pinned_items
+               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) || jsonb_build_object('topicArea', $2)
+               WHERE metadata->>'updateId' = $1`
+
 const CLEAR_PINNED_ITEM_TOPIC_QUERY = `UPDATE pinned_items
                SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
                WHERE update_url = $1`
+
+const CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY = `UPDATE pinned_items
+               SET metadata = COALESCE(metadata::jsonb, '{}'::jsonb) - 'topicArea'
+               WHERE metadata->>'updateId' = $1`
 
 const DELETE_PINNED_ITEM_BY_UPDATE_ID_QUERY = `DELETE FROM pinned_items
                  WHERE metadata->>'updateId' = $1`
@@ -85,6 +102,7 @@ const INSERT_FIRM_PROFILE_QUERY = `
 module.exports = {
   CLEAR_FIRM_PROFILE_QUERY,
   CLEAR_PINNED_ITEM_TOPIC_QUERY,
+  CLEAR_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY,
   DELETE_CUSTOM_ALERT_QUERY,
   DELETE_PINNED_ITEM_BY_UPDATE_ID_QUERY,
   DELETE_PINNED_ITEM_QUERY,
@@ -101,6 +119,8 @@ module.exports = {
   INSERT_SAVED_SEARCH_QUERY,
   UPDATE_ALERT_STATUS_QUERY,
   UPDATE_PINNED_ITEM_COLLECTION_QUERY,
+  UPDATE_PINNED_ITEM_COLLECTION_BY_UPDATE_ID_QUERY,
   UPDATE_PINNED_ITEM_NOTES_QUERY,
-  UPDATE_PINNED_ITEM_TOPIC_QUERY
+  UPDATE_PINNED_ITEM_TOPIC_QUERY,
+  UPDATE_PINNED_ITEM_TOPIC_BY_UPDATE_ID_QUERY
 }
