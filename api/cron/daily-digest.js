@@ -76,44 +76,59 @@ module.exports = async (req, res) => {
     totalMs: null
   }
 
-  // 1. Run FCA Enforcement scrape first (catches new fines before digest)
-  try {
-    results.enforcement = await runFcaEnforcementScrape()
-  } catch (error) {
-    results.enforcement = { success: false, error: error.message }
+  // 1. Run FCA Enforcement scrape (skip if SKIP_DIGEST_FCA=true)
+  // Note: fca-enforcement cron runs at 9:05 AM, and Puppeteer doesn't work on Vercel
+  const skipFca = process.env.SKIP_DIGEST_FCA === 'true'
+  if (skipFca) {
+    console.log('⚖️ FCA Enforcement: Skipping (SKIP_DIGEST_FCA=true)')
+    results.enforcement = { skipped: true, reason: 'SKIP_DIGEST_FCA enabled' }
+  } else {
+    try {
+      results.enforcement = await runFcaEnforcementScrape()
+    } catch (error) {
+      results.enforcement = { success: false, error: error.message }
+    }
   }
 
-  // 2. Refresh regulatory data before building digest
+  // 2. Refresh regulatory data before building digest (skip if SKIP_DIGEST_REFRESH=true)
+  // Note: rss-refresh cron runs at 9:00 AM, so this is often redundant
+  const skipRefresh = process.env.SKIP_DIGEST_REFRESH === 'true'
   const refreshStart = Date.now()
-  try {
-    console.log('📡 DailyDigest: Starting data refresh before digest generation...')
-    const summary = await rssFetcher.fetchAllFeeds({ fastMode: true })
-    const refreshDuration = Date.now() - refreshStart
 
-    results.dataRefresh = {
-      attempted: true,
-      success: true,
-      newUpdates: summary.newUpdates,
-      totalProcessed: summary.total,
-      successful: summary.successful,
-      failed: summary.failed,
-      durationMs: refreshDuration
-    }
-    performance.dataRefreshMs = refreshDuration
+  if (skipRefresh) {
+    console.log('📡 DailyDigest: Skipping data refresh (SKIP_DIGEST_REFRESH=true)')
+    results.dataRefresh = { skipped: true, reason: 'SKIP_DIGEST_REFRESH enabled' }
+  } else {
+    try {
+      console.log('📡 DailyDigest: Starting data refresh before digest generation...')
+      const summary = await rssFetcher.fetchAllFeeds({ fastMode: true })
+      const refreshDuration = Date.now() - refreshStart
 
-    console.log(`✅ DailyDigest: Data refresh completed in ${refreshDuration}ms`)
-    console.log(`   📊 New updates: ${summary.newUpdates}`)
-  } catch (error) {
-    const refreshDuration = Date.now() - refreshStart
-    results.dataRefresh = {
-      attempted: true,
-      success: false,
-      error: error.message,
-      durationMs: refreshDuration
+      results.dataRefresh = {
+        attempted: true,
+        success: true,
+        newUpdates: summary.newUpdates,
+        totalProcessed: summary.total,
+        successful: summary.successful,
+        failed: summary.failed,
+        durationMs: refreshDuration
+      }
+      performance.dataRefreshMs = refreshDuration
+
+      console.log(`✅ DailyDigest: Data refresh completed in ${refreshDuration}ms`)
+      console.log(`   📊 New updates: ${summary.newUpdates}`)
+    } catch (error) {
+      const refreshDuration = Date.now() - refreshStart
+      results.dataRefresh = {
+        attempted: true,
+        success: false,
+        error: error.message,
+        durationMs: refreshDuration
+      }
+      performance.dataRefreshMs = refreshDuration
+      console.warn('⚠️ DailyDigest: Data refresh failed, proceeding with existing data')
+      console.warn(`   Error: ${error.message}`)
     }
-    performance.dataRefreshMs = refreshDuration
-    console.warn('⚠️ DailyDigest: Data refresh failed, proceeding with existing data')
-    console.warn(`   Error: ${error.message}`)
   }
 
   // 3. Send daily digest email
