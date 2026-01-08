@@ -51,7 +51,7 @@ jobs:
             libxfixes3 \
             libxrandr2 \
             libgbm1 \
-            libasound2
+            libasound2t64
 
       - name: Run FCA Fines Scraper
         if: github.event.inputs.scraper == 'all' || github.event.inputs.scraper == 'fca-fines' || github.event_name == 'schedule'
