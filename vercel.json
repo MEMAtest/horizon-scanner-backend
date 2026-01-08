@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/cron/daily-digest.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/cron/rss-refresh.js": {
       "maxDuration": 60
@@ -49,7 +49,7 @@
     },
     {
       "path": "/api/cron/daily-digest",
-      "schedule": "10 9 * * *"
+      "schedule": "0 10 * * *"
     }
   ],
   "env": {

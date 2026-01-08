@@ -368,51 +368,18 @@ async function buildDigestPayload(options = {}) {
     return records
   }
 
+  // Single query for the rolling window - no expansion loop to avoid multiple slow DB calls
   let effectiveWindowHours = rollingWindowHours
   let updates = await fetchUpdatesForWindow(effectiveWindowHours)
   let usedStaleFallback = false
 
-  const MAX_EXPANSION_STEPS = 5
-  let expansionAttempts = 0
-
-  while (updates.length < minDigestItems && effectiveWindowHours < maxRollingWindowHours) {
-    const expandedWindow = Math.min(
-      maxRollingWindowHours,
-      Math.max(effectiveWindowHours + 24, Math.round(effectiveWindowHours * 1.5))
-    )
-    if (expandedWindow === effectiveWindowHours) break
-
-    console.warn(
-      `[DailyDigest] Only ${updates.length} updates found in ${effectiveWindowHours}h window. ` +
-      `Expanding to ${expandedWindow}h.`
-    )
-
-    effectiveWindowHours = expandedWindow
-    updates = await fetchUpdatesForWindow(effectiveWindowHours)
-    expansionAttempts++
-
-    if (expansionAttempts >= MAX_EXPANSION_STEPS) {
-      break
-    }
-  }
-
   if (updates.length < minDigestItems) {
-    if (allowStaleFallback) {
-      console.warn(
-        `[DailyDigest] Still only ${updates.length} updates after expanding to ` +
-        `${effectiveWindowHours}h. Falling back to latest stored updates.`
-      )
-      updates = await dbService.getEnhancedUpdates({
-        limit,
-        sort: 'newest'
-      })
-      usedStaleFallback = true
-    } else {
-      console.warn(
-        `[DailyDigest] ${updates.length} updates found after expanding to ${effectiveWindowHours}h ` +
-        'and stale fallback disabled. Digest may be empty.'
-      )
-    }
+    console.log(
+      `[DailyDigest] ${updates.length} updates found in ${effectiveWindowHours}h window. ` +
+      `Proceeding with available content (target: ${minDigestItems}).`
+    )
+  } else {
+    console.log(`[DailyDigest] ${updates.length} updates found in ${effectiveWindowHours}h window.`)
   }
 
   const firmProfile = await dbService.getFirmProfile().catch(() => null)
@@ -961,7 +928,7 @@ async function sendDailyDigest({ recipients, persona, brand }) {
   const digest = await buildDigestPayload({
     persona,
     limit: 200,
-    rollingWindowHours: 168 // 7 days to ensure enough fresh content
+    rollingWindowHours: 24 // 24h window for true daily digest
   })
   const { subject, html, text } = buildDailyDigestEmail({
     date: digest.generatedAt,
