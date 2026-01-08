@@ -3,12 +3,9 @@
  *
  * Scrapes the FCA publications search results page
  * Handles pagination through ~18k+ results
- * Uses axios first, falls back to Puppeteer with stealth for Cloudflare bypass
  */
 
 const axios = require('axios');
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 const {
@@ -19,27 +16,6 @@ const {
   DOCUMENT_TYPES
 } = require('./constants');
 
-// Enable stealth mode for Puppeteer fallback
-puppeteer.use(StealthPlugin());
-
-// Axios instance with browser-like headers
-const axiosClient = axios.create({
-  timeout: 60000,
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'en-GB,en;q=0.9,en-US;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Cache-Control': 'max-age=0'
-  }
-});
-
 class SearchScraper {
   constructor(database, progressTracker) {
     this.db = database;
@@ -47,47 +23,6 @@ class SearchScraper {
     this.totalResults = 0;
     this.requestCount = 0;
     this.lastRequestTime = 0;
-    this.browser = null;
-  }
-
-  /**
-   * Initialize browser
-   */
-  async initBrowser() {
-    if (this.browser) return this.browser;
-
-    console.log('[SearchScraper] Launching Puppeteer browser with stealth mode...');
-    this.browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-        '--window-size=1920x1080'
-      ]
-    });
-
-    this.browser.on('disconnected', () => {
-      this.browser = null;
-      console.warn('[SearchScraper] Browser disconnected');
-    });
-
-    console.log('[SearchScraper] Browser launched successfully');
-    return this.browser;
-  }
-
-  /**
-   * Close browser
-   */
-  async closeBrowser() {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-      console.log('[SearchScraper] Browser closed');
-    }
   }
 
   /**
@@ -98,17 +33,7 @@ class SearchScraper {
   }
 
   /**
-   * Check if response contains Cloudflare challenge
-   */
-  isCloudflareChallenge(html) {
-    return html.includes('Just a moment') ||
-           html.includes('challenge-platform') ||
-           html.includes('Checking your browser') ||
-           html.includes('cf-browser-verification');
-  }
-
-  /**
-   * Rate-limited request - tries axios first, falls back to Puppeteer
+   * Rate-limited request
    */
   async rateLimitedRequest(url) {
     const now = Date.now();
@@ -121,100 +46,21 @@ class SearchScraper {
     this.lastRequestTime = Date.now();
     this.requestCount++;
 
-    // Try axios first (faster and often works)
     try {
-      console.log(`[SearchScraper] Trying axios for: ${url}`);
-      const response = await axiosClient.get(url);
-      const html = response.data;
-
-      // Check for Cloudflare challenge
-      if (this.isCloudflareChallenge(html)) {
-        console.log('[SearchScraper] Cloudflare detected with axios, falling back to Puppeteer...');
-        return this.puppeteerRequest(url);
-      }
-
-      console.log(`[SearchScraper] Axios success! HTML length: ${html.length} chars`);
-      return { data: html };
-    } catch (axiosError) {
-      console.log(`[SearchScraper] Axios failed (${axiosError.message}), trying Puppeteer...`);
-      return this.puppeteerRequest(url);
-    }
-  }
-
-  /**
-   * Puppeteer-based request (fallback for Cloudflare bypass)
-   */
-  async puppeteerRequest(url) {
-    // Initialize browser if needed
-    await this.initBrowser();
-
-    const page = await this.browser.newPage();
-    try {
-      // Set realistic viewport and user agent
-      await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-      // Add extra headers
-      await page.setExtraHTTPHeaders({
-        'Accept-Language': 'en-GB,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      const response = await axios.get(url, {
+        headers: HTTP_CONFIG.headers,
+        timeout: HTTP_CONFIG.timeout,
+        maxRedirects: HTTP_CONFIG.maxRedirects
       });
-
-      // Navigate to page
-      await page.goto(url, {
-        waitUntil: 'networkidle2',
-        timeout: 60000
-      });
-
-      // Wait for content to load - try multiple selectors
-      const contentSelectors = [
-        'ol.search-list',
-        '.search-results',
-        'ol',
-        'ul li h3',
-        '.publication-list',
-        '[class*="search"]',
-        '[class*="result"]'
-      ];
-
-      let foundSelector = null;
-      for (const selector of contentSelectors) {
-        try {
-          await page.waitForSelector(selector, { timeout: 5000 });
-          foundSelector = selector;
-          console.log(`[SearchScraper] Found content with selector: ${selector}`);
-          break;
-        } catch (e) {
-          // Try next selector
-        }
-      }
-
-      if (!foundSelector) {
-        console.log('[SearchScraper] No expected content selectors found, continuing anyway...');
-      }
-
-      // Additional wait for dynamic content
-      await this.delay(2000);
-
-      // Get page content
-      const html = await page.content();
-
-      // Debug: log page info
-      const title = await page.title();
-      console.log(`[SearchScraper] Page title: ${title}`);
-      console.log(`[SearchScraper] HTML length: ${html.length} chars`);
-
-      // Check for Cloudflare challenge
-      if (this.isCloudflareChallenge(html)) {
-        console.log('[SearchScraper] WARNING: Cloudflare challenge still detected with Puppeteer!');
-      }
-
-      return { data: html };
+      return response;
     } catch (error) {
-      console.error(`[SearchScraper] Puppeteer error fetching ${url}:`, error.message);
+      if (error.response?.status === 429) {
+        // Rate limited - wait and retry
+        console.log('[SearchScraper] Rate limited, waiting 60 seconds...');
+        await this.delay(60000);
+        return this.rateLimitedRequest(url);
+      }
       throw error;
-    } finally {
-      await page.close();
     }
   }
 
@@ -251,84 +97,40 @@ class SearchScraper {
     const $ = cheerio.load(html);
     const publications = [];
 
-    // Extract total results count - try multiple selectors
-    let resultsText = $('.search-results__count').text() || $('body').text();
-    const totalMatch = resultsText.match(/of\s+(\d[\d,]*)\s+(?:search\s+)?results/i);
+    // Extract total results count - FCA uses: "Showing 1 to 10 of 18139 search results."
+    const resultsText = $('.search-results__count').text();
+    const totalMatch = resultsText.match(/of\s+(\d[\d,]*)\s+search\s+results/i);
     if (totalMatch) {
       this.totalResults = parseInt(totalMatch[1].replace(/,/g, ''), 10);
     }
 
-    // Try new structure first: simple li elements with h3 > a
-    let $items = $('ol li, ul.search-results li, .search-results li');
-
-    // If no items found, try old structure
-    if ($items.length === 0) {
-      $items = $('ol.search-list li.search-item');
-    }
-
-    console.log(`[SearchScraper] Found ${$items.length} potential items to parse`);
-
-    $items.each((index, element) => {
+    // Parse each search result - FCA structure: ol.search-list > li.search-item
+    $('ol.search-list li.search-item').each((index, element) => {
       try {
         const $item = $(element);
 
-        // Try multiple selectors for title/link (new structure first, then old)
-        let $titleLink = $item.find('h3 a').first();
-        if (!$titleLink.length) {
-          $titleLink = $item.find('h3.search-item__title a.search-item__clickthrough');
-        }
-        if (!$titleLink.length) {
-          $titleLink = $item.find('a').first();
-        }
-
+        // Extract title and link - FCA uses: h3.search-item__title > a.search-item__clickthrough
+        const $titleLink = $item.find('h3.search-item__title a.search-item__clickthrough');
         const rawTitle = $titleLink.text().trim();
-        let url = $titleLink.attr('href');
+        const url = $titleLink.attr('href');
 
         if (!rawTitle || !url) return;
-
-        // Make URL absolute
-        if (url && !url.startsWith('http')) {
-          url = `${FCA_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-        }
 
         // Extract file type from title (e.g., "[pdf]", "[csv]")
         const fileTypeMatch = rawTitle.match(/\[(pdf|csv|doc|docx|xls|xlsx)\]/i);
         const fileType = fileTypeMatch ? fileTypeMatch[1].toLowerCase() : null;
         const title = rawTitle.replace(/\s*\[[^\]]+\]\s*$/, '').trim();
 
-        // Extract date - try multiple patterns
-        let dateText = '';
-        const itemText = $item.text();
-
-        // Try old selector first
-        dateText = $item.find('p.meta-item.published-date').text().replace('Published:', '').trim();
-
-        // Try to find date in text content (format: DD/MM/YYYY or DD Month YYYY)
-        if (!dateText) {
-          const dateMatch = itemText.match(/Published[:\s]*(\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\s+\w+\s+\d{4})/i);
-          if (dateMatch) {
-            dateText = dateMatch[1];
-          }
-        }
-
+        // Extract date - FCA uses: p.meta-item.published-date with "Published: DD/MM/YYYY"
+        const dateText = $item.find('p.meta-item.published-date').text().replace('Published:', '').trim();
         const publicationDate = this.parseDate(dateText);
 
-        // Extract document type - try multiple selectors
-        let typeText = $item.find('p.meta-item.type').text().trim().toLowerCase();
-        if (!typeText) {
-          // Try to infer from text content
-          const lowerText = itemText.toLowerCase();
-          if (lowerText.includes('final notice')) typeText = 'final notice';
-          else if (lowerText.includes('decision notice')) typeText = 'decision notice';
-          else if (lowerText.includes('consultation')) typeText = 'consultation paper';
-        }
+        // Extract document type - FCA uses: p.meta-item.type
+        const typeText = $item.find('p.meta-item.type').text().trim().toLowerCase();
         const documentType = this.normalizeDocumentType(typeText, title);
 
-        // Extract description - try multiple selectors
-        let description = $item.find('div.search-item__body').text().trim();
-        if (!description) {
-          description = $item.find('p').not('.meta-item').text().trim();
-        }
+        // Extract description - FCA uses: div.search-item__body
+        const description = $item.find('div.search-item__body').text().trim();
 
         // Determine PDF URL
         const isPdf = fileType === 'pdf' || url.endsWith('.pdf');
