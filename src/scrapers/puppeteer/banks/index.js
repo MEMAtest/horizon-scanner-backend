@@ -394,7 +394,8 @@ const BANK_EXTRACTORS = {
 
   // Wells Fargo - newsroom
   WellsFargo: async (page, baseUrl) => {
-    await page.waitForSelector('a[href*="news"], article', { timeout: 15000 }).catch(() => {})
+    // Wait for the module_headline elements which contain news links
+    await page.waitForSelector('.module_headline a, a[href*="news-details"]', { timeout: 15000 }).catch(() => {})
     await new Promise(r => setTimeout(r, 3000))
 
     // Scroll to load more content
@@ -405,12 +406,12 @@ const BANK_EXTRACTORS = {
       const items = []
       const seen = new Set()
 
+      // Updated selectors based on actual Wells Fargo page structure
       const selectors = [
+        '.module_headline a[href*="news-details"]',
+        'a[href*="/news-releases/news-details/"]',
         'a[href*="/news-releases/"][href*="202"]',
-        'a[href*="/press-release/"]',
-        '.wd_news_release a',
-        'article a[href]',
-        '[class*="headline"] a[href]'
+        '[class*="headline"] a[href*="news"]'
       ]
 
       for (const selector of selectors) {
@@ -418,12 +419,13 @@ const BANK_EXTRACTORS = {
         links.forEach(link => {
           const url = link.href
           if (!url || seen.has(url)) return
-          if (url.endsWith('/news-releases/') || url.endsWith('/default.aspx')) return
+          // Skip index/listing pages (but allow news-details pages even if they end in default.aspx)
+          if (url.endsWith('/news-releases/') || url.endsWith('/news-releases/default.aspx')) return
+          if (!url.includes('news-details')) return
           seen.add(url)
 
-          const container = link.closest('article, [class*="item"], li, div')
-          const title = container?.querySelector('h2, h3, h4, [class*="title"], [class*="headline"]')?.textContent?.trim()
-                     || link.textContent?.trim()
+          // Get title from the link text (Wells Fargo puts title directly in the link)
+          const title = link.textContent?.trim()
 
           if (!title || title.length < 20) return
           // Filter out navigation links
