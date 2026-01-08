@@ -48,28 +48,37 @@ module.exports = async (req, res) => {
     const searchResults = await fetchFromPublicationsSearch(pool)
     console.log(`   Found ${searchResults.total} notices, ${searchResults.new} new`)
 
-    // STEP 2: Run traditional year-based scraper as backup
-    console.log('📋 Step 2: Running year-based scraper...')
-    scraper = new FCAFinesScraper({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    })
-    await scraper.initializeDatabase()
-
+    // STEP 2: Run traditional year-based scraper as backup (skip on Vercel - no Chrome)
+    const isVercel = process.env.VERCEL === '1'
     const currentYear = new Date().getFullYear()
-    const result = await scraper.startScraping({
-      startYear: currentYear,
-      endYear: currentYear,
-      useHeadless: true,
-      forceScrape: false
-    })
+    let scraperResult = { totalFines: 0, newFines: 0, skipped: false }
+
+    if (isVercel) {
+      console.log('📋 Step 2: Skipping year-based scraper (Puppeteer not available on Vercel)')
+      scraperResult.skipped = true
+    } else {
+      console.log('📋 Step 2: Running year-based scraper...')
+      scraper = new FCAFinesScraper({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      })
+      await scraper.initializeDatabase()
+
+      const result = await scraper.startScraping({
+        startYear: currentYear,
+        endYear: currentYear,
+        useHeadless: true,
+        forceScrape: false
+      })
+      scraperResult = { totalFines: result.totalFines, newFines: result.newFines, skipped: false }
+    }
 
     const duration = Date.now() - startTime
-    const totalNew = searchResults.new + result.newFines
+    const totalNew = searchResults.new + scraperResult.newFines
 
     console.log(`✅ FCA Enforcement: Completed in ${duration}ms`)
     console.log(`   Publications search: ${searchResults.new} new`)
-    console.log(`   Year-based scraper: ${result.newFines} new`)
+    console.log(`   Year-based scraper: ${scraperResult.skipped ? 'skipped' : scraperResult.newFines + ' new'}`)
     console.log(`   Total new: ${totalNew}`)
 
     return res.status(200).json({
@@ -78,7 +87,9 @@ module.exports = async (req, res) => {
       summary: {
         year: currentYear,
         publicationsSearch: searchResults,
-        yearBasedScraper: { total: result.totalFines, new: result.newFines },
+        yearBasedScraper: scraperResult.skipped
+          ? { skipped: true, reason: 'Puppeteer not available on Vercel' }
+          : { total: scraperResult.totalFines, new: scraperResult.newFines },
         totalNew,
         durationMs: duration
       }
