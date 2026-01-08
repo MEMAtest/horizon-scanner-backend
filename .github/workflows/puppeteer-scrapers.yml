@@ -17,6 +17,7 @@ on:
           - all
           - fca-fines
           - bank-news
+          - publications
 
 jobs:
   scrape:
@@ -69,6 +70,15 @@ jobs:
         run: |
           echo "🏦 Running Bank News Scrapers..."
           node scripts/run-bank-scrapers.js
+        continue-on-error: true
+
+      - name: Run Publications Pipeline
+        if: github.event.inputs.scraper == 'all' || github.event.inputs.scraper == 'publications' || github.event_name == 'schedule'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "📚 Running Publications Pipeline..."
+          node scripts/run-publications-pipeline.js
         continue-on-error: true
 
       - name: Summary
