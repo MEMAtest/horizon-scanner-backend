@@ -100,6 +100,44 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
         case 'UBS':
           scraperResults = await puppeteerScraper.scrapeUBS()
           break
+        // UK Banks
+        case 'Lloyds':
+        case 'Lloyds Banking Group':
+          scraperResults = await puppeteerScraper.scrapeLloyds()
+          break
+        case 'NatWest':
+        case 'NatWest Group':
+          scraperResults = await puppeteerScraper.scrapeNatWest()
+          break
+        case 'SantanderUK':
+        case 'Santander UK':
+          scraperResults = await puppeteerScraper.scrapeSantanderUK()
+          break
+        case 'Nationwide':
+        case 'Nationwide Building Society':
+          scraperResults = await puppeteerScraper.scrapeNationwide()
+          break
+        case 'TSB':
+          scraperResults = await puppeteerScraper.scrapeTSB()
+          break
+        case 'Monzo':
+          scraperResults = await puppeteerScraper.scrapeMonzo()
+          break
+        case 'Starling':
+        case 'Starling Bank':
+          scraperResults = await puppeteerScraper.scrapeStarling()
+          break
+        case 'Revolut':
+          scraperResults = await puppeteerScraper.scrapeRevolut()
+          break
+        case 'MetroBank':
+        case 'Metro Bank':
+          scraperResults = await puppeteerScraper.scrapeMetroBank()
+          break
+        case 'VirginMoney':
+        case 'Virgin Money':
+          scraperResults = await puppeteerScraper.scrapeVirginMoney()
+          break
         case 'CIMA':
         case 'Cayman Islands Monetary Authority':
           scraperResults = await puppeteerScraper.scrapeCIMA()

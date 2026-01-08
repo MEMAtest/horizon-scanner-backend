@@ -107,6 +107,98 @@ const BANK_CONFIGS = {
     country: 'Switzerland',
     type: 'puppeteer',
     selectors: ['.news-item', '.media-release', 'article', '[class*="news"]']
+  },
+
+  // UK Banks - Added January 2026
+  Lloyds: {
+    name: 'Lloyds Banking Group',
+    url: 'https://www.lloydsbankinggroup.com/media/press-releases.html',
+    baseUrl: 'https://www.lloydsbankinggroup.com',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '[class*="release"]']
+  },
+  NatWest: {
+    name: 'NatWest Group',
+    url: 'https://www.natwestgroup.com/news-and-insights/news-room/press-releases.html',
+    baseUrl: 'https://www.natwestgroup.com',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '[class*="release"]']
+  },
+  SantanderUK: {
+    name: 'Santander UK',
+    url: 'https://www.santander.co.uk/about-santander/media-centre/press-releases',
+    baseUrl: 'https://www.santander.co.uk',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '[class*="release"]']
+  },
+  Nationwide: {
+    name: 'Nationwide Building Society',
+    url: 'https://www.nationwide.co.uk/media/news/',
+    baseUrl: 'https://www.nationwide.co.uk',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.news-card', '.news-item', 'article', '[class*="news"]']
+  },
+  TSB: {
+    name: 'TSB',
+    url: 'https://www.tsb.co.uk/news-releases.html',
+    baseUrl: 'https://www.tsb.co.uk',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.news-release', '.news-item', 'article', '[class*="release"]']
+  },
+  Monzo: {
+    name: 'Monzo',
+    url: 'https://monzo.com/blog',
+    baseUrl: 'https://monzo.com',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.blog-post', '.post', 'article', '[class*="post"]']
+  },
+  Starling: {
+    name: 'Starling Bank',
+    url: 'https://www.starlingbank.com/news/',
+    baseUrl: 'https://www.starlingbank.com',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.news-item', '.press-release', 'article', '[class*="news"]']
+  },
+  Revolut: {
+    name: 'Revolut',
+    url: 'https://www.revolut.com/news/',
+    baseUrl: 'https://www.revolut.com',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.news-item', '.press-release', 'article', '[class*="news"]']
+  },
+  MetroBank: {
+    name: 'Metro Bank',
+    url: 'https://www.metrobankonline.co.uk/about-us/press-releases/',
+    baseUrl: 'https://www.metrobankonline.co.uk',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.press-release', '.news-item', 'article', '[class*="release"]']
+  },
+  VirginMoney: {
+    name: 'Virgin Money',
+    url: 'https://www.virginmoneyukplc.com/newsroom/all-news-and-releases/',
+    baseUrl: 'https://www.virginmoneyukplc.com',
+    region: 'UK',
+    country: 'United Kingdom',
+    type: 'puppeteer',
+    selectors: ['.news-item', '.release', 'article', '[class*="news"]']
   }
 }
 
@@ -572,6 +664,294 @@ const BANK_EXTRACTORS = {
       })
       return items
     }, baseUrl)
+  },
+
+  // UK Banks - Added January 2026
+
+  // Lloyds Banking Group
+  Lloyds: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="press-release"], a[href*="news"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/media/press-releases/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/press-releases.html') || url.endsWith('/press-releases/')) return
+        seen.add(url)
+
+        const title = link.textContent?.trim()
+        if (!title || title.length < 20) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // NatWest Group
+  NatWest: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="press-release"], a[href*="news"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/news-room/"], a[href*="/press-releases/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/press-releases.html') || url.endsWith('/news-room.html')) return
+        seen.add(url)
+
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
+        if (!title || title.length < 20) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Santander UK
+  SantanderUK: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="press-release"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/media-centre/press-releases/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/press-releases') || url.endsWith('/press-releases/')) return
+        seen.add(url)
+
+        const title = link.textContent?.trim()
+        if (!title || title.length < 15) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Nationwide Building Society
+  Nationwide: async (page, baseUrl) => {
+    // Accept cookies if present
+    await page.click('#onetrust-accept-btn-handler').catch(() => {})
+    await new Promise(r => setTimeout(r, 2000))
+
+    // Scroll to load more content
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => window.scrollBy(0, 500))
+      await new Promise(r => setTimeout(r, 1000))
+    }
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      // Look for article links with year in URL
+      const links = document.querySelectorAll('a')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        // Must contain year pattern
+        if (!url.includes('/media/news/202')) return
+        if (url.includes('/t/')) return // Skip tag/category pages
+        seen.add(url)
+
+        const title = link.textContent?.trim()
+        if (!title || title.length < 15) return
+        if (title === 'Learn More') return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // TSB
+  TSB: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/news-releases/"]', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      // TSB uses /news-releases/Article-Title pattern
+      const links = document.querySelectorAll('a[href*="/news-releases/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        // Skip index pages and anchors
+        if (url.endsWith('/news-releases.html') || url.includes('#')) return
+        if (url === 'https://www.tsb.co.uk/news-releases/') return
+        seen.add(url)
+
+        // Get title from parent container
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const titleEl = container?.querySelector('h2, h3, h4, [class*="title"], [class*="heading"]')
+        const title = titleEl?.textContent?.trim()
+
+        if (!title || title.length < 15) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Monzo (blog)
+  Monzo: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/blog/"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/blog/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url === 'https://monzo.com/blog' || url === 'https://monzo.com/blog/') return
+        seen.add(url)
+
+        const container = link.closest('article, [class*="post"], [class*="card"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
+        if (!title || title.length < 15) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Starling Bank
+  Starling: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/news/"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/news/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/news/') || url.endsWith('/news')) return
+        seen.add(url)
+
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
+        if (!title || title.length < 15) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Revolut (may have bot protection)
+  Revolut: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="/news/"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 5000)) // Extra wait for protection
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/news/"], a[href*="/blog/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/news/') || url.endsWith('/news')) return
+        seen.add(url)
+
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
+        if (!title || title.length < 15) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Metro Bank
+  MetroBank: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="press-release"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/press-releases/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/press-releases/') || url.endsWith('/press-releases')) return
+        seen.add(url)
+
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
+        if (!title || title.length < 20) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
+  },
+
+  // Virgin Money
+  VirginMoney: async (page, baseUrl) => {
+    await page.waitForSelector('a[href*="newsroom"], article', { timeout: 15000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 3000))
+
+    return page.evaluate((baseUrl) => {
+      const items = []
+      const seen = new Set()
+
+      const links = document.querySelectorAll('a[href*="/newsroom/"]')
+      links.forEach(link => {
+        const url = link.href
+        if (!url || seen.has(url)) return
+        if (url.endsWith('/newsroom/') || url.endsWith('/all-news-and-releases/')) return
+        seen.add(url)
+
+        const container = link.closest('article, [class*="card"], [class*="item"], div')
+        const title = container?.querySelector('h2, h3, h4, [class*="title"]')?.textContent?.trim()
+                   || link.textContent?.trim()
+
+        if (!title || title.length < 15) return
+
+        items.push({ title, url, date: '', description: '' })
+      })
+      return items
+    }, baseUrl)
   }
 }
 
@@ -780,6 +1160,18 @@ function applyBanksMethods(ServiceClass) {
   ServiceClass.prototype.scrapeBarclays = function() { return this.scrapeBank('Barclays') }
   ServiceClass.prototype.scrapeDeutscheBank = function() { return this.scrapeBank('DeutscheBank') }
   ServiceClass.prototype.scrapeUBS = function() { return this.scrapeBank('UBS') }
+
+  // UK Banks
+  ServiceClass.prototype.scrapeLloyds = function() { return this.scrapeBank('Lloyds') }
+  ServiceClass.prototype.scrapeNatWest = function() { return this.scrapeBank('NatWest') }
+  ServiceClass.prototype.scrapeSantanderUK = function() { return this.scrapeBank('SantanderUK') }
+  ServiceClass.prototype.scrapeNationwide = function() { return this.scrapeBank('Nationwide') }
+  ServiceClass.prototype.scrapeTSB = function() { return this.scrapeBank('TSB') }
+  ServiceClass.prototype.scrapeMonzo = function() { return this.scrapeBank('Monzo') }
+  ServiceClass.prototype.scrapeStarling = function() { return this.scrapeBank('Starling') }
+  ServiceClass.prototype.scrapeRevolut = function() { return this.scrapeBank('Revolut') }
+  ServiceClass.prototype.scrapeMetroBank = function() { return this.scrapeBank('MetroBank') }
+  ServiceClass.prototype.scrapeVirginMoney = function() { return this.scrapeBank('VirginMoney') }
 
   // Scrape all banks
   ServiceClass.prototype.scrapeAllBanks = async function() {

@@ -1534,6 +1534,141 @@ const feedSources = [
     sectors: ['Wealth Management', 'Investment Banking', 'Asset Management']
   },
 
+  // ============================================
+  // UK BANKS - Added January 2026
+  // Major UK high street and challenger banks
+  // ============================================
+  {
+    name: 'Lloyds Banking Group News',
+    authority: 'Lloyds',
+    url: 'https://www.lloydsbankinggroup.com/media/press-releases.html',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Lloyds Banking Group - Press releases (includes Halifax, Bank of Scotland)',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Consumer Finance', 'Insurance']
+  },
+  {
+    name: 'NatWest Group News',
+    authority: 'NatWest',
+    url: 'https://www.natwestgroup.com/news-and-insights/news-room/press-releases.html',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'NatWest Group - Press releases and news',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Consumer Finance', 'Corporate Banking']
+  },
+  {
+    name: 'Santander UK News',
+    authority: 'SantanderUK',
+    url: 'https://www.santander.co.uk/about-santander/media-centre/press-releases',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Santander UK - Media centre and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Consumer Finance', 'Mortgages']
+  },
+  {
+    name: 'Nationwide Building Society News',
+    authority: 'Nationwide',
+    url: 'https://www.nationwide.co.uk/media/news/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Nationwide Building Society - Media centre and news',
+    priority: 'disabled', // TODO: Fix cookie consent handling
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Mortgages', 'Building Societies']
+  },
+  {
+    name: 'TSB News',
+    authority: 'TSB',
+    url: 'https://www.tsb.co.uk/news-releases.html',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'TSB Bank - News releases',
+    priority: 'disabled', // TODO: Fix title extraction
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Consumer Finance']
+  },
+  {
+    name: 'Monzo Blog',
+    authority: 'Monzo',
+    url: 'https://monzo.com/blog',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Monzo - Blog and product updates',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Fintech', 'Payments']
+  },
+  {
+    name: 'Starling Bank News',
+    authority: 'Starling',
+    url: 'https://www.starlingbank.com/news/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Starling Bank - News and press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Fintech', 'Payments']
+  },
+  {
+    name: 'Revolut News',
+    authority: 'Revolut',
+    url: 'https://www.revolut.com/news/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Revolut - News and announcements',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Fintech', 'Payments', 'Cryptocurrency']
+  },
+  {
+    name: 'Metro Bank News',
+    authority: 'MetroBank',
+    url: 'https://www.metrobankonline.co.uk/about-us/press-releases/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Metro Bank - Press releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Consumer Finance']
+  },
+  {
+    name: 'Virgin Money News',
+    authority: 'VirginMoney',
+    url: 'https://www.virginmoneyukplc.com/newsroom/all-news-and-releases/',
+    type: 'puppeteer',
+    source_category: 'bank_news',
+    description: 'Virgin Money UK - Newsroom and releases',
+    priority: 'medium',
+    recencyDays: 30,
+    country: 'United Kingdom',
+    region: 'UK',
+    sectors: ['Banking', 'Consumer Finance', 'Credit Cards']
+  },
+
   {
     name: 'Demo Regulatory Updates',
     authority: 'Demo Authority',
