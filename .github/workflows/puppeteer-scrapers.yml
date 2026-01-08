@@ -1,0 +1,78 @@
+name: Puppeteer Scrapers
+
+on:
+  # Run daily at 8:00 AM UTC (before Vercel crons at 9:00-10:00 AM)
+  schedule:
+    - cron: '0 8 * * *'
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      scraper:
+        description: 'Which scraper to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - fca-fines
+          - bank-news
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2
+
+      - name: Run FCA Fines Scraper
+        if: github.event.inputs.scraper == 'all' || github.event.inputs.scraper == 'fca-fines' || github.event_name == 'schedule'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🕷️ Running FCA Fines Scraper..."
+          node scripts/run-fca-scraper.js
+        continue-on-error: true
+
+      - name: Run Bank News Scrapers
+        if: github.event.inputs.scraper == 'all' || github.event.inputs.scraper == 'bank-news' || github.event_name == 'schedule'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🏦 Running Bank News Scrapers..."
+          node scripts/run-bank-scrapers.js
+        continue-on-error: true
+
+      - name: Summary
+        run: |
+          echo "## Scraper Run Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
