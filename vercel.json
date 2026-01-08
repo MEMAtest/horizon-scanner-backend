@@ -4,7 +4,7 @@
       "maxDuration": 120
     },
     "api/cron/rss-refresh.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     }
   },
   "rewrites": [

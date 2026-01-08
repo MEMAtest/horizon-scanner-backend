@@ -76,12 +76,12 @@ module.exports = async (req, res) => {
     totalMs: null
   }
 
-  // 1. Run FCA Enforcement scrape (skip if SKIP_DIGEST_FCA=true)
-  // Note: fca-enforcement cron runs at 9:05 AM, and Puppeteer doesn't work on Vercel
-  const skipFca = process.env.SKIP_DIGEST_FCA === 'true'
+  // 1. Run FCA Enforcement scrape (skip by default - fca-enforcement cron runs at 9:05 AM)
+  // Note: Puppeteer doesn't work on Vercel serverless, so this would fail anyway
+  const skipFca = process.env.SKIP_DIGEST_FCA !== 'false'
   if (skipFca) {
-    console.log('⚖️ FCA Enforcement: Skipping (SKIP_DIGEST_FCA=true)')
-    results.enforcement = { skipped: true, reason: 'SKIP_DIGEST_FCA enabled' }
+    console.log('⚖️ FCA Enforcement: Skipping (runs separately at 9:05 AM)')
+    results.enforcement = { skipped: true, reason: 'Skipped by default (separate cron at 9:05 AM)' }
   } else {
     try {
       results.enforcement = await runFcaEnforcementScrape()
@@ -90,14 +90,14 @@ module.exports = async (req, res) => {
     }
   }
 
-  // 2. Refresh regulatory data before building digest (skip if SKIP_DIGEST_REFRESH=true)
-  // Note: rss-refresh cron runs at 9:00 AM, so this is often redundant
-  const skipRefresh = process.env.SKIP_DIGEST_REFRESH === 'true'
+  // 2. Refresh regulatory data before building digest (skip by default - rss-refresh runs at 9:00 AM)
+  // Note: Skipping saves ~60+ seconds since data is already fresh from the 9 AM cron
+  const skipRefresh = process.env.SKIP_DIGEST_REFRESH !== 'false'
   const refreshStart = Date.now()
 
   if (skipRefresh) {
-    console.log('📡 DailyDigest: Skipping data refresh (SKIP_DIGEST_REFRESH=true)')
-    results.dataRefresh = { skipped: true, reason: 'SKIP_DIGEST_REFRESH enabled' }
+    console.log('📡 DailyDigest: Skipping data refresh (runs separately at 9:00 AM)')
+    results.dataRefresh = { skipped: true, reason: 'Skipped by default (separate cron at 9:00 AM)' }
   } else {
     try {
       console.log('📡 DailyDigest: Starting data refresh before digest generation...')
