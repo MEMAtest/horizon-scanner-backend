@@ -8,3 +8,17 @@ db.json
 .env
 .vercel
 .env.vercel
+
+# Runtime data files (change frequently)
+data/updates.json
+data/weekly_briefing_metrics.json
+data/workspace.json
+data/scrape_monitor_*.json
+data/pdfs/
+data/weekly_briefings/
+src/data/in_app_notifications.json
+src/data/watch_list_matches.json
+
+# Temp files
+tmp/
+test-results/
