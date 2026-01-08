@@ -748,8 +748,14 @@ const BANK_EXTRACTORS = {
 
   // Nationwide Building Society
   Nationwide: async (page, baseUrl) => {
-    // Accept cookies if present
-    await page.click('#onetrust-accept-btn-handler').catch(() => {})
+    // Accept cookies and wait for banner to disappear
+    try {
+      await page.waitForSelector('#onetrust-accept-btn-handler', { timeout: 5000 })
+      await page.click('#onetrust-accept-btn-handler')
+      await page.waitForSelector('#onetrust-consent-sdk', { hidden: true, timeout: 5000 })
+    } catch (e) {
+      // No cookie banner or already dismissed
+    }
     await new Promise(r => setTimeout(r, 2000))
 
     // Scroll to load more content
@@ -762,19 +768,25 @@ const BANK_EXTRACTORS = {
       const items = []
       const seen = new Set()
 
-      // Look for article links with year in URL
-      const links = document.querySelectorAll('a')
+      // Nationwide uses /media/news/headline-slug format
+      const links = document.querySelectorAll('a[href*="/media/news/"]')
       links.forEach(link => {
         const url = link.href
-        if (!url || seen.has(url)) return
-        // Must contain year pattern
-        if (!url.includes('/media/news/202')) return
-        if (url.includes('/t/')) return // Skip tag/category pages
-        seen.add(url)
+        if (!url) return
+        // Skip category/tag pages and index
+        if (url.includes('/t/') || url.endsWith('/news/') || url.endsWith('/news')) return
+        // Skip non-article URLs (must have slug after /news/)
+        const pathAfterNews = url.split('/media/news/')[1]
+        if (!pathAfterNews || pathAfterNews.length < 10) return
 
         const title = link.textContent?.trim()
-        if (!title || title.length < 15) return
-        if (title === 'Learn More') return
+        if (!title || title.length < 20) return
+        // Skip navigation links
+        if (title === 'Learn More' || title.toLowerCase().includes('view all')) return
+
+        // Only add to seen AFTER we have a valid title (avoid dedup of empty/Learn More links)
+        if (seen.has(url)) return
+        seen.add(url)
 
         items.push({ title, url, date: '', description: '' })
       })
@@ -791,24 +803,48 @@ const BANK_EXTRACTORS = {
       const items = []
       const seen = new Set()
 
-      // TSB uses /news-releases/Article-Title pattern
+      // TSB structure: H4 (title) -> H4 (date) -> P (with link)
+      // Find title by looking at previous siblings of link's parent
       const links = document.querySelectorAll('a[href*="/news-releases/"]')
       links.forEach(link => {
         const url = link.href
         if (!url || seen.has(url)) return
-        // Skip index pages and anchors
         if (url.endsWith('/news-releases.html') || url.includes('#')) return
         if (url === 'https://www.tsb.co.uk/news-releases/') return
         seen.add(url)
 
-        // Get title from parent container
-        const container = link.closest('article, [class*="card"], [class*="item"], div')
-        const titleEl = container?.querySelector('h2, h3, h4, [class*="title"], [class*="heading"]')
-        const title = titleEl?.textContent?.trim()
+        // Look for H4 title in previous siblings
+        let title = ''
+        let date = ''
+        const parentP = link.closest('p')
+        if (parentP) {
+          let sibling = parentP.previousElementSibling
+          for (let i = 0; i < 3 && sibling; i++) {
+            const text = sibling.textContent?.trim()
+            if (sibling.tagName === 'H4' && text) {
+              // Date h4s contain year patterns like 2025, 2024, etc.
+              if (text.match(/\d{1,2}\s+\w+\s+202\d/)) {
+                date = text
+              } else if (text.length > 20) {
+                title = text
+                break
+              }
+            }
+            sibling = sibling.previousElementSibling
+          }
+        }
+
+        // Fallback: extract title from URL slug
+        if (!title || title.length < 15) {
+          const match = url.match(/\/news-releases\/([^\.]+)\.html/)
+          if (match) {
+            title = match[1].replace(/-/g, ' ')
+          }
+        }
 
         if (!title || title.length < 15) return
 
-        items.push({ title, url, date: '', description: '' })
+        items.push({ title, url, date, description: '' })
       })
       return items
     }, baseUrl)

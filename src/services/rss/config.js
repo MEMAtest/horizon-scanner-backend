@@ -1584,7 +1584,7 @@ const feedSources = [
     type: 'puppeteer',
     source_category: 'bank_news',
     description: 'Nationwide Building Society - Media centre and news',
-    priority: 'disabled', // TODO: Fix cookie consent handling
+    priority: 'high',
     recencyDays: 30,
     country: 'United Kingdom',
     region: 'UK',
@@ -1597,7 +1597,7 @@ const feedSources = [
     type: 'puppeteer',
     source_category: 'bank_news',
     description: 'TSB Bank - News releases',
-    priority: 'disabled', // TODO: Fix title extraction
+    priority: 'high',
     recencyDays: 30,
     country: 'United Kingdom',
     region: 'UK',
