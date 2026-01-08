@@ -126,54 +126,62 @@ module.exports = async (req, res) => {
   }
 }
 
-// Helper function to fetch latest notices from FCA publications search
+// Helper function to fetch latest notices from FCA RSS feed
 async function fetchFromPublicationsSearch(pool) {
   const results = { total: 0, new: 0, errors: [] }
 
   try {
-    const url = 'https://www.fca.org.uk/publications/search-results?category=notices%20and%20decisions-final%20notices&sort_by=dmetaZ'
+    // Use RSS feed instead of web scraping (bypasses Cloudflare)
+    const url = 'https://www.fca.org.uk/news/rss.xml'
 
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-GB,en;q=0.5'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/rss+xml,application/xml;q=0.9,*/*;q=0.8'
       },
-      timeout: 30000,
-      // Follow redirects and handle cookies
-      maxRedirects: 5,
-      validateStatus: (status) => status < 500
+      timeout: 30000
     })
 
-    // Check if we got blocked
-    if (response.status === 403) {
-      console.error('❌ FCA returned 403 Forbidden')
-      console.error('   Response preview:', response.data?.substring?.(0, 500) || 'No data')
-      results.errors.push({ stage: 'fetch', error: 'FCA returned 403 Forbidden - possible IP block' })
-      return results
-    }
-
-    console.log(`   FCA response status: ${response.status}`)
-    const $ = cheerio.load(response.data)
+    console.log(`   FCA RSS response status: ${response.status}`)
+    const $ = cheerio.load(response.data, { xmlMode: true })
     const notices = []
 
-    $('.search-item').each((i, el) => {
-      const title = $(el).find('.search-item__clickthrough').text().trim()
-      const link = $(el).find('.search-item__clickthrough').attr('href')
-      const dateText = $(el).find('.meta-item.published-date').text().trim()
+    // Look for enforcement-related items (fines, final notices)
+    $('item').each((i, el) => {
+      const title = $(el).find('title').text().trim()
+      const link = $(el).find('link').text().trim()
+      const pubDate = $(el).find('pubDate').text().trim()
+      const description = $(el).find('description').text().trim().toLowerCase()
 
-      if (title && link) {
-        const dateMatch = dateText.match(/(\d{2})\/(\d{2})\/(\d{4})/)
-        const date = dateMatch ? `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}` : null
-        const fullUrl = link.startsWith('http') ? link : 'https://www.fca.org.uk' + link
+      // Filter for enforcement actions (fines, final notices, penalties)
+      const isEnforcement = title.toLowerCase().includes('fine') ||
+                           title.toLowerCase().includes('penalty') ||
+                           title.toLowerCase().includes('final notice') ||
+                           description.includes('fine') ||
+                           description.includes('penalty') ||
+                           description.includes('enforcement')
+
+      if (title && link && isEnforcement) {
+        // Parse date from "Wednesday, January 7, 2026 - 09:06" format
+        const dateMatch = pubDate.match(/(\w+),\s+(\w+)\s+(\d+),\s+(\d{4})/)
+        let date = null
+        if (dateMatch) {
+          const months = { January: '01', February: '02', March: '03', April: '04', May: '05', June: '06',
+                          July: '07', August: '08', September: '09', October: '10', November: '11', December: '12' }
+          const month = months[dateMatch[2]] || '01'
+          const day = dateMatch[3].padStart(2, '0')
+          const year = dateMatch[4]
+          date = `${year}-${month}-${day}`
+        }
+
         const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30)
 
         notices.push({
-          entity_name: title.replace(/^Final Notice \d{4}: /, ''),
+          entity_name: title.replace(/^FCA fines /, '').replace(/^FCA /, ''),
           title: title,
-          url: fullUrl,
+          url: link,
           notice_date: date,
-          publication_id: `fn-${(date || '2025-01-01').replace(/-/g, '')}-${slug}`
+          publication_id: `fn-${(date || '2026-01-01').replace(/-/g, '')}-${slug}`
         })
       }
     })
