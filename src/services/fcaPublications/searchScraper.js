@@ -3,9 +3,10 @@
  *
  * Scrapes the FCA publications search results page
  * Handles pagination through ~18k+ results
- * Uses Puppeteer with stealth to bypass Cloudflare protection
+ * Uses axios first, falls back to Puppeteer with stealth for Cloudflare bypass
  */
 
+const axios = require('axios');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const cheerio = require('cheerio');
@@ -18,8 +19,26 @@ const {
   DOCUMENT_TYPES
 } = require('./constants');
 
-// Enable stealth mode
+// Enable stealth mode for Puppeteer fallback
 puppeteer.use(StealthPlugin());
+
+// Axios instance with browser-like headers
+const axiosClient = axios.create({
+  timeout: 60000,
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-GB,en;q=0.9,en-US;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Cache-Control': 'max-age=0'
+  }
+});
 
 class SearchScraper {
   constructor(database, progressTracker) {
@@ -79,7 +98,17 @@ class SearchScraper {
   }
 
   /**
-   * Rate-limited request using Puppeteer
+   * Check if response contains Cloudflare challenge
+   */
+  isCloudflareChallenge(html) {
+    return html.includes('Just a moment') ||
+           html.includes('challenge-platform') ||
+           html.includes('Checking your browser') ||
+           html.includes('cf-browser-verification');
+  }
+
+  /**
+   * Rate-limited request - tries axios first, falls back to Puppeteer
    */
   async rateLimitedRequest(url) {
     const now = Date.now();
@@ -92,6 +121,30 @@ class SearchScraper {
     this.lastRequestTime = Date.now();
     this.requestCount++;
 
+    // Try axios first (faster and often works)
+    try {
+      console.log(`[SearchScraper] Trying axios for: ${url}`);
+      const response = await axiosClient.get(url);
+      const html = response.data;
+
+      // Check for Cloudflare challenge
+      if (this.isCloudflareChallenge(html)) {
+        console.log('[SearchScraper] Cloudflare detected with axios, falling back to Puppeteer...');
+        return this.puppeteerRequest(url);
+      }
+
+      console.log(`[SearchScraper] Axios success! HTML length: ${html.length} chars`);
+      return { data: html };
+    } catch (axiosError) {
+      console.log(`[SearchScraper] Axios failed (${axiosError.message}), trying Puppeteer...`);
+      return this.puppeteerRequest(url);
+    }
+  }
+
+  /**
+   * Puppeteer-based request (fallback for Cloudflare bypass)
+   */
+  async puppeteerRequest(url) {
     // Initialize browser if needed
     await this.initBrowser();
 
@@ -100,6 +153,12 @@ class SearchScraper {
       // Set realistic viewport and user agent
       await page.setViewport({ width: 1920, height: 1080 });
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+      // Add extra headers
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-GB,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      });
 
       // Navigate to page
       await page.goto(url, {
@@ -146,13 +205,13 @@ class SearchScraper {
       console.log(`[SearchScraper] HTML length: ${html.length} chars`);
 
       // Check for Cloudflare challenge
-      if (html.includes('Just a moment') || html.includes('challenge-platform') || html.includes('cf-')) {
-        console.log('[SearchScraper] WARNING: Cloudflare challenge detected!');
+      if (this.isCloudflareChallenge(html)) {
+        console.log('[SearchScraper] WARNING: Cloudflare challenge still detected with Puppeteer!');
       }
 
       return { data: html };
     } catch (error) {
-      console.error(`[SearchScraper] Error fetching ${url}:`, error.message);
+      console.error(`[SearchScraper] Puppeteer error fetching ${url}:`, error.message);
       throw error;
     } finally {
       await page.close();
