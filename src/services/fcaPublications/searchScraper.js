@@ -107,13 +107,48 @@ class SearchScraper {
         timeout: 60000
       });
 
-      // Wait for content to load
-      await page.waitForSelector('ol.search-list, .search-results', { timeout: 30000 }).catch(() => {
-        // Content might not exist, continue anyway
-      });
+      // Wait for content to load - try multiple selectors
+      const contentSelectors = [
+        'ol.search-list',
+        '.search-results',
+        'ol',
+        'ul li h3',
+        '.publication-list',
+        '[class*="search"]',
+        '[class*="result"]'
+      ];
+
+      let foundSelector = null;
+      for (const selector of contentSelectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 5000 });
+          foundSelector = selector;
+          console.log(`[SearchScraper] Found content with selector: ${selector}`);
+          break;
+        } catch (e) {
+          // Try next selector
+        }
+      }
+
+      if (!foundSelector) {
+        console.log('[SearchScraper] No expected content selectors found, continuing anyway...');
+      }
+
+      // Additional wait for dynamic content
+      await this.delay(2000);
 
       // Get page content
       const html = await page.content();
+
+      // Debug: log page info
+      const title = await page.title();
+      console.log(`[SearchScraper] Page title: ${title}`);
+      console.log(`[SearchScraper] HTML length: ${html.length} chars`);
+
+      // Check for Cloudflare challenge
+      if (html.includes('Just a moment') || html.includes('challenge-platform') || html.includes('cf-')) {
+        console.log('[SearchScraper] WARNING: Cloudflare challenge detected!');
+      }
 
       return { data: html };
     } catch (error) {
