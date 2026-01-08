@@ -157,40 +157,84 @@ class SearchScraper {
     const $ = cheerio.load(html);
     const publications = [];
 
-    // Extract total results count - FCA uses: "Showing 1 to 10 of 18139 search results."
-    const resultsText = $('.search-results__count').text();
-    const totalMatch = resultsText.match(/of\s+(\d[\d,]*)\s+search\s+results/i);
+    // Extract total results count - try multiple selectors
+    let resultsText = $('.search-results__count').text() || $('body').text();
+    const totalMatch = resultsText.match(/of\s+(\d[\d,]*)\s+(?:search\s+)?results/i);
     if (totalMatch) {
       this.totalResults = parseInt(totalMatch[1].replace(/,/g, ''), 10);
     }
 
-    // Parse each search result - FCA structure: ol.search-list > li.search-item
-    $('ol.search-list li.search-item').each((index, element) => {
+    // Try new structure first: simple li elements with h3 > a
+    let $items = $('ol li, ul.search-results li, .search-results li');
+
+    // If no items found, try old structure
+    if ($items.length === 0) {
+      $items = $('ol.search-list li.search-item');
+    }
+
+    console.log(`[SearchScraper] Found ${$items.length} potential items to parse`);
+
+    $items.each((index, element) => {
       try {
         const $item = $(element);
 
-        // Extract title and link - FCA uses: h3.search-item__title > a.search-item__clickthrough
-        const $titleLink = $item.find('h3.search-item__title a.search-item__clickthrough');
+        // Try multiple selectors for title/link (new structure first, then old)
+        let $titleLink = $item.find('h3 a').first();
+        if (!$titleLink.length) {
+          $titleLink = $item.find('h3.search-item__title a.search-item__clickthrough');
+        }
+        if (!$titleLink.length) {
+          $titleLink = $item.find('a').first();
+        }
+
         const rawTitle = $titleLink.text().trim();
-        const url = $titleLink.attr('href');
+        let url = $titleLink.attr('href');
 
         if (!rawTitle || !url) return;
+
+        // Make URL absolute
+        if (url && !url.startsWith('http')) {
+          url = `${FCA_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+        }
 
         // Extract file type from title (e.g., "[pdf]", "[csv]")
         const fileTypeMatch = rawTitle.match(/\[(pdf|csv|doc|docx|xls|xlsx)\]/i);
         const fileType = fileTypeMatch ? fileTypeMatch[1].toLowerCase() : null;
         const title = rawTitle.replace(/\s*\[[^\]]+\]\s*$/, '').trim();
 
-        // Extract date - FCA uses: p.meta-item.published-date with "Published: DD/MM/YYYY"
-        const dateText = $item.find('p.meta-item.published-date').text().replace('Published:', '').trim();
+        // Extract date - try multiple patterns
+        let dateText = '';
+        const itemText = $item.text();
+
+        // Try old selector first
+        dateText = $item.find('p.meta-item.published-date').text().replace('Published:', '').trim();
+
+        // Try to find date in text content (format: DD/MM/YYYY or DD Month YYYY)
+        if (!dateText) {
+          const dateMatch = itemText.match(/Published[:\s]*(\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\s+\w+\s+\d{4})/i);
+          if (dateMatch) {
+            dateText = dateMatch[1];
+          }
+        }
+
         const publicationDate = this.parseDate(dateText);
 
-        // Extract document type - FCA uses: p.meta-item.type
-        const typeText = $item.find('p.meta-item.type').text().trim().toLowerCase();
+        // Extract document type - try multiple selectors
+        let typeText = $item.find('p.meta-item.type').text().trim().toLowerCase();
+        if (!typeText) {
+          // Try to infer from text content
+          const lowerText = itemText.toLowerCase();
+          if (lowerText.includes('final notice')) typeText = 'final notice';
+          else if (lowerText.includes('decision notice')) typeText = 'decision notice';
+          else if (lowerText.includes('consultation')) typeText = 'consultation paper';
+        }
         const documentType = this.normalizeDocumentType(typeText, title);
 
-        // Extract description - FCA uses: div.search-item__body
-        const description = $item.find('div.search-item__body').text().trim();
+        // Extract description - try multiple selectors
+        let description = $item.find('div.search-item__body').text().trim();
+        if (!description) {
+          description = $item.find('p').not('.meta-item').text().trim();
+        }
 
         // Determine PDF URL
         const isPdf = fileType === 'pdf' || url.endsWith('.pdf');
