@@ -3,9 +3,11 @@
  *
  * Scrapes the FCA publications search results page
  * Handles pagination through ~18k+ results
+ * Uses Puppeteer with stealth to bypass Cloudflare protection
  */
 
-const axios = require('axios');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 const {
@@ -16,6 +18,9 @@ const {
   DOCUMENT_TYPES
 } = require('./constants');
 
+// Enable stealth mode
+puppeteer.use(StealthPlugin());
+
 class SearchScraper {
   constructor(database, progressTracker) {
     this.db = database;
@@ -23,6 +28,47 @@ class SearchScraper {
     this.totalResults = 0;
     this.requestCount = 0;
     this.lastRequestTime = 0;
+    this.browser = null;
+  }
+
+  /**
+   * Initialize browser
+   */
+  async initBrowser() {
+    if (this.browser) return this.browser;
+
+    console.log('[SearchScraper] Launching Puppeteer browser with stealth mode...');
+    this.browser = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--window-size=1920x1080'
+      ]
+    });
+
+    this.browser.on('disconnected', () => {
+      this.browser = null;
+      console.warn('[SearchScraper] Browser disconnected');
+    });
+
+    console.log('[SearchScraper] Browser launched successfully');
+    return this.browser;
+  }
+
+  /**
+   * Close browser
+   */
+  async closeBrowser() {
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+      console.log('[SearchScraper] Browser closed');
+    }
   }
 
   /**
@@ -33,7 +79,7 @@ class SearchScraper {
   }
 
   /**
-   * Rate-limited request
+   * Rate-limited request using Puppeteer
    */
   async rateLimitedRequest(url) {
     const now = Date.now();
@@ -46,21 +92,35 @@ class SearchScraper {
     this.lastRequestTime = Date.now();
     this.requestCount++;
 
+    // Initialize browser if needed
+    await this.initBrowser();
+
+    const page = await this.browser.newPage();
     try {
-      const response = await axios.get(url, {
-        headers: HTTP_CONFIG.headers,
-        timeout: HTTP_CONFIG.timeout,
-        maxRedirects: HTTP_CONFIG.maxRedirects
+      // Set realistic viewport and user agent
+      await page.setViewport({ width: 1920, height: 1080 });
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+      // Navigate to page
+      await page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: 60000
       });
-      return response;
+
+      // Wait for content to load
+      await page.waitForSelector('ol.search-list, .search-results', { timeout: 30000 }).catch(() => {
+        // Content might not exist, continue anyway
+      });
+
+      // Get page content
+      const html = await page.content();
+
+      return { data: html };
     } catch (error) {
-      if (error.response?.status === 429) {
-        // Rate limited - wait and retry
-        console.log('[SearchScraper] Rate limited, waiting 60 seconds...');
-        await this.delay(60000);
-        return this.rateLimitedRequest(url);
-      }
+      console.error(`[SearchScraper] Error fetching ${url}:`, error.message);
       throw error;
+    } finally {
+      await page.close();
     }
   }
 

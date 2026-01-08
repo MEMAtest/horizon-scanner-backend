@@ -63,11 +63,26 @@ async function main() {
       console.log(`  Processed: ${status.statusCounts?.processed || 0}`)
     }
 
+    // Close browser if still open
+    if (orchestrator.searchScraper?.browser) {
+      await orchestrator.searchScraper.closeBrowser()
+    }
+
     process.exit(0)
   } catch (error) {
     console.error()
     console.error('Fatal error:', error.message)
     console.error(error.stack)
+
+    // Try to close browser on error
+    try {
+      if (orchestrator?.searchScraper?.browser) {
+        await orchestrator.searchScraper.closeBrowser()
+      }
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+
     process.exit(1)
   }
 }
