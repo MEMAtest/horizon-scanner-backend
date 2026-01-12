@@ -14,6 +14,7 @@ const DEFAULT_DIGEST_ROLLING_WINDOW_HOURS = 24
 const DEFAULT_DIGEST_MAX_ROLLING_WINDOW_HOURS = 24 * 14 // two weeks
 const DEFAULT_DIGEST_MIN_ITEMS = 6
 const DEFAULT_FINANCIAL_AUTHORITIES = [
+  // UK
   'FCA',
   'PRA',
   'Bank of England',
@@ -27,29 +28,56 @@ const DEFAULT_FINANCIAL_AUTHORITIES = [
   'FRC',
   'JMLSG',
   'Pay.UK',
+  'SRA',
+  // International Bodies
   'FATF',
   'FSB',
+  'BIS',
+  'IOSCO',
+  // EU
   'ESMA',
   'EBA',
   'EIOPA',
+  'ECB',
+  'EU_COUNCIL',
   'FINMA',
   'BaFin',
+  'ACPR',
+  'Bank of Italy',
+  'CNMV',
+  'DNB',
+  'AMF',
+  // US
   'SEC',
   'CFTC',
   'Federal Reserve',
   'FDIC',
   'OCC',
+  'FINRA',
+  'NCUA',
+  'FinCEN',
+  // Asia-Pacific
   'MAS',
+  'HKMA',
+  'SFC',
+  'JFSA',
+  'FSA',
   'ASIC',
   'APRA',
   'AUSTRAC',
+  'RBI',
+  'SEBI',
+  'IRDAI',
+  // Middle East
   'SAMA',
   'ADGM',
   'DFSA',
-  'ACPR',
-  'Bank of Italy',
-  'CNMV',
   'QCB',
+  'CMA',
+  // Africa
+  'FSCA',
+  'SARB',
+  // Other
   'EEAS'
 ]
 const DEFAULT_FINANCIAL_SECTORS = [
@@ -925,10 +953,12 @@ async function sendDailyDigest({ recipients, persona, brand }) {
     return { skipped: true, reason: 'No recipients' }
   }
 
+  // Use env var DIGEST_ROLLING_WINDOW_HOURS (default 168h = 7 days) to ensure content
+  const windowHours = parseInt(process.env.DIGEST_ROLLING_WINDOW_HOURS, 10) || 168
   const digest = await buildDigestPayload({
     persona,
     limit: 200,
-    rollingWindowHours: 24 // 24h window for true daily digest
+    rollingWindowHours: windowHours
   })
   const { subject, html, text } = buildDailyDigestEmail({
     date: digest.generatedAt,

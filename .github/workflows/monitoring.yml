@@ -1,0 +1,131 @@
+name: RegCanary Monitoring
+
+on:
+  schedule:
+    # Daily summary at 8:30 AM UTC (after puppeteer scrapers at 8:00)
+    - cron: '30 8 * * *'
+    # Scrape monitor checks every 6 hours
+    - cron: '30 2,14,20 * * *'
+
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - scrape-monitor
+          - site-monitor
+          - daily-summary
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  scrape-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'scrape-monitor') ||
+      github.event_name == 'schedule' && github.event.schedule == '30 2,14,20 * * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Scrape Monitor
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "🔍 Running scrape monitor..."
+          node scripts/run-scrape-monitor.js --fast
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Scrape Monitor Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+  site-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'site-monitor')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Site Monitor
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🌐 Running site monitor..."
+          node scripts/run-site-monitor.js
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Site Monitor Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+  daily-summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'daily-summary') ||
+      github.event_name == 'schedule' && github.event.schedule == '30 8 * * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Daily Summary
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📊 Generating daily health summary..."
+          node scripts/run-daily-summary.js
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Daily Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY

@@ -80,11 +80,24 @@ module.exports = function applyDigestMethods(EnhancedDBService) {
 
     async getRecentDigestIdentifiers(windowDays = 45) {
       const days = Number.isFinite(windowDays) && windowDays > 0 ? windowDays : 45
+      const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true'
+
       try {
-        if (this.fallbackMode) {
+        // On Vercel, ensure PostgreSQL connection
+        if (isVercel && !this.usePostgres) {
+          const reconnected = await this.ensurePostgresConnection()
+          if (!reconnected) {
+            console.warn('⚠️ Cannot fetch digest history: PostgreSQL unavailable')
+            return []
+          }
+        }
+
+        if (this.fallbackMode && !isVercel) {
           return await this.getRecentDigestIdentifiersJSON(days)
-        } else {
+        } else if (this.usePostgres) {
           return await this.getRecentDigestIdentifiersPG(days)
+        } else {
+          return []
         }
       } catch (error) {
         console.error('❌ Error fetching digest history:', error)

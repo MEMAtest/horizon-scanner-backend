@@ -6,7 +6,9 @@ function applyOrchestratorMethods(ServiceClass) {
       sourceCategories,
       onSourceComplete,
       onSourceError,
-      dryRun = false
+      dryRun = false,
+      maxDurationMs = fastMode ? 100000 : 300000, // 100s for fast mode, 5min otherwise
+      concurrency = fastMode ? 10 : 5 // Parallel batch size
     } = options
     const categoryFilter = Array.isArray(sourceCategories)
       ? sourceCategories
@@ -22,6 +24,7 @@ function applyOrchestratorMethods(ServiceClass) {
     }
 
     console.log(`📡 Starting ${fastMode ? 'fast-mode ' : ''}regulatory updates fetch...`)
+    console.log(`⏱️ Max duration: ${maxDurationMs / 1000}s, Concurrency: ${concurrency}`)
     this.processingStats.startTime = Date.now()
 
     const results = {
@@ -30,7 +33,8 @@ function applyOrchestratorMethods(ServiceClass) {
       failed: 0,
       newUpdates: 0,
       errors: [],
-      bySource: {}
+      bySource: {},
+      timedOut: false
     }
 
     const sortedFeeds = this.feedSources
@@ -42,9 +46,11 @@ function applyOrchestratorMethods(ServiceClass) {
             return false
           }
         }
-        if (fastMode && source.type === 'puppeteer') {
-          console.log(`⚡ Fast mode: Skipping slow source ${source.name}`)
-          return false
+        if (fastMode) {
+          // In fast mode, only process critical and high priority RSS feeds
+          if (source.type === 'puppeteer') return false
+          if (source.type === 'web_scraping') return false
+          if (source.priority !== 'critical' && source.priority !== 'high') return false
         }
         return true
       })
@@ -53,11 +59,12 @@ function applyOrchestratorMethods(ServiceClass) {
         return priorityOrder[a.priority] - priorityOrder[b.priority]
       })
 
-    for (const source of sortedFeeds) {
+    console.log(`📊 Processing ${sortedFeeds.length} sources in batches of ${concurrency}`)
+
+    // Process sources in parallel batches
+    const processSingleSource = async (source) => {
       const startedAt = Date.now()
       try {
-        console.log(`📡 Fetching from ${source.name} (${source.authority}) - ${source.type.toUpperCase()}...`)
-
         const updates = await this.fetchFromSource(source, options)
         const fetchedCount = Array.isArray(updates) ? updates.length : 0
 
@@ -86,9 +93,8 @@ function applyOrchestratorMethods(ServiceClass) {
             durationMs: Date.now() - startedAt
           }
 
-          console.log(`✅ ${source.name}: ${fetchedCount} fetched, ${savedCount} new`)
+          console.log(`✅ ${source.name}: ${savedCount} new`)
         } else {
-          console.log(`⚠️ ${source.name}: No updates found`)
           results.successful++
           results.bySource[source.name] = {
             name: source.name,
@@ -106,9 +112,8 @@ function applyOrchestratorMethods(ServiceClass) {
         if (typeof onSourceComplete === 'function') {
           onSourceComplete(results.bySource[source.name])
         }
-        await this.delay(1000)
       } catch (error) {
-        console.error(`❌ Failed to fetch from ${source.name}:`, error.message)
+        console.error(`❌ ${source.name}: ${error.message}`)
         results.failed++
         results.total++
         const sourceResult = {
@@ -138,6 +143,28 @@ function applyOrchestratorMethods(ServiceClass) {
       }
     }
 
+    // Process in batches with timeout check
+    for (let i = 0; i < sortedFeeds.length; i += concurrency) {
+      // Check if we're approaching timeout
+      const elapsed = Date.now() - this.processingStats.startTime
+      if (elapsed > maxDurationMs) {
+        console.warn(`⚠️ Approaching timeout (${elapsed}ms), stopping early`)
+        results.timedOut = true
+        break
+      }
+
+      const batch = sortedFeeds.slice(i, i + concurrency)
+      console.log(`📦 Processing batch ${Math.floor(i / concurrency) + 1}/${Math.ceil(sortedFeeds.length / concurrency)} (${batch.length} sources)`)
+
+      // Process batch in parallel
+      await Promise.all(batch.map(source => processSingleSource(source)))
+
+      // Small delay between batches (not between individual sources)
+      if (i + concurrency < sortedFeeds.length && !fastMode) {
+        await this.delay(500)
+      }
+    }
+
     const duration = ((Date.now() - this.processingStats.startTime) / 1000).toFixed(2)
     console.log(`\n📊 Fetch completed in ${duration}s:`)
     console.log(`   📰 RSS feeds: ${this.processingStats.rssSuccess}/${this.rssFeedCount} successful`)
@@ -145,6 +172,9 @@ function applyOrchestratorMethods(ServiceClass) {
     console.log(`   🤖 Puppeteer: ${this.processingStats.puppeteerSuccess || 0}/${this.puppeteerCount} successful`)
     console.log(`   ✅ Total: ${results.successful}/${results.total} sources processed`)
     console.log(`   🆕 New updates: ${results.newUpdates}`)
+    if (results.timedOut) {
+      console.log(`   ⚠️ Stopped early due to timeout`)
+    }
 
     return results
   }

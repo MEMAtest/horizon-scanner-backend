@@ -15,6 +15,7 @@ const aiAnalyzer = require('./services/aiAnalyzer')
 const FCAEnforcementService = require('./services/fcaEnforcementService')
 const { scheduleDailyDigest } = require('./services/dailyDigestService')
 const scrapeMonitorService = require('./services/scrapeMonitorService')
+const siteMonitorService = require('./services/siteMonitorService')
 
 // Import routes
 const pageRoutes = require('./routes/pageRoutes')
@@ -698,6 +699,7 @@ class AIRegulatoryIntelligenceServer {
       }
 
       scrapeMonitorService.schedule()
+      siteMonitorService.schedule()
 
       console.log('✅ Background tasks started')
     } catch (error) {

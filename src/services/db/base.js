@@ -73,12 +73,18 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
     },
 
     async initializeDatabase() {
+      // Detect if we're on Vercel (read-only filesystem)
+      const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true'
+
       try {
         if (process.env.DATABASE_URL) {
           console.log('🔗 Connecting to PostgreSQL database...')
           this.pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+            // Add connection timeout to prevent hanging
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000
           })
 
           const client = await this.pool.connect()
@@ -94,14 +100,69 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
           throw new Error('DATABASE_URL not configured')
         }
       } catch (error) {
-        console.warn('⚠️ PostgreSQL connection failed, using JSON fallback:', error.message)
-        this.fallbackMode = true
-        this.usePostgres = false
-        await this.ensureJSONFiles()
+        console.warn('⚠️ PostgreSQL connection failed:', error.message)
+
+        // On Vercel, don't fall back to JSON - filesystem is read-only
+        if (isVercel) {
+          console.error('❌ Cannot use JSON fallback on Vercel (read-only filesystem)')
+          console.error('❌ Database connection is required. Check DATABASE_URL.')
+          this.fallbackMode = false
+          this.usePostgres = false
+          // Keep the pool for retry attempts
+        } else {
+          console.warn('⚠️ Using JSON fallback mode')
+          this.fallbackMode = true
+          this.usePostgres = false
+          await this.ensureJSONFiles()
+        }
       } finally {
         this.isInitialized = true
         console.log('✅ Database service initialized')
       }
+    },
+
+    async ensurePostgresConnection() {
+      // If already connected to PostgreSQL, verify connection is still alive
+      if (this.usePostgres && this.pool) {
+        try {
+          const client = await this.pool.connect()
+          await client.query('SELECT 1')
+          client.release()
+          return true
+        } catch (error) {
+          console.warn('⚠️ PostgreSQL connection lost, attempting reconnect...')
+        }
+      }
+
+      // Try to (re)connect to PostgreSQL
+      if (process.env.DATABASE_URL) {
+        try {
+          // Close old pool if exists
+          if (this.pool) {
+            try { await this.pool.end() } catch (e) { /* ignore */ }
+          }
+
+          this.pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000
+          })
+
+          const client = await this.pool.connect()
+          await client.query('SELECT NOW()')
+          client.release()
+
+          console.log('✅ PostgreSQL reconnected successfully')
+          this.fallbackMode = false
+          this.usePostgres = true
+          return true
+        } catch (error) {
+          console.error('❌ PostgreSQL reconnection failed:', error.message)
+          return false
+        }
+      }
+      return false
     },
 
     async ensureTablesExist() {
@@ -350,20 +411,37 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
           try {
             await fs.access(filePath)
           } catch (error) {
+            // Skip file creation on read-only filesystem (Vercel)
+            if (error.code === 'EROFS') {
+              console.warn(`⚠️ Read-only filesystem - skipping ${path.basename(filePath)}`)
+              return
+            }
             await fs.writeFile(filePath, JSON.stringify(defaultContent, null, 2))
           }
         }))
       } catch (error) {
+        // Don't throw on EROFS - just warn and continue
+        if (error.code === 'EROFS') {
+          console.warn('⚠️ Read-only filesystem detected - JSON fallback unavailable')
+          return
+        }
         console.error('❌ Error ensuring JSON files exist:', error)
         throw error
       }
     },
 
     async loadJSONData(filePath) {
+      const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true'
+
       try {
         const content = await fs.readFile(filePath, 'utf8')
         return JSON.parse(content)
       } catch (error) {
+        // On Vercel, return empty array instead of trying to create files
+        if (isVercel && (error.code === 'ENOENT' || error.code === 'EROFS')) {
+          console.warn(`⚠️ Cannot access ${path.basename(filePath)} on Vercel - returning empty array`)
+          return []
+        }
         if (error.code === 'ENOENT') {
           await this.ensureJSONFiles()
           return this.loadJSONData(filePath)

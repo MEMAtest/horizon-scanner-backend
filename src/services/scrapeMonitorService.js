@@ -261,7 +261,8 @@ class ScrapeMonitorService {
 
       if (issues.length > 0) {
         await slackNotifier.sendMessage({
-          text: this.buildIssueMessage(runId, issues, totals)
+          text: this.buildIssueMessage(runId, issues, totals),
+          blocks: slackNotifier.buildScrapeMonitorBlocks(runId, issues, totals)
         })
       }
 

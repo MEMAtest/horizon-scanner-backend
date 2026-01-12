@@ -201,11 +201,26 @@ module.exports = function applyUpdatesMethods(EnhancedDBService) {
     },
 
     async getEnhancedUpdates(filters = {}) {
+      const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true'
+
       try {
-        if (this.fallbackMode) {
+        // On Vercel, always try PostgreSQL - JSON fallback won't work
+        if (isVercel && !this.usePostgres) {
+          console.log('🔄 Vercel detected - attempting PostgreSQL connection...')
+          const reconnected = await this.ensurePostgresConnection()
+          if (!reconnected) {
+            console.error('❌ Cannot fetch updates: PostgreSQL unavailable on Vercel')
+            return []
+          }
+        }
+
+        if (this.fallbackMode && !isVercel) {
           return await this.getEnhancedUpdatesJSON(filters)
-        } else {
+        } else if (this.usePostgres) {
           return await this.getEnhancedUpdatesPG(filters)
+        } else {
+          console.error('❌ No database connection available')
+          return []
         }
       } catch (error) {
         console.error('❌ Error getting enhanced updates:', error)

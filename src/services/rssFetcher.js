@@ -51,8 +51,8 @@ class EnhancedRSSFetcher {
     })
 
     this.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    this.fetchTimeout = 15000
-    this.maxConcurrentProcessing = 3
+    this.fetchTimeout = 10000 // Reduced from 15s to 10s for faster processing
+    this.maxConcurrentProcessing = 10 // Increased from 3 to 10 for parallel processing
     this.processingStats = {
       total: 0,
       processed: 0,

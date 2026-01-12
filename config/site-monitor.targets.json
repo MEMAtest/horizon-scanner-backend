@@ -1,0 +1,34 @@
+[
+  {
+    "id": "fcafines-site",
+    "name": "FCA Fines Dashboard",
+    "type": "http",
+    "url": "https://fcafines.memaconsultants.com"
+  },
+  {
+    "id": "fcafines-api",
+    "name": "FCA Fines API",
+    "type": "fca-fines-api",
+    "baseUrl": "https://fcafines.memaconsultants.com"
+  },
+  {
+    "id": "fcafines-scraper",
+    "name": "FCA Fines Scraper (GitHub Actions)",
+    "type": "github-workflow",
+    "repo": "MEMAtest/fca-fines-dashboard",
+    "workflow": "daily-fca-scraper.yml",
+    "maxAgeHours": 36
+  },
+  {
+    "id": "regcanary-site",
+    "name": "RegCanary Website",
+    "type": "http",
+    "url": "https://www.regcanary.com"
+  },
+  {
+    "id": "regcanary-status",
+    "name": "RegCanary System Status",
+    "type": "horizon-status",
+    "url": "https://www.regcanary.com/api/system-status"
+  }
+]

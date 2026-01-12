@@ -22,8 +22,13 @@ module.exports = async (req, res) => {
   try {
     console.log('🔄 RSS Refresh: Starting feed fetch...')
 
-    // Fetch all RSS feeds with fast mode to stay within Vercel timeout
-    const summary = await rssFetcher.fetchAllFeeds({ fastMode: true })
+    // Fetch all RSS feeds with fast mode to stay within Vercel timeout (120s)
+    const summary = await rssFetcher.fetchAllFeeds({
+      fastMode: true,
+      maxDurationMs: 100000, // Stop after 100s to leave buffer
+      concurrency: 15, // Process 15 feeds in parallel
+      timeoutMs: 8000 // 8s timeout per feed
+    })
 
     const duration = Date.now() - startTime
 
