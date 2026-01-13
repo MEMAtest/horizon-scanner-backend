@@ -41,8 +41,35 @@ module.exports = function applyScrapeMonitoringMethods(EnhancedDBService) {
           duration_ms INTEGER,
           fix_actions JSONB DEFAULT '[]'::JSONB,
           created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+          -- AI diagnosis fields for maintenance agent
+          error_category TEXT,
+          http_status_code INTEGER,
+          ai_diagnosis JSONB,
+          ai_suggested_fix TEXT,
+          ai_confidence FLOAT,
+          ai_analyzed_at TIMESTAMP WITHOUT TIME ZONE,
+          human_action_required BOOLEAN DEFAULT false,
+          human_action_taken_at TIMESTAMP WITHOUT TIME ZONE,
+          maintenance_notes TEXT,
           UNIQUE (run_id, source_name)
         )
+      `)
+
+      // Add columns if they don't exist (for existing tables)
+      await this.pool.query(`
+        DO $$
+        BEGIN
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS error_category TEXT;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS http_status_code INTEGER;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS ai_diagnosis JSONB;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS ai_suggested_fix TEXT;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS ai_confidence FLOAT;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS ai_analyzed_at TIMESTAMP WITHOUT TIME ZONE;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS human_action_required BOOLEAN DEFAULT false;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS human_action_taken_at TIMESTAMP WITHOUT TIME ZONE;
+          ALTER TABLE scrape_monitor_checks ADD COLUMN IF NOT EXISTS maintenance_notes TEXT;
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END $$
       `)
 
       await this.pool.query(`
@@ -158,7 +185,10 @@ module.exports = function applyScrapeMonitoringMethods(EnhancedDBService) {
         errorMessage: check.errorMessage || null,
         durationMs: check.durationMs || null,
         fixActions: Array.isArray(check.fixActions) ? check.fixActions : [],
-        createdAt: check.createdAt || new Date()
+        createdAt: check.createdAt || new Date(),
+        // Error classification fields
+        errorCategory: check.errorCategory || null,
+        httpStatusCode: check.httpStatusCode || null
       }
 
       if (this.usePostgres) {
@@ -179,9 +209,11 @@ module.exports = function applyScrapeMonitoringMethods(EnhancedDBService) {
               error_message,
               duration_ms,
               fix_actions,
-              created_at
+              created_at,
+              error_category,
+              http_status_code
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             ON CONFLICT (run_id, source_name)
             DO UPDATE SET
               authority = EXCLUDED.authority,
@@ -196,7 +228,9 @@ module.exports = function applyScrapeMonitoringMethods(EnhancedDBService) {
               error_message = EXCLUDED.error_message,
               duration_ms = EXCLUDED.duration_ms,
               fix_actions = EXCLUDED.fix_actions,
-              created_at = EXCLUDED.created_at
+              created_at = EXCLUDED.created_at,
+              error_category = EXCLUDED.error_category,
+              http_status_code = EXCLUDED.http_status_code
           `,
           [
             payload.runId,
@@ -213,13 +247,151 @@ module.exports = function applyScrapeMonitoringMethods(EnhancedDBService) {
             payload.errorMessage,
             payload.durationMs,
             JSON.stringify(payload.fixActions),
-            payload.createdAt
+            payload.createdAt,
+            payload.errorCategory,
+            payload.httpStatusCode
           ]
         )
         return payload
       }
 
       return this.recordScrapeMonitorCheckJSON(payload)
+    },
+
+    async updateCheckWithAIDiagnosis(checkId, diagnosis) {
+      if (!this.usePostgres) return null
+
+      await this.pool.query(
+        `
+          UPDATE scrape_monitor_checks
+          SET error_category = $2,
+              ai_diagnosis = $3,
+              ai_suggested_fix = $4,
+              ai_confidence = $5,
+              ai_analyzed_at = $6,
+              human_action_required = $7
+          WHERE id = $1
+        `,
+        [
+          checkId,
+          diagnosis.category || null,
+          JSON.stringify(diagnosis),
+          diagnosis.suggestedFix || null,
+          diagnosis.confidence || null,
+          new Date(),
+          diagnosis.humanActionRequired || false
+        ]
+      )
+      return checkId
+    },
+
+    async getUnanalyzedIssues(sinceHours = 24) {
+      if (!this.usePostgres) return []
+
+      const sinceDate = new Date(Date.now() - sinceHours * 60 * 60 * 1000)
+      const result = await this.pool.query(
+        `
+          SELECT c.*, r.started_at as run_started_at
+          FROM scrape_monitor_checks c
+          JOIN scrape_monitor_runs r ON c.run_id = r.id
+          WHERE c.created_at >= $1
+            AND c.issue_type IS NOT NULL
+            AND c.ai_analyzed_at IS NULL
+          ORDER BY c.created_at DESC
+        `,
+        [sinceDate]
+      )
+      return result.rows
+    },
+
+    async getIssuesRequiringHumanAction(sinceHours = 48) {
+      if (!this.usePostgres) return []
+
+      const sinceDate = new Date(Date.now() - sinceHours * 60 * 60 * 1000)
+      const result = await this.pool.query(
+        `
+          SELECT c.*, r.started_at as run_started_at
+          FROM scrape_monitor_checks c
+          JOIN scrape_monitor_runs r ON c.run_id = r.id
+          WHERE c.created_at >= $1
+            AND c.human_action_required = true
+            AND c.human_action_taken_at IS NULL
+          ORDER BY c.ai_confidence DESC NULLS LAST, c.created_at DESC
+        `,
+        [sinceDate]
+      )
+      return result.rows
+    },
+
+    async getMaintenanceSummary(sinceHours = 24) {
+      if (!this.usePostgres) return null
+
+      const sinceDate = new Date(Date.now() - sinceHours * 60 * 60 * 1000)
+
+      // Get totals
+      const totalsResult = await this.pool.query(
+        `
+          SELECT
+            COUNT(*) as total_checks,
+            COUNT(CASE WHEN status = 'success' OR status = 'fixed' THEN 1 END) as healthy,
+            COUNT(CASE WHEN status = 'error' THEN 1 END) as errors,
+            COUNT(CASE WHEN status = 'stale' THEN 1 END) as stale,
+            COUNT(CASE WHEN status = 'fixed' THEN 1 END) as auto_fixed,
+            COUNT(CASE WHEN human_action_required = true AND human_action_taken_at IS NULL THEN 1 END) as needs_attention
+          FROM scrape_monitor_checks
+          WHERE created_at >= $1
+        `,
+        [sinceDate]
+      )
+
+      // Get error categories breakdown
+      const categoriesResult = await this.pool.query(
+        `
+          SELECT error_category, COUNT(*) as count
+          FROM scrape_monitor_checks
+          WHERE created_at >= $1 AND error_category IS NOT NULL
+          GROUP BY error_category
+          ORDER BY count DESC
+        `,
+        [sinceDate]
+      )
+
+      // Get sources with recurring issues (3+ in last 7 days)
+      const recurringResult = await this.pool.query(
+        `
+          SELECT source_name, source_type, COUNT(*) as issue_count
+          FROM scrape_monitor_checks
+          WHERE created_at >= NOW() - INTERVAL '7 days'
+            AND issue_type IS NOT NULL
+          GROUP BY source_name, source_type
+          HAVING COUNT(*) >= 3
+          ORDER BY issue_count DESC
+          LIMIT 10
+        `
+      )
+
+      const totals = totalsResult.rows[0] || {}
+      const healthScore = totals.total_checks > 0
+        ? Math.round(((totals.healthy || 0) / totals.total_checks) * 100)
+        : 100
+
+      return {
+        since: sinceDate.toISOString(),
+        healthScore,
+        totals: {
+          total: parseInt(totals.total_checks) || 0,
+          healthy: parseInt(totals.healthy) || 0,
+          errors: parseInt(totals.errors) || 0,
+          stale: parseInt(totals.stale) || 0,
+          autoFixed: parseInt(totals.auto_fixed) || 0,
+          needsAttention: parseInt(totals.needs_attention) || 0
+        },
+        errorCategories: categoriesResult.rows.reduce((acc, row) => {
+          acc[row.error_category] = parseInt(row.count)
+          return acc
+        }, {}),
+        recurringIssues: recurringResult.rows
+      }
     },
 
     async getScrapeMonitorLastSuccessTimes() {

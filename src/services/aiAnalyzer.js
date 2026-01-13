@@ -18,6 +18,7 @@ const applyNormalizationMethods = require('./aiAnalyzer/normalization')
 const applyWeeklyMethods = require('./aiAnalyzer/weekly')
 const applyAnalysisMethods = require('./aiAnalyzer/analysis')
 const applyHealthMethods = require('./aiAnalyzer/health')
+const applyMaintenanceMethods = require('./aiAnalyzer/maintenance')
 
 class EnhancedAIAnalyzer {
   constructor() {
@@ -86,5 +87,6 @@ applyNormalizationMethods(EnhancedAIAnalyzer)
 applyWeeklyMethods(EnhancedAIAnalyzer)
 applyAnalysisMethods(EnhancedAIAnalyzer)
 applyHealthMethods(EnhancedAIAnalyzer)
+applyMaintenanceMethods(EnhancedAIAnalyzer)
 
 module.exports = new EnhancedAIAnalyzer()

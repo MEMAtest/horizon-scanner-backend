@@ -28,6 +28,73 @@ function formatIssueDetail(check) {
   return 'Issue detected'
 }
 
+// Classify error messages into categories for the maintenance agent
+function classifyError(errorMessage, httpStatusCode) {
+  if (!errorMessage) return { category: 'unknown', autoFixable: false }
+
+  const message = errorMessage.toLowerCase()
+
+  // Timeout errors - auto-fixable with longer timeout
+  if (message.includes('timeout') || message.includes('etimedout') || message.includes('timed out')) {
+    return { category: 'timeout', autoFixable: true }
+  }
+
+  // Connection errors - auto-fixable with retry
+  if (message.includes('econnreset') || message.includes('econnrefused') ||
+      message.includes('connection reset') || message.includes('socket hang up')) {
+    return { category: 'connection', autoFixable: true }
+  }
+
+  // Rate limiting - auto-fixable with backoff
+  if (httpStatusCode === 429 || message.includes('rate limit') || message.includes('too many requests')) {
+    return { category: 'rate_limit', autoFixable: true }
+  }
+
+  // SSL/TLS errors - may be auto-fixable
+  if (message.includes('ssl') || message.includes('certificate') || message.includes('tls') ||
+      message.includes('unable to verify')) {
+    return { category: 'ssl', autoFixable: true }
+  }
+
+  // DNS errors - usually temporary
+  if (message.includes('enotfound') || message.includes('getaddrinfo') || message.includes('dns')) {
+    return { category: 'dns', autoFixable: false }
+  }
+
+  // Auth/forbidden - needs human
+  if (httpStatusCode === 401 || httpStatusCode === 403 ||
+      message.includes('unauthorized') || message.includes('forbidden') || message.includes('access denied')) {
+    return { category: 'auth', autoFixable: false }
+  }
+
+  // Site down - temporary, skip
+  if (httpStatusCode >= 500 || message.includes('502') || message.includes('503') ||
+      message.includes('service unavailable') || message.includes('internal server error')) {
+    return { category: 'site_down', autoFixable: false }
+  }
+
+  // Selector/parsing errors - needs AI analysis
+  if (message.includes('selector') || message.includes('not found') ||
+      message.includes('no elements') || message.includes('parsing') ||
+      message.includes('cannot read') || message.includes('undefined')) {
+    return { category: 'selector', autoFixable: false }
+  }
+
+  // Missing result (skipped in fast mode)
+  if (message.includes('missing source result')) {
+    return { category: 'skipped', autoFixable: false }
+  }
+
+  return { category: 'unknown', autoFixable: false }
+}
+
+// Extract HTTP status code from error message if present
+function extractHttpStatusCode(errorMessage) {
+  if (!errorMessage) return null
+  const match = errorMessage.match(/\b(4\d{2}|5\d{2})\b/)
+  return match ? parseInt(match[1], 10) : null
+}
+
 class ScrapeMonitorService {
   constructor() {
     this.isRunning = false
@@ -217,6 +284,10 @@ class ScrapeMonitorService {
         }
       }
 
+      // Classify the error for maintenance agent
+      const httpStatusCode = extractHttpStatusCode(errorMessage)
+      const errorClassification = errorMessage ? classifyError(errorMessage, httpStatusCode) : null
+
       const check = {
         sourceName: source.name,
         authority: source.authority,
@@ -230,7 +301,10 @@ class ScrapeMonitorService {
         savedCount,
         errorMessage,
         durationMs,
-        fixActions
+        fixActions,
+        // Error classification for maintenance agent
+        errorCategory: errorClassification?.category || null,
+        httpStatusCode: httpStatusCode
       }
 
         try {

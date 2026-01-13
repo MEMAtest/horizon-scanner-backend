@@ -22,3 +22,4 @@ src/data/watch_list_matches.json
 # Temp files
 tmp/
 test-results/
+.env*.local
