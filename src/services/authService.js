@@ -4,7 +4,7 @@
  */
 
 const dbService = require('./dbService')
-const { sendEmail } = require('./email/resendClient')
+const { sendEmail } = require('./email/sesClient')
 
 const MAGIC_LINK_BASE_URL = process.env.MAGIC_LINK_BASE_URL || 'http://localhost:3000'
 

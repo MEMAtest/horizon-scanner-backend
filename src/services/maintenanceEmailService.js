@@ -1,7 +1,7 @@
 // Maintenance report email generator
 // Sends daily maintenance reports with auto-fixed issues and items needing attention
 
-const { sendEmail } = require('./email/resendClient')
+const { sendEmail } = require('./email/sesClient')
 
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://www.regcanary.com/dashboard'
 const GITHUB_ACTIONS_URL = 'https://github.com/MEMAtest/horizon-scanner-backend/actions'

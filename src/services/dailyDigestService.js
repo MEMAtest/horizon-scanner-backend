@@ -5,7 +5,7 @@ const cron = require('node-cron')
 const dbService = require('./dbService')
 const relevanceService = require('./relevanceService')
 const { buildDailyDigestEmail } = require('../templates/emails/dailyDigestEmail-classic')
-const { sendEmail } = require('./email/resendClient')
+const { sendEmail } = require('./email/sesClient')
 const { normalizeSectorName } = require('../utils/sectorTaxonomy')
 
 const DEFAULT_HISTORY_WINDOW_DAYS = 45
