@@ -154,6 +154,37 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
         case 'National Crime Agency':
           scraperResults = await puppeteerScraper.scrapeNCA()
           break
+        // New scrapers - converted from web_scraping
+        case 'CFTC':
+        case 'Commodity Futures Trading Commission':
+          scraperResults = await puppeteerScraper.scrapeCFTC()
+          break
+        case 'FSCA':
+        case 'Financial Sector Conduct Authority':
+          scraperResults = await puppeteerScraper.scrapeFSCA()
+          break
+        case 'FIC_SA':
+        case 'Financial Intelligence Centre':
+          scraperResults = await puppeteerScraper.scrapeFICSA()
+          break
+        case 'EU_COUNCIL':
+        case 'EU Council':
+          scraperResults = await puppeteerScraper.scrapeEUCouncil()
+          break
+        case 'CNBV':
+        case 'Comision Nacional Bancaria y de Valores':
+          scraperResults = await puppeteerScraper.scrapeCNBV()
+          break
+        case 'FCA_CP':
+          scraperResults = await puppeteerScraper.scrapeFCAConsultationPapers()
+          break
+        case 'FCA_DP':
+          scraperResults = await puppeteerScraper.scrapeFCADiscussionPapers()
+          break
+        case 'OFCOM':
+        case 'Office of Communications':
+          scraperResults = await puppeteerScraper.scrapeOfcom()
+          break
         default:
           console.log(`⚠️ No Puppeteer scraper configured for ${source.authority}`)
           return []
