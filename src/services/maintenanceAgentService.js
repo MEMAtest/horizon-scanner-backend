@@ -66,12 +66,12 @@ class MaintenanceAgentService {
         if (issue.status === 'fixed' || issue.status === 'success') {
           return false
         }
-        // Skip "skipped" category (fast mode exclusions - not actual errors)
-        if (issue.error_category === 'skipped' || issue.issue_type === 'skipped') {
+        // Skip 'no_updates' - not errors
+        if (issue.status === 'no_updates') {
           return false
         }
-        // Analyze actual errors and stale issues
-        return true
+        // Include issues with actual error status
+        return issue.status === 'error' || issue.status === 'stale'
       })
 
       console.log(`🔍 Filtering: ${issues.length} total → ${issuesToAnalyze.length} to analyze`)
