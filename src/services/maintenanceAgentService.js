@@ -103,21 +103,8 @@ class MaintenanceAgentService {
             diagnosis
           })
 
-          // Attempt auto-fix for fixable issues
-          if (diagnosis.autoFixable && diagnosis.confidence >= 0.7) {
-            console.log(`🔄 Attempting auto-fix for ${issue.source_name}...`)
-            const fixResult = await this.attemptAdvancedFix(issue, diagnosis)
-            results.fixAttempts.push({
-              sourceName: issue.source_name,
-              ...fixResult
-            })
-
-            if (fixResult.success) {
-              results.autoFixed++
-            }
-          } else if (!diagnosis.autoFixable) {
-            results.needsHuman++
-          }
+          // All issues flagged for human review (no auto-fix attempts)
+          results.needsHuman++
 
           // Rate limit AI calls
           await this.delay(500)
