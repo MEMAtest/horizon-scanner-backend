@@ -19,6 +19,7 @@ on:
         options:
           - all
           - scrape-monitor
+          - scrape-monitor-full
           - site-monitor
           - daily-summary
           - maintenance-agent
@@ -52,7 +53,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          echo "🔍 Running scrape monitor..."
+          echo "🔍 Running scrape monitor (fast mode)..."
           node scripts/run-scrape-monitor.js --fast
 
       - name: Summary
@@ -61,6 +62,39 @@ jobs:
           echo "## Scrape Monitor Results" >> $GITHUB_STEP_SUMMARY
           echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+  scrape-monitor-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'scrape-monitor-full'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Full Scrape Monitor (with Puppeteer)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "🔍 Running FULL scrape monitor (includes Puppeteer)..."
+          node scripts/run-scrape-monitor.js
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Full Scrape Monitor Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode**: Full (includes Puppeteer scrapers)" >> $GITHUB_STEP_SUMMARY
 
   site-monitor:
     runs-on: ubuntu-latest
