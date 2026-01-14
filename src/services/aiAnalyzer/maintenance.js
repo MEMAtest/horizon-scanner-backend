@@ -197,7 +197,19 @@ Write 2-3 sentences summarizing the health status and key actions needed. Be con
 
     try {
       const response = await this.makeGroqRequest(prompt)
-      const text = response?.choices?.[0]?.message?.content || ''
+      let text = response?.choices?.[0]?.message?.content || ''
+
+      // Handle JSON response format (DeepSeek sometimes returns JSON)
+      if (text.trim().startsWith('{') || text.trim().startsWith('```')) {
+        try {
+          const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+          const parsed = JSON.parse(cleanText)
+          text = parsed.executive_summary || parsed.summary || parsed.text || text
+        } catch (e) {
+          // Not valid JSON, use as-is
+        }
+      }
+
       return text || this.createFallbackSummary(data)
     } catch (error) {
       console.error('AI summary failed:', error.message)
