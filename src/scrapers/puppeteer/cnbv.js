@@ -13,8 +13,8 @@ puppeteer.use(StealthPlugin())
 const CNBV_CONFIG = {
   newsUrl: 'https://www.gob.mx/cnbv/prensa',
   baseUrl: 'https://www.gob.mx',
-  timeout: 60000,
-  waitTime: 5000,
+  timeout: 90000,  // Increased for slow government servers
+  waitTime: 8000,  // Increased wait time
   maxItems: 20,
   maxAgeDays: 90
 }

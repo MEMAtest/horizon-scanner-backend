@@ -47,9 +47,13 @@ function applyOrchestratorMethods(ServiceClass) {
           }
         }
         if (fastMode) {
-          // In fast mode, only process critical and high priority RSS feeds
+          // In fast mode, skip puppeteer (slow) but allow high-priority web scrapers
           if (source.type === 'puppeteer') return false
-          if (source.type === 'web_scraping') return false
+          // Only skip low/medium priority web scrapers - allow high/critical
+          if (source.type === 'web_scraping' &&
+              source.priority !== 'critical' && source.priority !== 'high') {
+            return false
+          }
           if (source.priority !== 'critical' && source.priority !== 'high') return false
         }
         return true

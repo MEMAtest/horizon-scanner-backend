@@ -69,20 +69,20 @@ function applyFSCAMethods(ServiceClass) {
         const items = []
         const seen = new Set()
 
-        // FSCA uses Bootstrap .news-card components
-        const newsCards = document.querySelectorAll('.news-card')
+        // FSCA uses .news-card-container or .card elements
+        const newsCards = document.querySelectorAll('.news-card-container, .news-card, .card')
 
         newsCards.forEach(card => {
           // Get headline from h5 in card-body
-          const headlineEl = card.querySelector('.card-body h5, .card-body h4, .card-body .card-title')
+          const headlineEl = card.querySelector('h5, h4, .card-title')
           if (!headlineEl) return
 
           const title = headlineEl.textContent?.trim()
           if (!title || title.length < 15) return
 
-          // Get link - may be on headline or on a read more button
+          // Get link - try .news-link first, then other patterns
           let href = ''
-          const linkEl = card.querySelector('a[href*="_api"], a[href*="News"], a[href*="Press"]')
+          const linkEl = card.querySelector('.news-link, a[href*="News"], a[href*="Press"], a[href*="_api"]')
           if (linkEl) {
             href = linkEl.href || linkEl.getAttribute('href') || ''
           }
@@ -103,7 +103,7 @@ function applyFSCAMethods(ServiceClass) {
           }
 
           // Get description if available
-          const descEl = card.querySelector('.card-body p')
+          const descEl = card.querySelector('.card-body p, p')
           const description = descEl?.textContent?.trim() || ''
 
           seen.add(href)
@@ -115,9 +115,9 @@ function applyFSCAMethods(ServiceClass) {
           })
         })
 
-        // Fallback: look for any news-style links if cards not found
+        // Fallback: look for any news links if cards not found
         if (items.length < 3) {
-          const allLinks = document.querySelectorAll('a[href*="_api/cr3ad_"]')
+          const allLinks = document.querySelectorAll('a[href*="News"], a[href*="Press"], a.news-link')
           allLinks.forEach(linkEl => {
             let href = linkEl.href
             if (!href || seen.has(href)) return
@@ -127,7 +127,8 @@ function applyFSCAMethods(ServiceClass) {
 
             // Skip generic text
             if (title.toLowerCase().includes('read more') ||
-                title.toLowerCase().includes('click here')) return
+                title.toLowerCase().includes('click here') ||
+                title.toLowerCase().includes('view all')) return
 
             if (href.startsWith('/')) {
               href = baseUrl + href

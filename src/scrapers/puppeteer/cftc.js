@@ -14,7 +14,7 @@ const CFTC_CONFIG = {
   newsUrl: 'https://www.cftc.gov/PressRoom/PressReleases',
   baseUrl: 'https://www.cftc.gov',
   timeout: 60000,
-  waitTime: 3000,
+  waitTime: 7000,  // Increased from 3000 for slow gov site
   maxItems: 20,
   maxAgeDays: 90
 }
@@ -69,30 +69,36 @@ function applyCFTCMethods(ServiceClass) {
         const items = []
         const seen = new Set()
 
-        // CFTC uses a table or list structure for press releases
-        const rows = document.querySelectorAll('.view-content .views-row, .press-release-item, table tbody tr, .item-list li')
+        // CFTC uses simple list with links - target all press release links directly
+        const allLinks = document.querySelectorAll('a[href*="/PressRoom/PressReleases/"]')
 
-        rows.forEach(row => {
-          const linkEl = row.querySelector('a[href*="PressReleases"], a[href*="pressrelease"]')
-          if (!linkEl) return
-
+        allLinks.forEach(linkEl => {
           let href = linkEl.href || linkEl.getAttribute('href')
-          if (!href || seen.has(href)) return
+          if (!href) return
+
+          // Skip the main page link
+          if (href.endsWith('/PressReleases') || href.endsWith('/PressReleases/')) return
 
           if (href.startsWith('/')) {
             href = baseUrl + href
           }
 
+          if (seen.has(href)) return
           if (href.includes('#') || href.includes('javascript:')) return
 
           const title = linkEl.textContent?.trim()
           if (!title || title.length < 10) return
 
-          // Get date from row
+          // Try to find date - CFTC shows dates as MM/DD/YYYY in text near links
           let dateText = ''
-          const dateEl = row.querySelector('.date-display-single, .views-field-created, time, .date')
-          if (dateEl) {
-            dateText = dateEl.textContent?.trim() || dateEl.getAttribute('datetime') || ''
+          const parent = linkEl.parentElement
+          if (parent) {
+            const parentText = parent.textContent || ''
+            // Look for date pattern MM/DD/YYYY
+            const dateMatch = parentText.match(/(\d{1,2}\/\d{1,2}\/\d{4})/)
+            if (dateMatch) {
+              dateText = dateMatch[1]
+            }
           }
 
           seen.add(href)
@@ -102,29 +108,6 @@ function applyCFTCMethods(ServiceClass) {
             date: dateText
           })
         })
-
-        // Fallback: try generic link extraction
-        if (items.length === 0) {
-          const allLinks = document.querySelectorAll('a[href*="PressReleases"]')
-          allLinks.forEach(linkEl => {
-            let href = linkEl.href
-            if (!href || seen.has(href) || href === baseUrl + '/PressRoom/PressReleases') return
-
-            if (href.startsWith('/')) {
-              href = baseUrl + href
-            }
-
-            const title = linkEl.textContent?.trim()
-            if (!title || title.length < 10) return
-
-            seen.add(href)
-            items.push({
-              title: title.replace(/\s+/g, ' ').trim(),
-              url: href,
-              date: ''
-            })
-          })
-        }
 
         return items
       }, CFTC_CONFIG.baseUrl)

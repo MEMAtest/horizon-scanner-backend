@@ -84,11 +84,12 @@ function applyFICSAMethods(ServiceClass) {
           'publications', 'events', 'home', 'about', 'contact'
         ]
 
-        // FIC newsroom uses specific structure
-        const newsContainers = document.querySelectorAll('.elementor-post, article, .news-item, .media-release-item, .post-item')
+        // FIC newsroom uses a carousel/scroll widget or article elements
+        const newsContainers = document.querySelectorAll('.ue_post_scroll_item, .elementor-post, article, .news-item, .media-release-item, .post-item')
 
         newsContainers.forEach(container => {
-          const linkEl = container.querySelector('a[href*="fic.gov.za"]:not([href*="#"]), h2 a, h3 a, .elementor-post__title a')
+          // Try multiple link selectors (carousel uses .uc_more_btn)
+          const linkEl = container.querySelector('.uc_more_btn, .ue-post-title a, a[href*="fic.gov.za"]:not([href*="#"]), h2 a, h3 a, .elementor-post__title a')
           if (!linkEl) return
 
           let href = linkEl.href || linkEl.getAttribute('href')
@@ -101,15 +102,17 @@ function applyFICSAMethods(ServiceClass) {
             href = baseUrl + href
           }
 
-          const title = linkEl.textContent?.trim()
-          if (!title || title.length < 25) return
+          // Get title from .ue-post-title or link text
+          const titleEl = container.querySelector('.ue-post-title, h2, h3')
+          const title = titleEl?.textContent?.trim() || linkEl.textContent?.trim()
+          if (!title || title.length < 15) return
 
           // Skip generic navigation titles
           if (skipTitles.some(skip => title.toLowerCase() === skip || title.toLowerCase().includes(skip))) return
 
-          // Get date
+          // Get date from .ue-calendar-date or other date elements
           let dateText = ''
-          const dateEl = container.querySelector('time, .date, .elementor-post-date, .post-date, .published')
+          const dateEl = container.querySelector('.ue-calendar-date, .ue-post-calendar, time, .date, .elementor-post-date, .post-date, .published')
           if (dateEl) {
             dateText = dateEl.getAttribute('datetime') || dateEl.textContent?.trim() || ''
           }
