@@ -11,7 +11,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(StealthPlugin())
 
 const OFCOM_CONFIG = {
-  newsUrl: 'https://www.ofcom.org.uk/news-centre/latest-news',
+  newsUrl: 'https://www.ofcom.org.uk/news-and-updates',
   baseUrl: 'https://www.ofcom.org.uk',
   timeout: 60000,
   waitTime: 5000,
@@ -69,11 +69,13 @@ function applyOfcomMethods(ServiceClass) {
         const items = []
         const seen = new Set()
 
-        // Ofcom uses various news card structures
-        const newsContainers = document.querySelectorAll('.news-item, .card, article, .content-item, .listing-item, .teaser')
+        // Ofcom uses article containers or list items with h3 titles
+        // Try multiple container selectors
+        const newsContainers = document.querySelectorAll('article, .news-item, .card, .content-item, .listing-item, li')
 
         newsContainers.forEach(container => {
-          const linkEl = container.querySelector('a[href*="/news-centre/"], a[href*="/news/"], h2 a, h3 a, .title a')
+          // Get title from h3 > a or direct a link
+          const linkEl = container.querySelector('h3 a, h2 a, a[href*="/news/"], a[href*="/publications/"]')
           if (!linkEl) return
 
           let href = linkEl.href || linkEl.getAttribute('href')
@@ -84,24 +86,45 @@ function applyOfcomMethods(ServiceClass) {
           }
 
           if (href.includes('#') || href.includes('javascript:')) return
+          // Skip non-news links
+          if (href.includes('/research') || href.includes('/advice') || href.includes('/consultations')) return
 
-          const title = linkEl.textContent?.trim() ||
-                        container.querySelector('h2, h3, .title')?.textContent?.trim()
+          const title = linkEl.textContent?.trim()
           if (!title || title.length < 15) return
 
-          // Get date
+          // Skip generic text
+          if (title.toLowerCase().includes('read more') ||
+              title.toLowerCase().includes('view all') ||
+              title.toLowerCase().includes('show more')) return
+
+          // Get date from p tag containing "Published:" or time element
           let dateText = ''
-          const dateEl = container.querySelector('time, .date, .published-date, .meta-date')
-          if (dateEl) {
-            dateText = dateEl.getAttribute('datetime') || dateEl.textContent?.trim() || ''
+          const allParas = container.querySelectorAll('p')
+          allParas.forEach(p => {
+            const text = p.textContent || ''
+            if (text.includes('Published:') || text.match(/\d{1,2}\s+\w+\s+\d{4}/)) {
+              const match = text.match(/(\d{1,2}\s+\w+\s+\d{4})/)
+              if (match) {
+                dateText = match[1]
+              }
+            }
+          })
+          // Also try time element
+          if (!dateText) {
+            const timeEl = container.querySelector('time')
+            if (timeEl) {
+              dateText = timeEl.getAttribute('datetime') || timeEl.textContent?.trim() || ''
+            }
           }
 
-          // Get summary
+          // Get summary from p tag (not the date one)
           let summary = ''
-          const summaryEl = container.querySelector('.summary, .description, p, .teaser-text')
-          if (summaryEl) {
-            summary = summaryEl.textContent?.trim().substring(0, 300) || ''
-          }
+          allParas.forEach(p => {
+            const text = p.textContent || ''
+            if (!text.includes('Published:') && text.length > 50) {
+              summary = text.trim().substring(0, 300)
+            }
+          })
 
           seen.add(href)
           items.push({
@@ -112,13 +135,15 @@ function applyOfcomMethods(ServiceClass) {
           })
         })
 
-        // Fallback: look for news links directly
+        // Fallback: look for any news article links
         if (items.length < 3) {
-          const allLinks = document.querySelectorAll('a[href*="/news-centre/"], a[href*="/news/"]')
+          const allLinks = document.querySelectorAll('a[href*="/news/"], a[href*="-news"]')
           allLinks.forEach(linkEl => {
             let href = linkEl.href
             if (!href || seen.has(href)) return
-            if (href === baseUrl + '/news-centre/' || href === baseUrl + '/news/') return
+
+            // Skip index pages
+            if (href.endsWith('/news/') || href.endsWith('/news-and-updates')) return
 
             const title = linkEl.textContent?.trim()
             if (!title || title.length < 20) return

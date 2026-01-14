@@ -443,7 +443,7 @@ const feedSources = [
   {
     name: 'Ofcom News',
     authority: 'OFCOM',
-    url: 'https://www.ofcom.org.uk/news-centre/latest-news',
+    url: 'https://www.ofcom.org.uk/news-and-updates',
     type: 'puppeteer',
     description: 'Ofcom - Communications Regulator News',
     priority: 'medium',

@@ -83,12 +83,12 @@ function applyFCAPapersMethods(ServiceClass) {
         const items = []
         const seen = new Set()
 
-        // FCA uses .search-item containers for publication results
-        const searchItems = document.querySelectorAll('.search-item, .publication-item, article')
+        // FCA uses <ol> list with <li> items for publication results
+        const listItems = document.querySelectorAll('ol li, .search-item, .publication-item, article')
 
-        searchItems.forEach(item => {
-          // Get the title link
-          const linkEl = item.querySelector('.search-item__clickthrough, .publication-title a, h2 a, h3 a, a[href*="/publications/"]')
+        listItems.forEach(item => {
+          // Get the title link from h3 > a
+          const linkEl = item.querySelector('h3 a, h2 a, .search-item__clickthrough, a[href*="/publications/"]')
           if (!linkEl) return
 
           let href = linkEl.href || linkEl.getAttribute('href')
@@ -99,20 +99,28 @@ function applyFCAPapersMethods(ServiceClass) {
           }
 
           if (href.includes('#') || href.includes('javascript:')) return
+          // Skip non-publication links
+          if (!href.includes('/publications/') && !href.includes('fca.org.uk')) return
 
           const title = linkEl.textContent?.trim()
           if (!title || title.length < 10) return
 
-          // Get date from .meta-item.published-date or similar
+          // Get date from div containing "Published:"
           let dateText = ''
-          const dateEl = item.querySelector('.meta-item.published-date, .publication-date, time, .date')
-          if (dateEl) {
-            dateText = dateEl.getAttribute('datetime') || dateEl.textContent?.trim() || ''
-          }
+          const allDivs = item.querySelectorAll('div')
+          allDivs.forEach(div => {
+            const text = div.textContent || ''
+            if (text.includes('Published:')) {
+              const match = text.match(/Published:\s*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/)
+              if (match) {
+                dateText = match[1]
+              }
+            }
+          })
 
-          // Get summary
+          // Get summary from p tag
           let summary = ''
-          const summaryEl = item.querySelector('.search-item__body, .publication-summary, .summary, p')
+          const summaryEl = item.querySelector('p')
           if (summaryEl) {
             summary = summaryEl.textContent?.trim().substring(0, 300) || ''
           }
