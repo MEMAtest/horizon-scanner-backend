@@ -46,21 +46,31 @@ class MaintenanceAgentService {
         fixAttempts: []
       }
 
-      // Analyze each issue
-      for (const issue of issues) {
+      // Analyze each issue (limit to first 20 to avoid rate limits)
+      const issuesToAnalyze = issues.filter(issue => {
+        // Skip issues that were already fixed or successful
+        if (issue.status === 'fixed' || issue.status === 'success') {
+          return false
+        }
+        // Skip "skipped" category (fast mode exclusions - not actual errors)
+        if (issue.error_category === 'skipped' || issue.issue_type === 'skipped') {
+          return false
+        }
+        // Only analyze actual errors
+        return issue.status === 'error' || issue.issue_type === 'error' || issue.issue_type === 'stale'
+      })
+
+      console.log(`🔍 Filtering: ${issues.length} total → ${issuesToAnalyze.length} to analyze`)
+      results.skipped = issues.length - issuesToAnalyze.length
+
+      // Limit analysis to 20 issues per run to avoid rate limits
+      const limitedIssues = issuesToAnalyze.slice(0, 20)
+      if (issuesToAnalyze.length > 20) {
+        console.log(`⚠️ Limiting analysis to 20 issues (${issuesToAnalyze.length - 20} deferred)`)
+      }
+
+      for (const issue of limitedIssues) {
         try {
-          // Skip issues that were already fixed by scrape monitor
-          if (issue.status === 'fixed' || issue.status === 'success') {
-            results.skipped++
-            continue
-          }
-
-          // Skip "skipped" category (fast mode exclusions)
-          if (issue.error_category === 'skipped') {
-            results.skipped++
-            continue
-          }
-
           // Get AI diagnosis
           const diagnosis = await aiAnalyzer.diagnoseScraperFailure(issue)
           results.analyzed++
