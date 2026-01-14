@@ -46,6 +46,20 @@ class MaintenanceAgentService {
         fixAttempts: []
       }
 
+      // Debug: Log breakdown of issue statuses
+      const statusCounts = {}
+      const typeCounts = {}
+      const categoryCounts = {}
+      for (const issue of issues) {
+        statusCounts[issue.status] = (statusCounts[issue.status] || 0) + 1
+        typeCounts[issue.issue_type] = (typeCounts[issue.issue_type] || 0) + 1
+        categoryCounts[issue.error_category] = (categoryCounts[issue.error_category] || 0) + 1
+      }
+      console.log(`📊 Issue breakdown:`)
+      console.log(`   Statuses: ${JSON.stringify(statusCounts)}`)
+      console.log(`   Types: ${JSON.stringify(typeCounts)}`)
+      console.log(`   Categories: ${JSON.stringify(categoryCounts)}`)
+
       // Analyze each issue (limit to first 20 to avoid rate limits)
       const issuesToAnalyze = issues.filter(issue => {
         // Skip issues that were already fixed or successful
@@ -56,8 +70,8 @@ class MaintenanceAgentService {
         if (issue.error_category === 'skipped' || issue.issue_type === 'skipped') {
           return false
         }
-        // Only analyze actual errors
-        return issue.status === 'error' || issue.issue_type === 'error' || issue.issue_type === 'stale'
+        // Analyze actual errors and stale issues
+        return true
       })
 
       console.log(`🔍 Filtering: ${issues.length} total → ${issuesToAnalyze.length} to analyze`)
