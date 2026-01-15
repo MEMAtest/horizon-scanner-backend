@@ -4,9 +4,11 @@ on:
   schedule:
     # Scrape monitor checks every 6 hours
     - cron: '30 2,14,20 * * *'
-    # Daily summary at 8:30 AM UTC (after puppeteer scrapers at 8:00)
+    # Daily digest email at 8:00 AM UTC
+    - cron: '0 8 * * *'
+    # Daily summary (Slack) at 8:30 AM UTC
     - cron: '30 8 * * *'
-    # Maintenance agent at 10:30 AM UTC (after daily digest at 10:00)
+    # Maintenance agent at 10:30 AM UTC
     - cron: '30 10 * * *'
 
   workflow_dispatch:
@@ -21,6 +23,7 @@ on:
           - scrape-monitor
           - scrape-monitor-full
           - site-monitor
+          - daily-digest
           - daily-summary
           - maintenance-agent
 
@@ -128,6 +131,47 @@ jobs:
         if: always()
         run: |
           echo "## Site Monitor Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+  daily-digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'daily-digest') ||
+      github.event_name == 'schedule' && github.event.schedule == '0 8 * * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Send Daily Digest Email
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_AGENT }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_AGENT }}
+          AWS_SES_REGION: eu-west-2
+          DAILY_DIGEST_RECIPIENTS: ${{ secrets.DAILY_DIGEST_RECIPIENTS }}
+          DIGEST_PERSONA: Executive
+          DIGEST_FROM_EMAIL: ${{ secrets.DIGEST_FROM_EMAIL }}
+          DIGEST_ROLLING_WINDOW_HOURS: 168
+        run: |
+          echo "📬 Sending daily digest email..."
+          node scripts/send-daily-digest.js
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Daily Digest Email" >> $GITHUB_STEP_SUMMARY
           echo "- **Date**: $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
 

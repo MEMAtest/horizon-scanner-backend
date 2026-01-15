@@ -134,8 +134,6 @@ module.exports = async (req, res) => {
   // 3. Send daily digest email
   if (process.env.ENABLE_DAILY_DIGEST !== 'true') {
     results.digest = { skipped: true, reason: 'ENABLE_DAILY_DIGEST not true' }
-  } else if (!process.env.RESEND_API_KEY) {
-    results.digest = { skipped: true, reason: 'RESEND_API_KEY not configured' }
   } else {
     const recipients = parseRecipients(process.env.DAILY_DIGEST_RECIPIENTS)
     if (recipients.length === 0) {
