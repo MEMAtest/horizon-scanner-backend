@@ -33,6 +33,42 @@ const ADD_DUE_DATE_COLUMN_QUERY = `
   ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITHOUT TIME ZONE
 `
 
+const ADD_DUE_DATE_INDEX_QUERY = `
+  CREATE INDEX IF NOT EXISTS idx_annotations_due_date
+  ON annotations (due_date)
+  WHERE due_date IS NOT NULL AND deleted_at IS NULL
+`
+
+// Safe field name mapping to prevent SQL injection via prototype pollution
+const FIELD_TO_COLUMN = {
+  visibility: 'visibility',
+  status: 'status',
+  content: 'content',
+  tags: 'tags',
+  assigned_to: 'assigned_to',
+  linked_resources: 'linked_resources',
+  origin_page: 'origin_page',
+  action_type: 'action_type',
+  annotation_type: 'annotation_type',
+  priority: 'priority',
+  persona: 'persona',
+  report_included: 'report_included',
+  context: 'context',
+  due_date: 'due_date'
+}
+
+// Validate and format date safely - returns null for invalid dates
+function safeFormatDate(dateInput) {
+  if (!dateInput) return null
+  try {
+    const date = new Date(dateInput)
+    if (Number.isNaN(date.getTime())) return null
+    return date.toISOString()
+  } catch (error) {
+    return null
+  }
+}
+
 function normalizeAnnotation(row) {
   if (!row) return null
   return {
@@ -52,10 +88,10 @@ function normalizeAnnotation(row) {
     persona: row.persona || null,
     report_included: Boolean(row.report_included),
     context: row.context || null,
-    due_date: row.due_date ? new Date(row.due_date).toISOString() : null,
-    deletedAt: row.deleted_at ? new Date(row.deleted_at).toISOString() : null,
-    created_at: row.created_at ? new Date(row.created_at).toISOString() : null,
-    updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null
+    due_date: safeFormatDate(row.due_date),
+    deletedAt: safeFormatDate(row.deleted_at),
+    created_at: safeFormatDate(row.created_at),
+    updated_at: safeFormatDate(row.updated_at)
   }
 }
 
@@ -67,6 +103,7 @@ module.exports = function applyAnnotationMethods(EnhancedDBService) {
       try {
         await client.query(ANNOTATIONS_TABLE_QUERY)
         await client.query(ADD_DUE_DATE_COLUMN_QUERY)
+        await client.query(ADD_DUE_DATE_INDEX_QUERY)
         console.log('Annotations table ensured')
       } catch (error) {
         console.warn('Failed to create annotations table:', error.message)
@@ -205,7 +242,7 @@ module.exports = function applyAnnotationMethods(EnhancedDBService) {
         persona: note.persona || null,
         report_included: typeof note.report_included === 'boolean' ? note.report_included : false,
         context: note.context || null,
-        due_date: note.due_date ? new Date(note.due_date).toISOString() : null,
+        due_date: safeFormatDate(note.due_date),
         created_at: now,
         updated_at: now
       }
@@ -275,41 +312,39 @@ module.exports = function applyAnnotationMethods(EnhancedDBService) {
       if (!this.fallbackMode && this.pool) {
         const client = await this.pool.connect()
         try {
-          // Build dynamic update query
+          // Build dynamic update query using safe field mapping
           const setClauses = ['updated_at = NOW()']
           const params = [noteId]
           let paramIndex = 2
 
-          const allowedFields = [
-            'visibility', 'status', 'content', 'tags', 'assigned_to',
-            'linked_resources', 'origin_page', 'action_type', 'annotation_type',
-            'priority', 'persona', 'report_included', 'context', 'due_date'
-          ]
+          // Only process fields that have a safe column mapping
+          for (const field of Object.keys(FIELD_TO_COLUMN)) {
+            if (!Object.prototype.hasOwnProperty.call(updates, field)) continue
 
-          for (const field of allowedFields) {
-            if (Object.prototype.hasOwnProperty.call(updates, field)) {
-              let value = updates[field]
+            const columnName = FIELD_TO_COLUMN[field]
+            if (!columnName) continue // Extra safety - skip unmapped fields
 
-              // Handle special types
-              if (field === 'tags' || field === 'assigned_to') {
-                value = Array.isArray(value) ? value : []
-                setClauses.push(`${field} = $${paramIndex}`)
-              } else if (field === 'linked_resources' || field === 'context') {
-                setClauses.push(`${field} = $${paramIndex}::jsonb`)
-                value = JSON.stringify(value || (field === 'linked_resources' ? [] : null))
-              } else if (field === 'report_included') {
-                setClauses.push(`${field} = $${paramIndex}`)
-                value = Boolean(value)
-              } else if (field === 'due_date') {
-                setClauses.push(`${field} = $${paramIndex}`)
-                value = value ? new Date(value).toISOString() : null
-              } else {
-                setClauses.push(`${field} = $${paramIndex}`)
-              }
+            let value = updates[field]
 
-              params.push(value)
-              paramIndex++
+            // Handle special types
+            if (field === 'tags' || field === 'assigned_to') {
+              value = Array.isArray(value) ? value : []
+              setClauses.push(`${columnName} = $${paramIndex}`)
+            } else if (field === 'linked_resources' || field === 'context') {
+              setClauses.push(`${columnName} = $${paramIndex}::jsonb`)
+              value = JSON.stringify(value || (field === 'linked_resources' ? [] : null))
+            } else if (field === 'report_included') {
+              setClauses.push(`${columnName} = $${paramIndex}`)
+              value = Boolean(value)
+            } else if (field === 'due_date') {
+              setClauses.push(`${columnName} = $${paramIndex}`)
+              value = safeFormatDate(value)
+            } else {
+              setClauses.push(`${columnName} = $${paramIndex}`)
             }
+
+            params.push(value)
+            paramIndex++
           }
 
           const query = `
@@ -363,7 +398,7 @@ module.exports = function applyAnnotationMethods(EnhancedDBService) {
         updated.report_included = Boolean(updates.report_included)
       }
       if (Object.prototype.hasOwnProperty.call(updates, 'due_date')) {
-        updated.due_date = updates.due_date ? new Date(updates.due_date).toISOString() : null
+        updated.due_date = safeFormatDate(updates.due_date)
       }
 
       workspace.annotations[index] = updated

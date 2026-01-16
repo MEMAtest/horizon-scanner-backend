@@ -28,7 +28,9 @@ function registerAnnotationRoutes(router) {
       }
 
       if (req.query.limit) {
-        filters.limit = parseInt(req.query.limit, 10)
+        const limit = parseInt(req.query.limit, 10)
+        // Validate: must be 1-1000, reject invalid values
+        filters.limit = (limit && limit >= 1 && limit <= 1000) ? limit : undefined
       }
 
       const annotations = await annotationService.listAnnotations(filters)
@@ -43,7 +45,9 @@ function registerAnnotationRoutes(router) {
   // Get annotations with upcoming due dates
   router.get('/annotations/upcoming', async (req, res) => {
     try {
-      const daysAhead = req.query.days ? parseInt(req.query.days, 10) : 7
+      const days = parseInt(req.query.days, 10)
+      // Validate: must be 1-365 days, default to 7
+      const daysAhead = (days && days >= 1 && days <= 365) ? days : 7
       const annotations = await annotationService.getUpcomingDueAnnotations(daysAhead)
 
       res.json({

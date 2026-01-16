@@ -140,11 +140,12 @@
           if (authority) metaParts.push('<span>🏛️ ' + escapeHtml(authority) + '</span>');
           metaParts.push('<span>🕒 ' + escapeHtml(created) + '</span>');
 
-          // Handle due date with overdue indicator
+          // Handle due date with overdue indicator - calculate once and reuse
+          let isOverdue = false;
           if (dueDate) {
             const dueDateObj = new Date(dueDate);
             const now = new Date();
-            const isOverdue = dueDateObj < now;
+            isOverdue = dueDateObj < now;
             const formattedDue = dueDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
             if (isOverdue) {
               metaParts.push('<span style="color: #dc2626; font-weight: 600;">⚠️ OVERDUE: ' + escapeHtml(formattedDue) + '</span>');
@@ -153,8 +154,7 @@
             }
           }
 
-          // Add overdue class if needed
-          const isOverdue = dueDate && new Date(dueDate) < new Date();
+          // Use pre-calculated isOverdue for CSS class
           const itemClass = isOverdue ? 'annotation-item annotation-overdue' : 'annotation-item';
 
           return [
