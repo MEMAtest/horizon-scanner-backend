@@ -5,6 +5,9 @@
     },
     "api/cron/rss-refresh.js": {
       "maxDuration": 120
+    },
+    "api/cron/weekly-newsletter.js": {
+      "maxDuration": 180
     }
   },
   "rewrites": [
@@ -12,6 +15,7 @@
     { "source": "/api/cron/rss-refresh", "destination": "/api/cron/rss-refresh.js" },
     { "source": "/api/cron/bank-news-refresh", "destination": "/api/cron/bank-news-refresh.js" },
     { "source": "/api/cron/fca-enforcement", "destination": "/api/cron/fca-enforcement.js" },
+    { "source": "/api/cron/weekly-newsletter", "destination": "/api/cron/weekly-newsletter.js" },
     { "source": "/(.*)", "destination": "/api/index.js" }
   ],
   "headers": [
@@ -50,6 +54,10 @@
     {
       "path": "/api/cron/daily-digest",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-newsletter",
+      "schedule": "0 18 * * 0"
     }
   ],
   "env": {
