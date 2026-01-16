@@ -337,6 +337,11 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
         if (typeof this.ensureScrapeMonitoringTables === 'function') {
           await this.ensureScrapeMonitoringTables()
         }
+
+        // Create annotations table
+        if (typeof this.ensureAnnotationsTable === 'function') {
+          await this.ensureAnnotationsTable()
+        }
       } catch (error) {
         console.error('❌ Error ensuring tables exist:', error)
       }

@@ -23,6 +23,7 @@ const applyFirmPersonasMethods = require('./db/firmPersonas')
 const applyCalendarMethods = require('./db/calendar')
 const applyHandbookMethods = require('./db/handbook')
 const applyScrapeMonitoringMethods = require('./db/scrapeMonitoring')
+const applyAnnotationMethods = require('./db/annotations')
 
 class EnhancedDBService {
   constructor() {
@@ -77,5 +78,6 @@ applyFirmPersonasMethods(EnhancedDBService)
 applyCalendarMethods(EnhancedDBService)
 applyHandbookMethods(EnhancedDBService)
 applyScrapeMonitoringMethods(EnhancedDBService)
+applyAnnotationMethods(EnhancedDBService)
 
 module.exports = new EnhancedDBService()

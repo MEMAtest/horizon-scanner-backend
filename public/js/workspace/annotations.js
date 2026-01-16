@@ -121,7 +121,7 @@
           const headline = contextData.headline || annotation.content || 'Untitled';
           const url = contextData.url;
           const authority = contextData.authority;
-          const dueDate = contextData.due_date || contextData.dueDate;
+          const dueDate = annotation.due_date || contextData.due_date || contextData.dueDate;
           const content = annotation.content;
           const created = context.formatDateTime(annotation.created_at || annotation.createdAt);
           const actions = [];
@@ -139,10 +139,26 @@
           const metaParts = [];
           if (authority) metaParts.push('<span>🏛️ ' + escapeHtml(authority) + '</span>');
           metaParts.push('<span>🕒 ' + escapeHtml(created) + '</span>');
-          if (dueDate) metaParts.push('<span>📅 Due ' + escapeHtml(dueDate) + '</span>');
+
+          // Handle due date with overdue indicator
+          if (dueDate) {
+            const dueDateObj = new Date(dueDate);
+            const now = new Date();
+            const isOverdue = dueDateObj < now;
+            const formattedDue = dueDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            if (isOverdue) {
+              metaParts.push('<span style="color: #dc2626; font-weight: 600;">⚠️ OVERDUE: ' + escapeHtml(formattedDue) + '</span>');
+            } else {
+              metaParts.push('<span>📅 Due ' + escapeHtml(formattedDue) + '</span>');
+            }
+          }
+
+          // Add overdue class if needed
+          const isOverdue = dueDate && new Date(dueDate) < new Date();
+          const itemClass = isOverdue ? 'annotation-item annotation-overdue' : 'annotation-item';
 
           return [
-            '<div class="annotation-item" data-annotation-id="' + noteId + '">',
+            '<div class="' + itemClass + '" data-annotation-id="' + noteId + '">',
             '  <div class="annotation-title">' + escapeHtml(headline) + '</div>',
             '  <div class="annotation-content">' + escapeHtml(content || 'No notes captured') + '</div>',
             '  <div class="annotation-meta">' + metaParts.join('') + '</div>',

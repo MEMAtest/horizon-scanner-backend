@@ -87,6 +87,10 @@ function renderAnnotationModal() {
               <input type="text" name="assigned_to" id="annotationAssigned" class="annotation-filter">
             </label>
             <label>
+              <span class="form-label">Due date</span>
+              <input type="date" name="due_date" id="annotationDueDate" class="annotation-filter">
+            </label>
+            <label>
               <span class="form-label">Linked resources (comma separated URLs)</span>
               <input type="text" name="linked_resources" id="annotationResources" class="annotation-filter">
             </label>

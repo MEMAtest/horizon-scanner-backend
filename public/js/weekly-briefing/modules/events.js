@@ -180,6 +180,7 @@ function applyEventsMixin(klass) {
         annotationForm.addEventListener('submit', async event => {
           event.preventDefault()
           const formData = new FormData(annotationForm)
+          const dueDate = formData.get('due_date')
           const body = {
             update_id: formData.get('update_id'),
             visibility: formData.get('visibility') || 'team',
@@ -196,7 +197,8 @@ function applyEventsMixin(klass) {
             linked_resources: (formData.get('linked_resources') || '')
               .split(',')
               .map(value => value.trim())
-              .filter(Boolean)
+              .filter(Boolean),
+            due_date: dueDate || null
           }
 
           if (!body.update_id || !body.content) {
