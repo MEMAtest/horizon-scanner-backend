@@ -5,7 +5,7 @@ const cron = require('node-cron')
 const dbService = require('./dbService')
 const relevanceService = require('./relevanceService')
 const { buildDailyDigestEmail } = require('../templates/emails/dailyDigestEmail-classic')
-const { sendEmail } = require('./email/resendClient')
+const { sendEmail } = require('./email/sesClient')
 const { normalizeSectorName } = require('../utils/sectorTaxonomy')
 
 const DEFAULT_HISTORY_WINDOW_DAYS = 45
@@ -1007,8 +1007,12 @@ function scheduleDailyDigest() {
     return null
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    console.warn('DailyDigest: RESEND_API_KEY is not configured. Digest scheduling skipped.')
+  // AWS SDK can use explicit credentials OR IAM roles
+  const hasExplicitCredentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+  const hasRegion = process.env.AWS_REGION || process.env.AWS_SES_REGION
+
+  if (!hasExplicitCredentials && !hasRegion) {
+    console.warn('DailyDigest: AWS credentials or region not configured. Digest scheduling skipped.')
     return null
   }
 

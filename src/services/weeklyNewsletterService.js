@@ -3,7 +3,7 @@
 
 const weeklyRoundupService = require('./weeklyRoundupService')
 const dbService = require('./dbService')
-const { sendEmail } = require('./email/resendClient')
+const { sendEmail } = require('./email/sesClient')
 const { buildWeeklyNewsletterEmail } = require('../templates/emails/weeklyNewsletterEmail')
 const axios = require('axios')
 

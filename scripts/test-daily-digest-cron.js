@@ -40,7 +40,9 @@ async function testDailyDigestCron() {
   // Check environment variables
   console.log('🔍 Environment Configuration:')
   console.log(`   ENABLE_DAILY_DIGEST: ${process.env.ENABLE_DAILY_DIGEST}`)
-  console.log(`   RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✓ Configured' : '✗ Missing'}`)
+  console.log(`   AWS_ACCESS_KEY_ID: ${process.env.AWS_ACCESS_KEY_ID ? '✓ Configured' : '✗ Missing'}`)
+  console.log(`   AWS_SECRET_ACCESS_KEY: ${process.env.AWS_SECRET_ACCESS_KEY ? '✓ Configured' : '✗ Missing'}`)
+  console.log(`   AWS_SES_REGION: ${process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-west-2 (default)'}`)
   console.log(`   DAILY_DIGEST_RECIPIENTS: ${process.env.DAILY_DIGEST_RECIPIENTS || '✗ Not set'}`)
   console.log(`   CRON_SECRET: ${process.env.CRON_SECRET ? '✓ Configured' : '✗ Not set'}`)
   console.log(`   DIGEST_PERSONA: ${process.env.DIGEST_PERSONA || 'Executive (default)'}`)
@@ -53,8 +55,8 @@ async function testDailyDigestCron() {
     console.log('')
   }
 
-  if (!process.env.RESEND_API_KEY) {
-    console.log('⚠️ WARNING: RESEND_API_KEY is not configured')
+  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    console.log('⚠️ WARNING: AWS credentials are not configured')
     console.log('   The cron job will return a 500 error')
     console.log('')
   }
