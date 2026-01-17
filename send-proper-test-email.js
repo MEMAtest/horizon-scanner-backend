@@ -38,49 +38,24 @@ async function sendProperTestEmail() {
     console.log(`✅ HTML length: ${html.length.toLocaleString()} characters`);
     console.log(`✅ Text length: ${text.length.toLocaleString()} characters\n`);
 
-    // Step 3: Send via Resend API
-    const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_H2dJHTUj_QJpDPXfwUj4QjcM8P9jPUpN1';
+    // Step 3: Send via AWS SES
+    const { sendEmail } = require('./src/services/email/sesClient');
     const recipient = process.env.DAILY_DIGEST_RECIPIENTS || 'contact@memaconsultants.com';
+    const recipients = recipient.split(',').map(e => e.trim()).filter(Boolean);
 
-    console.log(`📤 Sending email to ${recipient}...\n`);
+    console.log(`📤 Sending email via AWS SES to ${recipients.join(', ')}...\n`);
 
-    const fetch = require('node-fetch');
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'Regulatory Horizon Scanner <onboarding@resend.dev>',
-        to: [recipient],
-        subject: subject + ' [TEST]',
-        html: html,
-        text: text,
-        headers: {
-          'X-Entity-Ref-ID': `test-digest-${Date.now()}`,
-          'List-Unsubscribe': '<mailto:unsubscribe@regcanary.com>'
-        },
-        tags: [
-          {
-            name: 'category',
-            value: 'daily-digest-test'
-          }
-        ]
-      })
+    const result = await sendEmail({
+      to: recipients,
+      subject: subject + ' [TEST]',
+      html: html,
+      text: text
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('❌ Email send failed:', error);
-      process.exit(1);
-    }
-
-    const responseData = await response.json();
     console.log('✅ EMAIL SENT SUCCESSFULLY!\n');
     console.log('═══════════════════════════════════════════════════════════════');
-    console.log('Email ID:', responseData.id);
-    console.log(`Recipients: ${recipient}`);
+    console.log('Email ID:', result.id);
+    console.log(`Recipients: ${recipients.join(', ')}`);
     console.log(`Articles: ${digest.insights.length}`);
     console.log(`High impact: ${digest.metrics.highCount}`);
     console.log(`Medium impact: ${digest.metrics.mediumCount}`);

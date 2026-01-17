@@ -3,16 +3,23 @@
 
 const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses')
 
-const AWS_REGION = process.env.AWS_SES_REGION || 'eu-west-2'
+const AWS_REGION = process.env.AWS_SES_REGION || process.env.AWS_REGION || 'eu-west-2'
 
 let sesClient = null
 
 function getClient() {
   if (!sesClient) {
-    // AWS SDK will automatically use:
-    // - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars, or
-    // - IAM role if running on AWS infrastructure
-    sesClient = new SESClient({ region: AWS_REGION })
+    const config = { region: AWS_REGION }
+
+    // Explicitly configure credentials if available in environment
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      config.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }
+    }
+
+    sesClient = new SESClient(config)
   }
   return sesClient
 }
