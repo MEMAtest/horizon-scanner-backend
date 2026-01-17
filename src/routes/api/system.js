@@ -33,37 +33,6 @@ function registerSystemRoutes(router) {
   }
   })
 
-  router.get('/aws-check', (req, res) => {
-    res.json({
-      AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
-      AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
-      AWS_REGION: process.env.AWS_REGION || null,
-      AWS_SES_REGION: process.env.AWS_SES_REGION || null,
-      DIGEST_FROM_EMAIL: process.env.DIGEST_FROM_EMAIL || null,
-      DAILY_DIGEST_RECIPIENTS: process.env.DAILY_DIGEST_RECIPIENTS || null,
-      ENABLE_DAILY_DIGEST: process.env.ENABLE_DAILY_DIGEST || null,
-      keyIdPrefix: process.env.AWS_ACCESS_KEY_ID ? process.env.AWS_ACCESS_KEY_ID.substring(0, 4) + '...' : null
-    })
-  })
-
-  router.post('/test-ses-email', async (req, res) => {
-    try {
-      const { sendEmail } = require('../../services/email/sesClient')
-      const recipient = process.env.DAILY_DIGEST_RECIPIENTS || 'contact@memaconsultants.com'
-
-      const result = await sendEmail({
-        to: [recipient],
-        subject: 'SES Test - ' + new Date().toISOString(),
-        html: '<h1>Test Email</h1><p>AWS SES is working correctly.</p>',
-        text: 'Test Email - AWS SES is working correctly.'
-      })
-
-      res.json({ success: true, messageId: result.id })
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message, stack: error.stack })
-    }
-  })
-
   router.get('/status', async (req, res) => {
   try {
     console.log('Analytics API: System status requested')

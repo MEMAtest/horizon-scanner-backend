@@ -11,20 +11,12 @@ function getClient() {
   if (!sesClient) {
     const config = { region: AWS_REGION }
 
-    // Debug: log credential availability (not values)
-    console.log('[SES] Region:', AWS_REGION)
-    console.log('[SES] AWS_ACCESS_KEY_ID present:', !!process.env.AWS_ACCESS_KEY_ID)
-    console.log('[SES] AWS_SECRET_ACCESS_KEY present:', !!process.env.AWS_SECRET_ACCESS_KEY)
-
     // Explicitly configure credentials if available in environment
     if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-      console.log('[SES] Using explicit credentials from environment')
       config.credentials = {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
       }
-    } else {
-      console.log('[SES] No explicit credentials found, relying on default chain')
     }
 
     sesClient = new SESClient(config)
