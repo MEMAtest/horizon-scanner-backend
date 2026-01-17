@@ -46,6 +46,24 @@ function registerSystemRoutes(router) {
     })
   })
 
+  router.post('/test-ses-email', async (req, res) => {
+    try {
+      const { sendEmail } = require('../../services/email/sesClient')
+      const recipient = process.env.DAILY_DIGEST_RECIPIENTS || 'contact@memaconsultants.com'
+
+      const result = await sendEmail({
+        to: [recipient],
+        subject: 'SES Test - ' + new Date().toISOString(),
+        html: '<h1>Test Email</h1><p>AWS SES is working correctly.</p>',
+        text: 'Test Email - AWS SES is working correctly.'
+      })
+
+      res.json({ success: true, messageId: result.id })
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message, stack: error.stack })
+    }
+  })
+
   router.get('/status', async (req, res) => {
   try {
     console.log('Analytics API: System status requested')
