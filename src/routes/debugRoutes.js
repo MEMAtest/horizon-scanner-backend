@@ -11,6 +11,16 @@ const {
 
 router.get('/health', (req, res) => res.json({ status: 'healthy' }))
 
+router.get('/aws-check', (req, res) => {
+  res.json({
+    AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
+    AWS_REGION: process.env.AWS_REGION || null,
+    AWS_SES_REGION: process.env.AWS_SES_REGION || null,
+    keyIdPrefix: process.env.AWS_ACCESS_KEY_ID ? process.env.AWS_ACCESS_KEY_ID.substring(0, 4) + '...' : null
+  })
+})
+
 router.get('/test', async (req, res, next) => {
   try {
     const html = await renderTestPage()
