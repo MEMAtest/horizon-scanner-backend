@@ -39,6 +39,9 @@ function registerSystemRoutes(router) {
       AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
       AWS_REGION: process.env.AWS_REGION || null,
       AWS_SES_REGION: process.env.AWS_SES_REGION || null,
+      DIGEST_FROM_EMAIL: process.env.DIGEST_FROM_EMAIL || null,
+      DAILY_DIGEST_RECIPIENTS: process.env.DAILY_DIGEST_RECIPIENTS || null,
+      ENABLE_DAILY_DIGEST: process.env.ENABLE_DAILY_DIGEST || null,
       keyIdPrefix: process.env.AWS_ACCESS_KEY_ID ? process.env.AWS_ACCESS_KEY_ID.substring(0, 4) + '...' : null
     })
   })
