@@ -28,7 +28,7 @@ function buildWatchListsPage({
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Watch Lists - RegCanary</title>
+      <title>Fine Directory - RegCanary</title>
       ${commonStyles}
       ${watchListStyles}
       <style>${canaryStyles}</style>
@@ -41,8 +41,8 @@ function buildWatchListsPage({
             <div class="page-header-left">
               ${pageIcon}
               <div>
-                <h1>Watch Lists</h1>
-                <p class="subtitle">Monitor regulatory updates matching your criteria</p>
+                <h1>Fine Directory</h1>
+                <p class="subtitle">Track and monitor FCA enforcement actions and fines</p>
               </div>
             </div>
             <div class="header-actions">
@@ -51,7 +51,7 @@ function buildWatchListsPage({
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Create Watch List
+                Create Fine Monitor
               </button>
             </div>
           </header>

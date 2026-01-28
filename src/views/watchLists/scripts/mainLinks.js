@@ -120,7 +120,7 @@ function getWatchListLinksScript() {
                   },
                   body: JSON.stringify({
                     updateId: updateId,
-                    notes: 'Linked from Watch List match'
+                    notes: 'Linked from Fine Monitor match'
                   })
                 });
               } else if (linkType === 'policy') {
@@ -147,7 +147,7 @@ function getWatchListLinksScript() {
                   body: JSON.stringify({
                     updateId: updateId,
                     citationType: 'reference',
-                    notes: 'Linked from Watch List match',
+                    notes: 'Linked from Fine Monitor match',
                     sectionReference: ''
                   })
                 });

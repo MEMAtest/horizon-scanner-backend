@@ -92,7 +92,7 @@ class WatchListService {
           message,
           priority: matchCount ? 'high' : 'normal',
           actionUrl: `/watch-lists?openMatches=${encodeURIComponent(watchList.id)}`,
-          actionLabel: matchCount ? 'View Matches' : 'Open Watch Lists',
+          actionLabel: matchCount ? 'View Matches' : 'Open Fine Directory',
           referenceType: 'watch_list',
           referenceId: String(watchList.id),
           metadata: {
@@ -213,7 +213,7 @@ class WatchListService {
 
         if (watchList.auto_add_to_dossier && watchList.target_dossier_id) {
           await db.addItemToDossier(watchList.target_dossier_id, updateId, {
-            userNotes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`
+            userNotes: `Auto-added from fine monitor "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`
           })
         }
       }
@@ -343,7 +343,7 @@ class WatchListService {
             if (shouldAutoAddToDossier && update.id != null) {
               try {
                 await db.addItemToDossier(watchList.target_dossier_id, update.id, {
-                  userNotes: `Auto-added from watch list "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`
+                  userNotes: `Auto-added from fine monitor "${watchList.name}" (${Math.round(matchResult.score * 100)}% match)`
                 })
                 itemsAddedToDossier += 1
               } catch (error) {

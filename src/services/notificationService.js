@@ -395,8 +395,8 @@ class NotificationService {
           // Create notification for watch list owner
           await db.createNotification(watchList.user_id, {
             type: 'enforcement_watch_match',
-            title: `Watch List Alert: ${watchList.name}`,
-            message: `New FCA fine matches your watch list: ${fine.firm_individual} - ${matchReason.join(', ')}`,
+            title: `Fine Monitor Alert: ${watchList.name}`,
+            message: `New FCA fine matches your fine monitor: ${fine.firm_individual} - ${matchReason.join(', ')}`,
             priority: 'high',
             actionUrl: `/enforcement?firm=${encodeURIComponent(fine.firm_individual)}`,
             actionLabel: 'View Fine',

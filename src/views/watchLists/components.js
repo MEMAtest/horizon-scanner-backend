@@ -5,7 +5,7 @@ function renderStatsCards(stats) {
   return `
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Active Watch Lists</div>
+        <div class="stat-label">Active Fine Monitors</div>
         <div class="stat-value">${stats.totalWatchLists || 0}</div>
       </div>
       <div class="stat-card">
@@ -135,10 +135,10 @@ function renderWatchListsGrid(watchLists, connectionCounts = {}) {
           <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
           <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z"/>
         </svg>
-        <h3>No Watch Lists Yet</h3>
-        <p>Create a watch list to automatically track regulatory updates matching your criteria</p>
+        <h3>No Fine Monitors Yet</h3>
+        <p>Create a fine monitor to automatically track FCA enforcement actions matching your criteria</p>
         <button class="btn btn-primary" onclick="WatchListPage.openCreateModal()">
-          Create Your First Watch List
+          Create Your First Fine Monitor
         </button>
       </div>
     `
@@ -156,7 +156,7 @@ function renderCreateModal() {
     <div class="modal-overlay" id="create-modal">
       <div class="modal">
         <div class="modal-header">
-          <h2 id="modal-title">Create Watch List</h2>
+          <h2 id="modal-title">Create Fine Monitor</h2>
           <button class="btn btn-ghost" onclick="WatchListPage.closeModal()">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -175,7 +175,7 @@ function renderCreateModal() {
 
             <div class="form-group">
               <label for="description">Description</label>
-              <textarea id="description" name="description" placeholder="What are you tracking with this watch list?"></textarea>
+              <textarea id="description" name="description" placeholder="What fines or enforcement actions are you tracking?"></textarea>
             </div>
 
             <div class="form-group">
@@ -243,7 +243,7 @@ function renderCreateModal() {
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="WatchListPage.closeModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="submit-btn">Create Watch List</button>
+            <button type="submit" class="btn btn-primary" id="submit-btn">Create Fine Monitor</button>
           </div>
         </form>
       </div>
@@ -256,7 +256,7 @@ function renderMatchesModal() {
     <div class="modal-overlay" id="matches-modal">
       <div class="modal" style="max-width: 900px;">
         <div class="modal-header">
-          <h2 id="matches-modal-title">Watch List Matches</h2>
+          <h2 id="matches-modal-title">Fine Monitor Matches</h2>
           <button class="btn btn-ghost" onclick="WatchListPage.closeMatchesModal()">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>

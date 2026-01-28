@@ -6,7 +6,7 @@ function getWatchListMainCoreScript() {
 
         const WatchListPage = {
           init: function() {
-            console.log('[WatchLists] Initialized with', state.watchLists.length, 'watch lists');
+            console.log('[FineDirectory] Initialized with', state.watchLists.length, 'fine monitors');
 
             try {
               const params = new URLSearchParams(window.location.search || '');
@@ -25,8 +25,8 @@ function getWatchListMainCoreScript() {
             this.initializeDropdowns([], []);
             this.toggleAutoAddToDossier(false);
             this.ensureDossiersLoaded();
-            document.getElementById('modal-title').textContent = 'Create Watch List';
-            document.getElementById('submit-btn').textContent = 'Create Watch List';
+            document.getElementById('modal-title').textContent = 'Create Fine Monitor';
+            document.getElementById('submit-btn').textContent = 'Create Fine Monitor';
             document.getElementById('create-modal').classList.add('active');
           },
 
@@ -306,7 +306,7 @@ function getWatchListMainCoreScript() {
 
               const result = await response.json();
               if (result.success) {
-                this.showToast(isEdit ? 'Watch list updated' : 'Watch list created', 'success');
+                this.showToast(isEdit ? 'Fine monitor updated' : 'Fine monitor created', 'success');
                 this.closeModal();
                 window.location.reload();
               } else {
@@ -347,7 +347,7 @@ function getWatchListMainCoreScript() {
               watchList.sectors || []
             );
 
-            document.getElementById('modal-title').textContent = 'Edit Watch List';
+            document.getElementById('modal-title').textContent = 'Edit Fine Monitor';
             document.getElementById('submit-btn').textContent = 'Save Changes';
             document.getElementById('create-modal').classList.add('active');
           },
@@ -410,9 +410,9 @@ function getWatchListMainCoreScript() {
             select.innerHTML = options;
           },
 
-          // Delete Watch List
+          // Delete Fine Monitor
           deleteWatchList: async function(id) {
-            if (!confirm('Are you sure you want to delete this watch list?')) return;
+            if (!confirm('Are you sure you want to delete this fine monitor?')) return;
 
             try {
               const response = await fetch('/api/watch-lists/' + id, {
@@ -422,7 +422,7 @@ function getWatchListMainCoreScript() {
 
               const result = await response.json();
               if (result.success) {
-                this.showToast('Watch list deleted', 'success');
+                this.showToast('Fine monitor deleted', 'success');
                 window.location.reload();
               } else {
                 this.showToast('Error: ' + result.error, 'error');

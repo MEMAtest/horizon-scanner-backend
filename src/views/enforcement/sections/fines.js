@@ -15,6 +15,14 @@ function renderFinesSection() {
           Recent Enforcement Actions
         </h2>
         <div>
+          <a href="/watch-lists" class="btn btn-success">
+            <span class="button-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            Fine Directory
+          </a>
           <button class="btn btn-secondary" data-enforcement-action="refresh">
             <span class="button-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -26,7 +34,7 @@ function renderFinesSection() {
             </span>
             Refresh
           </button>
-          <button class="btn btn-primary" data-enforcement-action="export">
+          <button class="btn btn-secondary" data-enforcement-action="export">
             <span class="button-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 4v11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>

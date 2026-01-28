@@ -90,9 +90,9 @@ function renderNavigation({ currentPage, icons, recentCounts }) {
     { href: '/sector-intelligence/Banking', icon: icons.sector, text: 'Sector Intelligence', active: currentPage === 'sector-intelligence' }
   ]
 
-  // Research & Policy items
+  // Monitoring & Research items
   const researchItems = [
-    { href: '/watch-lists', icon: icons.watchList, text: 'Watch Lists', active: currentPage === 'watch-lists' },
+    { href: '/watch-lists', icon: icons.watchList, text: 'Fine Directory', active: currentPage === 'watch-lists' },
     { href: '/dossiers', icon: icons.dossier, text: 'Research Dossiers', active: currentPage === 'dossiers' },
     { href: '/policies', icon: icons.policy, text: 'Policy Library', active: currentPage === 'policies' }
   ]
@@ -105,7 +105,7 @@ function renderNavigation({ currentPage, icons, recentCounts }) {
   return `<nav class="sidebar-nav-clean">
     ${renderSection('navigation', 'NAVIGATION', navigationItems, true)}
     ${renderSection('analysis', 'ANALYSIS', analysisItems, true)}
-    ${renderSection('research', 'RESEARCH & POLICY', researchItems, false)}
+    ${renderSection('research', 'MONITORING & RESEARCH', researchItems, true)}
     ${renderSection('account', 'ACCOUNT', accountItems, false)}
   </nav>`
 }

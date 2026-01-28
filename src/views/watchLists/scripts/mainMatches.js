@@ -4,7 +4,7 @@ function getWatchListMatchesScript() {
             state.currentWatchListId = id;
             const watchList = state.watchLists.find(wl => String(wl.id) === String(id));
             document.getElementById('matches-modal-title').textContent =
-              'Matches: ' + (watchList ? watchList.name : 'Watch List');
+              'Matches: ' + (watchList ? watchList.name : 'Fine Monitor');
             document.getElementById('matches-modal').classList.add('active');
 
             // Reset linked items section
@@ -75,7 +75,7 @@ function getWatchListMatchesScript() {
               }
             } catch (error) {
               console.error('[WatchLists] Rescan error:', error);
-              this.showToast('Failed to rescan watch list', 'error');
+              this.showToast('Failed to rescan fine monitor', 'error');
             }
           },
 
@@ -403,7 +403,7 @@ function getWatchListMatchesScript() {
                     <p style="margin: 0 0 12px 0;">Are you sure you want to unlink this match?</p>
                     <p style="margin: 0; padding: 12px; background: #f8fafc; border-radius: 8px; font-weight: 500;" id="unlink-match-title"></p>
                     <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px;">
-                      This will remove the regulatory update from this watch list. The update itself will not be deleted.
+                      This will remove the regulatory update from this fine monitor. The update itself will not be deleted.
                     </p>
                   </div>
                   <div class="modal-footer">
