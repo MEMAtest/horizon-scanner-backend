@@ -701,8 +701,8 @@ function renderMarketingPage() {
               <div class="feature-icon-small">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               </div>
-              <h3>Watch Lists</h3>
-              <p>Create custom filters by authority, topic, or sector. Get notified only about what matters to your firm.</p>
+              <h3>Fine Directory</h3>
+              <p>Track FCA enforcement actions and create fine monitors by authority, topic, or sector. Get notified only about what matters to your firm.</p>
               <span class="feature-cta">Click to explore</span>
             </div>
 
@@ -993,7 +993,7 @@ function renderMarketingPage() {
                 <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>UK regulators (FCA, PRA, PSR, BoE)</li>
                 <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>AI-powered summaries</li>
                 <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Daily email digests</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Watch lists & alerts</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Fine monitors & alerts</li>
                 <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Regulatory calendar</li>
               </ul>
               <a class="btn ghost full-width" href="#demo">Request Pricing</a>
@@ -1232,15 +1232,15 @@ function renderMarketingPage() {
             ]
           },
           'watchlists': {
-            title: 'Custom Watch Lists',
+            title: 'Fine Directory',
             icon: '<svg viewBox="0 0 48 48"><path d="M24 4L44 14v20L24 44 4 34V14L24 4z" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/><path d="M24 14v20M14 19v10M34 19v10" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="24" r="4" fill="#22c55e"><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/></circle></svg>',
             demo: '<div class="demo-watchlist"><div class="wl-filter"><span class="wl-tag active">FCA</span><span class="wl-tag active">PRA</span><span class="wl-tag">EBA</span><span class="wl-tag">SEC</span></div><div class="wl-filter"><span class="wl-tag active">Consumer Duty</span><span class="wl-tag active">Capital</span><span class="wl-tag">AML</span></div><div class="wl-result"><div class="wl-count">12</div><div class="wl-label">Matching updates this week</div></div></div>',
             benefits: [
               'Filter by regulator, topic, or sector',
-              'Create multiple watch lists for different teams',
+              'Create multiple fine monitors for different teams',
               'Get notified only on what matters to you',
               'Reduce noise by 90% or more',
-              'Share watch lists across your organization'
+              'Share fine monitors across your organization'
             ]
           },
           'dossiers': {

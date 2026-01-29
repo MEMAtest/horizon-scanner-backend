@@ -52,7 +52,7 @@ class WatchListService {
     try {
       // Validate required fields
       if (!data.name) {
-        return { success: false, error: 'Watch list name is required' }
+        return { success: false, error: 'Fine monitor name is required' }
       }
 
       const watchList = await db.createWatchList(userId, {

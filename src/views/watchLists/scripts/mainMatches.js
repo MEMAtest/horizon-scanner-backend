@@ -36,7 +36,7 @@ function getWatchListMatchesScript() {
                 this.renderLinkedItems(linkedResult.data);
               }
             } catch (error) {
-              console.error('[WatchLists] Load matches error:', error);
+              console.error('[FineDirectory] Load matches error:', error);
               document.getElementById('matches-content').innerHTML =
                 '<div style="text-align: center; color: #ef4444;">Failed to load matches</div>';
             }
@@ -74,7 +74,7 @@ function getWatchListMatchesScript() {
                 this.showToast('Rescan failed: ' + (result.error || 'Unknown error'), 'error');
               }
             } catch (error) {
-              console.error('[WatchLists] Rescan error:', error);
+              console.error('[FineDirectory] Rescan error:', error);
               this.showToast('Failed to rescan fine monitor', 'error');
             }
           },
@@ -124,7 +124,7 @@ function getWatchListMatchesScript() {
                 if (valueEls[2]) valueEls[2].textContent = Math.round((wl.alert_threshold || 0.5) * 100) + '%';
               });
             } catch (error) {
-              console.error('[WatchLists] Failed to refresh watch lists:', error);
+              console.error('[FineDirectory] Failed to refresh watch lists:', error);
             }
           },
 
@@ -451,7 +451,7 @@ function getWatchListMatchesScript() {
                 this.showToast('Error: ' + result.error, 'error');
               }
             } catch (error) {
-              console.error('[WatchLists] Unlink error:', error);
+              console.error('[FineDirectory] Unlink error:', error);
               this.showToast('Failed to unlink match', 'error');
             }
           },

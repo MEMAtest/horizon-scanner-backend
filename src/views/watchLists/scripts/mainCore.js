@@ -313,7 +313,7 @@ function getWatchListMainCoreScript() {
                 this.showToast('Error: ' + result.error, 'error');
               }
             } catch (error) {
-              console.error('[WatchLists] Submit error:', error);
+              console.error('[FineDirectory] Submit error:', error);
               this.showToast('Failed to save watch list', 'error');
             }
           },
@@ -377,7 +377,7 @@ function getWatchListMainCoreScript() {
               this.populateDossierSelect(state.dossiers, selectedDossierId);
               return state.dossiers;
             } catch (error) {
-              console.error('[WatchLists] Failed to load dossiers:', error);
+              console.error('[FineDirectory] Failed to load dossiers:', error);
               state.dossiers = [];
               state.dossiersLoaded = true;
               this.populateDossierSelect([], selectedDossierId, true);
@@ -428,7 +428,7 @@ function getWatchListMainCoreScript() {
                 this.showToast('Error: ' + result.error, 'error');
               }
             } catch (error) {
-              console.error('[WatchLists] Delete error:', error);
+              console.error('[FineDirectory] Delete error:', error);
               this.showToast('Failed to delete watch list', 'error');
             }
           },
@@ -452,7 +452,7 @@ function getWatchListMainCoreScript() {
                 this.showToast('Error: ' + result.error, 'error');
               }
             } catch (error) {
-              console.error('[WatchLists] Toggle error:', error);
+              console.error('[FineDirectory] Toggle error:', error);
               this.showToast('Failed to update alerts', 'error');
             }
           },

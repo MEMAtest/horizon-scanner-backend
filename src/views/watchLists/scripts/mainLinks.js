@@ -52,7 +52,7 @@ function getWatchListLinksScript() {
                   '<div style="text-align: center; color: #ef4444;">Error loading items</div>';
               }
             } catch (error) {
-              console.error('[WatchLists] Load items error:', error);
+              console.error('[FineDirectory] Load items error:', error);
               document.getElementById('link-selector-content').innerHTML =
                 '<div style="text-align: center; color: #ef4444;">Failed to load items</div>';
             }
@@ -180,7 +180,7 @@ function getWatchListLinksScript() {
                 this.showToast('Error: ' + (result.error || 'Failed to link'), 'error');
               }
             } catch (error) {
-              console.error('[WatchLists] Link error:', error);
+              console.error('[FineDirectory] Link error:', error);
               this.showToast('Failed to create link', 'error');
             }
           },

@@ -59,15 +59,15 @@ function getFeatureDataScript() {
         ]
       },
       'watchlists': {
-        title: 'Custom Watch Lists',
+        title: 'Fine Directory',
         icon: '<svg viewBox="0 0 48 48"><path d="M24 4L44 14v20L24 44 4 34V14L24 4z" fill="#dcfce7" stroke="#22c55e" stroke-width="2"/><path d="M24 14v20M14 19v10M34 19v10" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="24" r="4" fill="#22c55e"><animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/></circle></svg>',
         demo: '<div class="demo-watchlist"><div class="wl-filter"><span class="wl-tag active">FCA</span><span class="wl-tag active">PRA</span><span class="wl-tag">EBA</span><span class="wl-tag">SEC</span></div><div class="wl-filter"><span class="wl-tag active">Consumer Duty</span><span class="wl-tag active">Capital</span><span class="wl-tag">AML</span></div><div class="wl-result"><div class="wl-count">12</div><div class="wl-label">Matching updates this week</div></div></div>',
         benefits: [
           'Filter by regulator, topic, or sector',
-          'Create multiple watch lists for different teams',
+          'Create multiple fine monitors for different teams',
           'Get notified only on what matters to you',
           'Reduce noise by 90% or more',
-          'Share watch lists across your organization'
+          'Share fine monitors across your organization'
         ]
       },
       'dossiers': {
