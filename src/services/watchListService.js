@@ -92,7 +92,7 @@ class WatchListService {
           message,
           priority: matchCount ? 'high' : 'normal',
           actionUrl: `/watch-lists?openMatches=${encodeURIComponent(watchList.id)}`,
-          actionLabel: matchCount ? 'View Matches' : 'Open Fine Directory',
+          actionLabel: 'View Fine Directory',
           referenceType: 'watch_list',
           referenceId: String(watchList.id),
           metadata: {

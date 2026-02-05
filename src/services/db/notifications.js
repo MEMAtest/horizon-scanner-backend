@@ -336,7 +336,7 @@ module.exports = function applyNotificationsMethods(EnhancedDBService) {
       return this.createNotification(userId, {
         type: 'watch_list_match',
         title: `New match in "${watchListName}"`,
-        message: `"${matchedUpdate.title}" matches your watch list criteria (${Math.round(matchScore * 100)}% match)`,
+        message: `"${matchedUpdate.title}" matches your fine monitor criteria (${Math.round(matchScore * 100)}% match)`,
         priority: matchScore >= 0.8 ? 'high' : 'normal',
         actionUrl: watchListId ? `/watch-lists?openMatches=${encodeURIComponent(watchListId)}` : `/update/${encodeURIComponent(updateId)}`,
         actionLabel: watchListId ? 'View Matches' : 'View Update',
