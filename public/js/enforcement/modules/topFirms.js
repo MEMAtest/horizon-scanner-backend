@@ -156,7 +156,7 @@ function applyTopFirmsMixin(klass) {
 
     showFineDetails(reference, fineData) {
       // Use the existing modal system to show fine details
-      if (this.showDrilldownModal) {
+      if (this.openModal) {
         const fine = typeof fineData === 'string' ? JSON.parse(fineData) : fineData;
         const breaches = this.safeArray(fine.breach_categories).join(', ') || '-';
         const sectors = this.safeArray(fine.affected_sectors).join(', ') || '-';
@@ -210,10 +210,9 @@ function applyTopFirmsMixin(klass) {
           </div>
         `;
 
-        this.showDrilldownModal(
+        this.openModal(
           this.escapeHtml(fine.firm_individual || 'Fine Details'),
-          content,
-          'fine-detail-modal'
+          content
         );
       }
     },

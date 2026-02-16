@@ -410,6 +410,29 @@ function applyCalendarMethods(DBService) {
       ...alerts
     ]
 
+    // Deduplicate: remove compliance_events that were auto-created from
+    // regulatory_updates that already appear as deadline events
+    const deadlineSourceIds = new Set(
+      deadlines.map(d => String(d.sourceId)).filter(Boolean)
+    )
+
+    allEvents = allEvents.filter(event => {
+      if (event.sourceType === 'compliance_event' && event.metadata?.source_update_id) {
+        return !deadlineSourceIds.has(String(event.metadata.source_update_id))
+      }
+      return true
+    })
+
+    // Deduplicate by title + date to catch remaining duplicates from different sources
+    const seen = new Set()
+    allEvents = allEvents.filter(event => {
+      const dateStr = event.eventDate ? new Date(event.eventDate).toISOString().split('T')[0] : ''
+      const key = `${(event.title || '').toLowerCase().trim()}|${dateStr}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
     // Apply filters
     if (filters.eventTypes && filters.eventTypes.length > 0) {
       allEvents = allEvents.filter(e => filters.eventTypes.includes(e.eventType))

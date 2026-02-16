@@ -336,7 +336,7 @@
 /* PHASE 3: Ensure sections don't overflow */
 .year-summary-dual-section > .year-summary-section {
   min-width: 0;  /* Allow flex items to shrink below content size */
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Empty States */

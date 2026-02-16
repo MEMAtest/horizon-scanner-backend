@@ -8,6 +8,9 @@
     },
     "api/cron/weekly-newsletter.js": {
       "maxDuration": 180
+    },
+    "api/cron/smart-briefing.js": {
+      "maxDuration": 120
     }
   },
   "rewrites": [
@@ -16,6 +19,7 @@
     { "source": "/api/cron/bank-news-refresh", "destination": "/api/cron/bank-news-refresh.js" },
     { "source": "/api/cron/fca-enforcement", "destination": "/api/cron/fca-enforcement.js" },
     { "source": "/api/cron/weekly-newsletter", "destination": "/api/cron/weekly-newsletter.js" },
+    { "source": "/api/cron/smart-briefing", "destination": "/api/cron/smart-briefing.js" },
     { "source": "/(.*)", "destination": "/api/index.js" }
   ],
   "headers": [
@@ -58,6 +62,10 @@
     {
       "path": "/api/cron/weekly-newsletter",
       "schedule": "0 18 * * 0"
+    },
+    {
+      "path": "/api/cron/smart-briefing",
+      "schedule": "30 9 * * 1"
     }
   ],
   "env": {

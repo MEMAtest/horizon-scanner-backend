@@ -1,3 +1,18 @@
+const { scrapeBankCheerio, BANK_CONFIGS } = require('../../scrapers/cheerio/banks')
+
+// Derive bank authority sets from BANK_CONFIGS to avoid duplication
+const BANK_AUTHORITIES = new Set(Object.keys(BANK_CONFIGS))
+const BANK_AUTHORITY_MAP = {}
+// Build reverse map: "Bank of America" -> "BofA", "Wells Fargo" -> "WellsFargo", etc.
+for (const [key, config] of Object.entries(BANK_CONFIGS)) {
+  BANK_AUTHORITIES.add(key)
+  // Also add the display name as an alias
+  if (config.name && config.name !== key) {
+    BANK_AUTHORITIES.add(config.name)
+    BANK_AUTHORITY_MAP[config.name] = key
+  }
+}
+
 function applyWebMethods(ServiceClass, {
   axios,
   cheerio,
@@ -126,6 +141,13 @@ function applyWebMethods(ServiceClass, {
           scraperResults = await scrapeCNMVCommunications()
           break
         default:
+          // Check if this is a bank authority - use cheerio bank scraper
+          if (BANK_AUTHORITIES.has(source.authority)) {
+            const bankKey = BANK_AUTHORITY_MAP[source.authority] || source.authority
+            console.log(`🏦 Using cheerio bank scraper for ${source.authority} (key: ${bankKey})`)
+            scraperResults = await scrapeBankCheerio(bankKey)
+            break
+          }
           console.log(`⚠️ No dedicated scraper for ${source.authority}, using generic HTML parsing`)
           return await this.genericWebScraping(source, options)
       }

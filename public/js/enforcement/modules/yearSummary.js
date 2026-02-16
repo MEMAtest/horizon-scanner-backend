@@ -117,7 +117,7 @@ function applyYearSummaryMixin(klass) {
      * Render AI-generated summary section
      */
     renderAISummarySection(aiSummary) {
-      if (!aiSummary) return ''
+      const hasSummary = aiSummary && (aiSummary.paragraph1 || aiSummary.paragraph2)
 
       return `
         <div class="year-summary-section ai-summary-section">
@@ -130,8 +130,10 @@ function applyYearSummaryMixin(klass) {
             Executive Summary
           </h3>
           <div class="ai-summary-text">
-            <p>${aiSummary.paragraph1 || ''}</p>
-            <p>${aiSummary.paragraph2 || ''}</p>
+            ${hasSummary
+              ? `<p>${aiSummary.paragraph1 || ''}</p><p>${aiSummary.paragraph2 || ''}</p>`
+              : '<p class="empty-state" style="text-align:left;font-style:italic;color:#64748b;">Executive summary is being generated. Refresh the page in a few moments.</p>'
+            }
           </div>
         </div>
       `

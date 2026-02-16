@@ -55,6 +55,7 @@ function renderFinesSection() {
         <div class="filter-group">
           <label class="filter-label">Year (Multi-select)</label>
           <select class="filter-input" id="year-filter" multiple size="6">
+            <option value="2026">2026</option>
             <option value="2025">2025</option>
             <option value="2024">2024</option>
             <option value="2023">2023</option>
