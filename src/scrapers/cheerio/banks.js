@@ -60,7 +60,7 @@ const BANK_CONFIGS = {
     url: 'https://www.hsbc.com/news-and-views/news',
     baseUrl: 'https://www.hsbc.com',
     linkPatterns: ['a[href*="/news-and-views/news/"]'],
-    skipPatterns: []
+    skipPatterns: ['/hsbc-news-archive$', '/news-and-views/news$']
   },
   Barclays: {
     name: 'Barclays',
