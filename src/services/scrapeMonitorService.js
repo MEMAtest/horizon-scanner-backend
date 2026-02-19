@@ -151,8 +151,15 @@ class ScrapeMonitorService {
             return false
           }
         }
-        if (options.fastMode && source.type === 'puppeteer') {
-          return false
+        if (options.fastMode) {
+          // Match the orchestrator's fast-mode filtering logic:
+          // skip puppeteer and non-critical/high priority web scrapers
+          if (source.type === 'puppeteer') return false
+          if (source.type === 'web_scraping' &&
+              source.priority !== 'critical' && source.priority !== 'high') {
+            return false
+          }
+          if (source.priority !== 'critical' && source.priority !== 'high') return false
         }
         return true
       })
@@ -236,8 +243,8 @@ class ScrapeMonitorService {
         priority: source.priority,
         fetched: 0,
         saved: 0,
-        status: 'error',
-        error: 'Missing source result'
+        status: fastMode ? 'skipped' : 'error',
+        error: fastMode ? 'Skipped in fast mode' : 'Missing source result'
       }
 
       const initialStatus = result.status || 'error'

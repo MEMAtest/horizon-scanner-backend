@@ -924,7 +924,7 @@ const feedSources = [
     url: 'https://www.consob.it/web/consob-and-its-activities/press-releases',
     type: 'web_scraping',
     description: 'Commissione Nazionale per le Società e la Borsa - Securities',
-    priority: 'medium',
+    priority: 'disabled', // JS-rendered page, not scrapeble with cheerio
     recencyDays: 30,
     country: 'Italy',
     region: 'Europe',
@@ -1273,7 +1273,7 @@ const feedSources = [
     url: 'http://www.pbc.gov.cn/en/3688110/3688172/index.html',
     type: 'web_scraping',
     description: 'People\'s Bank of China - News and announcements',
-    priority: 'high',
+    priority: 'disabled', // JS-rendered page, not scrapeble with cheerio
     recencyDays: 30,
     country: 'China',
     region: 'Asia-Pacific',
