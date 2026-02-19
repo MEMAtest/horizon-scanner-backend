@@ -9,7 +9,7 @@ function renderTopFirmsSection() {
               <rect x="8" y="4" width="8" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"></rect>
             </svg>
           </span>
-          Fines Directory
+          Fine Directory
         </h2>
         <p class="section-subtitle">Search and filter FCA enforcement actions</p>
       </div>
