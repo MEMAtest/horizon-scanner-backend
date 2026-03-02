@@ -1,5 +1,8 @@
 {
   "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    },
     "api/cron/daily-digest.js": {
       "maxDuration": 120
     },

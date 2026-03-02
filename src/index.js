@@ -197,19 +197,20 @@ class AIRegulatoryIntelligenceServer {
       }
     })
 
-    // Manual refresh endpoint alias (for sidebar button)
+    // Manual refresh endpoint (for sidebar button) - returns latest DB stats
+    // Actual RSS scraping is handled by cron jobs, this just refreshes the view
     this.app.post('/manual-refresh', async (req, res) => {
       try {
-        console.log('🔄 Manual refresh triggered from sidebar')
-        const sourceCategory = req.query.sourceCategory || req.body?.sourceCategory
-        const result = await rssFetcher.fetchAllFeeds(sourceCategory ? { sourceCategory } : {})
+        console.log('🔄 Manual refresh triggered from sidebar - fetching latest stats')
+        const stats = await dbService.getDashboardStatistics()
 
         res.json({
           success: true,
-          newArticles: result.newUpdates || 0,
-          total: result.total || 0,
+          newArticles: stats.newToday || 0,
+          total: stats.totalUpdates || 0,
           timestamp: new Date().toISOString(),
-          message: 'Data refreshed successfully'
+          message: 'Data refreshed successfully',
+          stats
         })
       } catch (error) {
         console.error('Manual refresh error:', error)
