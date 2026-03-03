@@ -105,23 +105,18 @@ function applyFallbackMethods(ServiceClass) {
       .replace(/[^\w\s.,!?;:-]/g, '')
       .trim()
 
-    const sentences = cleanText.split(/[.!?]+/)
-    let meaningfulText = sentences[0] || cleanText.substring(0, 150)
+    const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 0)
+    let meaningfulText = sentences[0] || cleanText.substring(0, 300)
 
     if (meaningfulText.length < 50 && sentences.length > 1) {
-      meaningfulText = sentences.slice(0, 2).join('. ')
+      meaningfulText = sentences.slice(0, 3).join('. ')
     }
 
-    if (meaningfulText.length > 200) {
-      meaningfulText = meaningfulText.substring(0, 200).trim() + '...'
+    if (meaningfulText.length > 300) {
+      meaningfulText = meaningfulText.substring(0, 300).trim() + '...'
     }
 
-    if (impactLevel === 'Significant') {
-      return `Significant regulatory development requiring attention: ${meaningfulText}`
-    } else if (impactLevel === 'Moderate') {
-      return `Regulatory update impacting business operations: ${meaningfulText}`
-    }
-    return `Informational regulatory update: ${meaningfulText}`
+    return meaningfulText.trim() || 'Regulatory update'
   }
 
   ServiceClass.prototype.detectRegulatoryArea = function(content) {

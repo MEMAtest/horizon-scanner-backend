@@ -100,6 +100,29 @@ const selectSummary = (update = {}) => {
     }
   }
 
+  // Last resort: try to extract meaningful text from fallback summaries
+  // Strip known boilerplate prefixes and use the remaining content
+  const fallbackPrefixes = [
+    /^significant regulatory development requiring attention:\s*/i,
+    /^regulatory update impacting business operations:\s*/i,
+    /^informational regulatory update:\s*/i,
+    /^regulatory update:\s*/i,
+    /^regulatory impact overview:\s*/i
+  ]
+
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    let text = stripHtml(candidate)
+    for (const prefix of fallbackPrefixes) {
+      text = text.replace(prefix, '')
+    }
+    text = text.replace(/^[^A-Za-z0-9]+/, '').trim()
+    const normalizedTitle = (title || '').toLowerCase().trim()
+    if (text.length > 30 && text.toLowerCase().trim() !== normalizedTitle) {
+      return text
+    }
+  }
+
   return ''
 }
 

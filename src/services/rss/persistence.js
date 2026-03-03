@@ -95,6 +95,9 @@ function applyPersistenceMethods(ServiceClass, { dbService, aiAnalyzer }) {
 
         update.fetchedDate = update.fetchedDate || new Date()
 
+        // Copy source_category from source config (fixes bank_news filtering)
+        update.source_category = update.source_category || source.source_category || source.sourceCategory || null
+
         // Copy country/region from source config for international filtering
         update.country = update.country || source.country || 'UK'
         update.region = update.region || source.region || 'UK'
