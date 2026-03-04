@@ -21,6 +21,7 @@ ${getEnhancementStyles()}
 ${getUtilityStyles()}
 ${getViewStyles()}
     </style>
+    <script defer src="/js/cookie-consent.js"></script>
   `
 }
 
