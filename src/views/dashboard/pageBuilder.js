@@ -1,4 +1,4 @@
-const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector, renderProfileModal } = require('./components')
+const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector, renderProfileModal, renderPersonaSwitcher } = require('./components')
 const { getDashboardStyles } = require('./styles')
 const { getDashboardScripts } = require('./scripts')
 const { formatCurrentDate } = require('./helpers')
@@ -13,7 +13,9 @@ function buildDashboardPage({
   clientScripts,
   commonStyles,
   businessLineProfiles = [],
-  selectedProfileId = null
+  selectedProfileId = null,
+  activePersona = null,
+  personaPresets = []
 }) {
   return `
     <!DOCTYPE html>
@@ -39,6 +41,7 @@ function buildDashboardPage({
                 <span class="date-value">${formatCurrentDate()}</span>
               </div>
             </div>
+            ${personaPresets.length > 0 ? renderPersonaSwitcher(personaPresets, activePersona) : ''}
             <p class="dashboard-subtitle">
               Real-time regulatory monitoring with AI-powered analysis and business impact intelligence.
             </p>
@@ -47,7 +50,7 @@ function buildDashboardPage({
           </header>
           ${renderFilters({ filterOptions, currentFilters })}
           <section class="updates-container">
-            ${renderUpdatesList(updates)}
+            ${renderUpdatesList(updates, activePersona)}
           </section>
         </main>
       </div>

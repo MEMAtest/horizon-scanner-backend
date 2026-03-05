@@ -9,6 +9,7 @@ const {
   formatDashboardStats,
   formatFilterOptions
 } = require('../../views/dashboard/helpers')
+const { getPersonaById, getPersonaSummaries } = require('../../config/firmPersonas')
 
 function resolveUserId(req) {
   const headerUser = req.headers?.['x-user-id']
@@ -48,8 +49,17 @@ async function renderDashboardPage(req, res) {
       updates = await loadUpdates(filters)
     }
 
-    // Apply persona filtering if persona is set and no profile filter
-    if (persona && !selectedProfileId) {
+    // Apply persona quick-switcher filtering (from ?persona= query param)
+    const allPersonaPresets = getPersonaSummaries()
+    let activePersona = null
+
+    if (filters.persona) {
+      activePersona = getPersonaById(filters.persona)
+      if (activePersona) {
+        updates = firmPersonaService.applyPersonaFilter(updates, activePersona)
+      }
+    } else if (persona && !selectedProfileId) {
+      // Fall back to user's saved persona if no quick-switcher param
       updates = firmPersonaService.applyPersonaFilter(updates, persona)
     }
 
@@ -73,7 +83,9 @@ async function renderDashboardPage(req, res) {
       clientScripts,
       commonStyles,
       businessLineProfiles,
-      selectedProfileId
+      selectedProfileId,
+      activePersona,
+      personaPresets: allPersonaPresets
     })
 
     res.send(html)
@@ -91,7 +103,8 @@ function getCurrentFilters(query = {}) {
     impact: query.impact || null,
     range: query.range || null,
     search: query.search || null,
-    profileId: query.profileId || null
+    profileId: query.profileId || null,
+    persona: query.persona || null
   }
 }
 

@@ -138,6 +138,81 @@ function getDashboardLayoutStyles() {
         gap: 12px;
       }
 
+      /* Persona Quick-Switcher */
+      .persona-switcher {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+      }
+
+      .persona-switcher::-webkit-scrollbar {
+        height: 4px;
+      }
+
+      .persona-switcher::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+      }
+
+      .persona-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border: 1.5px solid #d1d5db;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #4b5563;
+        background: #f9fafb;
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+
+      .persona-pill:hover {
+        border-color: var(--persona-color, #6b7280);
+        color: var(--persona-color, #4b5563);
+        background: #f3f4f6;
+        transform: translateY(-1px);
+      }
+
+      .persona-pill.active {
+        background: var(--persona-color, #1f2937);
+        color: #ffffff;
+        border-color: var(--persona-color, #1f2937);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      }
+
+      /* Relevance Badges */
+      .relevance-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+
+      .relevance-high {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+      }
+
+      .relevance-medium {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+      }
+
       .dashboard-subtitle {
         color: #6b7280;
         font-size: 1rem;

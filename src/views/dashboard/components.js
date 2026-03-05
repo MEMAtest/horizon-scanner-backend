@@ -135,6 +135,7 @@ function renderFilters({ filterOptions, currentFilters }) {
     <section class="filters-container">
       ${renderQuickFilters(currentFilters.category || 'all')}
       <form class="filters-grid" method="get" action="/dashboard">
+        ${currentFilters.persona ? `<input type="hidden" name="persona" value="${sanitizeHtml(currentFilters.persona)}">` : ''}
         ${renderFilterSelect('Category', 'category', renderFilterOptionList([
     { value: 'all', label: 'All categories' },
     { value: 'high-impact', label: 'High impact' },
@@ -253,7 +254,27 @@ function renderFilterTag(label, value, field) {
   `
 }
 
-function renderUpdatesList(updates = []) {
+function renderPersonaSwitcher(presets, activePersona) {
+  const allActive = !activePersona ? 'active' : ''
+  const pills = presets.map(p => {
+    const isActive = activePersona && activePersona.id === p.id
+    return `<a href="/dashboard?persona=${encodeURIComponent(p.id)}" class="persona-pill ${isActive ? 'active' : ''}" style="--persona-color: ${sanitizeHtml(p.color)}">${sanitizeHtml(p.name)}</a>`
+  }).join('')
+
+  return `<div class="persona-switcher">
+    <a href="/dashboard" class="persona-pill ${allActive}">All</a>
+    ${pills}
+  </div>`
+}
+
+function renderRelevanceBadge(update, activePersona) {
+  if (!activePersona || update.personaRelevance == null) return ''
+  if (update.personaRelevance >= 0.7) return '<span class="relevance-badge relevance-high">Highly Relevant</span>'
+  if (update.personaRelevance >= 0.5) return '<span class="relevance-badge relevance-medium">Relevant</span>'
+  return ''
+}
+
+function renderUpdatesList(updates = [], activePersona = null) {
   if (!updates.length) {
     return `
       <div class="no-updates">
@@ -265,10 +286,10 @@ function renderUpdatesList(updates = []) {
     `
   }
 
-  return updates.map(update => renderUpdateCard(update)).join('')
+  return updates.map(update => renderUpdateCard(update, activePersona)).join('')
 }
 
-function renderUpdateCard(update) {
+function renderUpdateCard(update, activePersona = null) {
   const impactLevel = update.impactLevel || update.impact_level || 'Informational'
   const urgency = update.urgency || 'Low'
   const publishedDate = formatDateDisplay(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
@@ -277,6 +298,7 @@ function renderUpdateCard(update) {
   const features = computeAIFeatures(update)
   const riskBadge = renderRiskScoreBadge(update, impactLevel)
   const contentBadge = renderContentTypeBadge(update)
+  const relevanceBadge = renderRelevanceBadge(update, activePersona)
 
   return `
     <div
@@ -293,6 +315,7 @@ function renderUpdateCard(update) {
           <span class="authority-badge">${sanitizeHtml(update.authority || 'Unknown')}</span>
           <span class="date-badge">${sanitizeHtml(publishedDate)}</span>
           ${contentBadge}
+          ${relevanceBadge}
         </div>
         <div class="update-meta-secondary">
           <div class="update-actions">
@@ -523,6 +546,7 @@ function renderProfileModal() {
 
 module.exports = {
   renderFilters,
+  renderPersonaSwitcher,
   renderProfileModal,
   renderProfileSelector,
   renderStatCard,

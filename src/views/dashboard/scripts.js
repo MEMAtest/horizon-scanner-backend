@@ -57,6 +57,7 @@ function getDashboardScripts({ updates, stats, filterOptions, currentFilters }) 
             if (!this.filterForm) return;
             Array.from(this.filterForm.elements).forEach(element => {
               if (!element.name) return;
+              if (element.type === 'hidden') return;
               if (element.tagName === 'SELECT') {
                 element.selectedIndex = 0;
               } else {
