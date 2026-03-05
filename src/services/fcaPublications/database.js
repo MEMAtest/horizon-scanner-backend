@@ -23,7 +23,7 @@ class PublicationsDatabase {
     try {
       this.pool = new Pool({
         connectionString: this.connectionString,
-        ssl: process.env.NODE_ENV === 'production'
+        ssl: (this.connectionString || '').includes('sslmode=require')
           ? { rejectUnauthorized: false }
           : false,
         max: 10,
