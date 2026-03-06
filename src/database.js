@@ -5,7 +5,7 @@ class NeonDatabase {
     // Initialize connection pool
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: (process.env.DATABASE_URL || '').includes('sslmode=require')
+      ssl: (process.env.DATABASE_URL || '').includes('sslmode=')
         ? { rejectUnauthorized: false }
         : false
     })

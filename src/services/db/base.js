@@ -81,7 +81,7 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
           console.log('🔗 Connecting to PostgreSQL database...')
           this.pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
+            ssl: process.env.DATABASE_URL?.includes('sslmode=') ? { rejectUnauthorized: false } : false,
             // Add connection timeout to prevent hanging
             connectionTimeoutMillis: 10000,
             idleTimeoutMillis: 30000
@@ -144,7 +144,7 @@ module.exports = function applyBaseMethods(EnhancedDBService) {
 
           this.pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
+            ssl: process.env.DATABASE_URL?.includes('sslmode=') ? { rejectUnauthorized: false } : false,
             connectionTimeoutMillis: 10000,
             idleTimeoutMillis: 30000
           })

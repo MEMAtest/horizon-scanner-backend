@@ -23,7 +23,7 @@ class PublicationsDatabase {
     try {
       this.pool = new Pool({
         connectionString: this.connectionString,
-        ssl: (this.connectionString || '').includes('sslmode=require')
+        ssl: (this.connectionString || '').includes('sslmode=')
           ? { rejectUnauthorized: false }
           : false,
         max: 10,
