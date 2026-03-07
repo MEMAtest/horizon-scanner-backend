@@ -138,56 +138,24 @@ function getDashboardLayoutStyles() {
         gap: 12px;
       }
 
-      /* Persona Quick-Switcher */
-      .persona-switcher {
+      /* Persona Dropdown */
+      .persona-dropdown-wrapper {
         display: flex;
-        flex-wrap: nowrap;
         align-items: center;
         gap: 8px;
-        padding: 12px 0;
+        padding: 8px 0;
         border-bottom: 1px solid #e5e7eb;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
       }
 
-      .persona-switcher::-webkit-scrollbar {
-        height: 4px;
-      }
-
-      .persona-switcher::-webkit-scrollbar-thumb {
-        background: #d1d5db;
-        border-radius: 4px;
-      }
-
-      .persona-pill {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 14px;
-        border: 1.5px solid #d1d5db;
-        border-radius: 999px;
+      .persona-dropdown-label {
         font-size: 0.8rem;
         font-weight: 600;
-        color: #4b5563;
-        background: #f9fafb;
-        cursor: pointer;
+        color: #64748b;
         white-space: nowrap;
-        text-decoration: none;
-        transition: all 0.2s ease;
       }
 
-      .persona-pill:hover {
-        border-color: var(--persona-color, #6b7280);
-        color: var(--persona-color, #4b5563);
-        background: #f3f4f6;
-        transform: translateY(-1px);
-      }
-
-      .persona-pill.active {
-        background: var(--persona-color, #1f2937);
-        color: #ffffff;
-        border-color: var(--persona-color, #1f2937);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      .persona-select {
+        min-width: 200px;
       }
 
       /* Relevance Badges */

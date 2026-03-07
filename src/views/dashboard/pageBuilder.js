@@ -1,4 +1,4 @@
-const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector, renderProfileModal, renderPersonaSwitcher } = require('./components')
+const { renderStatsGrid, renderFilters, renderUpdatesList, renderProfileSelector, renderProfileModal, renderPersonaDropdown } = require('./components')
 const { getDashboardStyles } = require('./styles')
 const { getDashboardScripts } = require('./scripts')
 const { formatCurrentDate } = require('./helpers')
@@ -41,7 +41,7 @@ function buildDashboardPage({
                 <span class="date-value">${formatCurrentDate()}</span>
               </div>
             </div>
-            ${personaPresets.length > 0 ? renderPersonaSwitcher(personaPresets, activePersona) : ''}
+            ${personaPresets.length > 0 ? renderPersonaDropdown(personaPresets, activePersona) : ''}
             <p class="dashboard-subtitle">
               Real-time regulatory monitoring with AI-powered analysis and business impact intelligence.
             </p>

@@ -254,16 +254,19 @@ function renderFilterTag(label, value, field) {
   `
 }
 
-function renderPersonaSwitcher(presets, activePersona) {
-  const allActive = !activePersona ? 'active' : ''
-  const pills = presets.map(p => {
-    const isActive = activePersona && activePersona.id === p.id
-    return `<a href="/dashboard?persona=${encodeURIComponent(p.id)}" class="persona-pill ${isActive ? 'active' : ''}" style="--persona-color: ${sanitizeHtml(p.color)}">${sanitizeHtml(p.name)}</a>`
+function renderPersonaDropdown(presets, activePersona) {
+  const options = presets.map(p => {
+    const isSelected = activePersona && activePersona.id === p.id
+    return `<option value="${encodeURIComponent(p.id)}" ${isSelected ? 'selected' : ''}>${sanitizeHtml(p.name)}</option>`
   }).join('')
 
-  return `<div class="persona-switcher">
-    <a href="/dashboard" class="persona-pill ${allActive}">All</a>
-    ${pills}
+  return `<div class="persona-dropdown-wrapper">
+    <label class="persona-dropdown-label" for="persona-select">Firm Type</label>
+    <select id="persona-select" class="profile-select persona-select"
+      onchange="(function(el){ var v=el.value; window.location.href=v?'/dashboard?persona='+encodeURIComponent(v):'/dashboard'; })(this)">
+      <option value="">All Firm Types</option>
+      ${options}
+    </select>
   </div>`
 }
 
@@ -546,7 +549,7 @@ function renderProfileModal() {
 
 module.exports = {
   renderFilters,
-  renderPersonaSwitcher,
+  renderPersonaDropdown,
   renderProfileModal,
   renderProfileSelector,
   renderStatCard,

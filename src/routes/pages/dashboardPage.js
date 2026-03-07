@@ -64,7 +64,10 @@ async function renderDashboardPage(req, res) {
     }
 
     const [statsRaw, filterOptionsRaw, sidebar] = await Promise.all([
-      dbService.getDashboardStatistics().catch(handleStatsFailure),
+      (activePersona
+        ? dbService.getDashboardStatisticsByPersona(activePersona)
+        : dbService.getDashboardStatistics()
+      ).catch(handleStatsFailure),
       dbService.getFilterOptions().catch(handleFilterOptionsFailure),
       getSidebar('dashboard', { user, persona })
     ])

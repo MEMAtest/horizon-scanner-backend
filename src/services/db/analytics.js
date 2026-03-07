@@ -227,6 +227,197 @@ module.exports = function applyAnalyticsMethods(EnhancedDBService) {
       }
     },
 
+    async getDashboardStatisticsByPersona(persona) {
+      try {
+        const hasFilters = (persona.regulators && persona.regulators.length > 0) ||
+          (persona.sectors && persona.sectors.length > 0) ||
+          (persona.keywords && persona.keywords.length > 0)
+        if (!hasFilters) {
+          return await this.getDashboardStatistics()
+        }
+        if (this.fallbackMode) {
+          return await this.getDashboardStatisticsByPersonaJSON(persona)
+        } else {
+          return await this.getDashboardStatisticsByPersonaPG(persona)
+        }
+      } catch (error) {
+        console.error('❌ Error getting persona dashboard statistics, falling back to unfiltered:', error)
+        return await this.getDashboardStatistics()
+      }
+    },
+
+    async getDashboardStatisticsByPersonaPG(persona) {
+      const client = await this.pool.connect()
+      try {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const startOfWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const startOfPrevWeek = new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+        const regulators = persona.regulators || []
+        const sectors = persona.sectors || []
+        const keywords = persona.keywords || []
+
+        const result = await client.query(`
+                  SELECT
+                      COUNT(*) as total_updates,
+                      COUNT(*) FILTER (WHERE impact_level = 'Significant' OR business_impact_score >= 7) as high_impact,
+                      COUNT(*) FILTER (WHERE ai_summary IS NOT NULL) as ai_analyzed,
+                      COUNT(DISTINCT authority) as active_authorities,
+                      COUNT(*) FILTER (WHERE published_date >= $1) as new_today,
+                      COUNT(*) FILTER (WHERE published_date >= $2) as total_last_week,
+                      COUNT(*) FILTER (WHERE published_date >= $3 AND published_date < $2) as total_prev_week,
+                      COUNT(*) FILTER (WHERE (impact_level = 'Significant' OR business_impact_score >= 7) AND published_date >= $2) as high_impact_last_week,
+                      COUNT(*) FILTER (WHERE (impact_level = 'Significant' OR business_impact_score >= 7) AND published_date >= $3 AND published_date < $2) as high_impact_prev_week,
+                      COUNT(*) FILTER (WHERE ai_summary IS NOT NULL AND published_date >= $2) as ai_analyzed_last_week,
+                      COUNT(*) FILTER (WHERE ai_summary IS NOT NULL AND published_date >= $3 AND published_date < $2) as ai_analyzed_prev_week,
+                      COUNT(DISTINCT CASE WHEN published_date >= $2 THEN authority END) as authorities_last_week,
+                      COUNT(DISTINCT CASE WHEN published_date >= $3 AND published_date < $2 THEN authority END) as authorities_prev_week
+                  FROM regulatory_updates
+                  WHERE ${bankNewsFilterSql}
+                    AND (
+                      authority = ANY($4)
+                      OR sector = ANY($5)
+                      OR firm_types_affected ?| $6
+                      OR EXISTS (
+                        SELECT 1 FROM unnest($7::text[]) AS kw
+                        WHERE headline ILIKE '%' || kw || '%'
+                           OR ai_summary ILIKE '%' || kw || '%'
+                           OR summary ILIKE '%' || kw || '%'
+                      )
+                    )
+              `, [today, startOfWeek, startOfPrevWeek, regulators, sectors, sectors, keywords])
+
+        const stats = result.rows[0]
+
+        const calcDelta = (current, previous) => {
+          const currentValue = Number(current || 0)
+          const previousValue = Number(previous || 0)
+          const delta = currentValue - previousValue
+          const percent = previousValue > 0 ? Math.round((delta / previousValue) * 100) : (currentValue > 0 ? 100 : 0)
+          return { delta, percent }
+        }
+
+        const totalChange = calcDelta(stats.total_last_week, stats.total_prev_week)
+        const highImpactChange = calcDelta(stats.high_impact_last_week, stats.high_impact_prev_week)
+        const aiAnalyzedChange = calcDelta(stats.ai_analyzed_last_week, stats.ai_analyzed_prev_week)
+        const authorityChange = calcDelta(stats.authorities_last_week, stats.authorities_prev_week)
+
+        return {
+          totalUpdates: parseInt(stats.total_updates),
+          highImpact: parseInt(stats.high_impact),
+          aiAnalyzed: parseInt(stats.ai_analyzed),
+          activeAuthorities: parseInt(stats.active_authorities),
+          newToday: parseInt(stats.new_today),
+          newAuthorities: Math.max(authorityChange.delta, 0),
+          impactTrend: highImpactChange.delta > 0 ? 'up' : highImpactChange.delta < 0 ? 'down' : 'stable',
+          impactChange: highImpactChange.percent,
+          totalUpdatesDelta: totalChange.delta,
+          totalUpdatesDeltaPercent: totalChange.percent,
+          highImpactDelta: highImpactChange.delta,
+          highImpactDeltaPercent: highImpactChange.percent,
+          aiAnalyzedDelta: aiAnalyzedChange.delta,
+          aiAnalyzedDeltaPercent: aiAnalyzedChange.percent,
+          activeAuthoritiesDelta: authorityChange.delta,
+          activeAuthoritiesDeltaPercent: authorityChange.percent
+        }
+      } finally {
+        client.release()
+      }
+    },
+
+    async getDashboardStatisticsByPersonaJSON(persona) {
+      const allUpdates = excludeBankNewsUpdates(await this.loadJSONData(this.updatesFile))
+
+      const regulators = new Set(persona.regulators || [])
+      const sectors = new Set(persona.sectors || [])
+      const keywords = persona.keywords || []
+
+      const updates = allUpdates.filter(u => {
+        if (u.authority && regulators.has(u.authority)) return true
+        if (u.sector && sectors.has(u.sector)) return true
+        const firmTypes = u.firm_types_affected || u.primarySectors || []
+        if (firmTypes.some(s => sectors.has(s))) return true
+        if (keywords.length > 0) {
+          const text = ((u.headline || '') + ' ' + (u.ai_summary || '') + ' ' + (u.summary || '')).toLowerCase()
+          if (keywords.some(kw => text.includes(kw.toLowerCase()))) return true
+        }
+        return false
+      })
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const totalUpdates = updates.length
+      const highImpact = updates.filter(u =>
+        u.impactLevel === 'Significant' ||
+              u.impact_level === 'Significant' ||
+              (u.business_impact_score || u.businessImpactScore || 0) >= 7
+      ).length
+      const aiAnalyzed = updates.filter(u => u.ai_summary || u.businessImpactScore || u.business_impact_score).length
+      const activeAuthorities = new Set(updates.map(u => u.authority)).size
+      const newToday = updates.filter(u => {
+        const updateDate = new Date(u.publishedDate || u.published_date || u.fetchedDate || u.createdAt)
+        return updateDate >= today
+      }).length
+
+      const startOfWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const startOfPrevWeek = new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+      const withinRange = (start, end) => (update) => {
+        const date = new Date(update.publishedDate || update.published_date || update.fetchedDate || update.createdAt)
+        if (isNaN(date)) return false
+        if (end) {
+          return date >= start && date < end
+        }
+        return date >= start
+      }
+
+      const isHighImpact = update => (
+        update.impactLevel === 'Significant' ||
+        update.impact_level === 'Significant' ||
+        (update.business_impact_score || update.businessImpactScore || 0) >= 7
+      )
+
+      const lastWeekUpdates = updates.filter(withinRange(startOfWeek))
+      const previousWeekUpdates = updates.filter(withinRange(startOfPrevWeek, startOfWeek))
+
+      const countHighImpact = arr => arr.filter(isHighImpact).length
+      const countAiAnalyzed = arr => arr.filter(u => u.ai_summary || u.businessImpactScore || u.business_impact_score).length
+      const countAuthorities = arr => new Set(arr.map(u => u.authority).filter(Boolean)).size
+
+      const calcDelta = (current, previous) => {
+        const delta = current - previous
+        const percent = previous > 0 ? Math.round((delta / previous) * 100) : (current > 0 ? 100 : 0)
+        return { delta, percent }
+      }
+
+      const totalChange = calcDelta(lastWeekUpdates.length, previousWeekUpdates.length)
+      const highImpactChange = calcDelta(countHighImpact(lastWeekUpdates), countHighImpact(previousWeekUpdates))
+      const aiAnalyzedChange = calcDelta(countAiAnalyzed(lastWeekUpdates), countAiAnalyzed(previousWeekUpdates))
+      const authorityChange = calcDelta(countAuthorities(lastWeekUpdates), countAuthorities(previousWeekUpdates))
+      const impactTrend = highImpactChange.delta > 0 ? 'up' : highImpactChange.delta < 0 ? 'down' : 'stable'
+
+      return {
+        totalUpdates,
+        highImpact,
+        aiAnalyzed,
+        activeAuthorities,
+        newToday,
+        newAuthorities: Math.max(authorityChange.delta, 0),
+        impactTrend,
+        impactChange: highImpactChange.percent,
+        totalUpdatesDelta: totalChange.delta,
+        totalUpdatesDeltaPercent: totalChange.percent,
+        highImpactDelta: highImpactChange.delta,
+        highImpactDeltaPercent: highImpactChange.percent,
+        aiAnalyzedDelta: aiAnalyzedChange.delta,
+        aiAnalyzedDeltaPercent: aiAnalyzedChange.percent,
+        activeAuthoritiesDelta: authorityChange.delta,
+        activeAuthoritiesDeltaPercent: authorityChange.percent
+      }
+    },
+
     async getUpdateCounts() {
       try {
         if (this.fallbackMode) {
