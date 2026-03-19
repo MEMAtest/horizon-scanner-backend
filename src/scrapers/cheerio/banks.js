@@ -212,6 +212,13 @@ async function scrapeBankCheerio(bankKey) {
           title = container.find('h2, h3, h4, [class*="title"], [class*="headline"]').first().text().trim()
         }
         if (!title) {
+          // No container — check preceding sibling headings (e.g. TSB: h4 title, h5 date, a link)
+          const prev = $(el).prevAll('h2, h3, h4').first()
+          if (prev.length) {
+            title = prev.text().trim()
+          }
+        }
+        if (!title) {
           title = $(el).text().trim()
         }
 
@@ -227,6 +234,13 @@ async function scrapeBankCheerio(bankKey) {
         if (container.length) {
           const dateEl = container.find('time, [class*="date"], [datetime]').first()
           date = dateEl.attr('datetime') || dateEl.text().trim() || ''
+        }
+        if (!date) {
+          // Check preceding sibling for date (e.g. TSB: h5 date before a link)
+          const prevDate = $(el).prevAll('h5, time, [class*="date"]').first()
+          if (prevDate.length) {
+            date = prevDate.attr('datetime') || prevDate.text().trim() || ''
+          }
         }
 
         items.push({
