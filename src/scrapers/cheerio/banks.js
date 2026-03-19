@@ -211,11 +211,17 @@ async function scrapeBankCheerio(bankKey) {
         if (container.length) {
           title = container.find('h2, h3, h4, [class*="title"], [class*="headline"]').first().text().trim()
         }
-        if (!title) {
-          // No container — check preceding sibling headings (e.g. TSB: h4 title, h5 date, a link)
-          const prev = $(el).prevAll('h2, h3, h4').first()
-          if (prev.length) {
-            title = prev.text().trim()
+        if (!title || title.length < 15) {
+          // Container title missing or too short (e.g. just a year label) —
+          // check preceding sibling headings of the link's parent
+          // (e.g. TSB: <div><h4>title</h4><h4>date</h4><p><a>Find out more</a></p></div>)
+          const wrapper = $(el).parent()
+          const prevHeadings = wrapper.prevAll('h2, h3, h4')
+          if (prevHeadings.length >= 2) {
+            // Second preceding heading is the title (first is the date)
+            title = prevHeadings.eq(1).text().trim()
+          } else if (prevHeadings.length === 1) {
+            title = prevHeadings.eq(0).text().trim()
           }
         }
         if (!title) {
@@ -236,10 +242,16 @@ async function scrapeBankCheerio(bankKey) {
           date = dateEl.attr('datetime') || dateEl.text().trim() || ''
         }
         if (!date) {
-          // Check preceding sibling for date (e.g. TSB: h5 date before a link)
-          const prevDate = $(el).prevAll('h5, time, [class*="date"]').first()
-          if (prevDate.length) {
-            date = prevDate.attr('datetime') || prevDate.text().trim() || ''
+          // Check parent's preceding siblings for date
+          // (e.g. TSB: <h4>date</h4> immediately before <p><a>...</a></p>)
+          const wrapper = $(el).parent()
+          const prevSib = wrapper.prev('h4, h5, time, [class*="date"]')
+          if (prevSib.length) {
+            const text = prevSib.text().trim()
+            // Only use if it looks like a date (contains a digit)
+            if (/\d/.test(text)) {
+              date = text
+            }
           }
         }
 
