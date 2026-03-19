@@ -21,11 +21,18 @@ const CONTENT_TYPE_ALIASES = new Map([
   ['dear ceo letters', 'Dear CEO Letter'],
   ['dear chief executive letter', 'Dear CEO Letter'],
   ['dear chief executive letters', 'Dear CEO Letter'],
+  ['portfolio letter', 'Dear CEO Letter'],
+  ['portfolio letters', 'Dear CEO Letter'],
+  ['supervisory correspondence', 'Dear CEO Letter'],
+  ['supervisory letter', 'Dear CEO Letter'],
+  ['supervisory letters', 'Dear CEO Letter'],
   ['supervisory statement', 'Supervisory Statement'],
   ['supervisory statements', 'Supervisory Statement'],
   ['supervisory statement letter', 'Supervisory Statement'],
   ['policy statement', 'Policy Statement'],
   ['policy statements', 'Policy Statement'],
+  ['policy paper', 'Policy Statement'],
+  ['policy papers', 'Policy Statement'],
   ['ps', 'Policy Statement'],
   ['speech', 'Speech'],
   ['speeches', 'Speech'],
@@ -46,6 +53,7 @@ const CONTENT_TYPE_ALIASES = new Map([
   ['guidelines', 'Guidance'],
   ['circular', 'Guidance'],
   ['directive', 'Guidance'],
+  ['administrative', 'Guidance'],
   ['enforcement action', 'Enforcement Action'],
   ['enforcement actions', 'Enforcement Action'],
   ['enforcement', 'Enforcement Action'],
@@ -66,6 +74,8 @@ const CONTENT_TYPE_ALIASES = new Map([
   ['warnings', 'Market Notice'],
   ['alert', 'Market Notice'],
   ['alerts', 'Market Notice'],
+  ['notice', 'Market Notice'],
+  ['notices', 'Market Notice'],
   ['press release', 'Press Release'],
   ['press releases', 'Press Release'],
   ['press statement', 'Press Release'],
@@ -112,7 +122,7 @@ const TAG_TYPE_MAP = new Map([
 ])
 
 const TEXT_RULES = [
-  { type: 'Dear CEO Letter', terms: ['dear ceo', 'dear chief executive'] },
+  { type: 'Dear CEO Letter', terms: ['dear ceo', 'dear chief executive', 'portfolio letter', 'supervisory letter', 'supervisory correspondence'] },
   { type: 'Supervisory Statement', terms: ['supervisory statement'] },
   { type: 'Policy Statement', terms: ['policy statement'] },
   { type: 'Enforcement Action', terms: ['enforcement action', 'enforcement', 'penalty', 'fine', 'sanction', 'settlement', 'disciplinary action', 'censure', 'prohibition order', 'cease and desist'] },
@@ -128,7 +138,7 @@ const TEXT_RULES = [
 ]
 
 const URL_RULES = [
-  { type: 'Dear CEO Letter', terms: ['dear-ceo', 'dear_ceo', 'dearceo'] },
+  { type: 'Dear CEO Letter', terms: ['dear-ceo', 'dear_ceo', 'dearceo', 'portfolio-letter', 'portfolio_letter', 'supervisory-correspondence', 'supervisory_correspondence'] },
   { type: 'Supervisory Statement', terms: ['supervisory-statement', 'supervisory_statement'] },
   { type: 'Policy Statement', terms: ['policy-statement', 'policy_statement'] },
   { type: 'Enforcement Action', terms: ['enforcement', 'penalty', 'sanction', 'fine'] },

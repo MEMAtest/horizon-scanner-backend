@@ -26,6 +26,17 @@ const feedSources = [
     sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit', 'Insurance', 'Payments']
   },
   {
+    name: 'FCA Supervisory Correspondence',
+    authority: 'FCA',
+    url: 'https://www.fca.org.uk/about/how-we-regulate/supervision/supervisory-correspondence',
+    type: 'web_scraping',
+    priority: 'critical',
+    description: 'FCA portfolio letters and supervisory correspondence (replaces Dear CEO letters)',
+    recencyDays: 365,
+    documentType: 'dear_ceo_letter',
+    sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit', 'Insurance', 'Payments']
+  },
+  {
     name: 'PRA Supervisory Statements',
     authority: 'PRA',
     url: 'https://www.bankofengland.co.uk/prudential-regulation/publication',
