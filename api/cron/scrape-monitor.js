@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
   try {
     console.log('🔍 Scrape Monitor: Starting health check...')
 
+    // fastMode skips puppeteer + low-priority sources; orchestrator enforces 100s max in fast mode
     const result = await scrapeMonitorService.runMonitor({
       runType: 'vercel-cron',
       fastMode: true
@@ -56,9 +57,15 @@ module.exports = async (req, res) => {
         staleSources: result.totals.staleSources,
         fixedSources: result.totals.fixedSources,
         newUpdates: result.totals.newUpdates,
-        issues: result.issues.length,
+        issueCount: result.issues.length,
         durationMs: duration
-      }
+      },
+      issues: result.issues.map(i => ({
+        source: i.sourceName,
+        type: i.issueType,
+        status: i.status,
+        detail: i.issueDetail || i.errorMessage
+      }))
     })
   } catch (error) {
     const duration = Date.now() - startTime
