@@ -17,6 +17,9 @@
     },
     "api/cron/scrape-monitor.js": {
       "maxDuration": 120
+    },
+    "api/cron/web-scraping-refresh.js": {
+      "maxDuration": 120
     }
   },
   "rewrites": [
@@ -27,6 +30,7 @@
     { "source": "/api/cron/weekly-newsletter", "destination": "/api/cron/weekly-newsletter.js" },
     { "source": "/api/cron/smart-briefing", "destination": "/api/cron/smart-briefing.js" },
     { "source": "/api/cron/scrape-monitor", "destination": "/api/cron/scrape-monitor.js" },
+    { "source": "/api/cron/web-scraping-refresh", "destination": "/api/cron/web-scraping-refresh.js" },
     { "source": "/(.*)", "destination": "/api/index.js" }
   ],
   "headers": [
@@ -73,6 +77,10 @@
     {
       "path": "/api/cron/smart-briefing",
       "schedule": "30 9 * * 1"
+    },
+    {
+      "path": "/api/cron/web-scraping-refresh",
+      "schedule": "30 9 * * *"
     },
     {
       "path": "/api/cron/scrape-monitor",

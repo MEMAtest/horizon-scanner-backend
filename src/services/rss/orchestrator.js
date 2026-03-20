@@ -4,6 +4,7 @@ function applyOrchestratorMethods(ServiceClass) {
       fastMode = false,
       sourceCategory,
       sourceCategories,
+      typeFilter,
       onSourceComplete,
       onSourceError,
       dryRun = false,
@@ -46,6 +47,8 @@ function applyOrchestratorMethods(ServiceClass) {
             return false
           }
         }
+        // Filter by source type (e.g. 'web_scraping' only)
+        if (typeFilter && source.type !== typeFilter) return false
         if (fastMode) {
           // In fast mode, skip puppeteer (slow) but allow high-priority web scrapers
           if (source.type === 'puppeteer') return false
@@ -99,6 +102,12 @@ function applyOrchestratorMethods(ServiceClass) {
           console.log(`✅ ${source.name}: ${savedCount} new`)
         } else {
           results.successful++
+          // Distinguish between RSS (expected to sometimes have no new items) and
+          // web scrapers returning 0 items (possible selector breakage)
+          const isEmptyWebScraper = fetchedCount === 0 && source.type === 'web_scraping'
+          if (isEmptyWebScraper) {
+            console.warn(`⚠️ ${source.name}: web scraper returned 0 items (possible selector breakage)`)
+          }
           results.bySource[source.name] = {
             name: source.name,
             fetched: 0,
@@ -106,7 +115,7 @@ function applyOrchestratorMethods(ServiceClass) {
             type: source.type,
             authority: source.authority,
             priority: source.priority,
-            status: 'no_updates',
+            status: isEmptyWebScraper ? 'empty' : 'no_updates',
             durationMs: Date.now() - startedAt
           }
         }

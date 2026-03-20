@@ -260,6 +260,19 @@ class ScrapeMonitorService {
       if (initialStatus === 'error') {
         issueType = 'error'
         issueDetail = result.error || 'Error during scrape'
+      } else if (initialStatus === 'empty') {
+        // Web scraper fetched page OK but returned 0 items — possible selector breakage
+        const lastSuccessAt = lastSuccessMap[source.name]
+        if (lastSuccessAt) {
+          const ageDays = Math.floor((Date.now() - new Date(lastSuccessAt).getTime()) / DAY_MS)
+          if (ageDays > 7) {
+            issueType = 'stale'
+            issueDetail = `Web scraper returning 0 items for ${ageDays}d (possible selector breakage)`
+          }
+        } else {
+          issueType = 'stale'
+          issueDetail = 'Web scraper returned 0 items and has no recent successful scrape'
+        }
       } else if (initialStatus === 'no_updates') {
         const lastSuccessAt = lastSuccessMap[source.name]
         const recencyDays = source.recencyDays || DEFAULT_RECENCY_DAYS
@@ -362,6 +375,7 @@ class ScrapeMonitorService {
     const successSources = checks.filter(check => check.status === 'success' || check.status === 'fixed').length
     const fixedSources = checks.filter(check => check.status === 'fixed').length
     const noUpdateSources = checks.filter(check => check.status === 'no_updates').length
+    const emptySources = checks.filter(check => check.status === 'empty').length
     const staleSources = checks.filter(check => check.status === 'stale').length
     const errorSources = checks.filter(check => check.status === 'error').length
 
@@ -370,6 +384,7 @@ class ScrapeMonitorService {
       successSources,
       fixedSources,
       noUpdateSources,
+      emptySources,
       staleSources,
       errorSources,
       newUpdates: (fetchResults?.newUpdates || 0) + fixSavedTotal,

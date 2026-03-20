@@ -60,53 +60,48 @@ async function scrapeFCAPapers(paperType = 'consultation') {
   const url = `https://www.fca.org.uk/publications/search-results?category=${category}&sort_by=dmetaZ`
   const baseUrl = 'https://www.fca.org.uk'
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('ol li, .search-item, article').each((i, el) => {
-      if (items.length >= 20) return false
+  $('ol li, .search-item, article').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('h3 a, h2 a, a[href*="/publications/"]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
+    const linkEl = $(el).find('h3 a, h2 a, a[href*="/publications/"]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
 
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href) || href.includes('#') || href.includes('javascript:')) return
-      if (!href.includes('/publications/') && !href.includes('fca.org.uk')) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href) || href.includes('#') || href.includes('javascript:')) return
+    if (!href.includes('/publications/') && !href.includes('fca.org.uk')) return
 
-      const title = linkEl.text().trim().replace(/\s+/g, ' ')
-      if (!title || title.length < 10) return
+    const title = linkEl.text().trim().replace(/\s+/g, ' ')
+    if (!title || title.length < 10) return
 
-      // Extract date from "Published: DD Month YYYY" pattern
-      let dateText = ''
-      const text = $(el).text()
-      const dateMatch = text.match(/Published:\s*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/)
-      if (dateMatch) dateText = dateMatch[1]
+    // Extract date from "Published: DD Month YYYY" pattern
+    let dateText = ''
+    const text = $(el).text()
+    const dateMatch = text.match(/Published:\s*(\d{1,2}\s+\w+\s+\d{4}|\d{4}-\d{2}-\d{2})/)
+    if (dateMatch) dateText = dateMatch[1]
 
-      // Get summary from p tag
-      const summary = $(el).find('p').first().text().trim().substring(0, 300)
+    // Get summary from p tag
+    const summary = $(el).find('p').first().text().trim().substring(0, 300)
 
-      seen.add(href)
-      items.push({
-        title,
-        url: href,
-        authority,
-        publishedDate: parseDate(dateText),
-        summary: summary || title,
-        area: typeName,
-        sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit']
-      })
+    seen.add(href)
+    items.push({
+      title,
+      url: href,
+      authority,
+      publishedDate: parseDate(dateText),
+      summary: summary || title,
+      area: typeName,
+      sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit']
     })
+  })
 
-    console.log(`[cheerio] FCA ${typeName}: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] FCA ${typeName} failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] FCA ${typeName}: found ${items.length} items`)
+  return items
 }
 
 async function scrapeFCAConsultationPapers() {
@@ -125,63 +120,58 @@ async function scrapeFCADearCeo() {
   const baseUrl = 'https://www.fca.org.uk'
   const url = `${baseUrl}/publications/search-results?category=dear-ceo-letters&sort_by=dmetaZ`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('li.search-item, .search-item, ol li, article').each((i, el) => {
-      if (items.length >= 30) return false
+  $('li.search-item, .search-item, ol li, article').each((i, el) => {
+    if (items.length >= 30) return false
 
-      const linkEl = $(el).find('h3 a, .search-item__clickthrough, a[href*="dear-ceo"], a[href*="correspondence"]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
+    const linkEl = $(el).find('h3 a, .search-item__clickthrough, a[href*="dear-ceo"], a[href*="correspondence"]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
 
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = linkEl.text().trim().replace(/\s+/g, ' ')
-      if (!title || title.length < 10) return
+    const title = linkEl.text().trim().replace(/\s+/g, ' ')
+    if (!title || title.length < 10) return
 
-      // Extract date - FCA uses "Published: DD/MM/YYYY" or "DD Month YYYY"
-      let publishedDate = null
-      const fullText = $(el).text()
+    // Extract date - FCA uses "Published: DD/MM/YYYY" or "DD Month YYYY"
+    let publishedDate = null
+    const fullText = $(el).text()
 
-      const ddmmyyyyMatch = fullText.match(/Published[:\s]+(\d{1,2})\/(\d{1,2})\/(\d{4})/i)
-      if (ddmmyyyyMatch) {
-        const [, day, month, year] = ddmmyyyyMatch
-        publishedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    const ddmmyyyyMatch = fullText.match(/Published[:\s]+(\d{1,2})\/(\d{1,2})\/(\d{4})/i)
+    if (ddmmyyyyMatch) {
+      const [, day, month, year] = ddmmyyyyMatch
+      publishedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    }
+
+    if (!publishedDate) {
+      const longDateMatch = fullText.match(/(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i)
+      if (longDateMatch) {
+        publishedDate = parseDate(`${longDateMatch[1]} ${longDateMatch[2]} ${longDateMatch[3]}`)
       }
+    }
 
-      if (!publishedDate) {
-        const longDateMatch = fullText.match(/(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i)
-        if (longDateMatch) {
-          publishedDate = parseDate(`${longDateMatch[1]} ${longDateMatch[2]} ${longDateMatch[3]}`)
-        }
-      }
+    const descEl = $(el).find('.search-item__body, p, .summary').first()
+    const description = descEl.text().trim().substring(0, 500)
 
-      const descEl = $(el).find('.search-item__body, p, .summary').first()
-      const description = descEl.text().trim().substring(0, 500)
-
-      seen.add(href)
-      items.push({
-        title,
-        url: href,
-        authority: 'FCA',
-        publishedDate: publishedDate ? parseDate(publishedDate) || publishedDate : null,
-        summary: description || title,
-        area: 'Dear CEO Letter',
-        sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit', 'Insurance', 'Payments']
-      })
+    seen.add(href)
+    items.push({
+      title,
+      url: href,
+      authority: 'FCA',
+      publishedDate: publishedDate ? parseDate(publishedDate) || publishedDate : null,
+      summary: description || title,
+      area: 'Dear CEO Letter',
+      sectors: ['Multi-sector', 'Banking', 'Investment Management', 'Consumer Credit', 'Insurance', 'Payments']
     })
+  })
 
-    console.log(`[cheerio] FCA Dear CEO: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] FCA Dear CEO failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] FCA Dear CEO: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -261,54 +251,49 @@ async function scrapeFSCS() {
   const baseUrl = 'https://www.fscs.org.uk'
   const url = `${baseUrl}/news/`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('a[href*="/news/"]').each((i, el) => {
-      if (items.length >= 25) return false
+  $('a[href*="/news/"]').each((i, el) => {
+    if (items.length >= 25) return false
 
-      let href = $(el).attr('href')
-      if (!href) return
+    let href = $(el).attr('href')
+    if (!href) return
 
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      // Skip section links
-      if (href === baseUrl + '/news/' ||
-          href.endsWith('/news/fscs-news/') ||
-          href.endsWith('/news/podcasts/') ||
-          href.endsWith('/news/fraud-scams/') ||
-          href.includes('#')) return
+    // Skip section links
+    if (href === baseUrl + '/news/' ||
+        href.endsWith('/news/fscs-news/') ||
+        href.endsWith('/news/podcasts/') ||
+        href.endsWith('/news/fraud-scams/') ||
+        href.includes('#')) return
 
-      const titleEl = $(el).find('h3, h2, h4, .title').first()
-      const title = titleEl.text().trim() || $(el).text().trim()
+    const titleEl = $(el).find('h3, h2, h4, .title').first()
+    const title = titleEl.text().trim() || $(el).text().trim()
 
-      if (!title || title.length < 10 || title === 'See all') return
+    if (!title || title.length < 10 || title === 'See all') return
 
-      const descEl = $(el).find('p').first()
-      const description = descEl.text().trim().substring(0, 300)
+    const descEl = $(el).find('p').first()
+    const description = descEl.text().trim().substring(0, 300)
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'FSCS',
-        publishedDate: null,
-        summary: description || title,
-        area: 'News',
-        sectors: ['Consumer Protection', 'Banking', 'Insurance', 'Investment Management']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'FSCS',
+      publishedDate: null,
+      summary: description || title,
+      area: 'News',
+      sectors: ['Consumer Protection', 'Banking', 'Insurance', 'Investment Management']
     })
+  })
 
-    console.log(`[cheerio] FSCS: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] FSCS failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] FSCS: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -319,95 +304,90 @@ async function scrapeOfcom() {
   const baseUrl = 'https://www.ofcom.org.uk'
   const url = `${baseUrl}/news-and-updates`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .card, .content-item, .listing-item').each((i, el) => {
+  $('article, .news-item, .card, .content-item, .listing-item').each((i, el) => {
+    if (items.length >= 20) return false
+
+    const linkEl = $(el).find('h3 a, h2 a, a[href*="/news/"], a[href*="/publications/"]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href) || href.includes('#')) return
+    if (href.includes('/research') || href.includes('/advice') || href.includes('/consultations')) return
+
+    const title = linkEl.text().trim()
+    if (!title || title.length < 15) return
+    if (/^(read more|view all|show more)$/i.test(title)) return
+
+    // Date extraction
+    let dateText = ''
+    $(el).find('p').each((_, p) => {
+      const text = $(p).text()
+      const match = text.match(/(\d{1,2}\s+\w+\s+\d{4})/)
+      if (match) dateText = match[1]
+    })
+    if (!dateText) {
+      const timeEl = $(el).find('time').first()
+      dateText = timeEl.attr('datetime') || timeEl.text().trim() || ''
+    }
+
+    // Summary
+    let summary = ''
+    $(el).find('p').each((_, p) => {
+      const text = $(p).text().trim()
+      if (!text.includes('Published:') && text.length > 50) {
+        summary = text.substring(0, 300)
+        return false
+      }
+    })
+
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'OFCOM',
+      publishedDate: parseDate(dateText),
+      summary: summary || title,
+      area: 'News',
+      sectors: ['Telecommunications', 'Broadcasting', 'Digital']
+    })
+  })
+
+  // Fallback: look for news links directly
+  if (items.length < 3) {
+    $('a[href*="/news/"]').each((i, el) => {
       if (items.length >= 20) return false
 
-      const linkEl = $(el).find('h3 a, h2 a, a[href*="/news/"], a[href*="/publications/"]').first()
-      let href = linkEl.attr('href')
+      let href = $(el).attr('href')
       if (!href) return
-
       href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href) || href.includes('#')) return
-      if (href.includes('/research') || href.includes('/advice') || href.includes('/consultations')) return
+      if (!href || seen.has(href)) return
+      if (href.endsWith('/news/') || href.endsWith('/news-and-updates')) return
 
-      const title = linkEl.text().trim()
-      if (!title || title.length < 15) return
-      if (/^(read more|view all|show more)$/i.test(title)) return
-
-      // Date extraction
-      let dateText = ''
-      $(el).find('p').each((_, p) => {
-        const text = $(p).text()
-        const match = text.match(/(\d{1,2}\s+\w+\s+\d{4})/)
-        if (match) dateText = match[1]
-      })
-      if (!dateText) {
-        const timeEl = $(el).find('time').first()
-        dateText = timeEl.attr('datetime') || timeEl.text().trim() || ''
-      }
-
-      // Summary
-      let summary = ''
-      $(el).find('p').each((_, p) => {
-        const text = $(p).text().trim()
-        if (!text.includes('Published:') && text.length > 50) {
-          summary = text.substring(0, 300)
-          return false
-        }
-      })
+      const title = $(el).text().trim()
+      if (!title || title.length < 20) return
+      if (/^(read more|view all)$/i.test(title)) return
 
       seen.add(href)
       items.push({
         title: title.replace(/\s+/g, ' '),
         url: href,
         authority: 'OFCOM',
-        publishedDate: parseDate(dateText),
-        summary: summary || title,
+        publishedDate: null,
+        summary: title,
         area: 'News',
         sectors: ['Telecommunications', 'Broadcasting', 'Digital']
       })
     })
-
-    // Fallback: look for news links directly
-    if (items.length < 3) {
-      $('a[href*="/news/"]').each((i, el) => {
-        if (items.length >= 20) return false
-
-        let href = $(el).attr('href')
-        if (!href) return
-        href = resolveUrl(href, baseUrl)
-        if (!href || seen.has(href)) return
-        if (href.endsWith('/news/') || href.endsWith('/news-and-updates')) return
-
-        const title = $(el).text().trim()
-        if (!title || title.length < 20) return
-        if (/^(read more|view all)$/i.test(title)) return
-
-        seen.add(href)
-        items.push({
-          title: title.replace(/\s+/g, ' '),
-          url: href,
-          authority: 'OFCOM',
-          publishedDate: null,
-          summary: title,
-          area: 'News',
-          sectors: ['Telecommunications', 'Broadcasting', 'Digital']
-        })
-      })
-    }
-
-    console.log(`[cheerio] Ofcom: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] Ofcom failed:`, error.message)
-    return []
   }
+
+  console.log(`[cheerio] Ofcom: found ${items.length} items`)
+  return items
 }
 
 // ============================================
@@ -422,54 +402,49 @@ async function scrapeCFTC() {
   const baseUrl = 'https://www.cftc.gov'
   const url = `${baseUrl}/PressRoom/PressReleases`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('a[href*="/PressRoom/PressReleases/"]').each((i, el) => {
-      if (items.length >= 20) return false
+  $('a[href*="/PressRoom/PressReleases/"]').each((i, el) => {
+    if (items.length >= 20) return false
 
-      let href = $(el).attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
-      // Skip the index page itself
-      if (href.endsWith('/PressReleases') || href.endsWith('/PressReleases/')) return
+    let href = $(el).attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
+    // Skip the index page itself
+    if (href.endsWith('/PressReleases') || href.endsWith('/PressReleases/')) return
 
-      const title = $(el).text().trim().replace(/\s+/g, ' ')
-      if (!title || title.length < 15) return
+    const title = $(el).text().trim().replace(/\s+/g, ' ')
+    if (!title || title.length < 15) return
 
-      // Try to extract date from nearby elements
-      const container = $(el).closest('tr, li, article, div')
-      let dateText = ''
-      if (container.length) {
-        const dateEl = container.find('time, .date, td').first()
-        const text = dateEl.text().trim()
-        if (/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/.test(text) || /\w+\s+\d{1,2},?\s+\d{4}/.test(text)) {
-          dateText = text
-        }
+    // Try to extract date from nearby elements
+    const container = $(el).closest('tr, li, article, div')
+    let dateText = ''
+    if (container.length) {
+      const dateEl = container.find('time, .date, td').first()
+      const text = dateEl.text().trim()
+      if (/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/.test(text) || /\w+\s+\d{1,2},?\s+\d{4}/.test(text)) {
+        dateText = text
       }
+    }
 
-      seen.add(href)
-      items.push({
-        title,
-        url: href,
-        authority: 'CFTC',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Press Release',
-        sectors: ['Derivatives', 'Capital Markets', 'Trading', 'Cryptocurrency']
-      })
+    seen.add(href)
+    items.push({
+      title,
+      url: href,
+      authority: 'CFTC',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Press Release',
+      sectors: ['Derivatives', 'Capital Markets', 'Trading', 'Cryptocurrency']
     })
+  })
 
-    console.log(`[cheerio] CFTC: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] CFTC failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] CFTC: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -480,45 +455,40 @@ async function scrapeCNBV() {
   const baseUrl = 'https://www.gob.mx'
   const url = `${baseUrl}/cnbv/prensa`
 
-  try {
-    const response = await axios.get(url, { timeout: 30000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 30000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .press-item, .node, li').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .press-item, .node, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'CNBV',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Press Release',
-        sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime', 'Fintech']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'CNBV',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Press Release',
+      sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime', 'Fintech']
     })
+  })
 
-    console.log(`[cheerio] CNBV: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] CNBV failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] CNBV: found ${items.length} items`)
+  return items
 }
 
 // ============================================
@@ -532,45 +502,40 @@ async function scrapeAPRA() {
   const baseUrl = 'https://www.apra.gov.au'
   const url = `${baseUrl}/news-and-publications`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .media-release, .news-item, .card, .views-row').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .media-release, .news-item, .card, .views-row').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href) || href.includes('#')) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href) || href.includes('#')) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'APRA',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Banking', 'Insurance', 'Superannuation', 'Prudential Regulation']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'APRA',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Banking', 'Insurance', 'Superannuation', 'Prudential Regulation']
     })
+  })
 
-    console.log(`[cheerio] APRA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] APRA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] APRA: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -580,45 +545,40 @@ async function scrapeAUSTRAC() {
   const baseUrl = 'https://www.austrac.gov.au'
   const url = `${baseUrl}/news-and-media/media-release`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .media-release, .news-item, .views-row, .node').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .media-release, .news-item, .views-row, .node').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'AUSTRAC',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Media Release',
-        sectors: ['AML & Financial Crime', 'Banking', 'Remittances', 'Cryptocurrency']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'AUSTRAC',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Media Release',
+      sectors: ['AML & Financial Crime', 'Banking', 'Remittances', 'Cryptocurrency']
     })
+  })
 
-    console.log(`[cheerio] AUSTRAC: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] AUSTRAC failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] AUSTRAC: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -628,54 +588,49 @@ async function scrapeRBI() {
   const baseUrl = 'https://rbi.org.in'
   const url = `${baseUrl}/Scripts/BS_PressreleaseDisplay.aspx`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    // RBI uses table-based layout or list
-    $('table tr, .tablebg tr, article, li').each((i, el) => {
-      if (items.length >= 20) return false
+  // RBI uses table-based layout or list
+  $('table tr, .tablebg tr, article, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      // Date from cells
-      const cells = $(el).find('td')
-      let dateText = ''
-      cells.each((_, td) => {
-        const text = $(td).text().trim()
-        if (/\w+\s+\d{1,2},?\s+\d{4}/.test(text) || /\d{2}[\/-]\d{2}[\/-]\d{4}/.test(text)) {
-          dateText = text
-          return false
-        }
-      })
-
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'RBI',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Press Release',
-        sectors: ['Banking', 'Payment Services', 'AML & Financial Crime', 'Fintech']
-      })
+    // Date from cells
+    const cells = $(el).find('td')
+    let dateText = ''
+    cells.each((_, td) => {
+      const text = $(td).text().trim()
+      if (/\w+\s+\d{1,2},?\s+\d{4}/.test(text) || /\d{2}[\/-]\d{2}[\/-]\d{4}/.test(text)) {
+        dateText = text
+        return false
+      }
     })
 
-    console.log(`[cheerio] RBI: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] RBI failed:`, error.message)
-    return []
-  }
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'RBI',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Press Release',
+      sectors: ['Banking', 'Payment Services', 'AML & Financial Crime', 'Fintech']
+    })
+  })
+
+  console.log(`[cheerio] RBI: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -685,45 +640,40 @@ async function scrapeCIMA() {
   const baseUrl = 'https://www.cima.ky'
   const url = `${baseUrl}/general-industry-notices`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .notice-item, .views-row, li, tr').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .notice-item, .views-row, li, tr').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'CIMA',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Industry Notice',
-        sectors: ['Banking', 'Investment Management', 'Insurance', 'AML & Financial Crime']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'CIMA',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Industry Notice',
+      sectors: ['Banking', 'Investment Management', 'Insurance', 'AML & Financial Crime']
     })
+  })
 
-    console.log(`[cheerio] CIMA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] CIMA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] CIMA: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -733,45 +683,40 @@ async function scrapeCBE() {
   const baseUrl = 'https://www.cbe.org.eg'
   const url = `${baseUrl}/en/news-publications/news`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .card, .list-item, li').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .card, .list-item, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'CBE',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Banking', 'Monetary Policy', 'AML & Financial Crime', 'Payment Services']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'CBE',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Banking', 'Monetary Policy', 'AML & Financial Crime', 'Payment Services']
     })
+  })
 
-    console.log(`[cheerio] CBE: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] CBE failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] CBE: found ${items.length} items`)
+  return items
 }
 
 // ============================================
@@ -785,45 +730,40 @@ async function scrapeFSCA() {
   const baseUrl = 'https://www.fsca.co.za'
   const url = `${baseUrl}/Latest-News/`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .accordion-item, .card, li').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .accordion-item, .card, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title, .accordion-header').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title, .accordion-header').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'FSCA',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Capital Markets', 'Insurance', 'Consumer Protection', 'Cryptocurrency']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'FSCA',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Capital Markets', 'Insurance', 'Consumer Protection', 'Cryptocurrency']
     })
+  })
 
-    console.log(`[cheerio] FSCA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] FSCA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] FSCA: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -832,57 +772,54 @@ async function scrapeFSCA() {
 async function scrapeFICSA() {
   const baseUrl = 'https://www.fic.gov.za'
 
-  try {
-    const response = await axios.get(baseUrl, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(baseUrl, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    // FIC uses news/media sections on homepage
-    $('article, .news-item, .card, a[href*="news"], a[href*="media"]').each((i, el) => {
-      if (items.length >= 20) return false
+  // FIC uses news/media sections on homepage
+  $('article, .news-item, .card, a[href*="news"], a[href*="media"]').each((i, el) => {
+    if (items.length >= 20) return false
 
-      let href, title
-      if (el.tagName === 'a') {
-        href = $(el).attr('href')
-        title = $(el).text().trim()
-      } else {
-        const linkEl = $(el).find('a[href]').first()
-        href = linkEl.attr('href')
-        title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      }
+    let href, title
+    if (el.tagName === 'a') {
+      href = $(el).attr('href')
+      title = $(el).text().trim()
+    } else {
+      const linkEl = $(el).find('a[href]').first()
+      href = linkEl.attr('href')
+      title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    }
 
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
-      if (!title || title.length < 10) return
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
+    if (!title || title.length < 10) return
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'FIC_SA',
-        publishedDate: null,
-        summary: title,
-        area: 'News',
-        sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Terrorism Financing']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'FIC_SA',
+      publishedDate: null,
+      summary: title,
+      area: 'News',
+      sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Terrorism Financing']
     })
+  })
 
-    console.log(`[cheerio] FIC SA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] FIC SA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] FIC SA: found ${items.length} items`)
+  return items
 }
 
 /**
  * Wolfsberg Group - News and Resources
+ * Note: keeps per-path try/catch since one path failing shouldn't block the other
  */
 async function scrapeWolfsberg() {
   const items = []
   const seen = new Set()
+  let lastError = null
 
   for (const path of ['/news', '/resources']) {
     try {
@@ -918,7 +855,13 @@ async function scrapeWolfsberg() {
       })
     } catch (error) {
       console.error(`[cheerio] Wolfsberg ${path} failed:`, error.message)
+      lastError = error
     }
+  }
+
+  // If ALL paths failed, throw so orchestrator records error
+  if (items.length === 0 && lastError) {
+    throw lastError
   }
 
   console.log(`[cheerio] Wolfsberg: found ${items.length} items`)
@@ -927,10 +870,11 @@ async function scrapeWolfsberg() {
 
 /**
  * Egmont Group - Try WordPress REST API first, fall back to HTML
+ * If both fail, throws so orchestrator records error
  */
 async function scrapeEgmont() {
+  // Try WordPress REST API first (more reliable)
   try {
-    // Try WordPress REST API first (more reliable)
     const apiUrl = 'https://egmontgroup.org/wp-json/wp/v2/posts?per_page=20'
     const response = await axios.get(apiUrl, { timeout: 15000, headers: { 'User-Agent': UA } })
 
@@ -952,43 +896,38 @@ async function scrapeEgmont() {
     console.log(`[cheerio] Egmont WP API unavailable, trying HTML: ${apiErr.message}`)
   }
 
-  // Fallback: HTML scraping
-  try {
-    const response = await axios.get('https://egmontgroup.org/news-and-events/', { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  // Fallback: HTML scraping — let errors propagate
+  const response = await axios.get('https://egmontgroup.org/news-and-events/', { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .post, .card').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .post, .card').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      if (!href.startsWith('http')) href = 'https://egmontgroup.org' + href
-      if (seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    if (!href.startsWith('http')) href = 'https://egmontgroup.org' + href
+    if (seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'EGMONT',
-        publishedDate: null,
-        summary: title,
-        area: 'News',
-        sectors: ['AML & Financial Crime', 'FIU', 'Information Sharing', 'SAR']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'EGMONT',
+      publishedDate: null,
+      summary: title,
+      area: 'News',
+      sectors: ['AML & Financial Crime', 'FIU', 'Information Sharing', 'SAR']
     })
+  })
 
-    console.log(`[cheerio] Egmont (HTML): found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] Egmont failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] Egmont (HTML): found ${items.length} items`)
+  return items
 }
 
 /**
@@ -999,45 +938,40 @@ async function scrapeNCA() {
   const baseUrl = 'https://www.nationalcrimeagency.gov.uk'
   const url = `${baseUrl}/news`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .views-row, .card, li').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .views-row, .card, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href) || href === `${baseUrl}/news`) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href) || href === `${baseUrl}/news`) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'NCA',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Law Enforcement']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'NCA',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['AML & Financial Crime', 'Banking', 'Compliance', 'Law Enforcement']
     })
+  })
 
-    console.log(`[cheerio] NCA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] NCA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] NCA: found ${items.length} items`)
+  return items
 }
 
 // ============================================
@@ -1046,56 +980,50 @@ async function scrapeNCA() {
 
 /**
  * LSE News
- * Try API first, then HTML
  */
 async function scrapeLSE() {
   const baseUrl = 'https://www.londonstockexchange.com'
 
-  try {
-    const response = await axios.get(`${baseUrl}/discover/news-and-insights?tab=latest`, {
-      timeout: 20000,
-      headers: HEADERS
+  const response = await axios.get(`${baseUrl}/discover/news-and-insights?tab=latest`, {
+    timeout: 20000,
+    headers: HEADERS
+  })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
+
+  $('article, .card, .news-item, a[href*="/news/"]').each((i, el) => {
+    if (items.length >= 20) return false
+
+    let href, title
+    if (el.tagName === 'a') {
+      href = $(el).attr('href')
+      title = $(el).text().trim()
+    } else {
+      const linkEl = $(el).find('a[href]').first()
+      href = linkEl.attr('href')
+      title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    }
+
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href) || href.includes('#')) return
+    if (!title || title.length < 10) return
+
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'LSE',
+      publishedDate: null,
+      summary: title,
+      area: 'News',
+      sectors: ['Capital Markets', 'Market News', 'Investment']
     })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  })
 
-    $('article, .card, .news-item, a[href*="/news/"]').each((i, el) => {
-      if (items.length >= 20) return false
-
-      let href, title
-      if (el.tagName === 'a') {
-        href = $(el).attr('href')
-        title = $(el).text().trim()
-      } else {
-        const linkEl = $(el).find('a[href]').first()
-        href = linkEl.attr('href')
-        title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      }
-
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href) || href.includes('#')) return
-      if (!title || title.length < 10) return
-
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'LSE',
-        publishedDate: null,
-        summary: title,
-        area: 'News',
-        sectors: ['Capital Markets', 'Market News', 'Investment']
-      })
-    })
-
-    console.log(`[cheerio] LSE: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] LSE failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] LSE: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -1106,53 +1034,48 @@ async function scrapeAquis() {
   const baseUrl = 'https://www.aquis.eu'
   const url = `${baseUrl}/stock-exchange/announcements`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('table tbody tr, article, .announcement-item, .card').each((i, el) => {
-      if (items.length >= 20) return false
+  $('table tbody tr, article, .announcement-item, .card').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      // Get title from cells or headings
-      const title = $(el).find('h2, h3, td a').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 5) return
+    // Get title from cells or headings
+    const title = $(el).find('h2, h3, td a').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 5) return
 
-      const cells = $(el).find('td')
-      let dateText = ''
-      cells.each((_, td) => {
-        const text = $(td).text().trim()
-        if (/\d{2}[\/-]\d{2}[\/-]\d{4}/.test(text) || /\w+\s+\d{1,2},?\s+\d{4}/.test(text)) {
-          dateText = text
-          return false
-        }
-      })
-
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'AQUIS',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Announcement',
-        sectors: ['Capital Markets', 'Listed Companies', 'Market News']
-      })
+    const cells = $(el).find('td')
+    let dateText = ''
+    cells.each((_, td) => {
+      const text = $(td).text().trim()
+      if (/\d{2}[\/-]\d{2}[\/-]\d{4}/.test(text) || /\w+\s+\d{1,2},?\s+\d{4}/.test(text)) {
+        dateText = text
+        return false
+      }
     })
 
-    console.log(`[cheerio] Aquis: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] Aquis failed:`, error.message)
-    return []
-  }
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'AQUIS',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Announcement',
+      sectors: ['Capital Markets', 'Listed Companies', 'Market News']
+    })
+  })
+
+  console.log(`[cheerio] Aquis: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -1162,45 +1085,40 @@ async function scrapePayUK() {
   const baseUrl = 'https://www.wearepay.uk'
   const url = `${baseUrl}/news-and-insight/latest-updates/`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .card, .post-item, li').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .card, .post-item, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'Pay.UK',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Payments', 'Fintech', 'Banking', 'Financial Market Infrastructure']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'Pay.UK',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Payments', 'Fintech', 'Banking', 'Financial Market Infrastructure']
     })
+  })
 
-    console.log(`[cheerio] Pay.UK: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] Pay.UK failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] Pay.UK: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -1210,45 +1128,40 @@ async function scrapeOFAC() {
   const baseUrl = 'https://ofac.treasury.gov'
   const url = `${baseUrl}/recent-actions`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .views-row, .card, li, tr').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .views-row, .card, li, tr').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'OFAC',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'Sanctions',
-        sectors: ['Sanctions', 'AML & Financial Crime', 'Banking', 'Compliance']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'OFAC',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'Sanctions',
+      sectors: ['Sanctions', 'AML & Financial Crime', 'Banking', 'Compliance']
     })
+  })
 
-    console.log(`[cheerio] OFAC: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] OFAC failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] OFAC: found ${items.length} items`)
+  return items
 }
 
 // ============================================
@@ -1262,45 +1175,40 @@ async function scrapeDFSA() {
   const baseUrl = 'https://www.dfsa.ae'
   const url = `${baseUrl}/news`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .card, .views-row, li').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .card, .views-row, li').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime], .news-date').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime], .news-date').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'DFSA',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Banking', 'Capital Markets', 'Insurance', 'AML & Financial Crime']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'DFSA',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Banking', 'Capital Markets', 'Insurance', 'AML & Financial Crime']
     })
+  })
 
-    console.log(`[cheerio] DFSA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] DFSA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] DFSA: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -1310,45 +1218,40 @@ async function scrapeCBUAE() {
   const baseUrl = 'https://www.centralbank.ae'
   const url = `${baseUrl}/en/news-and-publications/news-and-insights/`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .card, li, .item').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .card, li, .item').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'CBUAE',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Banking', 'AML & Financial Crime', 'Payment Services', 'Licensing']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'CBUAE',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Banking', 'AML & Financial Crime', 'Payment Services', 'Licensing']
     })
+  })
 
-    console.log(`[cheerio] CBUAE: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] CBUAE failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] CBUAE: found ${items.length} items`)
+  return items
 }
 
 /**
@@ -1358,45 +1261,40 @@ async function scrapeSAMA() {
   const baseUrl = 'https://www.sama.gov.sa'
   const url = `${baseUrl}/en-US/News/Pages/AllNews.aspx`
 
-  try {
-    const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
-    const $ = cheerio.load(response.data)
-    const items = []
-    const seen = new Set()
+  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
 
-    $('article, .news-item, .card, li, tr, .ms-vb2').each((i, el) => {
-      if (items.length >= 20) return false
+  $('article, .news-item, .card, li, tr, .ms-vb2').each((i, el) => {
+    if (items.length >= 20) return false
 
-      const linkEl = $(el).find('a[href]').first()
-      let href = linkEl.attr('href')
-      if (!href) return
-      href = resolveUrl(href, baseUrl)
-      if (!href || seen.has(href)) return
+    const linkEl = $(el).find('a[href]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href)) return
 
-      const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-      if (!title || title.length < 10) return
+    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    if (!title || title.length < 10) return
 
-      const dateEl = $(el).find('time, .date, [datetime]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+    const dateEl = $(el).find('time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-      seen.add(href)
-      items.push({
-        title: title.replace(/\s+/g, ' '),
-        url: href,
-        authority: 'SAMA',
-        publishedDate: parseDate(dateText),
-        summary: title,
-        area: 'News',
-        sectors: ['Banking', 'Insurance', 'AML & Financial Crime', 'Payment Services']
-      })
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'SAMA',
+      publishedDate: parseDate(dateText),
+      summary: title,
+      area: 'News',
+      sectors: ['Banking', 'Insurance', 'AML & Financial Crime', 'Payment Services']
     })
+  })
 
-    console.log(`[cheerio] SAMA: found ${items.length} items`)
-    return items
-  } catch (error) {
-    console.error(`[cheerio] SAMA failed:`, error.message)
-    return []
-  }
+  console.log(`[cheerio] SAMA: found ${items.length} items`)
+  return items
 }
 
 module.exports = {

@@ -1,53 +1,55 @@
-// api/cron/rss-refresh.js
-// Serverless trigger for RSS feed refresh, intended for Vercel Cron.
-// Fetches fresh regulatory updates from all configured RSS sources.
+// api/cron/web-scraping-refresh.js
+// Slow-mode cron for medium/low priority web scrapers that are skipped by rss-refresh (fastMode).
+// Runs without fastMode, filtered to web_scraping type only, excludes bank_news.
 
 const rssFetcher = require('../../src/services/rssFetcher')
 
 module.exports = async (req, res) => {
   const startTime = Date.now()
 
-  // Vercel Cron uses GET, manual triggers use POST - accept both
   if (req.method !== 'POST' && req.method !== 'GET') {
     res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json({ success: false, error: 'Method Not Allowed' })
   }
 
-  // Optional: Add authentication for manual triggers
   const authHeader = req.headers.authorization
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ success: false, error: 'Unauthorized' })
   }
 
   try {
-    console.log('🔄 RSS Refresh: Starting feed fetch...')
+    console.log('🌐 Web Scraping Refresh: Starting slow-mode web scraper fetch...')
 
-    // Fetch all RSS feeds with fast mode to stay within Vercel timeout (120s)
     const summary = await rssFetcher.fetchAllFeeds({
-      fastMode: true,
-      maxDurationMs: 100000, // Stop after 100s to leave buffer
-      concurrency: 15, // Process 15 feeds in parallel
-      timeoutMs: 8000 // 8s timeout per feed
+      // No fastMode — allows medium/low priority web scrapers
+      typeFilter: 'web_scraping',
+      sourceCategories: ['regulatory', 'international'],
+      maxDurationMs: 100000, // Stay within Vercel 120s limit
+      concurrency: 8 // Web scrapers are slower than RSS
     })
 
     const duration = Date.now() - startTime
 
-    console.log(`✅ RSS Refresh: Completed in ${duration}ms`)
-    console.log(`   Total sources: ${summary.total}`)
-    console.log(`   Successful: ${summary.successful}`)
-    console.log(`   Failed: ${summary.failed}`)
-    console.log(`   New updates: ${summary.newUpdates}`)
-
-    // Extract per-source failures for visibility in Vercel logs
+    // Extract per-source failures for visibility
     const failures = summary.bySource
       ? Object.values(summary.bySource)
           .filter(s => s.status === 'error' || s.status === 'empty')
           .map(s => ({ name: s.name, authority: s.authority, status: s.status, error: s.error || null, durationMs: s.durationMs }))
       : []
 
+    console.log(`✅ Web Scraping Refresh: Completed in ${duration}ms`)
+    console.log(`   Total sources: ${summary.total}`)
+    console.log(`   Successful: ${summary.successful}`)
+    console.log(`   Failed: ${summary.failed}`)
+    console.log(`   New updates: ${summary.newUpdates}`)
+    if (failures.length > 0) {
+      console.log(`   Failures: ${failures.map(f => f.name).join(', ')}`)
+    }
+
     return res.status(200).json({
       success: true,
       completedAt: new Date().toISOString(),
+      mode: 'web_scraping_slow',
       summary: {
         totalSources: summary.total,
         successful: summary.successful,
@@ -61,7 +63,7 @@ module.exports = async (req, res) => {
   } catch (error) {
     const duration = Date.now() - startTime
 
-    console.error('❌ RSS Refresh: Failed')
+    console.error('❌ Web Scraping Refresh: Failed')
     console.error(`   Error: ${error.message}`)
     console.error(`   Duration: ${duration}ms`)
 

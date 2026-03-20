@@ -22,10 +22,10 @@ module.exports = async (req, res) => {
   try {
     console.log('🔍 Scrape Monitor: Starting health check...')
 
-    // fastMode skips puppeteer + low-priority sources; orchestrator enforces 100s max in fast mode
+    // Monitor ALL active sources — the monitor only checks staleness in DB, it doesn't re-scrape
     const result = await scrapeMonitorService.runMonitor({
       runType: 'vercel-cron',
-      fastMode: true
+      fastMode: false
     })
 
     const duration = Date.now() - startTime

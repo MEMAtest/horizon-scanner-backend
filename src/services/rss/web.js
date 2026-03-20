@@ -309,10 +309,7 @@ function applyWebMethods(ServiceClass, {
         return await this.genericWebScraping(source, options)
       } catch (fallbackError) {
         console.error(`❌ Generic scraping also failed for ${source.name}:`, fallbackError.message)
-        if (options.throwOnError) {
-          throw fallbackError
-        }
-        return []
+        throw fallbackError
       }
     }
   }
@@ -336,10 +333,7 @@ function applyWebMethods(ServiceClass, {
       return this.parseWebScrapingContent($, source)
     } catch (error) {
       console.error('❌ Generic web scraping failed:', error.message)
-      if (options.throwOnError) {
-        throw error
-      }
-      return []
+      throw error
     }
   }
 
