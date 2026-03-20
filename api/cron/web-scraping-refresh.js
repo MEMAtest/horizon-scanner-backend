@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
       // No fastMode — allows medium/low priority web scrapers
       typeFilter: 'web_scraping',
       excludeSourceCategory: 'bank_news', // Bank news has its own cron
-      maxDurationMs: 95000, // Stop at 95s to leave buffer for response
+      maxDurationMs: 270000, // Stop at 270s to leave buffer for response (300s Vercel limit)
       concurrency: 15, // Higher concurrency since each scraper is independent
       timeoutMs: 10000 // 10s per source to avoid slow ones blocking the batch
     })

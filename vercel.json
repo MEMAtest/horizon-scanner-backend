@@ -19,7 +19,7 @@
       "maxDuration": 120
     },
     "api/cron/web-scraping-refresh.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     }
   },
   "rewrites": [
