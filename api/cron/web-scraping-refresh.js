@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
     const summary = await rssFetcher.fetchAllFeeds({
       // No fastMode — allows medium/low priority web scrapers
       typeFilter: 'web_scraping',
-      sourceCategories: ['regulatory', 'international'],
+      excludeSourceCategory: 'bank_news', // Bank news has its own cron
       maxDurationMs: 100000, // Stay within Vercel 120s limit
       concurrency: 8 // Web scrapers are slower than RSS
     })

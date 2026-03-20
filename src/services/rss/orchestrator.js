@@ -4,6 +4,7 @@ function applyOrchestratorMethods(ServiceClass) {
       fastMode = false,
       sourceCategory,
       sourceCategories,
+      excludeSourceCategory,
       typeFilter,
       onSourceComplete,
       onSourceError,
@@ -46,6 +47,11 @@ function applyOrchestratorMethods(ServiceClass) {
           if (!normalizedCategoryFilter.has(String(sourceCategoryValue).trim())) {
             return false
           }
+        }
+        // Exclude specific source category (e.g. 'bank_news')
+        if (excludeSourceCategory) {
+          const sourceCategoryValue = source.source_category || source.sourceCategory || ''
+          if (sourceCategoryValue === excludeSourceCategory) return false
         }
         // Filter by source type (e.g. 'web_scraping' only)
         if (typeFilter && source.type !== typeFilter) return false
