@@ -19,7 +19,11 @@ module.exports = async (req, res) => {
   try {
     console.log('🏦 Bank News Refresh: Starting bank feed fetch...')
 
-    const summary = await rssFetcher.fetchAllFeeds({ sourceCategory: 'bank_news' })
+    const summary = await rssFetcher.fetchAllFeeds({
+      sourceCategory: 'bank_news',
+      maxDurationMs: 100000,
+      concurrency: 10
+    })
 
     const duration = Date.now() - startTime
 

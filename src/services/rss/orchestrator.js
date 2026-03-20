@@ -54,7 +54,6 @@ function applyOrchestratorMethods(ServiceClass) {
               source.priority !== 'critical' && source.priority !== 'high') {
             return false
           }
-          if (source.priority !== 'critical' && source.priority !== 'high') return false
         }
         return true
       })

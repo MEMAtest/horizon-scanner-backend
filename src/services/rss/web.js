@@ -1,4 +1,39 @@
 const { scrapeBankCheerio, BANK_CONFIGS } = require('../../scrapers/cheerio/banks')
+const {
+  scrapeFCAConsultationPapers,
+  scrapeFCADiscussionPapers,
+  scrapeFCADearCeo,
+  scrapePRASupervisory,
+  scrapeFSCS: scrapeFSCSCheerio,
+  scrapeOfcom: scrapeOfcomCheerio,
+  scrapeCFTC,
+  scrapeCNBV,
+  scrapeAPRA,
+  scrapeAUSTRAC,
+  scrapeRBI,
+  scrapeCIMA,
+  scrapeCBE,
+  scrapeFSCA,
+  scrapeFICSA,
+  scrapeWolfsberg,
+  scrapeEgmont,
+  scrapeNCA,
+  scrapeLSE,
+  scrapeAquis,
+  scrapePayUK,
+  scrapeOFAC,
+  scrapeDFSA,
+  scrapeCBUAE,
+  scrapeSAMA
+} = require('../../scrapers/cheerio/regulators')
+const {
+  scrapeFATFCheerio,
+  scrapeJMLSGCheerio,
+  scrapeEIOPACheerio,
+  scrapeIOSCOCheerio,
+  scrapeBCBSCheerio,
+  scrapeEUCouncilCheerio
+} = require('../../scrapers/cheerio/international')
 
 // Derive bank authority sets from BANK_CONFIGS to avoid duplication
 const BANK_AUTHORITIES = new Set(Object.keys(BANK_CONFIGS))
@@ -54,9 +89,9 @@ function applyWebMethods(ServiceClass, {
 
       switch (source.authority) {
         case 'FATF':
-          scraperResults = await scrapeFATF()
+          scraperResults = await scrapeFATFCheerio()
           break
-            case 'FCA':
+        case 'FCA':
           scraperResults = await scrapeFCA()
           break
         case 'SFO':
@@ -81,7 +116,7 @@ function applyWebMethods(ServiceClass, {
           break
         case 'JMLSG':
         case 'Joint Money Laundering Steering Group':
-          scraperResults = await scrapeJMLSG()
+          scraperResults = await scrapeJMLSGCheerio()
           break
         case 'BoE':
         case 'Bank of England':
@@ -89,7 +124,7 @@ function applyWebMethods(ServiceClass, {
           break
         case 'PRA':
         case 'Prudential Regulation Authority':
-          scraperResults = await scrapePRA()
+          scraperResults = await scrapePRASupervisory()
           break
         case 'EBA':
         case 'European Banking Authority':
@@ -106,7 +141,7 @@ function applyWebMethods(ServiceClass, {
           break
         case 'OFCOM':
         case 'Ofcom':
-          scraperResults = await scrapeOfcom()
+          scraperResults = await scrapeOfcomCheerio()
           break
         case 'SRA':
         case 'Solicitors Regulation Authority':
@@ -139,6 +174,104 @@ function applyWebMethods(ServiceClass, {
         case 'CNMV':
         case 'Comision Nacional del Mercado de Valores':
           scraperResults = await scrapeCNMVCommunications()
+          break
+        // Converted from puppeteer — cheerio scrapers
+        case 'FCA_CP':
+          scraperResults = await scrapeFCAConsultationPapers()
+          break
+        case 'FCA_DP':
+          scraperResults = await scrapeFCADiscussionPapers()
+          break
+        case 'FSCS':
+          scraperResults = await scrapeFSCSCheerio()
+          break
+        case 'CFTC':
+        case 'Commodity Futures Trading Commission':
+          scraperResults = await scrapeCFTC()
+          break
+        case 'CNBV':
+        case 'Comision Nacional Bancaria y de Valores':
+          scraperResults = await scrapeCNBV()
+          break
+        case 'APRA':
+        case 'Australian Prudential Regulation Authority':
+          scraperResults = await scrapeAPRA()
+          break
+        case 'AUSTRAC':
+        case 'Australian Transaction Reports and Analysis Centre':
+          scraperResults = await scrapeAUSTRAC()
+          break
+        case 'RBI':
+        case 'Reserve Bank of India':
+          scraperResults = await scrapeRBI()
+          break
+        case 'CIMA':
+        case 'Cayman Islands Monetary Authority':
+          scraperResults = await scrapeCIMA()
+          break
+        case 'CBE':
+        case 'Central Bank of Egypt':
+          scraperResults = await scrapeCBE()
+          break
+        case 'FSCA':
+        case 'Financial Sector Conduct Authority':
+          scraperResults = await scrapeFSCA()
+          break
+        case 'FIC_SA':
+        case 'Financial Intelligence Centre':
+          scraperResults = await scrapeFICSA()
+          break
+        case 'WOLFSBERG':
+        case 'Wolfsberg Group':
+          scraperResults = await scrapeWolfsberg()
+          break
+        case 'EGMONT':
+        case 'Egmont Group':
+          scraperResults = await scrapeEgmont()
+          break
+        case 'NCA':
+        case 'National Crime Agency':
+          scraperResults = await scrapeNCA()
+          break
+        case 'LSE':
+        case 'London Stock Exchange':
+          scraperResults = await scrapeLSE()
+          break
+        case 'AQUIS':
+        case 'Aquis Exchange':
+          scraperResults = await scrapeAquis()
+          break
+        case 'Pay.UK':
+          scraperResults = await scrapePayUK()
+          break
+        case 'OFAC':
+          scraperResults = await scrapeOFAC()
+          break
+        case 'DFSA':
+        case 'Dubai Financial Services Authority':
+          scraperResults = await scrapeDFSA()
+          break
+        case 'CBUAE':
+        case 'Central Bank of UAE':
+          scraperResults = await scrapeCBUAE()
+          break
+        case 'SAMA':
+        case 'Saudi Arabian Monetary Authority':
+          scraperResults = await scrapeSAMA()
+          break
+        case 'BCBS':
+        case 'Basel Committee on Banking Supervision':
+          scraperResults = await scrapeBCBSCheerio()
+          break
+        case 'EIOPA':
+          scraperResults = await scrapeEIOPACheerio()
+          break
+        case 'IOSCO':
+          scraperResults = await scrapeIOSCOCheerio()
+          break
+        case 'EU_COUNCIL':
+        case 'EU Council':
+          scraperResults = await scrapeEUCouncilCheerio()
           break
         default:
           // Check if this is a bank authority - use cheerio bank scraper
