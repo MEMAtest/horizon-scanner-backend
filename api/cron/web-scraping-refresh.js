@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
       excludeSourceCategory: 'bank_news', // Bank news has its own cron
       maxDurationMs: 270000, // Stop at 270s to leave buffer for response (300s Vercel limit)
       concurrency: 15, // Higher concurrency since each scraper is independent
-      timeoutMs: 10000 // 10s per source to avoid slow ones blocking the batch
+      timeoutMs: 15000 // 15s per source (some sites are slow; per-source config.timeout overrides)
     })
 
     const duration = Date.now() - startTime

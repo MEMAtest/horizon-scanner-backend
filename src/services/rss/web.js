@@ -318,7 +318,7 @@ function applyWebMethods(ServiceClass, {
   ServiceClass.prototype.genericWebScraping = async function genericWebScraping(source, options = {}) {
     try {
       const response = await axios.get(source.url, {
-        timeout: options.timeoutMs || this.fetchTimeout || 15000,
+        timeout: source.timeout || options.timeoutMs || this.fetchTimeout || 15000,
         headers: {
           'User-Agent': this.userAgent,
           Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
