@@ -165,7 +165,8 @@ const feedSources = [
     type: 'web_scraping',
     description: 'Aquis Stock Exchange - Company Announcements',
     priority: 'medium',
-    recencyDays: 30,
+    timeout: 30000,
+    recencyDays: 60,
     sectors: ['Capital Markets', 'Listed Companies', 'Market News']
   },
   {
@@ -1017,6 +1018,7 @@ const feedSources = [
     type: 'web_scraping',
     description: 'Wolfsberg Group - AML/KYC/CTF standards from 12 global banks',
     priority: 'high',
+    timeout: 30000,
     recencyDays: 60,
     country: 'International',
     region: 'International',
@@ -1029,6 +1031,7 @@ const feedSources = [
     type: 'web_scraping',
     description: 'Wolfsberg Group - Publications, guidance, standards',
     priority: 'high',
+    timeout: 30000,
     recencyDays: 90,
     country: 'International',
     region: 'International',
@@ -1374,6 +1377,7 @@ const feedSources = [
     type: 'web_scraping',
     description: 'Australian Transaction Reports and Analysis Centre - AML/CTF regulator',
     priority: 'high',
+    timeout: 30000,
     recencyDays: 30,
     country: 'Australia',
     region: 'Asia-Pacific',

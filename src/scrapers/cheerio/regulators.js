@@ -15,14 +15,20 @@
 const axios = require('axios')
 const cheerio = require('cheerio')
 
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 const HEADERS = {
   'User-Agent': UA,
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.5',
-  'Accept-Encoding': 'gzip, deflate',
-  'Connection': 'keep-alive'
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'en-GB,en;q=0.9,en-US;q=0.8',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Connection': 'keep-alive',
+  'Cache-Control': 'no-cache',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1'
 }
 
 function resolveUrl(href, baseUrl) {
@@ -180,9 +186,10 @@ async function scrapeFCADearCeo() {
  */
 async function scrapePRASupervisory() {
   const baseUrl = 'https://www.bankofengland.co.uk'
+  // Use direct listing pages instead of search (search uses client-side JS rendering)
   const urls = [
-    `${baseUrl}/search?SearchTerms=supervisory+statement&Taxonomies=0829ed0c-5fdc-42a1-8c6f-4fe14d92de77`,
-    `${baseUrl}/search?SearchTerms=policy+statement&Taxonomies=0829ed0c-5fdc-42a1-8c6f-4fe14d92de77`
+    `${baseUrl}/prudential-regulation/publication`,
+    `${baseUrl}/prudential-regulation/supervisory-statement`
   ]
 
   const allItems = []
@@ -190,20 +197,25 @@ async function scrapePRASupervisory() {
 
   for (const url of urls) {
     try {
-      const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+      const response = await axios.get(url, {
+        timeout: 20000,
+        headers: { ...HEADERS, 'Referer': 'https://www.bankofengland.co.uk/' }
+      })
       const $ = cheerio.load(response.data)
 
-      $('.results-list li, .search-results li, article, .card').each((i, el) => {
+      // BoE uses .list-item, .publication-item, and standard link patterns
+      $('a[href*="/prudential-regulation/"], a[href*="/supervisory-statement/"], a[href*="/policy-statement/"]').each((i, el) => {
         if (allItems.length >= 30) return false
 
-        const linkEl = $(el).find('a[href]').first()
-        let href = linkEl.attr('href')
+        let href = $(el).attr('href')
         if (!href) return
 
         href = resolveUrl(href, baseUrl)
         if (!href || seen.has(href) || href.includes('#')) return
+        // Skip index/listing pages
+        if (href.endsWith('/publication') || href.endsWith('/supervisory-statement')) return
 
-        const title = linkEl.text().trim() || $(el).find('h2, h3, h4, .title').first().text().trim()
+        const title = $(el).text().trim()
         if (!title || title.length < 10) return
 
         // Filter for PRA supervisory content
@@ -217,10 +229,12 @@ async function scrapePRASupervisory() {
 
         if (!isPRADoc) return
 
-        const dateEl = $(el).find('time, .date, [datetime]').first()
+        // Try to find date from parent container
+        const container = $(el).closest('li, article, .card, .list-item, tr, div')
+        const dateEl = container.find('time, .date, [datetime]').first()
         const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
 
-        const descEl = $(el).find('p, .summary, .description').first()
+        const descEl = container.find('p, .summary, .description').first()
         const description = descEl.text().trim().substring(0, 500)
 
         seen.add(href)
@@ -235,7 +249,7 @@ async function scrapePRASupervisory() {
         })
       })
     } catch (error) {
-      console.error(`[cheerio] PRA search page failed:`, error.message)
+      console.error(`[cheerio] PRA page failed (${url}):`, error.message)
     }
   }
 
@@ -304,7 +318,10 @@ async function scrapeOfcom() {
   const baseUrl = 'https://www.ofcom.org.uk'
   const url = `${baseUrl}/news-and-updates`
 
-  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const response = await axios.get(url, {
+    timeout: 20000,
+    headers: { ...HEADERS, 'Referer': 'https://www.ofcom.org.uk/' }
+  })
   const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
@@ -452,40 +469,84 @@ async function scrapeCFTC() {
  * Slow server - needs extended timeout
  */
 async function scrapeCNBV() {
-  const baseUrl = 'https://www.gob.mx'
-  const url = `${baseUrl}/cnbv/prensa`
-
-  const response = await axios.get(url, { timeout: 30000, headers: HEADERS })
-  const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
 
-  $('article, .news-item, .press-item, .node, li').each((i, el) => {
-    if (items.length >= 20) return false
+  // Try multiple CNBV URLs — gob.mx structure changes frequently
+  const urls = [
+    { url: 'https://www.gob.mx/cnbv/prensa', base: 'https://www.gob.mx' },
+    { url: 'https://www.gob.mx/cnbv/articulos', base: 'https://www.gob.mx' },
+    { url: 'https://www.gob.mx/cnbv', base: 'https://www.gob.mx' }
+  ]
 
-    const linkEl = $(el).find('a[href]').first()
-    let href = linkEl.attr('href')
-    if (!href) return
-    href = resolveUrl(href, baseUrl)
-    if (!href || seen.has(href)) return
+  for (const { url, base } of urls) {
+    if (items.length >= 5) break
+    try {
+      const response = await axios.get(url, {
+        timeout: 30000,
+        headers: { ...HEADERS, 'Referer': 'https://www.gob.mx/' }
+      })
+      const $ = cheerio.load(response.data)
 
-    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
-    if (!title || title.length < 10) return
+      // gob.mx uses .article-body, .list-article, article patterns
+      $('article, .article-body, .list-article, .news-item, .press-item, .node, li').each((i, el) => {
+        if (items.length >= 20) return false
 
-    const dateEl = $(el).find('time, .date, [datetime]').first()
-    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+        const linkEl = $(el).find('a[href]').first()
+        let href = linkEl.attr('href')
+        if (!href) return
+        href = resolveUrl(href, base)
+        if (!href || seen.has(href)) return
+        // Skip index pages
+        if (href.endsWith('/cnbv') || href.endsWith('/cnbv/')) return
 
-    seen.add(href)
-    items.push({
-      title: title.replace(/\s+/g, ' '),
-      url: href,
-      authority: 'CNBV',
-      publishedDate: parseDate(dateText),
-      summary: title,
-      area: 'Press Release',
-      sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime', 'Fintech']
-    })
-  })
+        const title = $(el).find('h2, h3, h4, .title, .article-title').first().text().trim() || linkEl.text().trim()
+        if (!title || title.length < 10) return
+
+        const dateEl = $(el).find('time, .date, [datetime], .article-date').first()
+        const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+
+        seen.add(href)
+        items.push({
+          title: title.replace(/\s+/g, ' '),
+          url: href,
+          authority: 'CNBV',
+          publishedDate: parseDate(dateText),
+          summary: title,
+          area: 'Press Release',
+          sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime', 'Fintech']
+        })
+      })
+
+      // Also try direct links that contain /cnbv/
+      if (items.length < 3) {
+        $('a[href*="/cnbv/"]').each((i, el) => {
+          if (items.length >= 20) return false
+          let href = $(el).attr('href')
+          if (!href) return
+          href = resolveUrl(href, base)
+          if (!href || seen.has(href)) return
+          if (href.endsWith('/cnbv') || href.endsWith('/cnbv/') || href.includes('/prensa') || href.includes('/articulos')) return
+
+          const title = $(el).text().trim()
+          if (!title || title.length < 15) return
+
+          seen.add(href)
+          items.push({
+            title: title.replace(/\s+/g, ' '),
+            url: href,
+            authority: 'CNBV',
+            publishedDate: null,
+            summary: title,
+            area: 'Press Release',
+            sectors: ['Banking', 'Capital Markets', 'AML & Financial Crime', 'Fintech']
+          })
+        })
+      }
+    } catch (error) {
+      console.log(`[cheerio] CNBV ${url} failed: ${error.message}`)
+    }
+  }
 
   console.log(`[cheerio] CNBV: found ${items.length} items`)
   return items
@@ -545,7 +606,10 @@ async function scrapeAUSTRAC() {
   const baseUrl = 'https://www.austrac.gov.au'
   const url = `${baseUrl}/news-and-media/media-release`
 
-  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const response = await axios.get(url, {
+    timeout: 30000,
+    headers: { ...HEADERS, 'Referer': 'https://www.austrac.gov.au/' }
+  })
   const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
@@ -673,6 +737,84 @@ async function scrapeCIMA() {
   })
 
   console.log(`[cheerio] CIMA: found ${items.length} items`)
+  return items
+}
+
+/**
+ * MAS Media Releases (Singapore)
+ * URL: https://www.mas.gov.sg/news?content_type=Media%20Releases
+ */
+async function scrapeMAS() {
+  const baseUrl = 'https://www.mas.gov.sg'
+  const url = `${baseUrl}/news?content_type=Media%20Releases`
+
+  const response = await axios.get(url, {
+    timeout: 30000,
+    headers: { ...HEADERS, 'Referer': 'https://www.mas.gov.sg/' }
+  })
+  const $ = cheerio.load(response.data)
+  const items = []
+  const seen = new Set()
+
+  // MAS uses various listing patterns
+  $('article, .news-listing__item, .media-release, .card, .list-item, .content-item').each((i, el) => {
+    if (items.length >= 20) return false
+
+    const linkEl = $(el).find('h3 a, h2 a, a.news-listing__title, a[href*="/news/"]').first()
+    let href = linkEl.attr('href')
+    if (!href) return
+    href = resolveUrl(href, baseUrl)
+    if (!href || seen.has(href) || href.includes('#')) return
+    // Skip index pages
+    if (href === `${baseUrl}/news` || href.endsWith('/news/')) return
+
+    const title = linkEl.text().trim() || $(el).find('h3, h2, h4, .title').first().text().trim()
+    if (!title || title.length < 10) return
+
+    const dateEl = $(el).find('.news-listing__date, time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+
+    const descEl = $(el).find('p, .summary, .description').first()
+    const description = descEl.text().trim().substring(0, 300)
+
+    seen.add(href)
+    items.push({
+      title: title.replace(/\s+/g, ' '),
+      url: href,
+      authority: 'MAS',
+      publishedDate: parseDate(dateText),
+      summary: description || title,
+      area: 'Media Release',
+      sectors: ['Banking', 'Capital Markets', 'Insurance', 'Payment Services', 'Fintech']
+    })
+  })
+
+  // Fallback: broad link search for MAS news
+  if (items.length < 3) {
+    $('a[href*="/news/media-releases/"], a[href*="/news/press-releases/"]').each((i, el) => {
+      if (items.length >= 20) return false
+      let href = $(el).attr('href')
+      if (!href) return
+      href = resolveUrl(href, baseUrl)
+      if (!href || seen.has(href)) return
+
+      const title = $(el).text().trim()
+      if (!title || title.length < 15) return
+
+      seen.add(href)
+      items.push({
+        title: title.replace(/\s+/g, ' '),
+        url: href,
+        authority: 'MAS',
+        publishedDate: null,
+        summary: title,
+        area: 'Media Release',
+        sectors: ['Banking', 'Capital Markets', 'Insurance', 'Payment Services', 'Fintech']
+      })
+    })
+  }
+
+  console.log(`[cheerio] MAS: found ${items.length} items`)
   return items
 }
 
@@ -824,7 +966,10 @@ async function scrapeWolfsberg() {
   for (const path of ['/news', '/resources']) {
     try {
       const url = `https://wolfsberg-group.org${path}`
-      const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+      const response = await axios.get(url, {
+        timeout: 30000,
+        headers: { ...HEADERS, 'Referer': 'https://wolfsberg-group.org/' }
+      })
       const $ = cheerio.load(response.data)
 
       $('article, .news-item, .resource-item, .card, li').each((i, el) => {
@@ -897,30 +1042,41 @@ async function scrapeEgmont() {
   }
 
   // Fallback: HTML scraping — let errors propagate
-  const response = await axios.get('https://egmontgroup.org/news-and-events/', { timeout: 20000, headers: HEADERS })
+  const response = await axios.get('https://egmontgroup.org/news-and-events/', {
+    timeout: 20000,
+    headers: { ...HEADERS, 'Referer': 'https://egmontgroup.org/' }
+  })
   const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
 
-  $('article, .news-item, .post, .card').each((i, el) => {
+  // Egmont uses Ajax Load More plugin: .alm-item > .grid-item > .inner > h3 a
+  $('.alm-item, li.alm-item, article, .news-item, .post, .card, .grid-item').each((i, el) => {
     if (items.length >= 20) return false
 
-    const linkEl = $(el).find('a[href]').first()
+    const linkEl = $(el).find('h3 a, h2 a, a[href]').first()
     let href = linkEl.attr('href')
     if (!href) return
     if (!href.startsWith('http')) href = 'https://egmontgroup.org' + href
     if (seen.has(href)) return
 
-    const title = $(el).find('h2, h3, h4, .title').first().text().trim() || linkEl.text().trim()
+    const title = linkEl.text().trim() || $(el).find('h3, h2, h4, .title').first().text().trim()
     if (!title || title.length < 10) return
+
+    // Date from .entry-meta element
+    const dateEl = $(el).find('.entry-meta, time, .date, [datetime]').first()
+    const dateText = dateEl.attr('datetime') || dateEl.text().trim() || ''
+
+    // Summary from .excerpt
+    const summary = $(el).find('.excerpt, p:not(.entry-meta)').first().text().trim().substring(0, 300)
 
     seen.add(href)
     items.push({
       title: title.replace(/\s+/g, ' '),
       url: href,
       authority: 'EGMONT',
-      publishedDate: null,
-      summary: title,
+      publishedDate: parseDate(dateText),
+      summary: summary || title,
       area: 'News',
       sectors: ['AML & Financial Crime', 'FIU', 'Information Sharing', 'SAR']
     })
@@ -1034,7 +1190,27 @@ async function scrapeAquis() {
   const baseUrl = 'https://www.aquis.eu'
   const url = `${baseUrl}/stock-exchange/announcements`
 
-  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  // Retry logic for rate limiting (429)
+  let response
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      response = await axios.get(url, {
+        timeout: 30000,
+        headers: { ...HEADERS, 'Referer': 'https://www.aquis.eu/' }
+      })
+      break
+    } catch (err) {
+      if (err.response?.status === 429 && attempt < 3) {
+        const retryAfter = parseInt(err.response.headers['retry-after'] || '5', 10)
+        const delay = Math.min(retryAfter * 1000, 10000) * attempt
+        console.log(`[cheerio] Aquis: 429 rate limited, retrying in ${delay}ms (attempt ${attempt}/3)`)
+        await new Promise(r => setTimeout(r, delay))
+      } else {
+        throw err
+      }
+    }
+  }
+
   const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
@@ -1085,7 +1261,10 @@ async function scrapePayUK() {
   const baseUrl = 'https://www.wearepay.uk'
   const url = `${baseUrl}/news-and-insight/latest-updates/`
 
-  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const response = await axios.get(url, {
+    timeout: 20000,
+    headers: { ...HEADERS, 'Referer': 'https://www.wearepay.uk/' }
+  })
   const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
@@ -1218,7 +1397,10 @@ async function scrapeCBUAE() {
   const baseUrl = 'https://www.centralbank.ae'
   const url = `${baseUrl}/en/news-and-publications/news-and-insights/`
 
-  const response = await axios.get(url, { timeout: 20000, headers: HEADERS })
+  const response = await axios.get(url, {
+    timeout: 20000,
+    headers: { ...HEADERS, 'Referer': 'https://www.centralbank.ae/' }
+  })
   const $ = cheerio.load(response.data)
   const items = []
   const seen = new Set()
@@ -1313,6 +1495,7 @@ module.exports = {
   scrapeAUSTRAC,
   scrapeRBI,
   scrapeCIMA,
+  scrapeMAS,
   scrapeCBE,
   // Batch E — Africa + Others
   scrapeFSCA,

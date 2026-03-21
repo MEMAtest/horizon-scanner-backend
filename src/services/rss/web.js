@@ -12,6 +12,7 @@ const {
   scrapeAUSTRAC,
   scrapeRBI,
   scrapeCIMA,
+  scrapeMAS: scrapeMASCheerio,
   scrapeCBE,
   scrapeFSCA,
   scrapeFICSA,
@@ -149,7 +150,7 @@ function applyWebMethods(ServiceClass, {
           break
         case 'MAS':
         case 'Monetary Authority of Singapore':
-          scraperResults = await scrapeMAS()
+          scraperResults = typeof scrapeMAS === 'function' ? await scrapeMAS() : await scrapeMASCheerio()
           break
         case 'ASIC':
         case 'Australian Securities and Investments Commission':
