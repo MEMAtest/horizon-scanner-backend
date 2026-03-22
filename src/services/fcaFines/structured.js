@@ -265,10 +265,7 @@ function applyStructuredMethods(ServiceClass) {
     const url = `https://www.fca.org.uk/news/news-stories/${year}-fines`
     console.log(`   📊 Accessing structured fines page: ${url}`)
 
-    const browser = await puppeteer.launch({
-      headless: useHeadless,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    })
+    const browser = await launchBrowser()
 
     const page = await browser.newPage()
     const fines = []
