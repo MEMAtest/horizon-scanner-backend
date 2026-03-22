@@ -1,6 +1,3 @@
-const puppeteer = require('puppeteer-extra')
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
-
 const applyBrowserMethods = require('./puppeteer/browser')
 const applyFatfMethods = require('./puppeteer/fatf')
 const applyAquisMethods = require('./puppeteer/aquis')
@@ -38,8 +35,6 @@ const applyOfcomMethods = require('./puppeteer/ofcom')
 const applyUtilityMethods = require('./puppeteer/utils')
 const applyOrchestratorMethods = require('./puppeteer/orchestrator')
 
-puppeteer.use(StealthPlugin())
-
 class PuppeteerScraper {
   constructor() {
     this.browser = null
@@ -52,7 +47,7 @@ class PuppeteerScraper {
 }
 
 applyUtilityMethods(PuppeteerScraper)
-applyBrowserMethods(PuppeteerScraper, puppeteer)
+applyBrowserMethods(PuppeteerScraper)
 applyFatfMethods(PuppeteerScraper)
 applyAquisMethods(PuppeteerScraper)
 applyLseMethods(PuppeteerScraper)

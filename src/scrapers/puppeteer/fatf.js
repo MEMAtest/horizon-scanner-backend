@@ -10,11 +10,7 @@
  * - Health check and validation
  */
 
-const puppeteer = require('puppeteer-extra')
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
-
-// Apply stealth plugin to bypass Cloudflare detection
-puppeteer.use(StealthPlugin())
+const { launchBrowser } = require('./browser')
 
 // Constants for FATF scraping
 const FATF_CONFIG = {
@@ -258,20 +254,7 @@ function applyFatfMethods(ServiceClass) {
 
     try {
       // Launch browser with stealth configuration
-      browser = await puppeteer.launch({
-        headless: 'new',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          '--disable-features=site-per-process',
-          '--enable-features=NetworkService',
-          '--window-size=1920,1080',
-          '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process'
-        ],
-        defaultViewport: { width: 1920, height: 1080 }
-      })
+      browser = await launchBrowser()
 
       const page = await browser.newPage()
 

@@ -185,6 +185,10 @@ function applyPuppeteerMethods(ServiceClass, { puppeteerScraper }) {
         case 'Office of Communications':
           scraperResults = await puppeteerScraper.scrapeOfcom()
           break
+        case 'SEBI':
+        case 'Securities and Exchange Board of India':
+          scraperResults = await puppeteerScraper.scrapeSEBI()
+          break
         default:
           console.log(`⚠️ No Puppeteer scraper configured for ${source.authority}`)
           return []

@@ -5,10 +5,7 @@
  * FSCA is South Africa's market conduct regulator.
  */
 
-const puppeteer = require('puppeteer-extra')
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
-
-puppeteer.use(StealthPlugin())
+const { launchBrowser } = require('./browser')
 
 const FSCA_CONFIG = {
   newsUrl: 'https://www.fsca.co.za/Latest-News/',
@@ -29,16 +26,7 @@ function applyFSCAMethods(ServiceClass) {
     let browser = null
 
     try {
-      browser = await puppeteer.launch({
-        headless: 'new',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          '--window-size=1920,1080'
-        ],
-        defaultViewport: { width: 1920, height: 1080 }
-      })
+      browser = await launchBrowser()
 
       const page = await browser.newPage()
 

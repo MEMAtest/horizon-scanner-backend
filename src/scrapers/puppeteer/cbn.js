@@ -6,10 +6,7 @@
  * Uses Kendo UI Grid with AJAX loading from /api/GetAllNews
  */
 
-const puppeteer = require('puppeteer-extra')
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')
-
-puppeteer.use(StealthPlugin())
+const { launchBrowser } = require('./browser')
 
 const CBN_CONFIG = {
   newsUrl: 'https://www.cbn.gov.ng/NewsArchive/News.html',
@@ -30,16 +27,7 @@ function applyCBNMethods(ServiceClass) {
     let browser = null
 
     try {
-      browser = await puppeteer.launch({
-        headless: 'new',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          '--window-size=1920,1080'
-        ],
-        defaultViewport: { width: 1920, height: 1080 }
-      })
+      browser = await launchBrowser()
 
       const page = await browser.newPage()
 
