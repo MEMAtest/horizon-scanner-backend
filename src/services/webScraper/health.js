@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer')
+const { launchBrowser } = require('../../scrapers/puppeteer/browser')
 const dbService = require('../dbService')
 const aiAnalyzer = require('../aiAnalyzer')
 
@@ -40,7 +40,7 @@ function applyHealthMethods(ServiceClass) {
     }
 
     try {
-      const browser = await puppeteer.launch({ headless: 'new' })
+      const browser = await launchBrowser()
       await browser.close()
       health.checks.puppeteer = true
     } catch (error) {

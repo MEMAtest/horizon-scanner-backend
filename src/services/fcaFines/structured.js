@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer')
+const { launchBrowser } = require('../../scrapers/puppeteer/browser')
 
 function applyStructuredMethods(ServiceClass) {
   ServiceClass.prototype.scrapeStructuredFinesPage = async function(year, useHeadless = true) {
@@ -8,10 +8,7 @@ function applyStructuredMethods(ServiceClass) {
     try {
       console.log(`   📋 Trying FCA enforcement actions page for ${year}...`)
 
-      browser = await puppeteer.launch({
-        headless: useHeadless,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      })
+      browser = await launchBrowser()
 
       const page = await browser.newPage()
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')

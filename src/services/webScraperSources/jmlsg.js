@@ -2,16 +2,13 @@ const { axios, cheerio, rss, USER_AGENT, parseDate, isRecent, fetchHtml, cleanTe
 
 /* ───────── Joint Money Laundering Steering Group (JMLSG) - Enhanced with Puppeteer ───────── */
 async function scrapeJMLSG() {
-  const puppeteer = require('puppeteer')
+  const { launchBrowser } = require('../../scrapers/puppeteer/browser')
   let browser
 
   try {
     console.log('🌍 JMLSG: Starting Puppeteer scraping...')
 
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
+    browser = await launchBrowser()
 
     const page = await browser.newPage()
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')

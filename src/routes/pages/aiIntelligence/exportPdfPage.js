@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs/promises')
 const os = require('os')
-const puppeteer = require('puppeteer')
+const { launchBrowser } = require('../../../scrapers/puppeteer/browser')
 let PDFDocument
 try {
   PDFDocument = require('pdfkit')
@@ -41,19 +41,7 @@ async function renderAiIntelligenceExportPdf(req, res) {
 
     tempProfileDir = await fs.mkdtemp(path.join(os.tmpdir(), 'regcanary-pdf-'))
 
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote',
-        '--disable-crash-reporter'
-      ],
-      userDataDir: tempProfileDir
-    })
+    browser = await launchBrowser()
     page = await browser.newPage()
     await page.setContent(html, { waitUntil: ['load', 'domcontentloaded'] })
     await page.emulateMediaType('screen')

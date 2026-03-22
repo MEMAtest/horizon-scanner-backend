@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer')
+const { launchBrowser } = require('../../scrapers/puppeteer/browser')
 
 function applyOrchestratorMethods(ServiceClass) {
   ServiceClass.prototype.startScraping = async function(options = {}) {
@@ -102,15 +102,7 @@ function applyOrchestratorMethods(ServiceClass) {
       }
 
       console.log(`   🤖 Using Puppeteer for year ${year}...`)
-      browser = await puppeteer.launch({
-        headless: useHeadless ? 'new' : false,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
-        ]
-      })
+      browser = await launchBrowser()
 
       const page = await browser.newPage()
       await page.setUserAgent(this.userAgent)
