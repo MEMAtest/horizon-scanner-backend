@@ -175,3 +175,166 @@ display: none;
 }
 
 .run-status.active { display: block; }
+
+/* Deadline Tracker Widget */
+.deadline-tracker {
+  margin-top: 12px;
+}
+
+.deadline-tracker__link {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.deadline-tracker__link:hover {
+  text-decoration: underline;
+}
+
+.deadline-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.deadline-group {
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 3px solid #e5e7eb;
+}
+
+.deadline-group.deadline-overdue { border-left-color: #ef4444; }
+.deadline-group.deadline-soon { border-left-color: #f59e0b; }
+.deadline-group.deadline-upcoming { border-left-color: #3b82f6; }
+.deadline-group.deadline-later { border-left-color: #d1d5db; }
+
+.deadline-group__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.deadline-group__count {
+  font-weight: 400;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.deadline-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.deadline-item:last-child {
+  border-bottom: none;
+}
+
+.deadline-item__authority {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.deadline-item__headline {
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.deadline-item__date {
+  color: #6b7280;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.deadline-days {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.deadline-days.deadline-overdue {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.deadline-days.deadline-soon {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.deadline-days.deadline-upcoming {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.deadline-days.deadline-later {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Deadline chip on update cards */
+.update-card__date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.deadline-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.deadline-chip.deadline-overdue {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.deadline-chip.deadline-soon {
+  background: #fffbeb;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.deadline-chip.deadline-upcoming {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.deadline-chip.deadline-later {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}

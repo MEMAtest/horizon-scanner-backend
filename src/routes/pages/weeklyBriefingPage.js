@@ -5,6 +5,7 @@ const { getClientScripts } = require('../templates/clientScripts')
 const {
   MAX_HIGHLIGHT_UPDATES,
   MAX_UPDATES_PER_GROUP,
+  buildDeadlineTimelineHtml,
   buildInitialMetaHtml,
   buildInitialNarrativeHtml,
   buildInitialOnePagerHtml,
@@ -171,6 +172,9 @@ async function renderWeeklyBriefing(req, res) {
       ? annotations.filter(a => a.status === 'action_required' || a.requires_action).length
       : 0
 
+    // Build deadline timeline data from current updates
+    const deadlineData = buildDeadlineTimelineHtml(activeBriefing)
+
     const html = renderWeeklyBriefingPage({
       sidebar,
       commonStyles: getCommonStyles(),
@@ -202,6 +206,10 @@ async function renderWeeklyBriefing(req, res) {
           total: annotationsTotal,
           flagged: annotationsFlagged,
           actionRequired: annotationsActionRequired
+        },
+        deadlines: {
+          html: deadlineData.html,
+          count: deadlineData.count
         }
       },
       serialized: {

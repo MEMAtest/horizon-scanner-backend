@@ -248,6 +248,110 @@ function formatDateTimeDisplay(value) {
   })
 }
 
+function daysUntil(dateStr) {
+  if (!dateStr) return null
+  const deadline = new Date(dateStr)
+  if (Number.isNaN(deadline.getTime())) return null
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  deadline.setHours(0, 0, 0, 0)
+  return Math.ceil((deadline - now) / (1000 * 60 * 60 * 24))
+}
+
+function deadlineUrgencyClass(daysRemaining) {
+  if (daysRemaining === null) return ''
+  if (daysRemaining < 0) return 'deadline-overdue'
+  if (daysRemaining <= 30) return 'deadline-soon'
+  if (daysRemaining <= 90) return 'deadline-upcoming'
+  return 'deadline-later'
+}
+
+function buildDeadlineChip(deadlineValue) {
+  if (!deadlineValue) return ''
+  const days = daysUntil(deadlineValue)
+  if (days === null) return ''
+  const urgency = deadlineUrgencyClass(days)
+  const formatted = formatDateDisplay(deadlineValue)
+  const label = days < 0
+    ? `Overdue: ${formatted}`
+    : days === 0
+      ? `Due today`
+      : `Due: ${formatted}`
+  return `<span class="update-chip deadline-chip ${urgency}">${escapeHtml(label)}</span>`
+}
+
+function buildDeadlineTimelineHtml(briefing) {
+  const updates = briefing?.dataset?.currentUpdates || []
+  const withDeadlines = updates
+    .filter(u => {
+      if (!u.compliance_deadline) return false
+      const d = new Date(u.compliance_deadline)
+      return !Number.isNaN(d.getTime())
+    })
+    .map(u => ({
+      id: u.id,
+      authority: u.authority || 'Unknown',
+      headline: u.title || u.headline || 'Untitled',
+      deadline: u.compliance_deadline,
+      daysRemaining: daysUntil(u.compliance_deadline)
+    }))
+    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+    .filter(u => u.daysRemaining !== null)
+
+  if (withDeadlines.length === 0) {
+    return {
+      html: '',
+      count: 0,
+      items: []
+    }
+  }
+
+  const groups = {
+    overdue: withDeadlines.filter(d => d.daysRemaining < 0),
+    soon: withDeadlines.filter(d => d.daysRemaining >= 0 && d.daysRemaining <= 30),
+    upcoming: withDeadlines.filter(d => d.daysRemaining > 30 && d.daysRemaining <= 90),
+    later: withDeadlines.filter(d => d.daysRemaining > 90)
+  }
+
+  const renderGroup = (label, items, cssClass) => {
+    if (items.length === 0) return ''
+    const rows = items.slice(0, 5).map(item => {
+      const daysLabel = item.daysRemaining < 0
+        ? `${Math.abs(item.daysRemaining)}d overdue`
+        : item.daysRemaining === 0
+          ? 'Today'
+          : `${item.daysRemaining}d`
+      return `
+        <div class="deadline-item">
+          <span class="deadline-item__authority">${escapeHtml(item.authority)}</span>
+          <span class="deadline-item__headline">${escapeHtml(truncateText(item.headline, 60))}</span>
+          <span class="deadline-item__date">${escapeHtml(formatDateDisplay(item.deadline))}</span>
+          <span class="deadline-days ${cssClass}">${escapeHtml(daysLabel)}</span>
+        </div>
+      `
+    }).join('')
+    return `
+      <div class="deadline-group ${cssClass}">
+        <div class="deadline-group__label">${escapeHtml(label)} <span class="deadline-group__count">${items.length}</span></div>
+        ${rows}
+      </div>
+    `
+  }
+
+  const html = [
+    renderGroup('Overdue', groups.overdue, 'deadline-overdue'),
+    renderGroup('Due Soon', groups.soon, 'deadline-soon'),
+    renderGroup('Upcoming', groups.upcoming, 'deadline-upcoming'),
+    renderGroup('Later', groups.later, 'deadline-later')
+  ].join('')
+
+  return {
+    html,
+    count: withDeadlines.length,
+    items: withDeadlines
+  }
+}
+
 function buildUpdateCardHtml(update, options = {}) {
   const { isHero = false } = options
   const theme = classifyCardTheme(update)
@@ -292,7 +396,10 @@ function buildUpdateCardHtml(update, options = {}) {
           <span class="update-chip authority-chip">${authority}</span>
           <span class="update-chip category-chip category-${theme.key}">${escapeHtml(theme.label)}</span>
         </div>
-        <span class="update-chip date-chip">${date}</span>
+        <div class="update-card__date-row">
+          <span class="update-chip date-chip">${date}</span>
+          ${buildDeadlineChip(update.compliance_deadline)}
+        </div>
       </header>
       <div class="update-card__title-row">
         ${titleHtml}
@@ -595,6 +702,7 @@ function buildInitialMetaHtml(briefing) {
 module.exports = {
   MAX_HIGHLIGHT_UPDATES,
   MAX_UPDATES_PER_GROUP,
+  buildDeadlineTimelineHtml,
   buildExecutiveOnePager,
   buildInitialMetaHtml,
   buildInitialNarrativeHtml,

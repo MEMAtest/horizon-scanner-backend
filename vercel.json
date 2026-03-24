@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/index.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/cron/daily-digest.js": {
       "maxDuration": 120
@@ -76,11 +76,11 @@
     },
     {
       "path": "/api/cron/weekly-newsletter",
-      "schedule": "0 18 * * 0"
+      "schedule": "0 17 * * 5"
     },
     {
       "path": "/api/cron/smart-briefing",
-      "schedule": "30 9 * * 1"
+      "schedule": "0 15 * * 5"
     },
     {
       "path": "/api/cron/web-scraping-refresh",

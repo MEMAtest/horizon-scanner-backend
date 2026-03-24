@@ -4,16 +4,22 @@ function applyPromptMethods(ServiceClass) {
   ServiceClass.prototype.buildPromptPayload = function(dataset) {
     const trimForGroq = this.useGroq
 
-    const trimUpdate = (update) => ({
-      id: update.id,
-      title: update.title,
-      summary: trimForGroq ? update.summary?.substring(0, 200) : update.summary,
-      authority: update.authority,
-      impact_level: update.impact_level,
-      urgency: update.urgency,
-      sectors: update.sectors,
-      published_date: update.published_date
-    })
+    const trimUpdate = (update) => {
+      const deadline = update.compliance_deadline
+      const validDeadline = deadline && !isNaN(new Date(deadline).getTime()) ? deadline : null
+
+      return {
+        id: update.id,
+        title: update.title,
+        summary: trimForGroq ? update.summary?.substring(0, 200) : update.summary,
+        authority: update.authority,
+        impact_level: update.impact_level,
+        urgency: update.urgency,
+        sectors: update.sectors,
+        published_date: update.published_date,
+        compliance_deadline: validDeadline
+      }
+    }
 
     return {
       currentWeek: dataset.currentUpdates.slice(0, trimForGroq ? 15 : 30).map(trimUpdate),
@@ -61,6 +67,10 @@ function applyPromptMethods(ServiceClass) {
       '4. Key Storylines (3–4 narrative paragraphs linking related updates).',
       '5. Looking Ahead (forward-looking insight).',
       'Write in paragraphs. Reference authorities and sectors inline.',
+      'When referencing regulatory changes, note compliance deadlines where available. ',
+      'Distinguish between immediate-action items and longer-horizon implementation deadlines. ',
+      'Do not recommend "immediate action" when the compliance deadline is months or years away.',
+      'If an update has a compliance_deadline field, you MUST reference it.',
       'Do not include bullet lists or numbered lists in the output.',
       'Data for analysis follows as JSON.',
       JSON.stringify({
@@ -105,6 +115,9 @@ function applyPromptMethods(ServiceClass) {
       'Key Regulatory Developments (group by impact).',
       'Business Implications (tailored to firm context).',
       'Recommended Next Steps (prioritized list).',
+      'For Recommended Next Steps, include the compliance deadline date alongside each action where available. ',
+      'Differentiate urgent items from those with extended implementation timelines.',
+      'If an update has a compliance_deadline field, you MUST reference it.',
       'Use concise sentences, bold key phrases, and keep tone decisive.',
       'Source material:',
       JSON.stringify(payload)

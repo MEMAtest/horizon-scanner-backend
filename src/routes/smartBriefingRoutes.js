@@ -10,27 +10,63 @@ const {
   buildInitialUpdatesHtml
 } = require('../views/weeklyBriefing/builders')
 
-// Trigger a manual run of the weekly Smart Briefing pipeline
+// Trigger a manual run of the weekly Smart Briefing pipeline (synchronous)
+// On Vercel serverless, in-memory status polling across lambdas fails (404).
+// Instead, start the run and poll status within the same request lifecycle.
 router.post('/weekly-briefings/run', async (req, res) => {
+  const startTime = Date.now()
   try {
     const status = await smartBriefingService.startRun(req.body || {})
-    res.status(202).json({ success: true, status })
+    const runId = status.runId
+
+    // Poll within the same lambda — same pattern as api/cron/smart-briefing.js
+    const maxWait = 110000 // 110s (leave buffer for 120s function timeout)
+    const pollInterval = 2000
+    let elapsed = 0
+
+    while (elapsed < maxWait) {
+      const currentStatus = smartBriefingService.getRunStatus(runId)
+      if (!currentStatus) break
+
+      if (currentStatus.state === 'completed') {
+        const duration = Date.now() - startTime
+        console.log(`[SmartBriefing] Manual run completed in ${duration}ms (briefingId: ${currentStatus.briefingId})`)
+        return res.json({
+          success: true,
+          briefingId: currentStatus.briefingId,
+          cacheHit: currentStatus.cacheHit || false,
+          durationMs: duration
+        })
+      }
+
+      if (currentStatus.state === 'failed') {
+        const duration = Date.now() - startTime
+        console.error(`[SmartBriefing] Manual run failed: ${currentStatus.error}`)
+        return res.status(500).json({
+          success: false,
+          error: currentStatus.error,
+          durationMs: duration
+        })
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+      elapsed += pollInterval
+    }
+
+    // Timed out — briefing may still complete in the background
+    const duration = Date.now() - startTime
+    const finalStatus = smartBriefingService.getRunStatus(runId)
+    console.log(`[SmartBriefing] Manual run timed out after ${duration}ms (state: ${finalStatus?.state})`)
+    return res.status(504).json({
+      success: false,
+      timedOut: true,
+      message: 'Briefing generation is taking longer than expected. It may appear on your next page load.',
+      durationMs: duration
+    })
   } catch (error) {
     console.error('SmartBriefing run trigger failed:', error)
     res.status(500).json({ success: false, error: error.message })
   }
-})
-
-// Poll the status of an in-flight run
-router.get('/weekly-briefings/run/:runId', (req, res) => {
-  const runId = req.params.runId
-  const status = smartBriefingService.getRunStatus(runId)
-
-  if (!status) {
-    return res.status(404).json({ success: false, error: 'Run not found' })
-  }
-
-  res.json({ success: true, status })
 })
 
 // Retrieve the latest published briefing

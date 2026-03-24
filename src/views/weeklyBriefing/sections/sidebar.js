@@ -1,12 +1,13 @@
 const { sanitizeHtml } = require('../helpers')
 
-function renderSidebar({ stats, recentBriefings = [], metrics = {}, annotations = {} }) {
+function renderSidebar({ stats, recentBriefings = [], metrics = {}, annotations = {}, deadlines = {} }) {
   return `
     <aside class="report-sidebar">
       ${renderSnapshotStats(stats)}
       ${renderRecentBriefings(recentBriefings)}
       ${renderMetricsSummary(metrics)}
       ${renderAnnotationsSummary(annotations)}
+      ${renderDeadlineTracker(deadlines)}
     </aside>
   `
 }
@@ -135,6 +136,29 @@ function renderAnnotationsSummary(annotations) {
           </div>
         ` : ''}
       </div>
+    </div>
+  `
+}
+
+function renderDeadlineTracker(deadlines) {
+  const count = deadlines.count || 0
+  const html = deadlines.html || ''
+
+  if (count === 0) {
+    return `
+      <div class="sidebar-card deadline-tracker">
+        <h3 class="sidebar-card-title">Compliance Deadlines</h3>
+        <p class="sidebar-empty">No upcoming deadlines in this week's coverage.</p>
+        <a href="/regulatory-calendar" class="deadline-tracker__link">View full calendar &rarr;</a>
+      </div>
+    `
+  }
+
+  return `
+    <div class="sidebar-card deadline-tracker">
+      <h3 class="sidebar-card-title">Compliance Deadlines <span class="deadline-badge">${sanitizeHtml(String(count))}</span></h3>
+      ${html}
+      <a href="/regulatory-calendar" class="deadline-tracker__link">View full calendar &rarr;</a>
     </div>
   `
 }
